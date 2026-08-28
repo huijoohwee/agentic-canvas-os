@@ -4,8 +4,8 @@ export const URL_INGEST_INVOCATION = Object.freeze({
   semantic: "#canvas",
   skill: "url.ingest",
   text: "/ingest-url @url:https://example.com @reference-policy #canvas",
-  discoveryTool: "knowgrph.agentic_canvas_os.docs.invoke",
-  executionTool: "knowgrph.control_local_import_url",
+  discoveryTool: "agenticgraph.agentic_canvas_os.docs.invoke",
+  executionTool: "agenticgraph.control_local_import_url",
 });
 
 const FORBIDDEN_ALIASES = Object.freeze([

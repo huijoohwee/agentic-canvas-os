@@ -218,7 +218,7 @@ test("forwards tools/call and returns the structured Run_Manifest", async () => 
   assert.equal(seen.req.url, ENDPOINT);
   assert.equal(seen.req.method, "POST");
   assert.equal(seen.req.body.method, "tools/call");
-  assert.equal(seen.req.body.params.name, "knowgrph.video_remix.run");
+  assert.equal(seen.req.body.params.name, "agenticgraph.video_remix.run");
   assert.equal(manifest.state, "blocked");
   assert.equal(manifest.approvalGates.length, 5);
 });
@@ -259,7 +259,7 @@ test("forwards gateway-owned execution identity in the idempotency header and MC
     idempotencyKey: "stable-key-1",
     requestDigest: "request-digest-1",
   };
-  await client.callTool("knowgrph.record.update", { value: "updated" }, { execution });
+  await client.callTool("agenticgraph.record.update", { value: "updated" }, { execution });
   assert.equal(toolRequest.headers["idempotency-key"], execution.idempotencyKey);
   assert.deepEqual(
     toolRequest.body.params._meta["io.agentic-canvas-os/execution"],
@@ -292,7 +292,7 @@ test("evolveSkill forwards the canonical resumable Skill Evolution tool", async 
 
   const result = await client.evolveSkill(input, { bearer: "caller-session" });
 
-  assert.equal(toolRequest.body.params.name, "knowgrph.skill.evolve");
+  assert.equal(toolRequest.body.params.name, "agenticgraph.skill.evolve");
   assert.deepEqual(toolRequest.body.params.arguments, input);
   assert.equal(toolRequest.headers.authorization, "Bearer caller-session");
   assert.equal(result.status, "running");

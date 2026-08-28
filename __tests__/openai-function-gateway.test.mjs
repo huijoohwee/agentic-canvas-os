@@ -162,7 +162,7 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
         return {
           ok: true,
           view: "capabilities",
-          entries: [{ toolId: "knowgrph.os.status" }],
+          entries: [{ toolId: "agenticgraph.os.status" }],
           unavailableSources: [],
           cost_log: {
             model: "none",
@@ -193,7 +193,7 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
 
   const completed = await gateway.callTool(base);
   assert.equal(completed.status, "completed");
-  assert.deepEqual(completed.output.entry_ids, ["knowgrph.os.status"]);
+  assert.deepEqual(completed.output.entry_ids, ["agenticgraph.os.status"]);
   assert.equal(completed.costLog.estimated_cost_usd, 0);
   assert.equal(calls, 1);
   assert.equal(gateway.stats().inputGuardrailChecks, 1);
@@ -251,7 +251,7 @@ test("Knowgrph gateway resumes a review-required status call with exact signed r
         return {
           ok: true,
           view: "capabilities",
-          entries: [{ toolId: "knowgrph.os.status" }],
+          entries: [{ toolId: "agenticgraph.os.status" }],
           unavailableSources: [],
           cost_log: {
             model: "none",
@@ -296,7 +296,7 @@ test("Knowgrph gateway resumes a review-required status call with exact signed r
     },
   });
   assert.equal(completed.status, "completed");
-  assert.deepEqual(completed.output.entry_ids, ["knowgrph.os.status"]);
+  assert.deepEqual(completed.output.entry_ids, ["agenticgraph.os.status"]);
   assert.equal(mcpCalls, 1);
   assert.deepEqual(gateway.stats().reviewRequiredToolNames, [KNOWGRPH_FUNCTION_TOOL_NAMES.status]);
   assert.equal(gateway.stats().reviewPauses, 1);
@@ -392,7 +392,7 @@ test("built-in run-note mutation cannot bypass review and requires native receip
     note: "Operator reviewed this run.",
     revision: 1,
   });
-  assert.equal(mcpCall.name, "knowgrph.run_manifest.note.update");
+  assert.equal(mcpCall.name, "agenticgraph.run_manifest.note.update");
   assert.equal(mcpCall.options.execution.schema, "function-execution-receipt/v1");
 });
 
@@ -443,7 +443,7 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
           structuredContent: {
             ok: true,
             view: "capabilities",
-            entries: [{ toolId: "knowgrph.os.status" }, { toolId: "knowgrph.agent.run" }],
+            entries: [{ toolId: "agenticgraph.os.status" }, { toolId: "agenticgraph.agent.run" }],
             unavailableSources: [],
             cost_log: {
               model: "none",
@@ -480,7 +480,7 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
   assert.equal(result.body.evidence.toolCalls, 1);
   assert.equal(result.body.evidence.callIdentity, "preserved");
   assert.deepEqual(result.body.evidence.providerResponseIds, ["resp-a", "resp-b"]);
-  assert.equal(mcpCalls[0].params.name, "knowgrph.os.status");
+  assert.equal(mcpCalls[0].params.name, "agenticgraph.os.status");
   assert.equal(openAiBodies[1].previous_response_id, "resp-a");
   assert.equal(openAiBodies[1].input[1].call_id, "call-a");
   assert.equal(openAiBodies[1].tool_choice, "auto");

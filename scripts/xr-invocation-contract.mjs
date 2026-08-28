@@ -37,23 +37,23 @@ export const FACTS_COMPACTED_CONTRACTS = Object.freeze({
     runtime_command_authority: "SKILLS.md and DICTIONARY-COMMAND.md",
     execution_boundary: "selection resolves and loads the source-backed runtime prompt without submit; Send remains the execution boundary",
     semantic_contract_authority: "PROBE-TREE.md",
-    invocation_routes: "llm-chat-response uses the active Chat provider, endpoint, and model; native-chat-response uses the named shared runtime; mcp-invocation resolves the matching runtime command through knowgrph.agentic_canvas_os.docs.invoke without executing it",
+    invocation_routes: "llm-chat-response uses the active Chat provider, endpoint, and model; native-chat-response uses the named shared runtime; mcp-invocation resolves the matching runtime command through agenticgraph.agentic_canvas_os.docs.invoke without executing it",
   }),
 });
 
 const COMMAND_MARKERS = Object.freeze({
-  "/camera.select": ["exactly `@camera`", "exactly `#camera`", "`camera=fixed-follow` or `camera=free-orbit`", "knowgrph.control_local_camera"],
-  "/xr.stage": ["@<environment-id>", "no semantic token", "knowgrph.control_local_xr_scene"],
-  "/xr.place": ["@<asset-id>", "bounded non-empty label", "`linear` or `hold`", "no semantic token", "knowgrph.control_local_xr_scene"],
-  "/xr.transform": ["@<subject-id>", "exactly `#transform`", "knowgrph.control_local_xr_scene"],
-  "/xr.label": ["@<subject-id>", "bounded non-empty label", "no semantic token", "knowgrph.control_local_xr_scene"],
-  "/xr.remove": ["@<subject-id>", "shared scene owner", "no semantic token", "knowgrph.control_local_xr_scene"],
+  "/camera.select": ["exactly `@camera`", "exactly `#camera`", "`camera=fixed-follow` or `camera=free-orbit`", "agenticgraph.control_local_camera"],
+  "/xr.stage": ["@<environment-id>", "no semantic token", "agenticgraph.control_local_xr_scene"],
+  "/xr.place": ["@<asset-id>", "bounded non-empty label", "`linear` or `hold`", "no semantic token", "agenticgraph.control_local_xr_scene"],
+  "/xr.transform": ["@<subject-id>", "exactly `#transform`", "agenticgraph.control_local_xr_scene"],
+  "/xr.label": ["@<subject-id>", "bounded non-empty label", "no semantic token", "agenticgraph.control_local_xr_scene"],
+  "/xr.remove": ["@<subject-id>", "shared scene owner", "no semantic token", "agenticgraph.control_local_xr_scene"],
   "/xr.physics": ["exactly `@canvas`", "exactly one of", "`#world`", "`#body`", "`#impulse`", "`#controller`", "single physics owner"],
   "/xr.present": ["exactly `@scene`", "exactly `#reticle`", "active immersive AR placement target"],
 });
 
 const SEMANTIC_MARKERS = Object.freeze({
-  "#transform": ["/xr.transform", "Scene-authored XR subject", "knowgrph.control_local_xr_scene"],
+  "#transform": ["/xr.transform", "Scene-authored XR subject", "agenticgraph.control_local_xr_scene"],
   "#world": ["/xr.physics @canvas #world", "play", "pause", "stop", "reset", "step", "configure"],
   "#body": ["/xr.physics @canvas #body", "attach", "configure", "detach", "Agentic ECS remains a separate composition lane"],
   "#impulse": ["/xr.physics @canvas #impulse", "x,y,z", "eligible live body"],
@@ -119,8 +119,8 @@ export function validateXrInvocationContractDocuments(documents) {
     "/camera.select",
   ], failures);
   requireMarkers(findPlainTableRow(facts, "Camera and XR scene invocation catalog"), "FACTS.md Camera and XR scene boundary", [
-    "knowgrph.control_local_camera",
-    "knowgrph.control_local_xr_scene",
+    "agenticgraph.control_local_camera",
+    "agenticgraph.control_local_xr_scene",
     "Agentic ECS stays a separate three-tool stdio/KGC composition lane",
     "no renderer or physics ownership",
   ], failures);

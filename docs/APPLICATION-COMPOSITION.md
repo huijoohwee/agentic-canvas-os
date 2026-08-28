@@ -17,9 +17,9 @@ invocation:
   semantics: ["#application-composition", "#runtime-ready"]
   bindings: ["@application-manifest", "@component-catalog", "@integration-profile", "@runtime-proof"]
 mcp_tools:
-  - "knowgrph.application.catalog"
-  - "knowgrph.application.plan"
-  - "knowgrph.application.execute"
+  - "agenticgraph.application.catalog"
+  - "agenticgraph.application.plan"
+  - "agenticgraph.application.execute"
 external_pattern_sources: ["https://github.com/langchain-ai/langchain"]
 external_dependency: "forbidden"
 ---
@@ -40,7 +40,7 @@ The referenced [LangChain repository](https://github.com/langchain-ai/langchain)
 /application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof
 ```
 
-The `/`, `#`, and `@` tokens are host-side invocation aliases and metadata, never MCP wire methods. The host resolves them before calling the exact `knowgrph.application.*` tools.
+The `/`, `#`, and `@` tokens are host-side invocation aliases and metadata, never MCP wire methods. The host resolves them before calling the exact `agenticgraph.application.*` tools.
 
 `@operator` is required only when execution can spend, mutate, use authenticated or external services, or cross another existing approval boundary. Catalog and plan remain read-only and zero-spend. Dictionary resolution exposes metadata; it never grants execution.
 
@@ -65,17 +65,17 @@ The `/`, `#`, and `@` tokens are host-side invocation aliases and metadata, neve
 
 An embedding host may expand `@component-catalog` at process initialization with at most 16 component packs. Each pack is pure JSON data with a pack id, exact pack revision, inert source URI, a `source.sha256` field containing exactly 64 lowercase hexadecimal characters, and no more than 16 component records. The complete admitted set may contain at most 100 components. A non-JSON value, unknown field, mutable revision, invalid digest, per-pack overflow, total overflow, or partial pack blocks the complete admission; admission never truncates input.
 
-The only admitted source namespaces are `workspace:/`, `kgdoc:`, and `urn:knowgrph:`. Let `SEG` be the exact lowercase ASCII grammar `[a-z0-9]+(?:[._-][a-z0-9]+)*`. The closed forms are `workspace:/SEG[/SEG...]`, `kgdoc:SEG[/SEG...]`, and `urn:knowgrph:SEG[:SEG...]`; the first URN segment cannot be `http`, `https`, `file`, `ftp`, `ws`, or `wss`. Empty, dot-only, traversal, consecutive or trailing punctuation, uppercase, tilde, backslash, authority, query, fragment, percent-encoded, nested-scheme, and network-shaped values are invalid. These values identify already-authorized host content and are never dereferenced by the composition subsystem. Filesystem paths, environment-derived paths, package names, network URLs, redirects, registry coordinates, and mutable aliases are invalid. The host supplies the complete JSON values directly through its private initialization boundary; MCP callers and application manifests cannot provide, select, or override packs.
+The only admitted source namespaces are `workspace:/`, `kgdoc:`, and `urn:agenticgraph:`. Let `SEG` be the exact lowercase ASCII grammar `[a-z0-9]+(?:[._-][a-z0-9]+)*`. The closed forms are `workspace:/SEG[/SEG...]`, `kgdoc:SEG[/SEG...]`, and `urn:agenticgraph:SEG[:SEG...]`; the first URN segment cannot be `http`, `https`, `file`, `ftp`, `ws`, or `wss`. Empty, dot-only, traversal, consecutive or trailing punctuation, uppercase, tilde, backslash, authority, query, fragment, percent-encoded, nested-scheme, and network-shaped values are invalid. These values identify already-authorized host content and are never dereferenced by the composition subsystem. Filesystem paths, environment-derived paths, package names, network URLs, redirects, registry coordinates, and mutable aliases are invalid. The host supplies the complete JSON values directly through its private initialization boundary; MCP callers and application manifests cannot provide, select, or override packs.
 
 One pack's `source.sha256` covers canonical JSON for that pack envelope after removing only `source.sha256`, sorting object keys, and sorting its components by `(component id, exact revision)` after duplicate detection. Canonical JSON here means the exact `stableApplicationJson/v1` projection: pure JSON data only; finite numbers serialized with ECMAScript `JSON.stringify`; string code units preserved without Unicode normalization; object keys recursively sorted by ascending UTF-16 code units; array order retained except for the named component ordering; and accessors, symbols, custom prototypes, cycles, sparse arrays, hidden properties, non-finite numbers, and non-JSON values rejected. SHA-256 hashes the UTF-8 bytes of that exact serialization.
 
 Admission selects exactly one revision per pack id and orders packs by `(pack id, exact revision, source URI)`. The composite `catalogDigest` covers the complete normalized catalog, including those ordered pack bindings and all ordered built-in and pack components. Caller order and equivalent JSON object key order cannot change either digest.
 
-Within one admission, the same pack or component exact reference cannot appear twice, and different content under one exact reference is a conflict. A pack-content digest mismatch is admission drift. Either condition prevents registry startup, so none of the three tools becomes available for that rejected set; there is no last-known-good fallback, partial acceptance, or silent replacement. A stale caller-supplied `@runtime-proof` does not hide the active read-only catalog: `knowgrph.application.catalog` returns its current digests, while plan and execute reject the stale proof. A later process may admit a different exact set, but it produces a different `catalogDigest` and requires explicit proof refresh and replanning; this contract does not claim a persisted cross-process baseline.
+Within one admission, the same pack or component exact reference cannot appear twice, and different content under one exact reference is a conflict. A pack-content digest mismatch is admission drift. Either condition prevents registry startup, so none of the three tools becomes available for that rejected set; there is no last-known-good fallback, partial acceptance, or silent replacement. A stale caller-supplied `@runtime-proof` does not hide the active read-only catalog: `agenticgraph.application.catalog` returns its current digests, while plan and execute reject the stale proof. A later process may admit a different exact set, but it produces a different `catalogDigest` and requires explicit proof refresh and replanning; this contract does not claim a persisted cross-process baseline.
 
 Each component's source and definition digests cover its normalized component definition independently of unrelated members. Pack id, revision, URI, source digest, and membership remain separately bound by the composite `catalogDigest`. Adding an unrelated component therefore changes the catalog proof but cannot silently rewrite the unchanged member's content digests.
 
-Component packs carry metadata only. Runtime adapters and owner resolvers are supplied privately and process-locally by the embedding host, never through MCP arguments, manifests, source URIs, URLs, environment paths, filesystem scans, package discovery, or pack fields. Pack admission performs no discovery, download, install, upgrade, migration, or fallback, and grants no execution authority. `knowgrph.application.execute` still delegates only to an already-injected existing runtime owner under its normal approval and side-effect policy.
+Component packs carry metadata only. Runtime adapters and owner resolvers are supplied privately and process-locally by the embedding host, never through MCP arguments, manifests, source URIs, URLs, environment paths, filesystem scans, package discovery, or pack fields. Pack admission performs no discovery, download, install, upgrade, migration, or fallback, and grants no execution authority. `agenticgraph.application.execute` still delegates only to an already-injected existing runtime owner under its normal approval and side-effect policy.
 
 ## Deterministic Plan
 
@@ -93,9 +93,9 @@ Equivalent JSON object key order cannot change the plan digest. Slot ids and edg
 
 | Tool | Role | Boundary |
 |---|---|---|
-| `knowgrph.application.catalog` | Return bounded built-in, source-bound host-pack, and integration metadata plus current exact revisions. | Read-only, zero model spend, sanitized, and no global or copied registry scan; absent negotiated capabilities are unsupported. |
-| `knowgrph.application.plan` | Validate the canonical invocation, resolve exact records, negotiate compatibility, compile the DAG, and return its immutable digest. | Read-only; no component execution, persistence mutation, external connection, install, or upgrade. |
-| `knowgrph.application.execute` | Revalidate the exact plan and sequence ready dependency steps through injected host-owned runtime adapters. | Bounded and idempotency-fenced; every owner retains its schema, approval, receipt, cost, retry, and side-effect policy. No automatic retry, migration, provider fallback, deploy, or continuation beyond the plan bounds. |
+| `agenticgraph.application.catalog` | Return bounded built-in, source-bound host-pack, and integration metadata plus current exact revisions. | Read-only, zero model spend, sanitized, and no global or copied registry scan; absent negotiated capabilities are unsupported. |
+| `agenticgraph.application.plan` | Validate the canonical invocation, resolve exact records, negotiate compatibility, compile the DAG, and return its immutable digest. | Read-only; no component execution, persistence mutation, external connection, install, or upgrade. |
+| `agenticgraph.application.execute` | Revalidate the exact plan and sequence ready dependency steps through injected host-owned runtime adapters. | Bounded and idempotency-fenced; every owner retains its schema, approval, receipt, cost, retry, and side-effect policy. No automatic retry, migration, provider fallback, deploy, or continuation beyond the plan bounds. |
 
 Execution never accepts a caller-supplied adapter, command, endpoint, credential, raw MCP transport, provider object, approval array, or tool result. A step can start only after all declared predecessors have terminal valid outputs and its exact owner and schema evidence still match the plan. A failed, paused, blocked, or approval-required step stops admission of dependents and returns bounded owner evidence without synthesizing success.
 

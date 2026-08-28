@@ -43,7 +43,7 @@ test("repository keeps one canonical resumable Skill Evolution contract", () => 
     bindings: ["@skill-catalog", "@skill-policy", "@runtime-proof", "@operator"],
     text: "/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator",
   });
-  assert.equal(SKILL_EVOLUTION_MCP_TOOL, "knowgrph.skill.evolve");
+  assert.equal(SKILL_EVOLUTION_MCP_TOOL, "agenticgraph.skill.evolve");
   assert.deepEqual(SKILL_EVOLUTION_OPERATIONS, ["plan", "start", "step", "status", "cancel"]);
   assert.deepEqual(validateSkillEvolutionContractDocuments(repositoryDocuments), []);
 });

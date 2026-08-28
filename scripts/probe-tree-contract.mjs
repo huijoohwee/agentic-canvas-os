@@ -1,4 +1,4 @@
-const PROBE_TREE_PRESET_ID = "knowgrph-probe-tree";
+const PROBE_TREE_PRESET_ID = "agenticgraph-probe-tree";
 const PROBE_TREE_DOCUMENT_NAME = "PROBE-TREE.md";
 
 export const PROBE_TREE_CLARIFICATION_TOPICS = Object.freeze([
@@ -91,7 +91,7 @@ export function validateProbeTreeContractDocuments(documents) {
     "probe_tree_contract: \"PROBE-TREE.md\"",
     "semantic_contract_authority: \"PROBE-TREE.md\"",
   ], failures);
-  requireMarkers(findTableRow(command, "/knowgrph.probe-tree"), "DICTIONARY-COMMAND.md Probe-Tree row", [
+  requireMarkers(findTableRow(command, "/agenticgraph.probe-tree"), "DICTIONARY-COMMAND.md Probe-Tree row", [
     ...PROBE_TREE_CLARIFICATION_TOPICS,
     "2-4",
     "runtime-recognized selected-child terminal continuation",
@@ -99,12 +99,12 @@ export function validateProbeTreeContractDocuments(documents) {
     "query-specific hardcoding",
     "zero-model fallback",
   ], failures);
-  requireMarkers(findTableRow(semantic, "#knowgrph.probe-tree"), "DICTIONARY-SEMANTIC.md Probe-Tree row", [
+  requireMarkers(findTableRow(semantic, "#agenticgraph.probe-tree"), "DICTIONARY-SEMANTIC.md Probe-Tree row", [
     "semantic and case-insensitive",
     "2-4",
     "runtime-recognized selected-child terminal continuation",
   ], failures);
-  requireMarkers(findTableRow(binding, "@knowgrph.probe-tree"), "DICTIONARY-BINDING.md Probe-Tree row", [
+  requireMarkers(findTableRow(binding, "@agenticgraph.probe-tree"), "DICTIONARY-BINDING.md Probe-Tree row", [
     "selected child",
     "active Chat provider, endpoint, and model",
     "stale card-local routing",

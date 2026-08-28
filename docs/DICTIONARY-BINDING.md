@@ -76,7 +76,7 @@ dictionary_entries:
   - "@image"
   - "@image-to-threejs"
   - "@image-to-glb"
-  - "@knowgrph.probe-tree"
+  - "@agenticgraph.probe-tree"
   - "@audio"
   - "@voice-profile"
   - "@video"
@@ -241,7 +241,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@image` | Request source-consistent image artifacts. | Shared image-generation, persistence, Media, and Canvas projection owners. | Only provider-returned and read-back-verified image identities may project; no fabricated or localhost-only URL is accepted as durable output. |
 | `@image-to-threejs` | Bind one existing PNG, JPG, JPEG, or SVG source to the native `image.to-threejs` conversion. | Shared Card, Widget, image-to-threejs, and Rich Media Panel owners. | Uses the selected source URL only; no credential, provider generation, external plugin, or deploy authority is introduced. |
 | `@image-to-glb` | Bind one existing PNG, JPG, JPEG, or SVG source to the native procedural `image.to-glb` asset contract. | Shared Card, Widget, image-to-threejs source utilities, and GLB asset-pipeline owners. | Uses only the selected source URL; source media remains unchanged, external plugin/copy paths are forbidden, and any LLM execution requires its separately approved runtime. |
-| `@knowgrph.probe-tree` | Bind one Widget Card or answered branch to the shared Probe-Tree generation context. | Authored graph identity, selected child Output including numbered multi-selections and Other, bounded ancestor lineage, local MCP Probe-Tree tools, shared Storyboard publication owners, and the active Chat provider, endpoint, and model. | Carries no credentials or implicit provider approval; the selected child replaces any same-ID root alias as continuation owner, every accepted question and clarification suggestion traces to the selected child or bounded lineage through verbatim anchors, generation is bounded, forward-only, page-stable, and zero-spend by default, stale card-local routing is forbidden, and graph mutation remains atomic through the owning publication transaction. |
+| `@agenticgraph.probe-tree` | Bind one Widget Card or answered branch to the shared Probe-Tree generation context. | Authored graph identity, selected child Output including numbered multi-selections and Other, bounded ancestor lineage, local MCP Probe-Tree tools, shared Storyboard publication owners, and the active Chat provider, endpoint, and model. | Carries no credentials or implicit provider approval; the selected child replaces any same-ID root alias as continuation owner, every accepted question and clarification suggestion traces to the selected child or bounded lineage through verbatim anchors, generation is bounded, forward-only, page-stable, and zero-spend by default, stale card-local routing is forbidden, and graph mutation remains atomic through the owning publication transaction. |
 | `@audio` | Request narration, dialogue, sound, music, subtitle-sync, and master-audio artifacts. | Shared audio/video generation, media-probe, persistence, and Timeline owners. | Languages, synchronization, media kind, persistence, and read-back identity must be typed before projection. |
 | `@voice-profile` | Bind one exact revision of a consented voice-profile manifest for profile creation or disclosed synthesis. | Knowgrph's voice-studio runtime resolves opaque profile identity, source digests, speaker authorization, permitted uses, retention, disclosure, and revocation state through existing media and policy owners. | It contains no voice embedding, raw audio, credential, mutable provider alias, or implicit consent; a missing, expired, mismatched, or revoked profile blocks adapter work, spend, persistence, and output. |
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
@@ -418,7 +418,7 @@ binding:
 | `/agentic.graph.query #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | Bind a query to one opaque Knowgrph graph id and expected current snapshot digest. |
 | `/agentic.graph.explain #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | Bind explanation to one exact Knowgrph-stored edge under one expected snapshot digest. |
 | `/agent.team #role-based-agent-team @agent-team` | Resolve one revision-fenced role-based team and hand typed plan/start/list/control lifecycle ownership to the Knowgrph local stdio MCP runtime without creating a second scheduler or broadening Agent Swarm. |
-| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
+| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `agenticgraph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
 | `/game.portability #game-portability @portability-layer` | Select the source-backed browser/native portability contract while leaving capability execution, projection, persistence, provider, and deployment authority with their existing owners. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
@@ -466,12 +466,12 @@ binding:
 | `/tool.route #web-search @web-search-tool` | Execute search or extraction with citations and egress policy. |
 | `/tool.route #image-generation @image-tool` | Execute image generation with approval and artifact manifest. |
 | `/tool.route #text-to-speech @tts-tool` | Execute TTS with voice and output bounds. |
-| `/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `clone` route; `knowgrph.voice.studio` remains the only wire executor. |
-| `/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `dictate` route; `knowgrph.voice.studio` remains the only wire executor. |
-| `/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof` | Bind bounded text and one active profile revision to the metadata-only `create` route; `knowgrph.voice.studio` remains the only wire executor. |
+| `/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `clone` route; `agenticgraph.voice.studio` remains the only wire executor. |
+| `/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `dictate` route; `agenticgraph.voice.studio` remains the only wire executor. |
+| `/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof` | Bind bounded text and one active profile revision to the metadata-only `create` route; `agenticgraph.voice.studio` remains the only wire executor. |
 | `/tool.route #cloud-browser @browser-tool` | Execute cloud browser automation with isolated session and redaction. |
 | `/skill.propose #skill-evolution @skill-catalog` | Draft a reusable skill contract for review. |
-| `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Invoke `knowgrph.skill.evolve` through the catalog, policy, proof, and human authority owners; no binding grants automatic apply. |
+| `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Invoke `agenticgraph.skill.evolve` through the catalog, policy, proof, and human authority owners; no binding grants automatic apply. |
 | `/memory.search #memory-search @memory-store` | Retrieve prior context from scoped local memory. |
 | `/identity.reflect #identity-model @identity-model` | Persist stable non-secret preferences with operator authority. |
 | `/orchestration.graph #orchestration-graph @orchestration-graph` | Validate graph topology through source-backed owners. |
@@ -492,7 +492,7 @@ binding:
 | `@agentic-graph` | `FACTS.md` direct-resolution entry for one exact digest-fenced local graph snapshot view. |
 | `@agent` | `FACTS.md` direct-resolution entry for executing-agent obligations. |
 | `@soul-profile` | `FACTS.md` direct-resolution entry for durable identity binding. |
-| `@knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for the selected Probe-Tree graph context. |
+| `@agenticgraph.probe-tree` | `FACTS.md` direct-resolution entry for the selected Probe-Tree graph context. |
 | `@ecs-session` | `FACTS.md` direct-resolution entry for private bounded ECS session identity. |
 | `@memory-entry` | `FACTS.md` direct-resolution entry for bounded memory entries. |
 | `@skill-index` | `FACTS.md` direct-resolution entry for progressive skill discovery. |

@@ -4,7 +4,7 @@
 //   1. `POST /auth/session` → mint a stateless session token (HS256, secret
 //      server-side only).
 //   2. `POST /run` → verify the session token, validate the request schema, and
-//      FORWARD `knowgrph.video_remix.run` to the knowgrph MCP control plane,
+//      FORWARD `agenticgraph.video_remix.run` to the knowgrph MCP control plane,
 //      returning the Run_Manifest. This tier holds NO model keys and calls NO
 //      paid model directly; all reasoning/spend happens in knowgrph behind its
 //      Approval_Gates.

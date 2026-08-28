@@ -12,10 +12,10 @@ export const AGENT_TEAM_INVOCATION = Object.freeze({
 });
 
 export const AGENT_TEAM_MCP_TOOLS = Object.freeze([
-  "knowgrph.agent_team.plan",
-  "knowgrph.agent_team.start",
-  "knowgrph.agent_team.list",
-  "knowgrph.agent_team.control",
+  "agenticgraph.agent_team.plan",
+  "agenticgraph.agent_team.start",
+  "agenticgraph.agent_team.list",
+  "agenticgraph.agent_team.control",
 ]);
 
 export const AGENT_TEAM_BOUNDS = Object.freeze({

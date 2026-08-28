@@ -215,7 +215,7 @@ The canonical host composition is:
 /sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof
 ```
 
-It resolves to one local stdio MCP tool, `knowgrph.agentic_sdlc.observe`. The tool observes already-persisted evidence; it is not an Evaluator, runner, release controller, graph store, dashboard, or renderer. It performs no model call, network call, token spend, paid call, ledger mutation, source mutation, Canvas mutation, release transition, Prod mirror write, or Cloudflare action.
+It resolves to one local stdio MCP tool, `agenticgraph.agentic_sdlc.observe`. The tool observes already-persisted evidence; it is not an Evaluator, runner, release controller, graph store, dashboard, or renderer. It performs no model call, network call, token spend, paid call, ledger mutation, source mutation, Canvas mutation, release transition, Prod mirror write, or Cloudflare action.
 
 Observation starts only from the immutable receipt stored at `state.result.agenticSdlcLedger`:
 

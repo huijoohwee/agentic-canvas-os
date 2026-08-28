@@ -112,7 +112,7 @@ The existing Knowgrph Toolbar > Launch > Import folder flow remains the
 explicit local-corpus acquisition surface. Toolbar > Launch > Import URL opens
 the shared FloatingPanel Skills & Commands catalog for the source-backed
 agentic-graph ingestion command. The Canvas resolves that command's `/`,
-`#`, and `@` tuple through `knowgrph.agentic_canvas_os.docs.invoke` before the
+`#`, and `@` tuple through `agenticgraph.agentic_canvas_os.docs.invoke` before the
 local agentic-graph MCP host receives the repository URL. The Launch surface
 must not own a second catalog or a hardcoded semantic/binding list.
 

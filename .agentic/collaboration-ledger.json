@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5647,
-  "headDigest": "d3d4b89d2cb54b5c88f0326e4bb06c757d8995007e3776029e6987b41de1591d",
+  "sequence": 5648,
+  "headDigest": "aaf876f387076f662002698bc752f2b2d090d12e6df7d89e8400dc43ec8e8da0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -287114,6 +287114,47 @@
       },
       "claimDigest": "d5cf02fabb5fd9e4ecbac09688bbc326b6fef0a05413a14b3b251734bd93f510",
       "digest": "d3d4b89d2cb54b5c88f0326e4bb06c757d8995007e3776029e6987b41de1591d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5648,
+      "parentDigest": "d3d4b89d2cb54b5c88f0326e4bb06c757d8995007e3776029e6987b41de1591d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4ae8cd0999ba4d11a481e090b2cdbb8021ad1b81226c58d9b59e6db7dab271b6",
+      "idempotencyKey": "7ed9431c20cc0c7c4fb4c361aa7b0e9d9e3c6fe47000eec1c9ca29fc93399d7c",
+      "requestDigest": "234aef871a3ad63b4e95ffe05dd7d57170b752f1f2e04b607e97413466d99702",
+      "evaluationTime": "2026-08-28T06:53:22.000Z",
+      "claimCore": {
+        "claimId": "4ae8cd0999ba4d11a481e090b2cdbb8021ad1b81226c58d9b59e6db7dab271b6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f5de5304b1e7ebc46e05a8d12497a45d1adc7fded1c8c2cf2a8b8f5aa10d29dc",
+        "canonicalBaseRevision": "93e18fea38323f2544f16ea00912d50008e0d87f",
+        "declaredWriteScope": [
+          "path:__tests__/collaborative-release-lifecycle-contract.test.mjs",
+          "path:scripts/collaborative-release-lifecycle-contract.mjs",
+          "path:todo/2026-08/agenticgraph-production-recovery-parity.md",
+          "semantic:agenticgraph-release-recovery"
+        ],
+        "writeSetDigest": "42e2dffd923570dbe70347e241c789f7956256265e2f8681cec6095c1e492623",
+        "laneRevision": "93e18fea38323f2544f16ea00912d50008e0d87f",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T07:23:22.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "c4c35d89e569d842be998c24cca238e2fefe76e2897a8735cd7a9ec28422a941",
+      "digest": "aaf876f387076f662002698bc752f2b2d090d12e6df7d89e8400dc43ec8e8da0"
     }
   ]
 }

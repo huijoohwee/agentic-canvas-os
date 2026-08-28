@@ -15,6 +15,7 @@ import {
   resolveCanonicalMainWorktree,
   resolveWorkspaceRootFromGitCommonDir,
   endLocalRuntimeTurn,
+  parseConsumerPinnedDocsRef,
   startSessionRuntime,
   validateCanonicalRuntimeCandidate,
   validateOwnedService,
@@ -51,7 +52,78 @@ function validCandidate(overrides = {}) {
 }
 
 test("canonical runtime accepts only clean protected exact-main sources", () => {
-  assert.equal(validateCanonicalRuntimeCandidate(validCandidate()).knowgrph.headSha, applicationSha);
+  const validated = validateCanonicalRuntimeCandidate(validCandidate());
+  assert.equal(validated.knowgrph.headSha, applicationSha);
+  assert.equal(validated.agenticCanvasOs.revisionBinding, "fetched-tip");
+});
+
+test("canonical runtime binds agentic-canvas-os to the consumer pin when it is an ancestor of origin/main", () => {
+  const pinSha = "e".repeat(40);
+  const tipSha = "f".repeat(40);
+  const candidate = validCandidate({
+    agenticCanvasOs: repository("agentic-canvas-os", pinSha, {
+      remoteSha: tipSha,
+      consumerPinnedRef: pinSha,
+      consumerPinnedRefIsAncestorOfRemote: true,
+    }),
+  });
+  const validated = validateCanonicalRuntimeCandidate(candidate);
+  assert.equal(validated.agenticCanvasOs.headSha, pinSha);
+  assert.equal(validated.agenticCanvasOs.revisionBinding, "consumer-pin");
+});
+
+test("canonical runtime rejects a consumer pin that is not an ancestor of fetched origin/main", () => {
+  const pinSha = "e".repeat(40);
+  const candidate = validCandidate({
+    agenticCanvasOs: repository("agentic-canvas-os", pinSha, {
+      remoteSha: "f".repeat(40),
+      consumerPinnedRef: pinSha,
+      consumerPinnedRefIsAncestorOfRemote: false,
+    }),
+  });
+  assert.throws(() => validateCanonicalRuntimeCandidate(candidate), /consumer-pinned docs_dependency ref/);
+});
+
+test("canonical runtime rejects an agentic-canvas-os HEAD that matches neither tip nor consumer pin", () => {
+  const candidate = validCandidate({
+    agenticCanvasOs: repository("agentic-canvas-os", docsSha, {
+      remoteSha: "f".repeat(40),
+      consumerPinnedRef: "e".repeat(40),
+      consumerPinnedRefIsAncestorOfRemote: true,
+    }),
+  });
+  assert.throws(() => validateCanonicalRuntimeCandidate(candidate), /consumer-pinned docs_dependency ref/);
+});
+
+test("canonical runtime never relaxes the knowgrph tip requirement to a pin", () => {
+  const candidate = validCandidate({
+    knowgrph: {
+      ...validCandidate().knowgrph,
+      remoteSha: "c".repeat(40),
+      consumerPinnedRef: applicationSha,
+      consumerPinnedRefIsAncestorOfRemote: true,
+    },
+  });
+  assert.throws(() => validateCanonicalRuntimeCandidate(candidate), /must equal fetched origin\/main/);
+});
+
+test("consumer pinned docs ref parsing is conservative", () => {
+  const pin = "0123456789abcdef0123456789abcdef01234567";
+  const frontmatter = [
+    "---",
+    "title: \"Contract\"",
+    "docs_dependency:",
+    "  repository: \"https://github.com/huijoohwee/agentic-canvas-os.git\"",
+    `  ref: "${pin}"`,
+    "---",
+    "body",
+  ].join("\n");
+  assert.equal(parseConsumerPinnedDocsRef(frontmatter), pin);
+  assert.equal(parseConsumerPinnedDocsRef(frontmatter.replace("docs_dependency:", "other_dependency:")), null);
+  assert.equal(parseConsumerPinnedDocsRef(frontmatter.replace(pin, "not-a-sha")), null);
+  assert.equal(parseConsumerPinnedDocsRef(`ref: "${pin}"`), null);
+  assert.equal(parseConsumerPinnedDocsRef(["---", "docs_dependency:", "---", `  ref: "${pin}"`].join("\n")), null);
+  assert.equal(parseConsumerPinnedDocsRef(null), null);
 });
 
 test("canonical runtime residue tolerates foreign parallel docs but blocks runtime authority drift", () => {

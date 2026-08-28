@@ -200,13 +200,80 @@ export function validateCanonicalRuntimeCandidate(evidence) {
       );
     }
     if (!SHA_PATTERN.test(String(repository.headSha || ""))) throw new Error(`${repository.id} requires an exact 40-character SHA.`);
-    if (repository.headSha !== repository.remoteSha) throw new Error(`${repository.id} canonical HEAD must equal fetched origin/main.`);
+    if (repository === evidence.knowgrph && repository.headSha !== repository.remoteSha) {
+      throw new Error(`${repository.id} canonical HEAD must equal fetched origin/main.`);
+    }
     if (!repository.protectedChecksVerified) throw new Error(`${repository.id} protected checks are not verified for ${repository.headSha}.`);
   }
+  const revisionBinding = resolveAgenticCanvasOsRevisionBinding(evidence.agenticCanvasOs);
   if (!evidence.knowgrph.hasDevApexScript || !evidence.knowgrph.hasStorageWorkerScript) {
     throw new Error("Knowgrph must expose repository-owned dev:apex and storage:worker:dev scripts.");
   }
-  return evidence;
+  return { ...evidence, agenticCanvasOs: { ...evidence.agenticCanvasOs, revisionBinding } };
+}
+
+function resolveAgenticCanvasOsRevisionBinding(repository) {
+  if (repository.headSha === repository.remoteSha) return "fetched-tip";
+  const pin = String(repository.consumerPinnedRef || "");
+  if (SHA_PATTERN.test(pin) &&
+      repository.headSha === pin &&
+      repository.consumerPinnedRefIsAncestorOfRemote === true) {
+    return "consumer-pin";
+  }
+  throw new Error(
+    `${repository.id} canonical HEAD must equal fetched origin/main or the consumer-pinned docs_dependency ref that is an ancestor of origin/main.`,
+  );
+}
+
+export function parseConsumerPinnedDocsRef(markdown) {
+  const text = String(markdown ?? "");
+  if (!text.startsWith("---")) return null;
+  const end = text.indexOf("\n---", 3);
+  if (end === -1) return null;
+  let inDocsDependency = false;
+  for (const line of text.slice(0, end).split("\n")) {
+    if (/^docs_dependency:\s*$/u.test(line)) {
+      inDocsDependency = true;
+      continue;
+    }
+    if (!inDocsDependency) continue;
+    if (!/^\s/u.test(line)) {
+      inDocsDependency = false;
+      continue;
+    }
+    const match = /^ {2}ref:\s*"?([0-9a-f]{40})"?\s*$/u.exec(line);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function readConsumerPinnedDocsRef(knowgrphRoot) {
+  try {
+    return parseConsumerPinnedDocsRef(
+      readFileSync(path.join(knowgrphRoot, "docs", "runtime-readiness-contract.md"), "utf8"),
+    );
+  } catch {
+    return null;
+  }
+}
+
+function isAncestorCommit(root, ancestorSha, descendantSha, deps) {
+  try {
+    deps.gitText(root, ["merge-base", "--is-ancestor", ancestorSha, descendantSha]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function withConsumerPinEvidence(repository, knowgrphRoot, deps) {
+  const consumerPinnedRef = readConsumerPinnedDocsRef(knowgrphRoot);
+  return {
+    ...repository,
+    consumerPinnedRef,
+    consumerPinnedRefIsAncestorOfRemote: consumerPinnedRef !== null &&
+      isAncestorCommit(repository.root, consumerPinnedRef, repository.remoteSha, deps),
+  };
 }
 
 export function validateOwnedService({ service, processEvidence, token, tokenDigest, candidate }) {
@@ -434,7 +501,11 @@ async function startRuntime(candidate, options, locations, deps) {
       application: "knowgrph",
       surface: "apex",
       source: { repository: "huijoohwee/knowgrph", revision: candidate.knowgrph.headSha },
-      agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: candidate.agenticCanvasOs.headSha },
+      agenticCanvasOs: {
+        repository: "huijoohwee/agentic-canvas-os",
+        revision: candidate.agenticCanvasOs.headSha,
+        revisionBinding: candidate.agenticCanvasOs.revisionBinding ?? "fetched-tip",
+      },
       catalogRevision: candidate.agenticCanvasOs.headSha,
       host: LOCAL_RUNTIME_HOST,
       ports: { apex: APEX_PORT, storage: STORAGE_PORT },
@@ -543,7 +614,7 @@ function inspectCanonicalCandidate(options, deps, { verifyProtected }) {
   const packageJson = JSON.parse(readFileSync(path.join(knowgrphRoot, "package.json"), "utf8"));
   const protectedChecks = Object.fromEntries(repositories.map(repository => [repository.id, repository.checks]));
   const evidence = validateCanonicalRuntimeCandidate({
-    agenticCanvasOs: repositories[0],
+    agenticCanvasOs: withConsumerPinEvidence(repositories[0], knowgrphRoot, deps),
     knowgrph: {
       ...repositories[1],
       hasDevApexScript: typeof packageJson.scripts?.["dev:apex"] === "string",
@@ -599,7 +670,7 @@ function inspectRepository(id, root, deps, verifyProtected) {
   const treeSha = deps.gitText(root, ["rev-parse", "HEAD^{tree}"]).trim();
   const statusPorcelain = deps.gitText(root, ["status", "--porcelain", "--untracked-files=all"]).trimEnd();
   const residue = classifyCanonicalRuntimeResidue({ repositoryId: id, statusPorcelain });
-  const checks = verifyProtected ? deps.verifyProtectedChecks(id, root, remoteSha, REQUIRED_CHECKS[id]) : ["cached-status-check"];
+  const checks = verifyProtected ? deps.verifyProtectedChecks(id, root, headSha, REQUIRED_CHECKS[id]) : ["cached-status-check"];
   return {
     id,
     root,

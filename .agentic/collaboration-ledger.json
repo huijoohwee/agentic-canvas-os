@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5835,
-  "headDigest": "b2c464e893559f970d73af3cfd9b34c9af5f51083d94e5c607e569cac57e9541",
+  "sequence": 5836,
+  "headDigest": "57746fe668e0acc18bf2451dd2a8683690468397922174badbabac79e6810a48",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -296766,6 +296766,62 @@
       },
       "claimDigest": "cb5dee57f8e8ce1f4f1fd07a3d6a1f60dc4749251d63d1bbb32f3754b67ba17c",
       "digest": "b2c464e893559f970d73af3cfd9b34c9af5f51083d94e5c607e569cac57e9541"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5836,
+      "parentDigest": "b2c464e893559f970d73af3cfd9b34c9af5f51083d94e5c607e569cac57e9541",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "48dbbac276c3600b2327ea73194bc434a89c71c643a5f0838c6f74809e855de3",
+      "idempotencyKey": "3dbe0fad2789bc1e5de33889cadb0ab7a00d91f8d2f08fa9b2b2ded57d8dc3cb",
+      "requestDigest": "14a1ba509d5aad56418e9811a6d644d919bfe88f5cbcf0c0ab75e0ab8e25d4d5",
+      "evaluationTime": "2026-08-28T16:41:54.000Z",
+      "claimCore": {
+        "claimId": "48dbbac276c3600b2327ea73194bc434a89c71c643a5f0838c6f74809e855de3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:13c69082861dcbaacfcb09bf732c23b09a1f452d205e48cbfefd64f8cccc17ee",
+        "canonicalBaseRevision": "98b1185c445fbd3d566a8885dffc8e24dd09ee1d",
+        "declaredWriteScope": [
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-cli.test.mjs",
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-contract.test.mjs",
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-controller.test.mjs",
+          "path:__tests__/admitted-prepared-descendant-canonical-supersession-retirement-repository-adapter.test.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement-contract.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement-controller.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement-repository-adapter.mjs",
+          "path:scripts/admitted-prepared-descendant-canonical-supersession-retirement.mjs",
+          "semantic:prepared-supersession-retirement"
+        ],
+        "writeSetDigest": "4f477e38d856cb867dab58b9962229cbd78eebab29c53a65c558edfca0479ef0",
+        "laneRevision": "5623d7062605c1ba9ab793c25c21e45f34d7fb68",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-28T17:19:32.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBW3PLw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "5623d7062605c1ba9ab793c25c21e45f34d7fb68",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBW3PLw",
+          "bytesDigest": "16ee37bbfed238f10418a98c239c7dc650437be4ccaa47329eb9ed52444f0aaa",
+          "namedChecksDigest": "1841702e7085c9240f57483e38d7a465949492253496b5954c81cc3168c8a7fb",
+          "handoffEvidenceDigest": "4fe0961bfd1dfc1c22bb32cc2d83d205a05ef95d503ddd5e1bf2f19803f8b5f5",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-28T16:41:54.000Z"
+        }
+      },
+      "claimDigest": "3740f918f5bec827ad58fb9a069ae6add4d99467682bcf15c7c71b84199c35ff",
+      "digest": "57746fe668e0acc18bf2451dd2a8683690468397922174badbabac79e6810a48"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5821,
-  "headDigest": "e39fca3a40ccd0b14a885950808ed0dee95c6c66a4b124354a054639c3f6cbae",
+  "sequence": 5822,
+  "headDigest": "a0e1aa2c622d1e0cd6344605e95412928b7583363facf442840ea4da1e4c45ce",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -296021,6 +296021,63 @@
       },
       "claimDigest": "281536ab68fc96819139268c6a58c290787de8dfb4a0b7b417835ddf6beec905",
       "digest": "e39fca3a40ccd0b14a885950808ed0dee95c6c66a4b124354a054639c3f6cbae"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5822,
+      "parentDigest": "e39fca3a40ccd0b14a885950808ed0dee95c6c66a4b124354a054639c3f6cbae",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e1337700161980929564e96b8ac5033ef4dbbccc327da710f6f712fbd9cc2fc3",
+      "idempotencyKey": "db8e50033e50f8945afae660550eb8e2ad79c9ece535484fa5cfd17a5cd94778",
+      "requestDigest": "6355cc8444303fb8f7e96e828610447016ec49c75fc19265d95378674291a80f",
+      "evaluationTime": "2026-08-28T15:04:14.000Z",
+      "claimCore": {
+        "claimId": "e1337700161980929564e96b8ac5033ef4dbbccc327da710f6f712fbd9cc2fc3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:4231b3a1d4c721db9fa20c6e3dc08556a412f75608579d205aa6140790fc5481",
+        "canonicalBaseRevision": "ac6fef6b20fd984b094cabe255a808206d5ef68a",
+        "declaredWriteScope": [
+          "path:__tests__/admitted-empty-abandoned-owner-retirement-contract.test.mjs",
+          "path:__tests__/admitted-empty-abandoned-owner-retirement-repository-adapter.test.mjs",
+          "path:scripts/admitted-empty-abandoned-owner-retirement-contract.mjs",
+          "path:scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs",
+          "semantic:canonical-authored-retirement-resume"
+        ],
+        "writeSetDigest": "64f273b40ae300ffe443a9f1e17ebc176ba13419c332e0068e2b26cbc5d1c4f0",
+        "laneRevision": "b606f3c50a8a6b283cd023ec4880c0a84d82a98b",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-28T15:26:40.000Z",
+        "evidenceDigest": "a655f6d8a59cd061d692b33b4c59f5ce833c27f4c08855ee0c7f64bacf241b65",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBWWtBQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "d94255d6338e6e075cbe4a4e5eb408517a745fff8beed4e99f4d4475ad8f7d65",
+          "recoveredAt": "2026-08-28T14:56:40.000Z"
+        },
+        "integration": {
+          "candidateRevision": "b606f3c50a8a6b283cd023ec4880c0a84d82a98b",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBWWtBQ",
+          "focusedEvidenceDigest": "a655f6d8a59cd061d692b33b4c59f5ce833c27f4c08855ee0c7f64bacf241b65",
+          "dependencyClosureDigest": "05598e3a65153982af7560303ca0d582c40f491348ecead7c65e5551736b255c",
+          "namedChecksDigest": "003d506664f53bddb67180ce5af933ae846e1d2a3de5e5243effe2e889ce353f",
+          "handoffEvidenceDigest": "c663b75d2fb13195338e9bc42a0b5d93dee7fa909077ddc30e0cd22e9d552030",
+          "operatorDecisionDigest": "88726f559ec39d692ba52cc13d4e0525af97f68f6bb0ece218995339c1dbadd2",
+          "integrationIntentDigest": "c70e64c7c72d061aa4c7a8da245eb632b8619724267350e504088112088ac2e3",
+          "integratedAt": "2026-08-28T15:04:14.000Z"
+        }
+      },
+      "claimDigest": "a4d946b1b47c92e15e2063186aef58fbed4939239d9cd90be1beedd208303da6",
+      "digest": "a0e1aa2c622d1e0cd6344605e95412928b7583363facf442840ea4da1e4c45ce"
     }
   ]
 }

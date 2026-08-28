@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5681,
-  "headDigest": "fd3282b394b09bd959d9744d5271378278af2d25cfe66a31b2a26e474c92fe41",
+  "sequence": 5682,
+  "headDigest": "e885d3b9ed89178772f38781ee0df41af0d393432db374abfbb13dd68c8492a2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -289191,6 +289191,55 @@
       },
       "claimDigest": "02c9ba7dded54b2e48de8adcec3c41ba0ce85b58ee515adf0649642d8bd1ab90",
       "digest": "fd3282b394b09bd959d9744d5271378278af2d25cfe66a31b2a26e474c92fe41"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5682,
+      "parentDigest": "fd3282b394b09bd959d9744d5271378278af2d25cfe66a31b2a26e474c92fe41",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "f968543bf33427a0689f2c5af9a79bfae44e445256c1cbb412bfed0f5f5d25cf",
+      "idempotencyKey": "458d61dab46fbd4c93bc47c025abee00b1d02b3c9e4c30e8e1afbf183baac686",
+      "requestDigest": "64755ba1ddc5ef53cae8f94190cf6211aabad47126f6f1012d555d6db813040e",
+      "evaluationTime": "2026-08-28T08:13:46.000Z",
+      "claimCore": {
+        "claimId": "f968543bf33427a0689f2c5af9a79bfae44e445256c1cbb412bfed0f5f5d25cf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:c2c8488d2b0327696c61d3cd24d1e80a1a1971a8ee472042cdca901a928c91dc",
+        "canonicalBaseRevision": "fc0274f69347852c7dd96453d993439a945e3b2b",
+        "declaredWriteScope": [
+          "path:.github/workflows/guideline-contract.yml",
+          "path:docs/documents/git-guidelines.md",
+          "path:scripts/__tests__/git-guidelines-budget.test.mjs",
+          "path:scripts/__tests__/git-guidelines-checker.test.mjs",
+          "path:scripts/__tests__/git-guidelines-input-resolver.test.mjs",
+          "path:scripts/__tests__/git-guidelines-modules.test.mjs",
+          "path:scripts/__tests__/git-guidelines-rule-contract.test.mjs",
+          "path:scripts/check-git-guidelines.mjs",
+          "path:scripts/lib/git-guidelines/commit-attribution.mjs",
+          "path:scripts/lib/git-guidelines/content-contracts.mjs",
+          "path:scripts/lib/git-guidelines/input-resolver.mjs",
+          "semantic:git-guidelines-refresh-proof"
+        ],
+        "writeSetDigest": "bf76eb304ed24528f02afa3cdaeac58a1a763941ef84ddbfe8be0f7893795fd0",
+        "laneRevision": "d4d258f4df609dbce6e7c8ebac9a34219e61f242",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 2,
+        "state": "reviewed",
+        "expiresAt": "2026-08-28T09:08:48.000Z",
+        "evidenceDigest": "d8ac285aeea49be48f1065491362ecc23db5a029b98085fa21d071ba0e86d8d5",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABBTf-dw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e227ce73c4dc4e193f38006372181c5607f98b6abeffd175ee7e04fbfb0bfc6b",
+      "digest": "e885d3b9ed89178772f38781ee0df41af0d393432db374abfbb13dd68c8492a2"
     }
   ]
 }

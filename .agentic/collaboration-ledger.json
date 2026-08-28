@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5801,
-  "headDigest": "72c82fcfb48f8e0d0abc13ea68a4d52f57b8802747244f181ea0760546fc0254",
+  "sequence": 5802,
+  "headDigest": "5499faa1313a433ef959a92229dc363f15072cbf489b829d4c482fa5f5fce2cc",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -295080,6 +295080,47 @@
       },
       "claimDigest": "ecb1095daa9dae5600bd6c9163943e622a889d4475fe551cbf4c146e6f00cda0",
       "digest": "72c82fcfb48f8e0d0abc13ea68a4d52f57b8802747244f181ea0760546fc0254"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5802,
+      "parentDigest": "72c82fcfb48f8e0d0abc13ea68a4d52f57b8802747244f181ea0760546fc0254",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "085d365e8519cbc2f557541cdf07fe1d89b798710c8eb1b3a0c9e84b3d2fe52f",
+      "idempotencyKey": "bdb5d23a2c25fb923a0b0cddf430e87d11adf2347512d0c1bbee6e7b805a3269",
+      "requestDigest": "5695ea0ef0d090dcfeeb8ab0f068c4d84889d6cff48a63c510245d6e5f82d80d",
+      "evaluationTime": "2026-08-28T14:08:29.000Z",
+      "claimCore": {
+        "claimId": "085d365e8519cbc2f557541cdf07fe1d89b798710c8eb1b3a0c9e84b3d2fe52f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b33af5da97ba6e458e976a48aa32f5172db0c04b24a184e22dbd630c1687fed5",
+        "canonicalBaseRevision": "6095bbfdb82b321e34a8833acc1c4ef701327b31",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:scripts/device-branch-ownership-lib.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "semantic:prepared-integration-replay-fence"
+        ],
+        "writeSetDigest": "2742207ed44f26f8eba692cdab85c7e027acc99d7e950f1a77b1e582aceef7fb",
+        "laneRevision": "6095bbfdb82b321e34a8833acc1c4ef701327b31",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T14:38:29.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b3f01cb58811a7c1e049c61157c42b9c96414642fb00f16539a5311bd241784a",
+      "digest": "5499faa1313a433ef959a92229dc363f15072cbf489b829d4c482fa5f5fce2cc"
     }
   ]
 }

@@ -1,6 +1,7 @@
 // Responsibility: Seal two separately authorized claim-only cloud lifecycle transactions.
 import {
   canonicalJson, digestValue, normalizeCanonicalDescendantProof, normalizeWriteSet,
+  writeSetsOverlap,
 } from "./cloud-collaboration-primitives.mjs";
 import {
   claimOnlyOperationKeyFromDigest,
@@ -10,7 +11,6 @@ import {
   claimOnlyTerminalVerification,
   validateClaimOnlyJournalSemantics,
 } from "./claim-only-partial-start-retirement-store.mjs";
-
 export const RETIREMENT_OPERATION = "claim-only-partial-start-retirement";
 export const ROLLOVER_OPERATION = "claim-only-successor-rollover";
 export const RETIREMENT_PHASES = Object.freeze([
@@ -29,7 +29,6 @@ export const RECEIPT_SCHEMAS = Object.freeze({
   [RETIREMENT_OPERATION]: "agentic-claim-only-partial-start-retirement-receipt/v1",
   [ROLLOVER_OPERATION]: "agentic-claim-only-successor-rollover-receipt/v1",
 });
-
 const ENTRY_SCHEMA = "agentic-cloud-collaboration-entry/v2";
 const DIGEST = /^[0-9a-f]{64}$/u;
 const SHA = /^[0-9a-f]{40}$/u;
@@ -44,17 +43,14 @@ const PRESERVATION = Object.freeze({
   writerRegistry: "unchanged", pullRequests: "unchanged", provider: "unchanged",
   deployment: "not-performed",
 });
-
 export function buildRetirementPlan(evidence) {
   const normalized = normalizeRetirementEvidence(evidence);
   return sealPlan(RETIREMENT_OPERATION, normalized);
 }
-
 export function buildRolloverPlan(evidence) {
   const normalized = normalizeRolloverEvidence(evidence);
   return sealPlan(ROLLOVER_OPERATION, normalized);
 }
-
 export function normalizeClaimOnlyPlan(value) {
   object(value, "claim-only plan");
   const rebuilt = value.operation === RETIREMENT_OPERATION
@@ -63,7 +59,6 @@ export function normalizeClaimOnlyPlan(value) {
   if (canonicalJson(value) !== canonicalJson(rebuilt)) invalid("plan drift");
   return rebuilt;
 }
-
 export function authorizeClaimOnlyPlan(plan, authorization) {
   const normalized = normalizeClaimOnlyPlan(plan);
   if (authorization !== normalized.exactAuthorization) {
@@ -72,13 +67,11 @@ export function authorizeClaimOnlyPlan(plan, authorization) {
   return digestValue({ operation: normalized.operation,
     planDigest: normalized.planDigest, authorization });
 }
-
 export function createClaimOnlyJournal(plan) {
   const normalized = normalizeClaimOnlyPlan(plan);
   return sealJournal({ schema: JOURNAL_SCHEMA, operation: normalized.operation,
     plan: normalized, state: null });
 }
-
 export function startClaimOnlyJournal(journal, authorization) {
   const current = normalizeClaimOnlyJournal(journal);
   if (current.state !== null) throw new Error("Claim-only journal is already authorized.");
@@ -91,7 +84,6 @@ export function startClaimOnlyJournal(journal, authorization) {
     state: { phase: "authorized", receipts: { authorized } },
   }));
 }
-
 export function advanceClaimOnlyJournal(journal, phase, values) {
   const current = normalizeClaimOnlyJournal(journal);
   if (!current.state) throw new Error("Claim-only journal is not authorized.");
@@ -109,7 +101,6 @@ export function advanceClaimOnlyJournal(journal, phase, values) {
     state: { phase, receipts: { ...current.state.receipts, [phase]: receipt } },
   }));
 }
-
 export function normalizeClaimOnlyJournal(value) {
   object(value, "claim-only journal");
   const plan = normalizeClaimOnlyPlan(value.plan);
@@ -122,7 +113,6 @@ export function normalizeClaimOnlyJournal(value) {
   }
   return freeze({ ...core, journalDigest: value.journalDigest });
 }
-
 export function claimOnlyOperationKey(plan, phase) {
   const normalized = normalizeClaimOnlyPlan(plan);
   if (!phasesFor(normalized.operation).includes(phase) || phase === "authorized") {
@@ -130,7 +120,6 @@ export function claimOnlyOperationKey(plan, phase) {
   }
   return claimOnlyOperationKeyFromDigest(normalized.operation, normalized.planDigest, phase);
 }
-
 export function buildClaimOnlyCompletionReceipt(journal) {
   const current = normalizeClaimOnlyJournal(journal);
   if (!["verified", "complete"].includes(current.state?.phase)) {
@@ -138,7 +127,6 @@ export function buildClaimOnlyCompletionReceipt(journal) {
   }
   return completionReceipt(current.plan, current.state.receipts);
 }
-
 export function buildClaimOnlyTerminalVerification(
   journal,
   { effects = null, preservation = null } = {},
@@ -156,7 +144,6 @@ export function buildClaimOnlyTerminalVerification(
     preservation || current.plan.evidence.preservation,
   );
 }
-
 function completionReceipt(plan, receipts) {
   const authorized = receipts.authorized;
   const verified = receipts.verified;
@@ -193,7 +180,6 @@ function completionReceipt(plan, receipts) {
   };
   return freeze({ ...core, receiptDigest: digestValue(core) });
 }
-
 export function normalizeClaimOnlyCompletionReceipt(value, operation = value?.operation) {
   object(value, "completion receipt");
   const schema = RECEIPT_SCHEMAS[operation];
@@ -216,7 +202,6 @@ export function normalizeClaimOnlyCompletionReceipt(value, operation = value?.op
   }
   return freeze({ ...core, receiptDigest: value.receiptDigest });
 }
-
 export function phaseReceipt(phase, values) {
   object(values, `${phase} values`);
   const core = { phase, ...structuredClone(values) };
@@ -236,7 +221,7 @@ function normalizeRetirementEvidence(value) {
     "agentic-claim-only-partial-start-retirement-evidence/v1");
   assertGenesisSource(evidence);
   assertWaitingSuccessor(evidence);
-  assertLineageIdentity(evidence.source, evidence.successor);
+  assertLineageIdentity(evidence.source, evidence.successor, evidence.canonical);
   if (Date.parse(evidence.source.expiresAt) > Date.parse(evidence.observedAt)) {
     invalid("source claim must be expired");
   }
@@ -251,7 +236,7 @@ function normalizeRolloverEvidence(value) {
   const evidence = normalizeSharedEvidence(value,
     "agentic-claim-only-successor-rollover-evidence/v1", { sourceTerminal: true });
   assertWaitingSuccessor(evidence);
-  assertLineageIdentity(evidence.source, evidence.successor);
+  assertLineageIdentity(evidence.source, evidence.successor, evidence.canonical);
   if (Date.parse(evidence.successor.expiresAt) > Date.parse(evidence.observedAt)) {
     invalid("waiting successor must be stale before rollover");
   }
@@ -367,14 +352,33 @@ function assertWaitingSuccessor(evidence) {
     || entry.heartbeatCounter !== 0 || entry.predecessorClaimId !== evidence.source.claimId
     || entry.reviewRequestId !== null) invalid("direct waiting successor");
 }
-function assertLineageIdentity(source, successor) {
-  for (const name of ["actorId", "repositoryId", "workItemId", "deviceId", "sessionId",
-    "writeSetDigest"]) {
-    if (source[name] !== successor[name]) invalid(`source/successor ${name}`);
+function assertLineageIdentity(source, successor, canonical) {
+  const scopesEqual = canonicalJson(source.declaredWriteScope) === canonicalJson(successor.declaredWriteScope);
+  const exact = ["actorId", "repositoryId", "workItemId", "deviceId", "sessionId", "writeSetDigest"].every(name => source[name] === successor[name]);
+  if (exact && scopesEqual) return;
+  for (const name of ["actorId", "repositoryId", "deviceId"]) if (source[name] !== successor[name]) invalid(`source/successor ${name}`);
+  const mixed = ["workItemId", "sessionId", "canonicalBaseRevision", "writeSetDigest"]
+    .every(name => source[name] !== successor[name]);
+  if (!mixed) {
+    for (const name of ["workItemId", "sessionId", "writeSetDigest"]) {
+      if (source[name] !== successor[name]) invalid(`source/successor ${name}`);
+    }
+    if (!scopesEqual) invalid("source/successor declared write scope");
+    return;
   }
-  if (canonicalJson(source.declaredWriteScope)
-    !== canonicalJson(successor.declaredWriteScope)) invalid("source/successor declared write scope");
+  const successorAddsScope = successor.declaredWriteScope.some(target =>
+    !source.declaredWriteScope.some(scope => scopeCovers(scope, target)));
+  if (!writeSetsOverlap(source.declaredWriteScope, successor.declaredWriteScope)
+    || !successorAddsScope) {
+    invalid("mixed-identity successor scope expansion");
+  }
+  if (canonical.sourceBaseStrictAncestorOfSuccessorBase !== true) {
+    invalid("mixed-identity source-to-successor ancestry");
+  }
 }
+function scopeCovers(source, target) { if (source === target) return true;
+  const path = source.slice("path:".length); return source.startsWith("path:")
+    && target.startsWith("path:") && (path === "." || target.slice("path:".length).startsWith(`${path}/`)); }
 function normalizeClaim(value, label) {
   const result = clone(object(value, label));
   for (const name of ["claimId", "claimDigest", "transitionDigest", "operationReceiptDigest",
@@ -449,6 +453,8 @@ function assertRepositoryIdentity(evidence) {
 function normalizeCanonical(value) {
   const result = object(value, "canonical evidence");
   text(result.targetRepository, "target repository"); sha(result.mainSha, "canonical main");
+  if (Object.hasOwn(result, "sourceBaseStrictAncestorOfSuccessorBase")
+    && typeof result.sourceBaseStrictAncestorOfSuccessorBase !== "boolean") invalid("canonical ancestry");
   if (result.sourceBaseContained !== true || result.successorBaseContained !== true) {
     invalid("canonical ancestry");
   }
@@ -571,8 +577,6 @@ function normalizePhaseCore(core, phase, operation = null) {
     invalid(`${phase} disposition`);
   }
 }
-
-
 function phasesFor(operation) {
   if (operation === RETIREMENT_OPERATION) return RETIREMENT_PHASES;
   if (operation === ROLLOVER_OPERATION) return ROLLOVER_PHASES;

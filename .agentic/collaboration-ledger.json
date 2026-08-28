@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5655,
-  "headDigest": "9770a7bf2474baa2116220714933a6a3c48e65f19d0d52adcaf1c5bc6c39ca81",
+  "sequence": 5656,
+  "headDigest": "6c4dc398adcbdd774a5af0404fbcc18c894bc539ecff8d811bc7d4b68a5a1347",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -287517,6 +287517,47 @@
       },
       "claimDigest": "61177f56869c324531eb40ceb9c49b42ac92d6e5f3183d7489e272536ed62841",
       "digest": "9770a7bf2474baa2116220714933a6a3c48e65f19d0d52adcaf1c5bc6c39ca81"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5656,
+      "parentDigest": "9770a7bf2474baa2116220714933a6a3c48e65f19d0d52adcaf1c5bc6c39ca81",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "4ae8cd0999ba4d11a481e090b2cdbb8021ad1b81226c58d9b59e6db7dab271b6",
+      "idempotencyKey": "f47bd8ce3c81b92e7bfeaf35e04f2d956d69fad7667078dbe0349797c0004296",
+      "requestDigest": "402b512f7b86c34cc464fb20a4ec09428501855e9b059f6b2664cf7464dfa6c4",
+      "evaluationTime": "2026-08-28T07:12:24.000Z",
+      "claimCore": {
+        "claimId": "4ae8cd0999ba4d11a481e090b2cdbb8021ad1b81226c58d9b59e6db7dab271b6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f5de5304b1e7ebc46e05a8d12497a45d1adc7fded1c8c2cf2a8b8f5aa10d29dc",
+        "canonicalBaseRevision": "93e18fea38323f2544f16ea00912d50008e0d87f",
+        "declaredWriteScope": [
+          "path:__tests__/collaborative-release-lifecycle-contract.test.mjs",
+          "path:scripts/collaborative-release-lifecycle-contract.mjs",
+          "path:todo/2026-08/agenticgraph-production-recovery-parity.md",
+          "semantic:agenticgraph-release-recovery"
+        ],
+        "writeSetDigest": "42e2dffd923570dbe70347e241c789f7956256265e2f8681cec6095c1e492623",
+        "laneRevision": "128b0980a2b361c31201313469121e18f725aced",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-28T07:23:22.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBTbRqQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "33a8a70a5357989795c4143e3db064f8b4480821c1ee9e5a6785ae17bfd81d00",
+      "digest": "6c4dc398adcbdd774a5af0404fbcc18c894bc539ecff8d811bc7d4b68a5a1347"
     }
   ]
 }

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createController } from "../scripts/admitted-empty-abandoned-owner-retirement-controller.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { advanceState, buildPlan, createState, phaseReceipt }
+  from "../scripts/admitted-empty-abandoned-owner-retirement-contract.mjs";
 
 const sha = value => value.repeat(40).slice(0, 40), digest = value => value.repeat(64).slice(0, 64);
 function fixture() { const base = sha("1"), head = sha("2"), tree = sha("3"), branch = "agent/device/empty";
@@ -19,6 +21,32 @@ function fixture() { const base = sha("1"), head = sha("2"), tree = sha("3"), br
       clean: true, registered: true, statusDigest: digest("e"), stateDigest: digest("f") },
     controller: { headSha: sha("6"), originMainSha: sha("6"), treeSha: sha("7"), runtimeDigest: digest("8"), clean: true, protected: true },
     cloud: { ledgerRepository: "owner/ledger", ledgerRevision: sha("9"), ledgerDigest: digest("9"), sequence: 3 } }; }
+
+function resumeFixture() {
+  let sourceState = createState(buildPlan(fixture()));
+  sourceState = advanceState(sourceState, "authorized", phaseReceipt("authorized", {
+    authorizationDigest: digest("1"),
+  }));
+  sourceState = advanceState(sourceState, "claim-retired", phaseReceipt("claim-retired", {
+    claimId: sourceState.plan.subject.claim.claimId, cloudMutation: true,
+    subjectStateDigest: sourceState.plan.subject.stateDigest,
+  }));
+  sourceState = advanceState(sourceState, "pull-request-closed", phaseReceipt("pull-request-closed", {
+    pullRequestNumber: 7, closedAt: "2026-08-23T11:02:00.000Z",
+    providerMutation: true, remoteBranchPreserved: true,
+  }));
+  return { observedAt: "2026-08-23T12:00:00.000Z", sourceState,
+    controller: { ...sourceState.plan.controller, headSha: sha("a"), originMainSha: sha("a") },
+    cloud: { ...sourceState.plan.cloud, ledgerRevision: sha("b"), ledgerDigest: digest("b"), sequence: 4 },
+    recovery: { sourceStateDigest: sourceState.stateDigest,
+      sourcePlanDigest: sourceState.plan.planDigest, claimAbsent: true,
+      retirementEntryDigest: digest("c"), pullRequestState: "CLOSED",
+      pullRequestClosedAt: "2026-08-23T11:02:00.000Z", leaseStatus: "active",
+      leaseDigest: sourceState.plan.subject.lease.digest, taskAuthorityBindingDigest: digest("d"),
+      subjectStateDigest: sourceState.plan.subject.stateDigest,
+      authoredLaneStateDigest: sourceState.plan.authoredLane.stateDigest,
+      remoteHeadSha: sourceState.plan.subject.remoteHeadSha } };
+}
 
 test("plan persists once and run reuses that exact authorization subject", async () => {
   const calls = [], evidence = fixture(); let state = null, claim = true, pull = true, owner = true;
@@ -47,4 +75,39 @@ test("wrong authorization has zero effects", async () => { let state = null, eff
   const controller = createController({ adapter }), plan = await controller.plan();
   await assert.rejects(controller.run({ planDigest: plan.planDigest, authorization: "wrong" }), /Exact authorization/u);
   assert.equal(effects, 0);
+});
+
+test("fresh resume authorization releases only local ownership and replays terminally", async () => {
+  let state = null, released = false, releases = 0, classifications = 0;
+  const evidence = resumeFixture();
+  const adapter = { observe: async () => { throw new Error("ordinary flow is outside resume test"); },
+    observeResume: async () => evidence, readState: async () => state,
+    writeState: async ({ expected, next }) => {
+      assert.equal(state?.stateDigest || null, expected?.stateDigest || null);
+      state = next; return state;
+    },
+    withLock: async (_context, action) => action(),
+    classifyResumedOwnerReleased: async () => {
+      classifications += 1;
+      return released ? { state: "complete", values: { localMutation: true,
+        leaseDigest: digest("e"), sourceStateDigest: evidence.sourceState.stateDigest } }
+        : { state: "pending" };
+    },
+    releaseResumedOwner: async () => { releases += 1; released = true; },
+    verifyResumedTerminal: async () => ({ terminalEvidenceDigest: digest("f") }),
+    classifyClaim: async () => {}, retireClaim: async () => {}, classifyPullRequest: async () => {},
+    closePullRequest: async () => {}, classifyOwnerReleased: async () => {}, releaseOwner: async () => {},
+    verifyTerminal: async () => {} };
+  const controller = createController({ adapter }), plan = await controller.resumePlan();
+  await assert.rejects(controller.resumeRun({ planDigest: plan.planDigest, authorization: "wrong" }),
+    /Exact authorization/u);
+  assert.equal(releases, 0);
+  const receipt = await controller.resumeRun({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization });
+  const replay = await controller.resumeRun({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization });
+  assert.equal(receipt.receiptDigest, replay.receiptDigest);
+  assert.equal(releases, 1);
+  assert.equal(classifications, 2);
+  assert.equal(state.phase, "complete");
 });

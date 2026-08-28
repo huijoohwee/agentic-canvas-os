@@ -8,12 +8,13 @@ import { createController } from "./admitted-empty-abandoned-owner-retirement-co
 import { createRepositoryAdapter } from "./admitted-empty-abandoned-owner-retirement-repository-adapter.mjs";
 
 const OPTIONS = new Set(["auth-file", "claim-id", "controller-root", "ledger-repository",
-  "plan-digest", "pull-request", "repository", "state-path", "subject-worktree",
+  "plan-digest", "pull-request", "repository", "source-state-path", "state-path", "subject-worktree",
+  "task-authority",
   "authored-worktree", "target-repository", "json"]);
 
 export async function main(argumentsList = process.argv.slice(2), dependencies = {}) {
   const [action = "plan", ...tail] = argumentsList;
-  if (!new Set(["plan", "run"]).has(action)) throw new Error(usage());
+  if (!new Set(["plan", "run", "resume-plan", "resume-run"]).has(action)) throw new Error(usage());
   const options = parse(tail);
   const createAdapter = dependencies.createAdapter || createRepositoryAdapter;
   const createRuntime = dependencies.createController || createController;
@@ -25,14 +26,31 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
     controllerRoot: options.get("controller-root"),
     pullRequestNumber: integer(required(options, "pull-request"), "pull request"),
     claimId: exactDigest(required(options, "claim-id"), "claim ID"),
-    statePath: required(options, "state-path") });
+    statePath: required(options, "state-path"),
+    sourceStatePath: options.get("source-state-path"),
+    taskAuthorityFile: options.get("task-authority") });
   const controller = createRuntime({ adapter });
   if (action === "plan") {
-    if (options.has("auth-file") || options.has("plan-digest")) throw new Error("plan forbids run authorization options.");
+    if (options.has("auth-file") || options.has("plan-digest") || options.has("source-state-path")) {
+      throw new Error("plan forbids run or resume authorization options.");
+    }
     return controller.plan();
   }
-  return controller.run({ planDigest: exactDigest(required(options, "plan-digest"), "plan digest"),
-    authorization: readAuthorization(required(options, "auth-file")) });
+  if (action === "resume-plan") {
+    if (options.has("auth-file") || options.has("plan-digest")) {
+      throw new Error("resume-plan forbids run authorization options.");
+    }
+    required(options, "source-state-path"); required(options, "task-authority");
+    return controller.resumePlan();
+  }
+  const input = { planDigest: exactDigest(required(options, "plan-digest"), "plan digest"),
+    authorization: readAuthorization(required(options, "auth-file")) };
+  if (action === "resume-run") {
+    required(options, "source-state-path"); required(options, "task-authority");
+    return controller.resumeRun(input);
+  }
+  if (options.has("source-state-path")) throw new Error("run forbids resume source state.");
+  return controller.run(input);
 }
 
 export async function runCli(argumentsList = process.argv.slice(2)) {
@@ -54,6 +72,6 @@ function parse(args) { const result = new Map(); for (const argument of args) { 
 function required(options, name) { const value = options.get(name); if (!value) throw new Error(`--${name}=<value> is required.`); return value; }
 function integer(value, label) { const result = Number(value); if (!Number.isSafeInteger(result) || result < 1) throw new Error(`${label} is invalid.`); return result; }
 function exactDigest(value, label) { if (!/^[0-9a-f]{64}$/u.test(value)) throw new Error(`${label} is invalid.`); return value; }
-function usage() { return "Usage: admitted-empty-abandoned-owner-retirement.mjs plan|run --repository=<path> --subject-worktree=<path> --authored-worktree=<path> --target-repository=<owner/name> --pull-request=<number> --claim-id=<digest> --state-path=<private-json> [--ledger-repository=<owner/name>] [--controller-root=<protected-main>] [--plan-digest=<digest> --auth-file=<private-text>] [--json]"; }
+function usage() { return "Usage: admitted-empty-abandoned-owner-retirement.mjs plan|run|resume-plan|resume-run --repository=<path> --subject-worktree=<path> --authored-worktree=<path> --target-repository=<owner/name> --pull-request=<number> --claim-id=<digest> --state-path=<private-json> [--source-state-path=<private-json>] [--task-authority=<private-capability>] [--ledger-repository=<owner/name>] [--controller-root=<protected-main>] [--plan-digest=<digest> --auth-file=<private-text>] [--json]"; }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) process.exitCode = await runCli();

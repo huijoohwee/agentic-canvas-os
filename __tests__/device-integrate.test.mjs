@@ -21,8 +21,14 @@ import {
   CLOUD_COLLABORATION_BOUNDS,
   digestValue,
 } from "../scripts/cloud-collaboration-primitives.mjs";
+import { assertPreparedIntegrationRemoteFence }
+  from "../scripts/device-branch-ownership-lib.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { normalizeDeclaredWriteScopeManifest } from "../scripts/scoped-lane-admission-lib.mjs";
+import {
+  createTaskAuthorityBinding,
+  createTaskAuthorityCapability,
+} from "../scripts/task-bound-lane-authority-contract.mjs";
 import { casWriterLeaseProjection } from "../scripts/writer-lease-registry-cas.mjs";
 import {
   createWriterLeaseStore,
@@ -145,6 +151,158 @@ function cleanupReceipt({
   });
   return { ...receipt, ...receiptOverrides };
 }
+
+function preparedIntegrationFenceFixture() {
+  const preparedBranch = "agent/device/prepared-integration-replay";
+  const preparedBaseSha = "1".repeat(40);
+  const preparedFenceSha = "2".repeat(40);
+  const preparedCommitSha = "3".repeat(40);
+  const preparedTreeSha = "4".repeat(40);
+  const preparedPath = "docs/runtime-readiness-contract.md";
+  const preparedDiff = [
+    "diff --git a/docs/runtime-readiness-contract.md b/docs/runtime-readiness-contract.md",
+    "index 1111111..2222222 100644",
+    "--- a/docs/runtime-readiness-contract.md",
+    "+++ b/docs/runtime-readiness-contract.md",
+    "@@ -1 +1 @@",
+    "-old",
+    "+new",
+    "",
+  ].join("\n");
+  const preparedMessage = "fix(prepared-integration-replay): recover response loss";
+  const declaredWriteSet = Object.freeze([
+    `path:${preparedPath}`,
+    "semantic:prepared-integration-replay",
+  ]);
+  const expiresAt = "2026-08-28T16:00:00.000Z";
+  const cloudAuthority = Object.freeze({
+    schema: "agentic-lane-cloud-authority/v1",
+    provider: "github",
+    ledgerRepository: "example/ledger",
+    targetRepository: "example/repository",
+    claimId: "5".repeat(64),
+    claimDigest: "6".repeat(64),
+    ledgerRevision: "7".repeat(40),
+    ledgerDigest: "8".repeat(64),
+    claimLedgerRevision: "9".repeat(64),
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    operationReceiptDigest: "a".repeat(64),
+    mutationAuthorityEligible: true,
+    canonicalBaseSha: preparedBaseSha,
+    laneRevision: preparedFenceSha,
+    cloudDeclaredWriteScope: declaredWriteSet,
+    writeSetDigest: "b".repeat(64),
+    deviceId: "device",
+    sessionId: "session-prepared-integration",
+    reviewRequestId: "github-pull-request:PR_PREPARED",
+    leaseEpoch: 1,
+    transitionCounter: 2,
+    state: "active",
+    expiresAt,
+    integrationReceiptDigest: null,
+    integration: null,
+    manifestDigest: "c".repeat(64),
+  });
+  const leaseIdentity = {
+    schema: "agentic-writer-lease/v2",
+    status: "active",
+    epoch: 7,
+    sessionId: cloudAuthority.sessionId,
+    device: cloudAuthority.deviceId,
+    scope: "prepared-integration-replay",
+    branch: preparedBranch,
+    worktreePath: "/workspace/prepared-integration-replay",
+    baseSha: preparedBaseSha,
+    fenceSha: preparedFenceSha,
+    pullRequestUrl: "https://github.com/example/repository/pull/42",
+    expiresAt,
+    cloudAuthority,
+  };
+  const capability = createTaskAuthorityCapability({
+    issuedAt: "2026-08-28T14:00:00.000Z",
+  });
+  const taskAuthority = createTaskAuthorityBinding({
+    capability,
+    lease: leaseIdentity,
+    boundAt: "2026-08-28T14:00:01.000Z",
+  });
+  const lease = Object.freeze({
+    ...leaseIdentity,
+    admission: Object.freeze({
+      schema: "agentic-lane-admission-lease/v1",
+      status: "admitted",
+      semanticScope: leaseIdentity.scope,
+      declaredWriteSet,
+      writeSetDigest: cloudAuthority.writeSetDigest,
+      manifestDigest: cloudAuthority.manifestDigest,
+      planReceiptDigest: "d".repeat(64),
+      admissionReceiptDigest: "e".repeat(64),
+      existingLaneStateDigest: "f".repeat(64),
+      admittedReportDigest: "0".repeat(64),
+      preservationReceiptDigest: "1".repeat(64),
+    }),
+    integration: Object.freeze({
+      schema: "agentic-integration-commit/v1",
+      commitSha: preparedCommitSha,
+      treeSha: preparedTreeSha,
+      commitMessage: preparedMessage,
+      manifestDigest: "2".repeat(64),
+      stagedDiffDigest: createHash("sha256").update(preparedDiff).digest("hex"),
+      paths: Object.freeze([preparedPath]),
+      recordedAt: "2026-08-28T14:05:00.000Z",
+    }),
+    taskAuthority,
+  });
+  const pullRequest = Object.freeze({
+    id: "PR_PREPARED",
+    url: lease.pullRequestUrl,
+    state: "OPEN",
+    isDraft: true,
+    headRefName: preparedBranch,
+    headRefOid: preparedCommitSha,
+    headRepository: { nameWithOwner: cloudAuthority.targetRepository },
+    baseRefName: "main",
+    baseRefOid: preparedBaseSha,
+    body: "",
+  });
+  const gitText = argumentsList => {
+    const key = argumentsList.join(" ");
+    if (key === "rev-parse HEAD") return `${preparedCommitSha}\n`;
+    if (key === "status --porcelain --untracked-files=all") return "";
+    if (key === `rev-list --parents -n 1 ${preparedCommitSha}`) {
+      return `${preparedCommitSha} ${preparedFenceSha}\n`;
+    }
+    if (key === `rev-parse ${preparedCommitSha}^{tree}`) return `${preparedTreeSha}\n`;
+    if (key === `log -1 --pretty=%s ${preparedCommitSha}`) return `${preparedMessage}\n`;
+    if (key === `diff --name-only -z ${preparedFenceSha} ${preparedCommitSha} --`) {
+      return `${preparedPath}\0`;
+    }
+    if (key === `diff --binary ${preparedFenceSha} ${preparedCommitSha} --`) {
+      return preparedDiff;
+    }
+    throw new Error(`Unexpected prepared-integration Git call: ${key}`);
+  };
+  return { branch: preparedBranch, lease, pullRequest, remoteSha: preparedCommitSha, gitText };
+}
+
+test("prepared integration response loss accepts only the exact receipt-bound remote fence", () => {
+  const fixture = preparedIntegrationFenceFixture();
+  const receipt = assertPreparedIntegrationRemoteFence(fixture);
+  assert.equal(receipt.status, "accepted");
+  assert.equal(receipt.fenceSha, fixture.lease.fenceSha);
+  assert.equal(receipt.integrationCommitSha, fixture.lease.integration.commitSha);
+  assert.equal(receipt.stagedDiffDigest, fixture.lease.integration.stagedDiffDigest);
+});
+
+test("prepared integration response loss rejects a foreign descendant remote fence", () => {
+  const fixture = preparedIntegrationFenceFixture();
+  assert.throws(() => assertPreparedIntegrationRemoteFence({
+    ...fixture,
+    remoteSha: "f".repeat(40),
+    gitText() { throw new Error("foreign descendant must reject before repository reads"); },
+  }), /this session is stale/u);
+});
 
 test("runtime repository identity is independent from the isolated canonical directory name", () => {
   const workspace = mkdtempSync(path.join(os.tmpdir(), "agentic-runtime-identity-"));

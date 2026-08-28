@@ -224,7 +224,10 @@ function object(value, label) {
 export function stableClaimOnlyEvidence(value, operation) {
   const common = {
     repository: value.repository, controller: value.controller,
-    canonical: value.canonical, source: value.source, successor: value.successor,
+    canonical: { ...value.canonical,
+      sourceBaseStrictAncestorOfSuccessorBase:
+        value.canonical.sourceBaseStrictAncestorOfSuccessorBase ?? false },
+    source: value.source, successor: value.successor,
     sourceEntry: value.sourceEntry, successorEntry: value.successorEntry,
     associations: value.associations, preservation: value.preservation,
     overlap: value.overlap,
@@ -274,7 +277,9 @@ export function buildClaimOnlyObservedEvidence({
     canonical: {
       targetRepository, mainSha: frame.mainSha,
       sourceBaseContained: frame.sourceBaseContained,
-      successorBaseContained: frame.successorBaseContained
+      successorBaseContained: frame.successorBaseContained,
+      sourceBaseStrictAncestorOfSuccessorBase:
+        frame.sourceBaseStrictAncestorOfSuccessorBase === true
     },
     cloud: {
       ledgerRepository, ledgerRevision: frame.status.ledgerRevision,

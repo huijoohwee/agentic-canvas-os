@@ -226,7 +226,10 @@ export function createRepositoryClaimOnlyPartialStartRetirementAdapter(options =
       frame: {
         ...frame,
         sourceBaseContained: isAncestor(frame.source.canonicalBaseRevision, frame.mainSha),
-        successorBaseContained: isAncestor(frame.successor.canonicalBaseRevision, frame.mainSha)
+        successorBaseContained: isAncestor(frame.successor.canonicalBaseRevision, frame.mainSha),
+        sourceBaseStrictAncestorOfSuccessorBase:
+          frame.source.canonicalBaseRevision !== frame.successor.canonicalBaseRevision
+          && isAncestor(frame.source.canonicalBaseRevision, frame.successor.canonicalBaseRevision)
       },
       schema,
       targetRepository,

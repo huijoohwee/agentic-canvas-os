@@ -22,7 +22,13 @@ This controller closes one bounded lifecycle gap without inventing a local
 owner. The source is an expired, claim-only genesis entry: it has never
 received a heartbeat, review, local writer lease, recovery, integration, or
 authored revision. One direct non-writing waiting successor exists for the
-same owner and write set.
+same actor, repository, and device. Existing same-identity pairs retain their
+exact work-item, session, base, and write-set contract. A mixed-identity pair
+is eligible only for a bounded forward handoff: its work item, session, base,
+and write set differ; its scopes overlap but are unequal; the successor adds
+at least one source-absent scope; and the source base is a strict ancestor of
+the successor base. Successor-subset, disjoint, and equal-scope pairs fail
+closed.
 
 The repair is deliberately split into two independently planned and authorized
 transactions:
@@ -55,8 +61,13 @@ Read-only planning proves all of the following:
 - the successor has one v2 `claim` lineage entry, is the sole direct
   `waiting-successor`, is epoch 1, transition 1, heartbeat 0, non-writing and
   non-reserving, and names the source as predecessor;
+- source and successor use either the legacy exact-identity relationship or
+  the mixed-identity relationship above; actor, repository, or device drift is
+  never eligible;
 - neither claim matches a writer-registry lease or pull-request marker;
-- the exact canonical main contains both historical bases;
+- the exact canonical main contains both historical bases and mixed identity
+  additionally carries positive evidence that the source base is a strict
+  ancestor of the successor base;
 - the source is the only reserved overlap and the successor is the only
   waiting overlap, with no higher-priority waiter; and
 - Git refs, registered worktrees, the complete writer registry, and provider
@@ -102,8 +113,10 @@ symlinked, or conflicting output blocks the receipt.
 
 ## Authorization and replay
 
-Each plan is immutable and emits one byte-exact statement. Broad approval does
-not substitute for either statement:
+Each plan is immutable and emits one byte-exact statement. Retirement and
+rollover are separate effects and therefore require two separate exact human
+authorizations; authorizing either plan never authorizes the other. Broad
+approval does not substitute for either statement:
 
 ```text
 authorize claim-only-partial-start-retirement <planDigest>
@@ -171,10 +184,12 @@ preservation drift fails closed.
 ## Proof boundary
 
 Focused tests cover exact plan sealing, wrong authorization, genesis and
-waiting-successor cardinality and identity, stale-base descendant proof, phase
-ordering, adversarial receipt/entry response-loss adoption, repository-identity
-drift, raw-output durability, replay, absolute/symlink/private-file enforcement,
-and zero forbidden adapter calls. Passing proof establishes only
+waiting-successor cardinality, legacy exact identity, mixed-identity forward
+overlap and its subset/disjoint/equal/ownership/ancestry rejections, stale-base
+descendant proof, phase ordering, adversarial receipt/entry response-loss
+adoption, repository-identity drift, raw-output durability, replay,
+absolute/symlink/private-file enforcement, and zero forbidden adapter calls.
+Passing proof establishes only
 this Dev coordination capability; protected integration, the two live exact
 authorizations, later scope-expansion admission, Production, publication, and
 deployment remain separate gates.

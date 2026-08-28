@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5759,
-  "headDigest": "d63019ecc560ca830928a4f82289573c179bde6575be907f1b21d9ebd78b8494",
+  "sequence": 5760,
+  "headDigest": "bbfe84ca0754509cc4bcd4ad732c1ec39652e1255bbd3e0414924c703bbd3c42",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -292994,6 +292994,61 @@
       },
       "claimDigest": "732044544d5db084c1ac450809cd86e589cfb42c8c109768d6e79b9c1d6669ee",
       "digest": "d63019ecc560ca830928a4f82289573c179bde6575be907f1b21d9ebd78b8494"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5760,
+      "parentDigest": "d63019ecc560ca830928a4f82289573c179bde6575be907f1b21d9ebd78b8494",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "c3a07fd003d0a781e6d7df6d92bf59cd44a64c0af6fc579ec166a6bff40bdf27",
+      "idempotencyKey": "c0369e37b716fbc26a4f65e1b158b88e730e20e97b054097d8e512df48dd9aab",
+      "requestDigest": "f01939cd19a61a3ec9ee574db04b63f0f12428507ead6b83e2432adece6aae84",
+      "evaluationTime": "2026-08-28T12:06:21.000Z",
+      "claimCore": {
+        "claimId": "c3a07fd003d0a781e6d7df6d92bf59cd44a64c0af6fc579ec166a6bff40bdf27",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:20df78f09dc525089df020bc57b02349824b1a75a782d4b3c825096392c82450",
+        "canonicalBaseRevision": "d3b50f106917e8b827fdc4ffc44067de582adaba",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-partial-start-retirement.test.mjs",
+          "path:docs/CLAIM-ONLY-PARTIAL-START-RETIREMENT.md",
+          "path:scripts/claim-only-partial-start-retirement-contract.mjs",
+          "path:scripts/claim-only-partial-start-retirement-controller.mjs",
+          "path:scripts/claim-only-partial-start-retirement-repository-adapter.mjs",
+          "semantic:claim-only-mixed-identity-compatibility"
+        ],
+        "writeSetDigest": "45a71ccdaab3bfc46fb4a6b80bf782907081372ee0cb049c6206c57950cf16d2",
+        "laneRevision": "2387ae22c3fc9ac91d2fd58f1168fb30279a9c2a",
+        "leaseEpoch": 2,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-28T12:30:38.000Z",
+        "evidenceDigest": "149a15044654b151758796d896ce04af4539a5198831dc7355732f4340b2726f",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBUnskA",
+        "predecessorClaimId": "e16f8cad2b88520db2a6849e873dbce2cc77d4ea5bd514821fc263800f0c789a",
+        "eligibleSince": "2026-08-28T11:59:18.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-28T12:00:38.000Z",
+        "integration": {
+          "candidateRevision": "2387ae22c3fc9ac91d2fd58f1168fb30279a9c2a",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBUnskA",
+          "focusedEvidenceDigest": "149a15044654b151758796d896ce04af4539a5198831dc7355732f4340b2726f",
+          "dependencyClosureDigest": "a789272e235b6daab786940be9ae3a614806f19c767b7966905b50af23c60005",
+          "namedChecksDigest": "c924dea9a23a53b2506e4a0db13e2eb3c30d942a0c9a310d026e53a74c099b7b",
+          "handoffEvidenceDigest": "1600e67940e81103b7a1dd9886672859f7807dac652e6e99178f311d1844dbd1",
+          "operatorDecisionDigest": "af1ac876e6355147207b82e45eaad4b80a3cb07582704f88762970ff6f0af535",
+          "integrationIntentDigest": "e202e214ce0fbf6811f33577959b53e1e2cf859bf64cddda8da7893f66521bfa",
+          "integratedAt": "2026-08-28T12:06:21.000Z"
+        }
+      },
+      "claimDigest": "30c2edde5ff18ca8e4a6c4a94532e2a48d3f58dfd363c9457834e29927c6298b",
+      "digest": "bbfe84ca0754509cc4bcd4ad732c1ec39652e1255bbd3e0414924c703bbd3c42"
     }
   ]
 }

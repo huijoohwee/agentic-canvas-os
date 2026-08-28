@@ -1,7 +1,9 @@
 // Responsibility: Enforce exact device-branch ownership, heartbeat, PR, and protected-main projections.
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { digestValue, normalizeWriteSet, writeSetsOverlap }
   from "./cloud-collaboration-primitives.mjs";
+import { assertActivePublishPathsAdmitted } from "./active-publish-write-scope.mjs";
 import {
   assertNoCompetingPullRequests,
   assertNoUnmergedPaths,
@@ -15,6 +17,7 @@ import {
 import { captureOwnedDirtEvidence } from "./owned-dirt-resume-lib.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
+import { assertTaskAuthorityBinding } from "./task-bound-lane-authority-contract.mjs";
 import { assertActiveDraftMutationAuthority, reconcileLostCloudHeartbeat,
   requireExactDraftHeartbeatMarker, verifiedHeartbeatAuthority }
   from "./active-owned-dirt-recovery-registry.mjs";
@@ -48,8 +51,14 @@ export function heartbeat({
   const branch = gitText(["branch", "--show-current"]).trim();
   let current = leaseStore.verify({ sessionId, branch });
   assertLeaseWorktree(current, repo);
+  let observedRemoteSha = null;
   if (!repairPullRequestProjection) {
-    requireRemoteFence({ branch, lease: current, gitOptional });
+    const remoteLine = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
+    observedRemoteSha = remoteLine.split(/\s+/)[0] || "";
+    if (!current.fenceSha || (
+      observedRemoteSha !== current.fenceSha
+      && observedRemoteSha !== current.integration?.commitSha
+    )) throw remoteFenceStaleError({ branch, lease: current, remoteSha: observedRemoteSha });
   }
   if (!current.pullRequestUrl || !current.fenceSha) {
     throw new Error("Writer lease is missing its draft pull request or fencing SHA.");
@@ -70,6 +79,12 @@ export function heartbeat({
   const pullRequest = requireOwnershipPullRequestDraft({
     url: current.pullRequestUrl, branch, ghText, expectedDraft: true,
   });
+  if (!repairPullRequestProjection) {
+    requireRemoteFence({
+      branch, lease: current, pullRequest, gitText, gitOptional,
+      remoteSha: observedRemoteSha,
+    });
+  }
   let activeDraftPullRequest = null;
   let cloudExpiryCap = null;
   let cloudVerification = null;
@@ -357,12 +372,148 @@ export function assertLeaseWorktree(lease, repo) {
   }
 }
 
-function requireRemoteFence({ branch, lease, gitOptional }) {
-  const remoteLine = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
-  const remoteSha = remoteLine.split(/\s+/)[0] || "";
-  if (!lease.fenceSha || remoteSha !== lease.fenceSha) throw new Error(
-    `Remote fence for ${branch} is ${remoteSha || "missing"}, not ${lease.fenceSha || "unclaimed"}; this session is stale.`,
+function requireRemoteFence({ branch, lease, pullRequest, gitText, gitOptional, remoteSha = null }) {
+  if (remoteSha === null) {
+    const remoteLine = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
+    remoteSha = remoteLine.split(/\s+/)[0] || "";
+  }
+  if (lease.fenceSha && remoteSha === lease.fenceSha) return;
+  assertPreparedIntegrationRemoteFence({ branch, lease, pullRequest, remoteSha, gitText });
+}
+
+export function assertPreparedIntegrationRemoteFence({
+  branch,
+  lease,
+  pullRequest,
+  remoteSha,
+  gitText,
+}) {
+  const stale = () => remoteFenceStaleError({ branch, lease, remoteSha });
+  const integration = lease?.integration;
+  const integrationKeys = [
+    "commitMessage", "commitSha", "manifestDigest", "paths", "recordedAt", "schema",
+    "stagedDiffDigest", "treeSha",
+  ];
+  if (
+    typeof gitText !== "function"
+    || lease?.schema !== "agentic-writer-lease/v2"
+    || lease.status !== "active"
+    || !SHA_PATTERN.test(String(lease.baseSha || ""))
+    || !SHA_PATTERN.test(String(lease.fenceSha || ""))
+    || integration?.schema !== "agentic-integration-commit/v1"
+    || JSON.stringify(Object.keys(integration).sort()) !== JSON.stringify(integrationKeys)
+    || !SHA_PATTERN.test(String(integration.commitSha || ""))
+    || !SHA_PATTERN.test(String(integration.treeSha || ""))
+    || remoteSha !== integration.commitSha
+    || !isDigest(integration.manifestDigest)
+    || !isDigest(integration.stagedDiffDigest)
+    || typeof integration.commitMessage !== "string"
+    || !integration.commitMessage.trim()
+    || integration.commitMessage.includes("\n")
+    || !isCanonicalInstant(integration.recordedAt)
+  ) throw stale();
+
+  let admittedPaths;
+  try {
+    assertTaskAuthorityBinding({ binding: lease.taskAuthority, lease });
+    admittedPaths = assertActivePublishPathsAdmitted({
+      paths: integration.paths,
+      admission: lease.admission,
+    }).paths;
+  } catch {
+    throw stale();
+  }
+  if (JSON.stringify(integration.paths) !== JSON.stringify(admittedPaths)) throw stale();
+
+  const authority = lease.cloudAuthority;
+  const exactCloudIdentity = authority?.schema === "agentic-lane-cloud-authority/v1"
+    && authority.provider === "github"
+    && authority.state === "active"
+    && authority.mutationAuthorityEligible === true
+    && authority.canonicalBaseSha === lease.baseSha
+    && authority.laneRevision === lease.fenceSha
+    && authority.writeSetDigest === lease.admission.writeSetDigest
+    && authority.manifestDigest === lease.admission.manifestDigest
+    && JSON.stringify(authority.cloudDeclaredWriteScope)
+      === JSON.stringify(lease.admission.declaredWriteSet)
+    && authority.deviceId === lease.device
+    && authority.sessionId === lease.sessionId
+    && authority.reviewRequestId === `github-pull-request:${pullRequest?.id || ""}`
+    && authority.integrationReceiptDigest === null
+    && authority.integration === null
+    && isDigest(authority.claimId)
+    && isDigest(authority.claimDigest)
+    && SHA_PATTERN.test(String(authority.ledgerRevision || ""))
+    && isDigest(authority.ledgerDigest)
+    && isDigest(authority.claimLedgerRevision)
+    && isDigest(authority.operationReceiptDigest)
+    && Number.isSafeInteger(authority.leaseEpoch)
+    && authority.leaseEpoch > 0
+    && Number.isSafeInteger(authority.transitionCounter)
+    && authority.transitionCounter > 0
+    && isCanonicalInstant(authority.expiresAt)
+    && Date.parse(authority.expiresAt) >= Date.parse(lease.expiresAt);
+  const exactPullRequestIdentity = pullRequest?.url === lease.pullRequestUrl
+    && pullRequest.state === "OPEN"
+    && pullRequest.isDraft === true
+    && pullRequest.headRefName === branch
+    && pullRequest.headRefOid === integration.commitSha
+    && pullRequest.headRepository?.nameWithOwner === authority?.targetRepository
+    && pullRequest.baseRefName === "main";
+  if (!exactCloudIdentity || !exactPullRequestIdentity) throw stale();
+
+  const localHead = gitText(["rev-parse", "HEAD"]).trim();
+  const worktreeStatus = gitText(["status", "--porcelain", "--untracked-files=all"]);
+  const lineage = gitText(["rev-list", "--parents", "-n", "1", integration.commitSha])
+    .trim().split(/\s+/u);
+  const treeSha = gitText(["rev-parse", `${integration.commitSha}^{tree}`]).trim();
+  const commitMessage = gitText(["log", "-1", "--pretty=%s", integration.commitSha]).trim();
+  const paths = splitNul(gitText([
+    "diff", "--name-only", "-z", lease.fenceSha, integration.commitSha, "--",
+  ]));
+  const stagedDiffDigest = createHash("sha256").update(gitText([
+    "diff", "--binary", lease.fenceSha, integration.commitSha, "--",
+  ])).digest("hex");
+  if (
+    localHead !== integration.commitSha
+    || worktreeStatus !== ""
+    || lineage.length !== 2
+    || lineage[0] !== integration.commitSha
+    || lineage[1] !== lease.fenceSha
+    || treeSha !== integration.treeSha
+    || commitMessage !== integration.commitMessage
+    || JSON.stringify(paths) !== JSON.stringify(integration.paths)
+    || stagedDiffDigest !== integration.stagedDiffDigest
+  ) throw stale();
+  return Object.freeze({
+    schema: "agentic-prepared-integration-remote-fence/v1",
+    status: "accepted",
+    branch,
+    fenceSha: lease.fenceSha,
+    integrationCommitSha: integration.commitSha,
+    integrationTreeSha: integration.treeSha,
+    manifestDigest: integration.manifestDigest,
+    stagedDiffDigest: integration.stagedDiffDigest,
+  });
+}
+
+function remoteFenceStaleError({ branch, lease, remoteSha }) {
+  return new Error(
+    `Remote fence for ${branch} is ${remoteSha || "missing"}, not ${lease?.fenceSha || "unclaimed"}; this session is stale.`,
   );
+}
+
+function isDigest(value) {
+  return /^[0-9a-f]{64}$/u.test(String(value || ""));
+}
+
+function isCanonicalInstant(value) {
+  const parsed = Date.parse(String(value || ""));
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+}
+
+function splitNul(value) {
+  return String(value || "").split("\0").filter(Boolean);
 }
 
 function requireExactRemoteHead({ branch, expectedHeadSha, gitOptional }) {

@@ -180,10 +180,15 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     const sourcePlan = sourceState.plan, subject = subjectProjection(), authored = authoredProjection();
     const resumedRelease = plan && isResumedReleasedLease(subject.rawLease, plan);
     if (subject.stateDigest !== sourcePlan.subject.stateDigest
-      || authored.stateDigest !== sourcePlan.authoredLane.stateDigest
       || (!resumedRelease && digestValue(subject.rawLease) !== sourcePlan.subject.lease.digest)) {
       throw new Error("Retirement resume subject, lease, or authored lane drifted.");
     }
+    const controller = controllerProjection();
+    if (controller.headSha !== sourcePlan.controller.headSha) {
+      assertControllerDescendant(sourcePlan.controller, controller, git, controllerRoot);
+    }
+    const authoredRecovery = resumeAuthoredRecovery({ sourcePlan, authored, controller, plan,
+      resumedRelease, controllerRoot, git });
     const pull = pullProjection();
     assertPullIdentity(sourcePlan.subject.pullRequest, pull);
     if (pull.state !== "CLOSED" || pull.mergedAt !== null || !pull.closedAt) {
@@ -204,10 +209,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
         throw new Error("Retirement resume task authority proof did not bind the observed lease.");
       }
     }
-    const controller = controllerProjection();
-    if (controller.headSha !== sourcePlan.controller.headSha) {
-      assertControllerDescendant(sourcePlan.controller, controller, git, controllerRoot);
-    }
     const recovery = {
       sourceStateDigest: sourceState.stateDigest,
       sourcePlanDigest: sourcePlan.planDigest,
@@ -219,7 +220,7 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       leaseDigest: resumedRelease ? plan.recovery.leaseDigest : digestValue(subject.rawLease),
       taskAuthorityBindingDigest: bindingDigest,
       subjectStateDigest: subject.stateDigest,
-      authoredLaneStateDigest: authored.stateDigest,
+      ...authoredRecovery,
       remoteHeadSha: subject.remoteHeadSha,
     };
     if (recovery.pullRequestClosedAt !== sourceState.receipts["pull-request-closed"].closedAt) {
@@ -387,9 +388,49 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       return { terminalEvidenceDigest: digestValue({ claimAbsent: true, pullState: frame.pull.state,
         sourceStateDigest: frame.sourceState.stateDigest, resumePlanDigest: plan.planDigest,
         leaseDigest: digestValue(lease), subjectStateDigest: frame.subject.stateDigest,
-        authoredLaneStateDigest: frame.authored.stateDigest, remoteHeadSha: frame.subject.remoteHeadSha }) };
+        authoredLaneDisposition: plan.recovery.authoredLaneDisposition,
+        authoredLaneStateDigest: plan.recovery.authoredLaneStateDigest,
+        authoredLaneHeadSha: plan.recovery.authoredLaneHeadSha,
+        authoredLaneTreeSha: plan.recovery.authoredLaneTreeSha,
+        protectedDescendant: plan.recovery.authoredLaneDisposition === "protected-main-descendant",
+        remoteHeadSha: frame.subject.remoteHeadSha }) };
     },
   });
+}
+
+function resumeAuthoredRecovery({ sourcePlan, authored, controller, plan, resumedRelease,
+  controllerRoot, git }) {
+  const source = sourcePlan.authoredLane;
+  const canonicalProtectedMain = source.path === controllerRoot && source.branch === "main"
+    && source.headSha === sourcePlan.controller.headSha
+    && source.treeSha === sourcePlan.controller.treeSha;
+  if (!canonicalProtectedMain) {
+    if (authored.stateDigest !== source.stateDigest) {
+      throw new Error("Retirement resume subject, lease, or authored lane drifted.");
+    }
+    return { authoredLaneDisposition: "source-exact", authoredLaneStateDigest: source.stateDigest,
+      authoredLaneHeadSha: source.headSha, authoredLaneTreeSha: source.treeSha };
+  }
+  if (authored.path !== controllerRoot || authored.branch !== "main"
+    || authored.headSha !== controller.headSha || authored.treeSha !== controller.treeSha
+    || !controller.clean || !controller.protected) {
+    throw new Error("Retirement resume canonical authored lane is not exact protected main.");
+  }
+  if (controller.headSha !== sourcePlan.controller.headSha) {
+    assertControllerDescendant(sourcePlan.controller, controller, git, controllerRoot);
+  }
+  if (plan && plan.recovery.authoredLaneDisposition !== "protected-main-descendant") {
+    throw new Error("Retirement resume authored lane disposition drifted.");
+  }
+  if (plan && resumedRelease) {
+    return { authoredLaneDisposition: "protected-main-descendant",
+      authoredLaneStateDigest: plan.recovery.authoredLaneStateDigest,
+      authoredLaneHeadSha: plan.recovery.authoredLaneHeadSha,
+      authoredLaneTreeSha: plan.recovery.authoredLaneTreeSha };
+  }
+  return { authoredLaneDisposition: "protected-main-descendant",
+    authoredLaneStateDigest: authored.stateDigest, authoredLaneHeadSha: authored.headSha,
+    authoredLaneTreeSha: authored.treeSha };
 }
 
 function assertPullIdentity(expected, actual) { for (const key of ["number", "nodeId", "url", "isDraft", "mergedAt",

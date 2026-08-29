@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5989,
-  "headDigest": "fdc34b5d3e81a1813070150ec30371e6ce085027d94554be4f2918d47bdebc4b",
+  "sequence": 5990,
+  "headDigest": "6d50d1711dfbfc3a9774ed7cbc8e6be5450df93278fe8e1876e8dc70743c2213",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -304252,6 +304252,55 @@
       },
       "claimDigest": "83b57435ce34c9353f37fe647b9fe5b72c7129bf2ec507561e8925629efe60e6",
       "digest": "fdc34b5d3e81a1813070150ec30371e6ce085027d94554be4f2918d47bdebc4b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5990,
+      "parentDigest": "fdc34b5d3e81a1813070150ec30371e6ce085027d94554be4f2918d47bdebc4b",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d7c18368493dee4fe835215d826e2e8cf008bcb1a9f724e5525d06b990f3af81",
+      "idempotencyKey": "6252a926c0cd79623d62900fac43491b51aa1b203a88429c78961373e68123ef",
+      "requestDigest": "5112aa38b952acdbbbdd186823c2446d0e7c95dadd7ee24cbcaeb594ba03e11e",
+      "evaluationTime": "2026-08-29T10:36:43.000Z",
+      "claimCore": {
+        "claimId": "d7c18368493dee4fe835215d826e2e8cf008bcb1a9f724e5525d06b990f3af81",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:7e532555183249556803e35c0c7d8d0c246be416d2dacd8bf08ebf510e905e33",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:591e538050366f00a64587be9f7f4be5d295b48d5cca51f17b291ccc52446f8d",
+        "canonicalBaseRevision": "a6b27f2add76b470c491c9ecbbe3c9fff904f67f",
+        "declaredWriteScope": [
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-cli.test.mjs",
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-contract.test.mjs",
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-controller.test.mjs",
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-evidence.test.mjs",
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-repository-adapter.test.mjs",
+          "path:docs/PROVIDER-ONLY-MERGED-CLAIM-PAIR-RECONCILIATION.md",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-contract.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-controller.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-evidence.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-repository-adapter.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation.mjs",
+          "semantic:provider-only-merged-claim-pair-reconciliation-v2"
+        ],
+        "writeSetDigest": "f4f35337479ed5d5f2d7d5107b213f155af31dbad027ba98b8b334c35159ce2d",
+        "laneRevision": "44098bddd2fc46e7e1c566b0e9aabe755055e553",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T10:48:46.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBbrVNA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1cbcfb67deabef243ccc7c31ab66a50bf63e929bbd967a17b7da24b3e6de43d0",
+      "digest": "6d50d1711dfbfc3a9774ed7cbc8e6be5450df93278fe8e1876e8dc70743c2213"
     }
   ]
 }

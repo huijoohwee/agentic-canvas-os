@@ -18,7 +18,7 @@ test("current positive invocation grammar uses the AgenticGraph namespace", () =
     "agenticgraph.application.*",
     "agenticgraph.agentic_sdlc.observe",
   ]) {
-    assert.match(currentCatalog, new RegExp(token.replaceAll(".", "\\.").replace("*", "\\*")));
+    assert.match(currentCatalog, new RegExp(token.replaceAll(".", "\\.").replaceAll("*", "\\*")));
   }
 
   assert.doesNotMatch(

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6016,
-  "headDigest": "af15ad902a50881bc553e7946f41d2386b06c3a970db9c0989ccde378b885891",
+  "sequence": 6017,
+  "headDigest": "7e962c1ef491046b3e6aaad0f41d48ba4b4a54bca4201430c44101a6fd4fe5e3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -305644,6 +305644,70 @@
       },
       "claimDigest": "f21a1c53064fa18a098e5584d65a9557f96b216bf202eeedc94108d1d84b72d7",
       "digest": "af15ad902a50881bc553e7946f41d2386b06c3a970db9c0989ccde378b885891"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6017,
+      "parentDigest": "af15ad902a50881bc553e7946f41d2386b06c3a970db9c0989ccde378b885891",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "d414c052d0650605839f2e15f03cc03c1c3764047fe37a30cf6bf8352960cb76",
+      "idempotencyKey": "679b5fd21c6b5a9576c6d3d9530f54a2aa77f8688d901790e0deb54f26a87514",
+      "requestDigest": "d03c18e8ca6770c9af11b29b392f0e19f8e2cef6e3891d873b2b730b3ea98844",
+      "evaluationTime": "2026-08-29T11:55:58.000Z",
+      "claimCore": {
+        "claimId": "d414c052d0650605839f2e15f03cc03c1c3764047fe37a30cf6bf8352960cb76",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9cbf0dfabdd7dbf00600da733ffb70a373869fe7c30fd5c249356ff620caf6e9",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:094fb16c21ce88e25519521a810a7b7c7b4570de4a68bb5961c86b7aea216d91",
+        "canonicalBaseRevision": "14e45771c6c9864705d13c484281c0bf5025de86",
+        "declaredWriteScope": [
+          "path:canvas/scripts/prepare-xr-v2-depth-assets.mjs",
+          "path:canvas/src/__tests__/spatialCaptureRenderPerformance.test.ts",
+          "path:canvas/src/features/three/SpatialCaptureManifestStage.tsx",
+          "path:docs/conflict-resolution.md",
+          "path:docs/documents/agenticgraph-cross-repo-publish-topology.md",
+          "path:docs/documents/agenticgraph-feature-map.md",
+          "path:docs/documents/agenticgraph-integrations-ssot-sync-directives.md",
+          "path:scripts/__tests__/production-mirror-artifact.test.mjs",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "path:scripts/__tests__/sync-pages-stale-asset-cleanup.test.mjs",
+          "path:scripts/production-mirror-artifact.mjs",
+          "path:scripts/production-pages-routing.mjs",
+          "path:scripts/sync-pages-agenticgraph.mjs",
+          "path:scripts/verify-production-fidelity.mjs",
+          "path:scripts/xr-v2/production-publish-contract.mjs",
+          "semantic:xr-v2-publish-repair"
+        ],
+        "writeSetDigest": "73af9a9b14189fbd1892593bd13344f2a01b03a5693b7d5c9bae351c26165485",
+        "laneRevision": "f246ea19179ba8da939ee74a1667ee7cbe30739c",
+        "leaseEpoch": 1,
+        "transitionCounter": 7,
+        "heartbeatCounter": 2,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-29T12:50:20.000Z",
+        "evidenceDigest": "6a0249db7eda2145c36d48e53e1016c77a002e4cd2eb18bce6527230d254a6e6",
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBb7rVg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "f246ea19179ba8da939ee74a1667ee7cbe30739c",
+          "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBb7rVg",
+          "focusedEvidenceDigest": "6a0249db7eda2145c36d48e53e1016c77a002e4cd2eb18bce6527230d254a6e6",
+          "dependencyClosureDigest": "5f8770360ada1ed92a00e41f77c5d803e4146e39383d5b1cbaa5287edd4c18e3",
+          "namedChecksDigest": "c0c42753bb54f9094e4d63f68860e36508f667d483c2feb3c943f039229ba2f4",
+          "handoffEvidenceDigest": "6b63bd35065791faf8f651eae2b0fc91de64135da4df30f53ec0559ee7413911",
+          "operatorDecisionDigest": "1baf9c8b9d2bff34e432abdf8dd8bd2982cdb5c7a3c35f343cc9617ae576d4de",
+          "integrationIntentDigest": "469bf01c1fa3b68805f1119890668a4f9aaccc7d921d817a9991771227681f7a",
+          "integratedAt": "2026-08-29T11:55:58.000Z"
+        }
+      },
+      "claimDigest": "8db4bf23b9c6234d8820a2b1923a7d15dd4ae487a7f07a31da0599cdb728912b",
+      "digest": "7e962c1ef491046b3e6aaad0f41d48ba4b4a54bca4201430c44101a6fd4fe5e3"
     }
   ]
 }

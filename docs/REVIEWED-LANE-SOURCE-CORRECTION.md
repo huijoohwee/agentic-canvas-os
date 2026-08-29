@@ -28,6 +28,13 @@ base. Repository, work item, lane revision, write-set digest, and predecessor
 identity must remain exact; a different base still requires the existing
 canonical-descendant proof.
 
+An `integrated-preserved` predecessor, including its time-derived dormant
+projection, always requires that proof when the successor retains a historical
+base. The source-correction plan derives it from the plan-bound protected
+advance: source, current protected head, disjoint canonical paths, and preserved
+lane paths. Claim replay may adopt only a successor carrying that exact proof;
+missing or drifted evidence fails closed.
+
 ## Purpose
 
 This controller reopens one exact reviewed lane for correction by its original

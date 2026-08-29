@@ -9,6 +9,8 @@ import path from "node:path";
 
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { createGitHubCloudCollaborationAdapter } from "./github-cloud-collaboration-adapter.mjs";
+import { proveLegacyReviewCanonicalDescendant }
+  from "./legacy-clean-committed-lane-bootstrap-adapter-lib.mjs";
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
 import {
   buildReviewedLaneSourceCorrectionEvidence,
@@ -130,6 +132,10 @@ function createRuntime(options, dependencies) {
       ? projectRootState(joined.state)
       : projectRootState(authority.state);
     const advance = protectedAdvance(lease, provider.pullRequest.baseSha, protectedMainHead());
+    sourceCorrectionCanonicalDescendantProof({
+      protectedAdvance: advance,
+      declaredWriteSet: lease.admission.declaredWriteSet,
+    });
     const marker = parseWriterLeasePullRequestBody(provider.pullRequest.body);
     return buildReviewedLaneSourceCorrectionEvidence({
       repository: provider.repository,
@@ -271,9 +277,15 @@ function createRuntime(options, dependencies) {
       && item.leaseEpoch === plan.successorLeaseEpoch
       && acceptedStates.has(projectRootState(item.state)));
     if (candidates.length > 1) invalid("successor cardinality");
-    return candidates[0]
-      ? joinedClaim(candidates[0].claimId, plan.source.authority, cloudStatus)
-      : null;
+    if (!candidates[0]) return null;
+    const claim = await joinedClaim(candidates[0].claimId, plan.source.authority, cloudStatus);
+    const expectedProof = sourceCorrectionCanonicalDescendantProof({
+      protectedAdvance: plan.source.protectedAdvance,
+      declaredWriteSet: plan.source.lease.admission.declaredWriteSet,
+    });
+    if (digestValue(claim.canonicalDescendantProof ?? null)
+      !== digestValue(expectedProof)) invalid("successor canonical descendant proof");
+    return claim;
   }
 
   function successorValues(cloudStatus, claim) {
@@ -290,6 +302,10 @@ function createRuntime(options, dependencies) {
 
   async function createWaitingSuccessor({ plan }) {
     assertUnchangedSource(plan);
+    const canonicalDescendantProof = sourceCorrectionCanonicalDescendantProof({
+      protectedAdvance: plan.source.protectedAdvance,
+      declaredWriteSet: plan.source.lease.admission.declaredWriteSet,
+    });
     const before = status(plan.source.authority);
     const source = await joinedClaim(plan.sourceClaimId, plan.source.authority, before);
     if (!sameSourceClaim(source, plan.source.claim)) invalid("source claim drift");
@@ -300,6 +316,7 @@ function createRuntime(options, dependencies) {
       declaredWriteSet: source.declaredWriteScope, predecessorClaimId: plan.sourceClaimId,
       leaseEpoch: plan.successorLeaseEpoch, ttlSeconds,
       deviceId: plan.source.lease.device, sessionId: plan.source.lease.sessionId,
+      ...(canonicalDescendantProof ? { canonicalDescendantProof } : {}),
       idempotencyKey: `reviewed-lane-source-correction:waiting:${plan.planDigest}`,
     }, plan.source.authority);
     const after = status(plan.source.authority);
@@ -568,6 +585,31 @@ export function sameSourceClaim(live, expected) {
       === JSON.stringify(expected.declaredWriteScope)
     && digestValue(live.integration ?? null) === digestValue(expected.integration ?? null)
     && digestValue(live.recovery ?? null) === digestValue(expected.recovery ?? null);
+}
+
+export function sourceCorrectionCanonicalDescendantProof({
+  protectedAdvance,
+  declaredWriteSet,
+} = {}) {
+  if (protectedAdvance?.disposition === "unchanged") return null;
+  if (protectedAdvance?.disposition !== "disjoint-preserved") {
+    invalid("protected advance proof source");
+  }
+  return proveLegacyReviewCanonicalDescendant({
+    sourceBaseSha: protectedAdvance.sourceBaseSha,
+    targetBaseSha: protectedAdvance.currentBaseSha,
+    protectedMainSha: protectedAdvance.currentBaseSha,
+    canonicalChangedPaths: pathScopes(protectedAdvance.changedWriteScope),
+    preservedChangedPaths: pathScopes(declaredWriteSet),
+    sourceIsAncestor: true,
+    targetIsProtectedAncestor: true,
+  });
+}
+
+function pathScopes(values) {
+  return normalizeWriteSet(values)
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice("path:".length));
 }
 
 function sameSourceClaimState(live, expected) {

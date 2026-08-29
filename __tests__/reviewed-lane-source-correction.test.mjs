@@ -23,6 +23,7 @@ import {
 } from "../scripts/reviewed-lane-source-correction-evidence.mjs";
 import {
   createReviewedLaneSourceCorrectionRepositoryAdapter,
+  sourceCorrectionCanonicalDescendantProof,
 } from "../scripts/reviewed-lane-source-correction-repository-adapter.mjs";
 import { main } from "../scripts/reviewed-lane-source-correction.mjs";
 import { updateWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
@@ -293,6 +294,26 @@ test("protected-main advance is accepted only when its write scope is disjoint",
     currentBaseSha: hex("e", 40),
     changedWriteScope: ["path:scripts/source.mjs"],
   }), /identity join/);
+});
+
+test("protected-main advance derives one exact canonical descendant proof", () => {
+  const source = fixture({
+    currentBaseSha: hex("e", 40),
+    changedWriteScope: ["path:docs/disjoint.md"],
+  }).source;
+  const proof = sourceCorrectionCanonicalDescendantProof({
+    protectedAdvance: source.protectedAdvance,
+    declaredWriteSet: source.lease.admission.declaredWriteSet,
+  });
+  assert.equal(proof.sourceBaseSha, source.protectedAdvance.sourceBaseSha);
+  assert.equal(proof.targetBaseSha, source.protectedAdvance.currentBaseSha);
+  assert.equal(proof.protectedMainSha, source.protectedAdvance.currentBaseSha);
+  assert.deepEqual(proof.canonicalChangedPaths, ["docs/disjoint.md"]);
+  assert.deepEqual(proof.preservedChangedPaths, ["scripts/source.mjs"]);
+  assert.equal(sourceCorrectionCanonicalDescendantProof({
+    protectedAdvance: fixture().source.protectedAdvance,
+    declaredWriteSet: source.lease.admission.declaredWriteSet,
+  }), null);
 });
 
 test("integrated response loss joins the prior local review projection exactly", () => {
@@ -590,9 +611,12 @@ test("integrated response-loss retirement uses and replays the exact integration
   const publicSource = { ...sourceClaim, state: "integrated-preserved" };
   for (const key of ["recordedState", "deviceId", "sessionId"]) delete publicSource[key];
   let retired = false;
+  let successorCreated = false;
+  const claimRequests = [];
   const retireRequests = [];
   const status = () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
-    action: "status", claims: retired ? [waiting] : [publicSource, waiting],
+    action: "status", claims: retired ? [waiting]
+      : successorCreated ? [publicSource, waiting] : [publicSource],
     ledgerRevision: hex("a", 40), ledgerDigest: hex("b", 64) });
   const pull = subject.source.pullRequest;
   const gh = args => args[0] === "repo"
@@ -620,7 +644,8 @@ test("integrated response-loss retirement uses and replays the exact integration
   };
   const adapter = createReviewedLaneSourceCorrectionRepositoryAdapter({ repository,
     sourceSessionId: sourceSession, pullRequestNumber: pull.number }, {
-    git, gh, leaseStore: { read: () => lease }, privateClaims: async () => [sourceClaim, waiting],
+    git, gh, leaseStore: { read: () => lease },
+    privateClaims: async () => successorCreated ? [sourceClaim, waiting] : [sourceClaim],
     execute(command, args) {
       if (command === "git" && args[0] === "merge-base") return "";
       if (command === "git" && args[0] === "diff") return "docs/disjoint.md\0";
@@ -628,6 +653,16 @@ test("integrated response-loss retirement uses and replays the exact integration
     },
     cloud(input) {
       if (input.action === "status") return status();
+      if (input.action === "claim") {
+        claimRequests.push(structuredClone(input.request));
+        if (!successorCreated) {
+          waiting.canonicalDescendantProof = structuredClone(
+            input.request.canonicalDescendantProof,
+          );
+          successorCreated = true;
+        }
+        return { ...status(), action: "claim" };
+      }
       retireRequests.push(input.request); retired = true;
       return { ...status(), action: "retire", operationReceipt: {
         operation: "retire", receiptDigest: hex("c", 64) } };
@@ -641,6 +676,26 @@ test("integrated response-loss retirement uses and replays the exact integration
   const drifted = structuredClone(plan);
   drifted.source.claim.operationReceiptDigest = hex("0", 64);
   await assert.rejects(adapter.createWaitingSuccessor({ plan: drifted }), /source claim drift/);
+  const firstSuccessor = await adapter.createWaitingSuccessor({ plan });
+  const secondSuccessor = await adapter.createWaitingSuccessor({ plan });
+  assert.deepEqual(secondSuccessor, firstSuccessor);
+  assert.equal(claimRequests.length, 2);
+  assert.deepEqual(claimRequests[1].canonicalDescendantProof,
+    claimRequests[0].canonicalDescendantProof);
+  assert.deepEqual(claimRequests[0].canonicalDescendantProof,
+    sourceCorrectionCanonicalDescendantProof({
+      protectedAdvance: plan.source.protectedAdvance,
+      declaredWriteSet: plan.source.lease.admission.declaredWriteSet,
+    }));
+  assert.deepEqual(claimRequests[0].canonicalDescendantProof.canonicalChangedPaths,
+    ["docs/disjoint.md"]);
+  assert.deepEqual(claimRequests[0].canonicalDescendantProof.preservedChangedPaths,
+    ["scripts/source.mjs"]);
+  const exactProof = structuredClone(waiting.canonicalDescendantProof);
+  waiting.canonicalDescendantProof.evidenceDigest = hex("0", 64);
+  await assert.rejects(adapter.createWaitingSuccessor({ plan }),
+    /successor canonical descendant proof/);
+  waiting.canonicalDescendantProof = exactProof;
   const first = await adapter.retireSourceClaim({ plan });
   const second = await adapter.retireSourceClaim({ plan });
   assert.deepEqual(second, first);

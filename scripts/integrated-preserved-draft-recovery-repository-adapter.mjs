@@ -13,6 +13,13 @@ import {
   normalizeContinuationRequest,
   validateContinuation,
 } from "./cloud-authority-handoff-lineage.mjs";
+import {
+  createScopeExpansionLineageProjectionProof,
+} from "./cloud-authority-scope-expansion-lineage-projection.mjs";
+import {
+  githubLedgerCommandOptions,
+  readScopeExpansionLineageLedger,
+} from "./cloud-authority-scope-expansion-lineage-migration.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import {
   createIntegratedPreservedDraftRecoveryPlan,
@@ -46,6 +53,7 @@ export function createRepositoryIntegratedPreservedDraftRecoveryAdapter({
   ghText = null,
   run = null,
   readProvider = null,
+  readLineageLedger = null,
   withFence = withReviewedLaneEntrypointFence,
   now = () => new Date(),
   resolveRealpath = realpathSync,
@@ -88,6 +96,16 @@ export function createRepositoryIntegratedPreservedDraftRecoveryAdapter({
   const providerReader = readProvider || (reference => JSON.parse(gh([
     "pr", "view", reference, "--json", PULL_REQUEST_FIELDS,
   ])));
+  const lineageLedgerReader = readLineageLedger || (ledgerRepository => (
+    readScopeExpansionLineageLedger({
+      ledgerRepository,
+      ghText: argumentsList => execFileSync(
+        "gh",
+        argumentsList,
+        githubLedgerCommandOptions(repoRoot),
+      ),
+    })
+  ));
   let authorityStore = leaseStore;
 
   function store() {
@@ -126,11 +144,18 @@ export function createRepositoryIntegratedPreservedDraftRecoveryAdapter({
     }
     const provider = await providerReader(captured.lane.pullRequest.url);
     assertProviderMatchesCapturedLane(provider, captured.lane);
+    const requiresLineageProof = captured.claim?.leaseEpoch === 1
+      && Boolean(captured.claim.predecessorClaimId);
+    const lineageLedger = requiresLineageProof
+      ? await lineageLedgerReader(captured.lane.authority.ledgerRepository)
+      : null;
     const continuation = classifyContinuation({
       lane: captured.lane,
       actor: capturedActor,
       status: captured.status,
       sessionId: sourceSessionId,
+      lineageLedger,
+      observedAt: now(),
     });
     assertOnlyDraftProjectionFinding({
       findings: continuation.findings,
@@ -191,6 +216,14 @@ export function createRepositoryIntegratedPreservedDraftRecoveryAdapter({
       remoteClaimIntegrationDigest: digestValue(claim.integration),
       remoteClaimDigest: digestValue(claim),
       continuationSubjectDigest: continuation.subjectDigest,
+      scopeExpansionLineageIdentityDigest:
+        continuation.lineageProof?.lineageIdentityDigest || null,
+      scopeExpansionSourceClaimId:
+        continuation.lineageProof?.sourceClaimId || null,
+      scopeExpansionTargetGenesisEntryDigest:
+        continuation.lineageProof?.targetGenesisEntryDigest || null,
+      scopeExpansionSourceRetirementEntryDigest:
+        continuation.lineageProof?.sourceRetirementEntryDigest || null,
       pullRequestId: requiredText(provider.id, "pull-request ID"),
       pullRequestNumber: provider.number,
       pullRequestUrl: requiredText(provider.url, "pull-request URL"),
@@ -278,7 +311,14 @@ export function createRepositoryIntegratedPreservedDraftRecoveryAdapter({
   });
 }
 
-function classifyContinuation({ lane, actor, status, sessionId }) {
+function classifyContinuation({
+  lane,
+  actor,
+  status,
+  sessionId,
+  lineageLedger,
+  observedAt,
+}) {
   const request = normalizeContinuationRequest({
     transition: "reclaim",
     branch: lane.branch,
@@ -287,7 +327,17 @@ function classifyContinuation({ lane, actor, status, sessionId }) {
     successorDeviceId: lane.lease.device,
     ttlSeconds: 1800,
   });
-  const predecessor = classifyPredecessor({ lane, actor, status, request });
+  const candidate = status?.claims?.find(
+    claim => claim?.claimId === lane.authority.claimId,
+  );
+  const lineageProof = candidate?.leaseEpoch === 1 && candidate.predecessorClaimId
+    ? createScopeExpansionLineageProjectionProof({
+      lane, actor, status, ledger: lineageLedger, request, now: observedAt,
+    })
+    : null;
+  const predecessor = classifyPredecessor({
+    lane, actor, status, request, lineageProjectionProof: lineageProof,
+  });
   const integratedReplay = classifyIntegratedReplay({
     request,
     lane,
@@ -306,14 +356,21 @@ function classifyContinuation({ lane, actor, status, sessionId }) {
     predecessor,
     successor,
     integratedReplay,
+    lineageProjectionProof: lineageProof,
   });
   const subject = Object.freeze({
     request,
     predecessor,
     integratedReplay,
     successor,
+    scopeExpansionLineageIdentityDigest: lineageProof?.lineageIdentityDigest || null,
   });
-  return Object.freeze({ findings, subjectDigest: digestValue(subject) });
+  return Object.freeze({
+    findings,
+    lineageProof,
+    observedAt,
+    subjectDigest: digestValue(subject),
+  });
 }
 
 function assertOnlyDraftProjectionFinding({ findings, isDraft }) {

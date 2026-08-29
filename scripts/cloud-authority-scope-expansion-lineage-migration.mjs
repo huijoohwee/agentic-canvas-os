@@ -203,7 +203,7 @@ export function createRepositoryScopeExpansionLineageMigrationAdapter({
       ledgerRepository: lane.authority.ledgerRepository,
       targetRepository: lane.authority.targetRepository,
     }),
-    readLedger: ({ lane }) => readGitHubLedger({
+    readLedger: ({ lane }) => readScopeExpansionLineageLedger({
       ledgerRepository: lane.authority.ledgerRepository,
       ghText: repositoryGhText,
     }),
@@ -222,7 +222,7 @@ async function readEvidence(adapter, branch) {
   return Object.freeze({ lane, actor, status, ledger });
 }
 
-function readGitHubLedger({ ledgerRepository, ghText }) {
+export function readScopeExpansionLineageLedger({ ledgerRepository, ghText }) {
   const repository = requiredRepository(ledgerRepository);
   const metadata = JSON.parse(ghText([
     "api",

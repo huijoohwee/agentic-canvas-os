@@ -16,7 +16,10 @@ import {
 import { createMixedIdentityPairRetirementController }
   from "../scripts/claim-only-mixed-identity-pair-retirement-controller.mjs";
 import {
+  assertMixedIdentityPairTerminalDescendant,
   convergeRetirementAtFreshLedger,
+  isMixedIdentityPairTerminalDescendantReplay,
+  mixedIdentityPairTerminalRelevantDigest,
   projectMixedIdentityPairRepositoryEvidence,
 }
   from "../scripts/claim-only-mixed-identity-pair-retirement-repository-adapter.mjs";
@@ -168,6 +171,35 @@ test("stable repository evidence excludes provider display metadata", () => {
   }, expected.ledgerRepository);
   assert.deepEqual(projected, expected);
   assert.equal(Object.hasOwn(projected, "nameWithOwner"), false);
+});
+
+test("terminal replay admits only path-stable protected descendants", () => {
+  const plan = structuredClone(buildMixedIdentityPairRetirementPlan(fixtureEvidence()));
+  plan.evidence.repository.targetRepository = plan.evidence.repository.ledgerRepository;
+  const next = "d".repeat(40), later = "e".repeat(40);
+  const frame = { repository: plan.evidence.repository,
+    controller: { ...plan.evidence.controller, headSha: next, originMainSha: next,
+      remoteMainSha: next, runtimeDigest: digestValue("next-runtime") },
+    canonical: { ...plan.evidence.canonical, mainSha: next }, sourceMatches: [],
+    waitingMatches: [], associations: emptyAssociations(),
+    sourceEntries: [{ digest: digestValue("source-terminal") }],
+    waitingEntries: [{ digest: digestValue("waiting-terminal") }] };
+  const paths = plan.evidence.scopeComparison.union.filter(value => value.startsWith("path:"))
+    .map(value => value.slice(5));
+  assert.equal(isMixedIdentityPairTerminalDescendantReplay({ state: { phase: "prepared" } }), false);
+  assert.equal(isMixedIdentityPairTerminalDescendantReplay({ state: { phase: "complete" } }), true);
+  assert.doesNotThrow(() => assertMixedIdentityPairTerminalDescendant({ plan, frame,
+    isAncestor: () => true, pathsUnchanged: (base, head, actual) =>
+      base === BASE && head === next && canonicalJson(actual) === canonicalJson(paths) }));
+  const effect = digestValue("sealed-effect"), stable = mixedIdentityPairTerminalRelevantDigest(
+    plan, frame, effect);
+  const advanced = { ...frame, controller: { ...frame.controller, headSha: later,
+    originMainSha: later, remoteMainSha: later }, canonical: { ...frame.canonical, mainSha: later } };
+  assert.equal(mixedIdentityPairTerminalRelevantDigest(plan, advanced, effect), stable);
+  assert.throws(() => assertMixedIdentityPairTerminalDescendant({ plan, frame,
+    isAncestor: () => true, pathsUnchanged: () => false }), /affected path drift/u);
+  assert.throws(() => assertMixedIdentityPairTerminalDescendant({ plan, frame,
+    isAncestor: () => false, pathsUnchanged: () => true }), /terminal ancestry/u);
 });
 
 test("relevant subject drift blocks before source retirement", async () => {

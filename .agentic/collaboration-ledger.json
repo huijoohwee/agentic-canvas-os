@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6010,
-  "headDigest": "31e79ce7957c9812c98bd660864dd5f126029db53ef59fe649db0286d0226692",
+  "sequence": 6011,
+  "headDigest": "286ab72e83788c51ed95c9b26479339214bbdb427cd0925dc9356600d787240c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -305366,6 +305366,46 @@
       },
       "claimDigest": "7ca8924cc5acbc2ed6cf20db0b1bf6aabcc35a663930e1a2ddc0449bdad7bf2a",
       "digest": "31e79ce7957c9812c98bd660864dd5f126029db53ef59fe649db0286d0226692"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6011,
+      "parentDigest": "31e79ce7957c9812c98bd660864dd5f126029db53ef59fe649db0286d0226692",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "7e9d6e3a9016e8a740c306a59fb386a866a7a21b812b23dbc5577f942c6a16cf",
+      "idempotencyKey": "944e8955d91530789d78c4b84de5f8d3be4ace88c4a76efd76dac48c583fdeb6",
+      "requestDigest": "8d0cace316d127388adcdab4e7fe055acd1322d002aedab150aca6bc1139b6f3",
+      "evaluationTime": "2026-08-29T11:43:11.000Z",
+      "claimCore": {
+        "claimId": "7e9d6e3a9016e8a740c306a59fb386a866a7a21b812b23dbc5577f942c6a16cf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:0d9047c98071551c1b518bec5a3b4daa7ea941a1ce4005601318f3ed222973d7",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:52c36c17fcd13991921477be01fdd071d4229d593c35ebd1cc73c7ca99a28c07",
+        "canonicalBaseRevision": "14e45771c6c9864705d13c484281c0bf5025de86",
+        "declaredWriteScope": [
+          "path:.github/workflows/promote-agentic-canvas-os.yml",
+          "path:scripts/__tests__/promote-agentic-canvas-os-revision.test.mjs",
+          "semantic:runtime-readiness-promotion-branch-contract"
+        ],
+        "writeSetDigest": "f92658301efdba9f3f2768345e11a4428a88be4ef8e7e1485967b1ba7feb8dd6",
+        "laneRevision": "906adca27d07e5f0f849b75cdb90e8cbda0bd68a",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T12:41:09.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBb9hLQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "7d039e295593ca6aaf66212c53da020e99e3c363c708d81e41e06a79e6e1adbf",
+      "digest": "286ab72e83788c51ed95c9b26479339214bbdb427cd0925dc9356600d787240c"
     }
   ]
 }

@@ -269,6 +269,99 @@ test("execute projects review-ready once then delegates exact same-session recla
   assert.equal(reclaimed, 2);
 });
 
+test("integrated replay forwards its fresh branded lineage proof to the shared reclaim", async () => {
+  const live = "2026-08-10T02:00:00.000Z";
+  const base = fixture({
+    remoteClaimState: "integrated-preserved",
+    localExpiresAt: live,
+    remoteExpiresAt: live,
+  });
+  const lane = {
+    repository: base.repository,
+    branch: base.branch,
+    headSha: base.reviewHeadSha,
+    refreshedHeadSha: null,
+    remoteHeadSha: base.remoteHeadSha,
+    clean: true,
+    authority: {
+      state: "review_ready",
+      claimId: base.claimId,
+      laneRevision: base.authorityLaneRevision,
+      reviewRequestId: base.reviewRequestId,
+      writeSetDigest: base.writeSetDigest,
+      cloudDeclaredWriteScope: base.declaredWriteScope,
+      leaseEpoch: 1,
+      ledgerRepository: "o/ledger",
+      targetRepository: "o/r",
+    },
+    lease: {
+      status: "review_ready",
+      sessionId: base.sessionId,
+      expiresAt: live,
+      device: "device.local",
+    },
+    pullRequest: {
+      headRefOid: base.pullRequestHeadSha,
+      url: base.pullRequestUrl,
+      authorLogin: "owner",
+      state: "OPEN",
+      isDraft: false,
+      autoMergeRequest: null,
+    },
+  };
+  const lineageProjectionProof = Object.freeze({ kind: "opaque-branded-proof" });
+  let proofCalls = 0;
+  const adapter = {
+    async readPreservedReviewLane() { return lane; },
+    async readCloudStatus() {
+      return {
+        repositoryId: base.repositoryId,
+        claims: [{
+          claimId: base.claimId,
+          predecessorClaimId: digest("9"),
+          state: "integrated-preserved",
+          repositoryId: base.repositoryId,
+          reviewRequestId: base.reviewRequestId,
+          writeSetDigest: base.writeSetDigest,
+          laneRevision: base.authorityLaneRevision,
+          declaredWriteScope: base.declaredWriteScope,
+          leaseEpoch: 1,
+          expiresAt: live,
+        }],
+      };
+    },
+    async readAuthenticatedOwner() { return { login: "owner" }; },
+    async createLineageProjectionProof({ request, observedAt }) {
+      proofCalls += 1;
+      assert.equal(request.transition, "reclaim");
+      assert.equal(request.sessionId, base.sessionId);
+      assert.equal(observedAt.toISOString(), "2026-08-10T01:00:00.000Z");
+      return lineageProjectionProof;
+    },
+  };
+  const controller = createReviewAheadProjectionController({
+    adapter,
+    now: () => new Date("2026-08-10T01:00:00.000Z"),
+    async reclaim(request, options) {
+      assert.equal(request.successorSessionId, base.sessionId);
+      assert.equal(options.lineageProjectionProof, lineageProjectionProof);
+      return {
+        outcome: "reclaimed-live-replay",
+        successorClaimId: base.claimId,
+      };
+    },
+  });
+  const plan = await controller.plan({ branch: base.branch, sessionId: base.sessionId });
+  const result = await controller.execute({
+    branch: base.branch,
+    sessionId: base.sessionId,
+    authorization: plan.authorization,
+  });
+  assert.equal(result.status, "review-ready-reclaimed");
+  assert.equal(result.successorClaimId, base.claimId);
+  assert.equal(proofCalls, 1);
+});
+
 test("execute rejects a stale authorization before projection", async () => {
   let projected = false;
   const base = fixture();

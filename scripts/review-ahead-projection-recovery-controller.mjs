@@ -4,6 +4,13 @@ import {
   continueExpiredReviewLaneAuthority,
   createRepositoryCloudAuthorityHandoffControllerAdapter,
 } from "./cloud-authority-handoff-controller.mjs";
+import {
+  createScopeExpansionLineageProjectionProof,
+} from "./cloud-authority-scope-expansion-lineage-projection.mjs";
+import {
+  githubLedgerCommandOptions,
+  readScopeExpansionLineageLedger,
+} from "./cloud-authority-scope-expansion-lineage-migration.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import {
   assertReviewAheadAuthorization,
@@ -52,16 +59,36 @@ export function createReviewAheadProjectionController({
           || projected.evidence.reviewHeadSha !== before.evidence.reviewHeadSha) {
         throw new Error("Review-ahead local projection did not preserve exact identity.");
       }
-      const reclaimed = await reclaim({
+      const reclaimRequest = Object.freeze({
         transition: "reclaim",
         branch,
         sessionId,
         successorSessionId: sessionId,
         successorDeviceId: before.lane.lease.device,
         ttlSeconds,
-      }, { adapter });
+      });
+      const lineageProjectionProof = projected.claim?.leaseEpoch === 1
+          && projected.claim.predecessorClaimId
+        ? await adapter.createLineageProjectionProof({
+          lane: projected.lane,
+          status: projected.status,
+          request: reclaimRequest,
+          observedAt: now(),
+        })
+        : null;
+      const reclaimed = await reclaim(reclaimRequest, {
+        adapter,
+        lineageProjectionProof,
+      });
       if (!String(reclaimed.outcome || "").startsWith("reclaimed-live")) {
-        throw new Error("Review-ahead cloud reclaim did not converge to live review authority.");
+        const findingTypes = Array.isArray(reclaimed.blockingFindings)
+          ? reclaimed.blockingFindings.map(item => item?.type).filter(Boolean).join(",")
+          : "";
+        throw new Error(
+          `Review-ahead cloud reclaim did not converge to live review authority${
+            findingTypes ? `: ${findingTypes}` : "."
+          }`,
+        );
       }
       const core = {
         schema: REVIEW_AHEAD_RESULT_SCHEMA,
@@ -95,6 +122,25 @@ export function createRepositoryReviewAheadProjectionController({
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       }).trim();
+    },
+    async createLineageProjectionProof({ lane, status, request, observedAt }) {
+      const actor = await base.readAuthenticatedOwner();
+      const ledger = readScopeExpansionLineageLedger({
+        ledgerRepository: lane.authority.ledgerRepository,
+        ghText: argumentsList => execFileSync(
+          "gh",
+          argumentsList,
+          githubLedgerCommandOptions(repository),
+        ),
+      });
+      return createScopeExpansionLineageProjectionProof({
+        lane,
+        actor,
+        status,
+        ledger,
+        request,
+        now: observedAt,
+      });
     },
     readLocalDescendantReceipt({ baseSha, localHeadSha, reviewHeadSha, declaredWriteScope }) {
       const gitText = args => execFileSync("git", args, {

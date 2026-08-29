@@ -53,7 +53,8 @@ export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
   }
   return adapter;
 }
-export async function continueExpiredReviewLaneAuthority(input, { adapter, lineageAdmission = null } = {}) {
+export async function continueExpiredReviewLaneAuthority(input, { adapter, lineageAdmission = null,
+  lineageProjectionProof = null } = {}) {
   const request = normalizeContinuationRequest(input);
   if (!parseDeviceBranch(request.branch)) {
     throw new Error("Cloud authority continuation requires a canonical agent/device/scope branch.");
@@ -64,20 +65,13 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter, linea
     ledgerRepository: lane.authority.ledgerRepository,
     targetRepository: lane.authority.targetRepository,
   });
-  const predecessor = classifyPredecessor({ lane, actor, status, request, lineageAdmission });
+  const predecessor = classifyPredecessor({ lane, actor, status, request, lineageAdmission, lineageProjectionProof });
   const integratedReplay = classifyIntegratedReplay({ request, lane, actor, status, predecessor });
   const successor = integratedReplay.applicable
     ? emptyResumableSuccessor()
     : classifyResumableSuccessor({ request, lane, actor, status, predecessor });
-  const findings = validateContinuation({
-    request,
-    lane,
-    actor,
-    status,
-    predecessor,
-    successor,
-    integratedReplay,
-  });
+  const findings = validateContinuation({ request, lane, actor, status, predecessor, successor,
+    integratedReplay, lineageProjectionProof });
   const preflightReceipt = buildHandoffReceipt("preflight", {
     branch: lane.branch,
     transition: request.transition,

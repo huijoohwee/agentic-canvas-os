@@ -1,8 +1,7 @@
 // Responsibility: Join Git, provider, lease, cloud, and durable state for exact retirement.
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync,
-  readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalJson, digestValue, validateLedger } from "./cloud-collaboration-primitives.mjs";
@@ -10,11 +9,10 @@ import { normalizeResumePlan, normalizeResumeState, normalizeState, RESUME_STATE
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { withPrivateOperationLock } from "./private-operation-lock.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
+import { authorizeTaskBoundLeaseMutation } from "./task-bound-lane-authority-store.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
 const CONTROLLER_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
-const RUNTIME_FILES = Object.freeze(["scripts/admitted-empty-abandoned-owner-retirement-contract.mjs",
-  "scripts/admitted-empty-abandoned-owner-retirement-controller.mjs", "scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs",
-  "scripts/admitted-empty-abandoned-owner-retirement.mjs", "scripts/private-operation-lock.mjs"]);
+const RUNTIME_FILES = Object.freeze(["scripts/admitted-empty-abandoned-owner-retirement-contract.mjs", "scripts/admitted-empty-abandoned-owner-retirement-controller.mjs", "scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs", "scripts/admitted-empty-abandoned-owner-retirement.mjs", "scripts/private-operation-lock.mjs"]);
 export function createRepositoryAdapter(options = {}, dependencies = {}) {
   const repository = absolute(options.repository, "repository");
   const subjectPath = absolute(options.subjectWorktree, "subject worktree");
@@ -168,12 +166,14 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     let taskAuthorityBindingDigest = null;
     if (descendant || requireCapability) {
       if (!taskAuthorityFile) throw new Error("Protected-controller continuation requires the original task authority capability.");
-      const authorized = leaseStore.assertTaskAuthority({ branch: plan.subject.branch,
-        operation: `admitted-empty-abandoned-owner-retirement:${plan.planDigest}:${operation}` });
-      const expectedLeaseDigest = released ? digestValue(subject.rawLease) : plan.subject.lease.digest;
-      if (digestValue(authorized) !== expectedLeaseDigest)
-        throw new Error("Task authority no longer proves the exact retirement lease.");
-      taskAuthorityBindingDigest = authorized.taskAuthority?.bindingDigest || null;
+      const authorityOperation = `admitted-empty-abandoned-owner-retirement:${plan.planDigest}:${operation}`;
+      const authority = released ? authorizeTaskBoundLeaseMutation({ capabilityPath: taskAuthorityFile,
+        lease: { ...subject.rawLease, status: plan.subject.lease.status,
+          cloudAuthority: { claimId: plan.subject.lease.claimId } },
+        operation: authorityOperation, now: now() }) : leaseStore.assertTaskAuthority({
+          branch: plan.subject.branch, operation: authorityOperation });
+      if (!released && digestValue(authority) !== plan.subject.lease.digest) throw new Error("Task authority no longer proves the exact retirement lease.");
+      taskAuthorityBindingDigest = released ? authority.bindingDigest : authority.taskAuthority?.bindingDigest || null;
     } else if (released) taskAuthorityBindingDigest = subject.rawLease.taskAuthority?.bindingDigest || null;
     if (released && descendant && taskAuthorityBindingDigest === null)
       throw new Error("Released descendant retirement lease lost its task-authority binding.");

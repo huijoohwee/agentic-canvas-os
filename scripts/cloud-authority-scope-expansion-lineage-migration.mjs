@@ -178,6 +178,8 @@ export function createRepositoryScopeExpansionLineageMigrationAdapter({
   gitText = null,
   ghText = null,
   handoffAdapter = null,
+  taskAuthorityFile = null,
+  createHandoffAdapter = createRepositoryCloudAuthorityHandoffControllerAdapter,
 } = {}) {
   const repoRoot = realpathSync(path.resolve(requiredText(repository, "repository")));
   const repositoryGitText = gitText || (args => execFileSync("git", args, {
@@ -188,12 +190,13 @@ export function createRepositoryScopeExpansionLineageMigrationAdapter({
     args,
     githubLedgerCommandOptions(repoRoot),
   ));
-  const owner = handoffAdapter || createRepositoryCloudAuthorityHandoffControllerAdapter({
+  const owner = handoffAdapter || createHandoffAdapter({
     repository: repoRoot,
     sessionId: requiredText(sessionId, "session ID"),
     environment,
     gitText: repositoryGitText,
     ghText: repositoryGhText,
+    taskAuthorityFile,
     resolveRealpath: value => value,
   });
   return createScopeExpansionLineageMigrationAdapter({
@@ -356,10 +359,15 @@ async function main() {
       || execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim());
     const sessionId = option(argumentsList, "session");
     const device = option(argumentsList, "successor-device") || branchIdentity.device;
+    const taskAuthority = option(argumentsList, "task-authority");
+    if (mode === "execute" && !path.isAbsolute(taskAuthority)) {
+      throw new Error("--task-authority must be an existing absolute capability path for execute.");
+    }
     const adapter = createRepositoryScopeExpansionLineageMigrationAdapter({
       repository,
       sessionId,
       environment: process.env,
+      taskAuthorityFile: mode === "execute" ? realpathSync(taskAuthority) : null,
     });
     const result = await runScopeExpansionLineageMigration({
       mode,

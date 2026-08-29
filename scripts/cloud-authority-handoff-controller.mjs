@@ -1,13 +1,10 @@
 #!/usr/bin/env node
-
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
-import { continueClaimedReviewSuccessorCloudAuthority, invokeRepositoryCloudAction,
-  recoverIntegratedPreservedCloudAuthority, reviewReadyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
+import { continueClaimedReviewSuccessorCloudAuthority, invokeRepositoryCloudAction, recoverIntegratedPreservedCloudAuthority, reviewReadyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
 import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import { sanitizeCloudAuthorityDiagnostic } from "./cloud-authority-scope-expansion-lineage-contract.mjs";
 import { assertRegisteredWorktree } from "./repository-guards.mjs";
@@ -16,8 +13,7 @@ import {
   assertResumableSuccessorReplay,
   buildCloudAuthoritySuccessorClaimRequest,
   buildHandoffReceipt,
-  classifyIntegratedReplay,
-  classifyPredecessor,
+  classifyIntegratedReplay, classifyPredecessor,
   classifyResumableSuccessor,
   CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA,
   CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA,
@@ -28,8 +24,8 @@ import {
   validateContinuation,
 } from "./cloud-authority-handoff-lineage.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
-import { createWriterLeaseStore, parseDeviceBranch, parseWriterLeasePullRequestBody,
-  updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
+import { continueTaskAuthorityCloudSuccessorBinding } from "./task-bound-lane-authority-store.mjs";
+import { createWriterLeaseStore, parseDeviceBranch, parseWriterLeasePullRequestBody, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 export { buildCloudAuthoritySuccessorClaimRequest, CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA, CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA };
 const SHA_PATTERN = /^[0-9a-f]{40}$/u, DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
@@ -251,6 +247,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       }
       const lease = laneStore.read(branch);
       if (!lease) throw new Error(`No writer lease records ${branch}.`);
+      if (lease.taskAuthority && taskAuthorityFile) laneStore.assertTaskAuthority({ branch, operation: "cloud-authority-handoff-preflight" });
       const pullRequest = readOwnershipPullRequest({
         url: requiredText(lease.pullRequestUrl, "pullRequestUrl"),
         branch,
@@ -324,6 +321,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       return Object.freeze({ ...status, repositoryId: `github-repository:${repositoryNodeId}` });
     },
     claimSuccessor({ request, lane, predecessor }) {
+      if (lane.lease.taskAuthority && !taskAuthorityFile) throw new Error("Task-bound cloud continuation requires its existing capability.");
       return invokeRepositoryCloudAction({
         action: "claim",
         ledgerRepository: lane.authority.ledgerRepository,
@@ -389,6 +387,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       });
     },
     recoverIntegratedAuthority({ request, lane, integratedReplay }) {
+      if (lane.lease.taskAuthority && !taskAuthorityFile) throw new Error("Task-bound cloud recovery requires its existing capability.");
       return recoverIntegratedPreservedCloudAuthority({
         authority: lane.authority,
         integratedClaim: integratedReplay.claim,
@@ -407,19 +406,24 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       });
     },
     persistReviewProjection({ lane, authority }) {
+      const values = { reviewHeadSha: lane.headSha, cloudAuthority: authority };
+      if (lane.lease.taskAuthority && authority.claimId !== lane.authority.claimId) {
+        const nextLease = { ...lane.lease, ...values, schema: "agentic-writer-lease/v2", status: "review_ready", heartbeatAt: authority.expiresAt, expiresAt: authority.expiresAt };
+        values.taskAuthority = continueTaskAuthorityCloudSuccessorBinding({ sourceLease: lane.lease, nextLease, capabilityPath: taskAuthorityFile });
+      }
       const updatedLease = store.release({
         sessionId,
         branch: lane.branch,
         status: "review_ready",
         timestamp: authority.expiresAt,
-        values: {
-          reviewHeadSha: lane.headSha,
-          cloudAuthority: authority,
-        },
+        expectedLease: lane.lease,
+        values,
       });
       if (updatedLease.status !== "review_ready"
         || updatedLease.heartbeatAt !== authority.expiresAt || updatedLease.expiresAt !== authority.expiresAt
-        || updatedLease.cloudAuthority?.claimId !== authority.claimId) {
+        || updatedLease.cloudAuthority?.claimId !== authority.claimId
+        || updatedLease.taskAuthority?.bindingDigest
+          !== (values.taskAuthority || lane.lease.taskAuthority)?.bindingDigest) {
         throw new Error("Local review-ready projection did not preserve exact cloud expiry and authority.");
       }
       execute("gh", [

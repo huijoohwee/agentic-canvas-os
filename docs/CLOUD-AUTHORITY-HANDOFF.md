@@ -177,8 +177,13 @@ copying, and symbol reflection cannot reconstruct either capability.
 For a reviewed historical claim, the existing handoff controller creates a
 normal epoch-2 successor, retires the historical claim through the standard
 root operation, restores the unchanged review projection, and persists it
-through repository-owned APIs. When the authorized plan instead ends at the
-exact integrated child of the local reviewed transition, the controller uses
+through repository-owned APIs. If the preserved writer lease is task-bound,
+that same repository transaction authenticates the existing external
+capability and continues its binding to the new cloud claim. The capability is
+never copied into the lease, rotated, or replaced; only its public binding is
+projected. A missing, insecure, or mismatched capability fails before cloud
+continuation. When the authorized plan instead ends at the exact integrated
+child of the local reviewed transition, the controller uses
 the already-validated predecessor capability to recover that same claim as
 epoch 1. It does not mint a successor or replace the immutable integration
 receipt. Post-recovery verification keeps the exact local and remote reviewed
@@ -234,6 +239,7 @@ After inspecting the receipt-bound plan, execute that exact plan:
 ```sh
 node ./scripts/cloud-authority-scope-expansion-lineage-migration.mjs execute \
   --session="<exact-lease-session-id>" \
+  --task-authority="<existing-absolute-capability-path>" \
   --plan-file="<lineage-plan-result.json>" \
   --authorize="authorize lineage-migration <planDigest>" \
   --json

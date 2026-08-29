@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 import {
   buildCloudAuthoritySuccessorClaimRequest,
@@ -9,6 +12,8 @@ import {
   createRepositoryCloudAuthorityHandoffControllerAdapter,
 } from "../scripts/cloud-authority-handoff-controller.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
+import { createTaskAuthorityLeaseBinding, writeTaskAuthorityCapability }
+  from "../scripts/task-bound-lane-authority-store.mjs";
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
 
 const BASE_SHA = "a".repeat(40);
@@ -149,6 +154,28 @@ function successorAuthority(overrides = {}) {
     focusedEvidenceDigest: PREDECESSOR_FOCUSED_EVIDENCE,
     ...overrides,
   };
+}
+
+function taskBoundPreservedLane(testContext) {
+  const directory = mkdtempSync(path.join(realpathSync(tmpdir()), "acos-handoff-binding-"));
+  testContext.after(() => rmSync(directory, { recursive: true, force: true }));
+  const capabilityPath = path.join(directory, "task-authority.json");
+  writeTaskAuthorityCapability({ outputPath: capabilityPath });
+  const lane = preservedLane();
+  const leaseCore = {
+    ...lane.lease, schema: "agentic-writer-lease/v2", epoch: 2, fenceSha: REVIEW_SHA,
+    autoDelivery: false, runtimeRequired: false,
+    acquiredAt: "2026-08-03T07:00:00.000Z",
+    heartbeatAt: lane.authority.expiresAt, expiresAt: lane.authority.expiresAt,
+    admission: { ...lane.lease.admission, schema: "agentic-lane-admission-lease/v1",
+      semanticScope: lane.lease.scope, planReceiptDigest: "a".repeat(64),
+      admissionReceiptDigest: "b".repeat(64), existingLaneStateDigest: "c".repeat(64),
+      preservationReceiptDigest: "d".repeat(64) },
+  };
+  const lease = { ...leaseCore, taskAuthority: createTaskAuthorityLeaseBinding({
+    lease: leaseCore, capabilityPath,
+  }) };
+  return { lane: { ...lane, lease, authority: lease.cloudAuthority }, capabilityPath };
 }
 
 function statusResult(claims = [], { includePredecessor = true } = {}) {
@@ -522,6 +549,8 @@ test("integrated replay is stable and derivative or evidence drift never mutates
   const first = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
   const replay = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
   assert.equal(first.outcome, "reclaimed-live-replay");
+  assert.equal(first.predecessorClaimId, first.successorClaimId);
+  assert.equal(first.projectionUpdated, false);
   assert.equal(first.resultDigest, replay.resultDigest);
   assert.deepEqual(calls, ["recover", "recover"]);
   for (const status of [
@@ -560,31 +589,58 @@ test("successor ambiguity, competing drift, and replay identity fail closed", as
   assert.deepEqual(calls, ["claim"]);
 });
 
-test("repository projection pins non-writer expiry to cloud authority", () => {
-  const source = preservedLane(), authority = successorAuthority();
-  let released = null, body = source.pullRequest.body;
-  const updated = {
-    ...source.lease, schema: "agentic-writer-lease/v2", status: "review_ready",
-    epoch: 2, fenceSha: REVIEW_SHA, autoDelivery: false, runtimeRequired: false,
-    heartbeatAt: authority.expiresAt, expiresAt: authority.expiresAt,
-    reviewHeadSha: REVIEW_SHA, cloudAuthority: authority,
-    admission: { ...source.lease.admission, schema: "agentic-lane-admission-lease/v1",
-      semanticScope: source.lease.scope, planReceiptDigest: "a".repeat(64),
-      admissionReceiptDigest: "b".repeat(64), existingLaneStateDigest: "c".repeat(64),
-      preservationReceiptDigest: "d".repeat(64) },
-  };
+test("repository projection atomically continues task authority for a new cloud claim", testContext => {
+  const { lane: source, capabilityPath } = taskBoundPreservedLane(testContext);
+  const authority = successorAuthority();
+  let released = null, updated = null, body = source.pullRequest.body;
   const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
     repository: "/repo", sessionId: "legacy-session", environment: {},
+    taskAuthorityFile: capabilityPath,
     resolveRealpath: value => value,
-    leaseStore: { release(input) { released = input; return updated; } },
+    leaseStore: { release(input) {
+      released = input;
+      updated = { ...input.expectedLease, ...input.values, schema: "agentic-writer-lease/v2",
+        status: input.status, heartbeatAt: input.timestamp, expiresAt: input.timestamp };
+      return updated;
+    } },
     run: (_command, args) => { body = args[args.indexOf("--body") + 1]; },
     ghText: () => JSON.stringify({
       ...source.pullRequest, headRepository: { nameWithOwner: "example/repo" }, body,
     }),
   });
   adapter.persistReviewProjection({ lane: source, authority });
+  assert.equal(released.expectedLease, source.lease);
   assert.equal(released.timestamp, authority.expiresAt);
   assert.equal(updated.expiresAt, authority.expiresAt);
+  assert.equal(released.values.taskAuthority.bindingMode, "continuation");
+  assert.equal(released.values.taskAuthority.priorBindingDigest,
+    source.lease.taskAuthority.bindingDigest);
+  assert.notEqual(released.values.taskAuthority.bindingDigest,
+    source.lease.taskAuthority.bindingDigest);
+  assert.equal(updated.taskAuthority.bindingDigest,
+    released.values.taskAuthority.bindingDigest);
+});
+
+test("repository projection rejects missing successor capability before local or PR mutation", testContext => {
+  const { lane: source } = taskBoundPreservedLane(testContext);
+  let releases = 0, edits = 0;
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo", sessionId: "legacy-session", environment: {},
+    resolveRealpath: value => value,
+    leaseStore: { release() { releases += 1; throw new Error("must remain idle"); } },
+    run: () => { edits += 1; },
+  });
+  assert.throws(() => adapter.claimSuccessor({
+    request: {}, lane: source, predecessor: {},
+  }), /requires its existing capability/u);
+  assert.throws(() => adapter.recoverIntegratedAuthority({
+    request: {}, lane: source, integratedReplay: {},
+  }), /requires its existing capability/u);
+  assert.throws(() => adapter.persistReviewProjection({
+    lane: source, authority: successorAuthority(),
+  }), /task authority capability path must be absolute/u);
+  assert.equal(releases, 0);
+  assert.equal(edits, 0);
 });
 
 test("repository reader preserves the provider pull-request node ID", () => {

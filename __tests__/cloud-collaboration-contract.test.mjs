@@ -482,6 +482,82 @@ test("a reviewed predecessor admits only its exact unchanged-scope successor on 
     canonicalBaseRevision: historicalBase, predecessorClaimId: reviewed.claim.claimId, laneRevision,
     leaseEpoch: 2, time: T3, expiresAt: T6, idempotencyKey: "claim:expanded-reviewed-correction",
   }), "stale_canonical_base"); });
+test("an integrated predecessor admits a historical-base successor only with exact descendant proof", () => {
+  for (const [label, predecessorExpiry, successorTime] of [
+    ["current", T6, T4],
+    ["dormant", T4, T5],
+  ]) {
+    const historicalBase = revision(`integrated-${label}-historical-base`);
+    const laneRevision = revision(`integrated-${label}-lane`);
+    const historicalRepository = { ...repository, canonicalRevision: historicalBase };
+    const claimed = claim(createEmptyLedger(`ledger:integrated-${label}`), {
+      targetRepository: historicalRepository,
+      workItemId: `work:integrated-${label}-correction`,
+      canonicalBaseRevision: historicalBase,
+      laneRevision,
+      expiresAt: predecessorExpiry,
+    });
+    const projected = continueClaim(claimed.ledger, claimed.claim, {
+      mode: "projection", time: T1, laneRevision,
+      reviewRequestId: `review:integrated-${label}-correction`,
+    });
+    const reviewed = continueClaim(projected.ledger, projected.claim, {
+      mode: "review", time: T2, laneRevision,
+      reviewRequestId: projected.claim.reviewRequestId,
+      focusedEvidenceDigest: evidence(`integrated-${label}-focused`),
+    });
+    const integrated = applyCloudTransition({
+      ledger: reviewed.ledger,
+      action: "integrate",
+      actor: owner,
+      repository,
+      evaluationTime: T3,
+      request: {
+        claimId: reviewed.claim.claimId,
+        expectedFenceRevision: reviewed.claim.fenceRevision,
+        expectedTransitionCounter: reviewed.claim.transitionCounter,
+        expectedLedgerDigest: reviewed.ledger.headDigest,
+        candidateRevision: laneRevision,
+        reviewRequestId: reviewed.claim.reviewRequestId,
+        focusedEvidenceDigest: reviewed.claim.evidenceDigest,
+        dependencyClosureDigest: evidence(`integrated-${label}-dependencies`),
+        namedChecksDigest: evidence(`integrated-${label}-checks`),
+        handoffEvidenceDigest: evidence(`integrated-${label}-handoff`),
+        operatorDecisionDigest: evidence(`integrated-${label}-operator`),
+        integrationIntentDigest: evidence(`integrated-${label}-intent`),
+        idempotencyKey: `integrate:${label}-historical-correction`,
+      },
+    });
+    const successorInput = {
+      targetRepository: repository,
+      workItemId: integrated.claim.workItemId,
+      scope: integrated.claim.declaredWriteScope,
+      canonicalBaseRevision: historicalBase,
+      predecessorClaimId: integrated.claim.claimId,
+      laneRevision,
+      leaseEpoch: 2,
+      time: successorTime,
+      expiresAt: T6,
+    };
+    throwsCode(() => claim(integrated.ledger, {
+      ...successorInput,
+      idempotencyKey: `claim:integrated-${label}-without-proof`,
+    }), "stale_canonical_base");
+    const proof = canonicalDescendantProof({
+      sourceBaseSha: historicalBase,
+      targetBaseSha: repository.canonicalRevision,
+      canonicalChangedPaths: [`docs/integrated-${label}-current.md`],
+      preservedChangedPaths: ["docs/a.md"],
+    });
+    const successor = claim(integrated.ledger, {
+      ...successorInput,
+      canonicalDescendantProof: proof,
+      idempotencyKey: `claim:integrated-${label}-with-proof`,
+    });
+    assert.equal(successor.claim.state, "waiting-successor");
+    assert.equal(successor.claim.canonicalDescendantProof.evidenceDigest, proof.evidenceDigest);
+  }
+});
 test("expiry is dormant-preserved and recovery ignores the expired device lease", () => {
   const first = claim(createEmptyLedger("ledger:repository"), { expiresAt: T1 });
   const dormant = listCurrentClaims(first.ledger, T2)[0];

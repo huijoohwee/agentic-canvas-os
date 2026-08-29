@@ -247,14 +247,19 @@ function allowsPredecessorBaseContinuation({ ledger, intent, evaluationTime, pro
   const predecessorWriteSet = predecessor ? normalizeWriteSet(predecessor.declaredWriteScope) : [];
   const successorWriteSet = normalizeWriteSet(intent.declaredWriteScope);
   const sameWriteSet = predecessor?.writeSetDigest === intent.writeSetDigest;
+  const integratedPredecessor = predecessor?.recordedState === "integrated-preserved";
   const strictSuperset = successorWriteSet.length > predecessorWriteSet.length
     && predecessorWriteSet.every(value => successorWriteSet.includes(value));
-  const stateAndScopeMatch = (["reviewed", "dormant-preserved", "retired"].includes(predecessor?.state)
+  const stateAndScopeMatch = (["reviewed", "integrated-preserved", "dormant-preserved", "retired"].includes(predecessor?.state)
       && sameWriteSet) || (["current", "dormant-preserved", "retired"].includes(predecessor?.state)
       && strictSuperset); const subjectMatches = predecessor && stateAndScopeMatch
     && predecessor.repositoryId === intent.repositoryId
     && predecessor.workItemId === intent.workItemId
     && predecessor.laneRevision === intent.laneRevision; if (!subjectMatches) return false;
+  if (integratedPredecessor) {
+    return Boolean(normalizeCanonicalDescendantProof({ value: intent.canonicalDescendantProof,
+      sourceBaseSha: intent.canonicalBaseRevision, protectedRevision, }));
+  }
   if (sameWriteSet
     && predecessor.canonicalBaseRevision === intent.canonicalBaseRevision) return true;
   return Boolean(normalizeCanonicalDescendantProof({ value: intent.canonicalDescendantProof,

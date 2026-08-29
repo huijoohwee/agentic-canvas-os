@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6060,
-  "headDigest": "439b68424d9ccbc65363f1ce4e54721c9db8b6c8ac204a4c71f28cc1904247c7",
+  "sequence": 6061,
+  "headDigest": "d8e9a70ae207ba23705cad6a91eb7828a35268eddcb50ee52c3ac2b333a6ea76",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -308020,6 +308020,60 @@
       },
       "claimDigest": "54b9dc4f1bd453699f039bdace22bcb739d3db18d81aca5b06d41ef05154fc30",
       "digest": "439b68424d9ccbc65363f1ce4e54721c9db8b6c8ac204a4c71f28cc1904247c7"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6061,
+      "parentDigest": "439b68424d9ccbc65363f1ce4e54721c9db8b6c8ac204a4c71f28cc1904247c7",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOUEoVfg",
+      "claimId": "0adda1d5eba7499819ad1640d9b8cc1b1da1b4df03b1e3f5b0cc3cd65053d1d6",
+      "idempotencyKey": "52a290491508cb54c3ba7942d26facc088d252ab0e174566c282e11d02a063c7",
+      "requestDigest": "6bc0f741ea61c551e3cafea572d2132eb1bcc3eed0580014244b1f71f183f1e2",
+      "evaluationTime": "2026-08-29T14:58:15.000Z",
+      "claimCore": {
+        "claimId": "0adda1d5eba7499819ad1640d9b8cc1b1da1b4df03b1e3f5b0cc3cd65053d1d6",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:667356942c082a29e5aac7941b2c6c5abaa94c44d48187302400f6a3668fa0b3",
+        "repositoryId": "github-repository:R_kgDOUEoVfg",
+        "workItemId": "work-item:c9bb5c2c0054fdf80c14c9dd1bbfa4ea89ce5e796d8f3f556ca6c33441d7c6a2",
+        "canonicalBaseRevision": "2e39e5c43f2f49866f4dd6849994f7bfdf677ec1",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:config",
+          "path:docs",
+          "path:package-lock.json",
+          "path:package.json",
+          "path:playwright.config.ts",
+          "path:scripts",
+          "path:src",
+          "path:test",
+          "path:tsconfig.json",
+          "path:tsconfig.worker.json",
+          "path:vitest.config.ts",
+          "path:vitest.worker.config.ts",
+          "path:wrangler.core.jsonc",
+          "path:wrangler.edge.jsonc",
+          "path:wrangler.sandbox.jsonc",
+          "semantic:agentic-graph-commerce-platform"
+        ],
+        "writeSetDigest": "785915c8cc144651eb347ac417dfab18c8cd237531b54e3bb26b509bf1cfa81e",
+        "laneRevision": "2e39e5c43f2f49866f4dd6849994f7bfdf677ec1",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T20:58:15.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "31349c42be29bac489bfbcbecf3c64503bc6c513d5b81caab6d4eee02a07498a",
+      "digest": "d8e9a70ae207ba23705cad6a91eb7828a35268eddcb50ee52c3ac2b333a6ea76"
     }
   ]
 }

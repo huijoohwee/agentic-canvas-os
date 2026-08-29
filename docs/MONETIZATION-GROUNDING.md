@@ -13,7 +13,7 @@ runtime_claim: "reading or resolving this document performs no mutation, spend, 
 publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
 operating_priorities: ["minimum-viable-maximum-value", "time-to-value", "high-ROI", "TCO", "token-economics", "FOSS-first"]
 shipped_surface:
-  worker: "Cloudflare Worker product tier calling the knowgrph control plane over MCP; holds no model provider keys"
+  worker: "Cloudflare Worker product tier calling the AgenticGraph control plane over MCP; holds no model provider keys"
   agentic_graph_client: "typed deterministic agentic-graph ingest, parser-generate, query, and edge-explanation client (src/knowgrph-mcp-*.js)"
   canvas: "embedded live agentic-graph canvas with interactive HTML export (web/app.js)"
 first_dollar_boundary: "manual concierge delivery from the Dev boundary; production deployment remains separately gated"

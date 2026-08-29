@@ -72,7 +72,10 @@ test("one local wire tool is receipt-gated and has the exact request and result 
   }
   assert.match(runtime, /`sha256:<64-lowercase-hex>`/);
   assert.match(runtime, /action `\/sdlc\.observe`, semantic `#agentic-sdlc-observability`, and bindings ordered as `@implementation-run`, `@canvas`, `@runtime-proof`/);
-  assert.match(runtime, /`knowgrph-agentic-sdlc-observation\/v1` with `source`, `status`, `conformance`, `projection`, `cache`, and `economics`/);
+  assert.match(runtime, /`agenticgraph-agentic-sdlc-observation\/v1` with `source`, `status`, `conformance`, `projection`, `cache`, and `economics`/);
+  for (const source of [command, runtime, gateway]) {
+    assert.doesNotMatch(source, /knowgrph-agentic-sdlc-observation\/v1/);
+  }
   assert.match(gateway, new RegExp(escapeRegExp(tool)));
 });
 

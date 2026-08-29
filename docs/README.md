@@ -143,7 +143,7 @@ The current native-in-repo target is:
 flowchart LR
   local["Local MCP + Source Files"]
   soul["SOUL.md identity"]
-  canvas["Knowgrph Canvas"]
+  canvas["AgenticGraph Canvas"]
   mcp["Cloudflare McpAgent where deployed"]
   gateway["Discovery-first MCP federation"]
   harnesses["Existing harnesses"]

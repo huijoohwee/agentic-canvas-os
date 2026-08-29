@@ -67,7 +67,8 @@ export function createReviewAheadProjectionController({
         successorDeviceId: before.lane.lease.device,
         ttlSeconds,
       });
-      const lineageProjectionProof = projected.claim?.leaseEpoch === 1
+      const lineageProjectionProof = projected.claim?.state === "integrated-preserved"
+          && projected.claim.leaseEpoch === 1
           && projected.claim.predecessorClaimId
         ? await adapter.createLineageProjectionProof({
           lane: projected.lane,

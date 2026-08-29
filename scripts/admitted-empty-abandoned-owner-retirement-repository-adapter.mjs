@@ -5,22 +5,16 @@ import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync,
   readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
 import { canonicalJson, digestValue, validateLedger } from "./cloud-collaboration-primitives.mjs";
-import { normalizeResumePlan, normalizeResumeState, normalizeState, RESUME_STATE_SCHEMA, STATE_SCHEMA }
-  from "./admitted-empty-abandoned-owner-retirement-contract.mjs";
+import { normalizeResumePlan, normalizeResumeState, normalizeState, RESUME_STATE_SCHEMA, STATE_SCHEMA } from "./admitted-empty-abandoned-owner-retirement-contract.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
+import { withPrivateOperationLock } from "./private-operation-lock.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
-
 const CONTROLLER_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
-const RUNTIME_FILES = Object.freeze([
-  "scripts/admitted-empty-abandoned-owner-retirement-contract.mjs",
-  "scripts/admitted-empty-abandoned-owner-retirement-controller.mjs",
-  "scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs",
-  "scripts/admitted-empty-abandoned-owner-retirement.mjs",
-]);
-
+const RUNTIME_FILES = Object.freeze(["scripts/admitted-empty-abandoned-owner-retirement-contract.mjs",
+  "scripts/admitted-empty-abandoned-owner-retirement-controller.mjs", "scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs",
+  "scripts/admitted-empty-abandoned-owner-retirement.mjs", "scripts/private-operation-lock.mjs"]);
 export function createRepositoryAdapter(options = {}, dependencies = {}) {
   const repository = absolute(options.repository, "repository");
   const subjectPath = absolute(options.subjectWorktree, "subject worktree");
@@ -32,8 +26,7 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
   const pullRequestNumber = positive(options.pullRequestNumber, "pull request number");
   const claimId = digest(options.claimId, "claim ID");
   const statePath = safeStatePath(options.statePath);
-  const sourceStatePath = options.sourceStatePath
-    ? safeStatePath(options.sourceStatePath) : null;
+  const sourceStatePath = options.sourceStatePath ? safeStatePath(options.sourceStatePath) : null;
   if (sourceStatePath === statePath) throw new Error("Resume source and target state paths must remain distinct.");
   const lockPath = `${statePath}.lock`;
   const now = dependencies.now || (() => new Date());
@@ -44,16 +37,11 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
   const gitRaw = dependencies.gitRaw || ((cwd, args) => String(execute("git", ["-C", cwd, ...args], cwd)));
   const gh = dependencies.gh || (args => String(execute("gh", args, repository)).trim());
   const invokeCloud = dependencies.invokeCloud || invokeRepositoryCloudAction;
-  const commonDirectory = path.resolve(repository, git(repository,
-    ["rev-parse", "--path-format=absolute", "--git-common-dir"]));
+  const commonDirectory = path.resolve(repository, git(repository, ["rev-parse", "--path-format=absolute", "--git-common-dir"]));
   const taskAuthorityFile = options.taskAuthorityFile
     ? safeTaskAuthorityPath(options.taskAuthorityFile, { repository, subjectPath, authoredPath,
       controllerRoot, commonDirectory }) : null;
-  const leaseStore = dependencies.leaseStore || createWriterLeaseStore({
-    gitCommonDir: commonDirectory,
-    taskAuthorityFile,
-  });
-
+  const leaseStore = dependencies.leaseStore || createWriterLeaseStore({ gitCommonDir: commonDirectory, taskAuthorityFile });
   function cloudStatus() {
     const value = dependencies.readCloud ? dependencies.readCloud()
       : invokeCloud({ action: "status", ledgerRepository,
@@ -64,7 +52,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     }
     return value;
   }
-
   function subjectProjection() {
     const registered = worktrees(gitRaw(repository, ["worktree", "list", "--porcelain", "-z"]));
     if (!registered.includes(subjectPath)) throw new Error("Fence-only subject worktree is not registered.");
@@ -88,7 +75,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
         expiresAt: lease.expiresAt, admissionStatus: lease.admission?.status,
         claimId: lease.cloudAuthority?.claimId, digest: digestValue(lease) }, rawLease: lease };
   }
-
   function authoredProjection() {
     const registered = worktrees(gitRaw(repository, ["worktree", "list", "--porcelain", "-z"]));
     if (!registered.includes(authoredPath)) throw new Error("Authored preservation lane is not registered.");
@@ -100,7 +86,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       statusDigest: digestValue(status) };
     return { ...core, stateDigest: digestValue(core) };
   }
-
   function pullProjection() {
     const value = JSON.parse(gh(["pr", "view", String(pullRequestNumber), "--repo", targetRepository,
       "--json", "number,id,url,state,isDraft,mergedAt,closedAt,headRefName,headRefOid,baseRefName,baseRefOid"]));
@@ -109,7 +94,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       headBranch: value.headRefName, headSha: value.headRefOid,
       baseBranch: value.baseRefName, baseSha: value.baseRefOid };
   }
-
   function claimProjection(status = cloudStatus()) {
     const matches = status.claims.filter(item => item.claimId === claimId);
     if (matches.length > 1) throw new Error("Cloud claim cardinality is ambiguous.");
@@ -129,7 +113,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       transitionCounter: claim.transitionCounter, reviewRequestId: claim.reviewRequestId || null,
       expiresAt: new Date(claim.expiresAt).toISOString() };
   }
-
   function controllerProjection() {
     const headSha = git(controllerRoot, ["rev-parse", "HEAD"]);
     const originMainSha = git(controllerRoot, ["rev-parse", "origin/main"]);
@@ -139,7 +122,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       digest: digestValue(readFileSync(path.join(controllerRoot, file))) })));
     return { headSha, originMainSha, treeSha, runtimeDigest, clean, protected: headSha === originMainSha };
   }
-
   function assertStatic(plan) {
     const subject = subjectProjection(), authored = authoredProjection(), pull = pullProjection();
     if (subject.stateDigest !== plan.subject.stateDigest || authored.stateDigest !== plan.authoredLane.stateDigest
@@ -150,7 +132,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     if (digestValue(controller) !== digestValue(plan.controller)) throw new Error("Protected controller drifted after planning.");
     return { subject, authored, pull };
   }
-
   function assertPreserved(plan) {
     const subject = subjectProjection(), authored = authoredProjection();
     if (subject.stateDigest !== plan.subject.stateDigest || authored.stateDigest !== plan.authoredLane.stateDigest) {
@@ -160,14 +141,84 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     if (digestValue(controller) !== digestValue(plan.controller)) throw new Error("Protected controller drifted after planning.");
     return { subject, authored };
   }
-
+  function assertPostClaimContinuation(plan, { allowReleased = false,
+    operation = "observe", requireCapability = false, cloud: observedCloud = null } = {}) {
+    const cloud = observedCloud || cloudStatus(), claim = claimProjection(cloud);
+    if (claim) throw new Error("Protected-controller continuation requires the exact retired cloud claim.");
+    const retirementEntry = requireRetirementEntry({ status: cloud, plan, gh, dependencies });
+    const subject = subjectProjection(), released = allowReleased && isReleasedLease(subject.rawLease, plan);
+    if (subject.stateDigest !== plan.subject.stateDigest) throw new Error("Fence-only subject drifted after cloud retirement.");
+    if (!released && digestValue(subject.rawLease) !== plan.subject.lease.digest) throw new Error("Local lease drifted after cloud retirement.");
+    const controller = controllerProjection(), descendant = controller.headSha !== plan.controller.headSha;
+    if (!descendant && digestValue(controller) !== digestValue(plan.controller))
+      throw new Error("Protected controller drifted after planning.");
+    if (descendant) { assertControllerDescendant(plan.controller, controller, git, controllerRoot);
+      if (git(controllerRoot, ["branch", "--show-current"]) !== "main"
+        || remoteHead(git, controllerRoot, "main") !== controller.headSha
+        || git(controllerRoot, ["rev-parse", `${plan.controller.headSha}^{tree}`]) !== plan.controller.treeSha)
+        throw new Error("Retirement continuation is not on exact live protected main."); }
+    const pull = pullProjection(); assertPullIdentity(plan.subject.pullRequest, pull, { protectedBaseSha: descendant ? controller.headSha : null });
+    const authored = authoredProjection();
+    const sourceWasProtectedMain = plan.authoredLane.path === controllerRoot && plan.authoredLane.branch === "main"
+      && plan.authoredLane.headSha === plan.controller.headSha && plan.authoredLane.treeSha === plan.controller.treeSha;
+    const authoredDescendant = sourceWasProtectedMain && authored.path === controllerRoot && authored.branch === "main"
+      && authored.headSha === controller.headSha && authored.treeSha === controller.treeSha && authored.clean;
+    if (!authoredDescendant && authored.stateDigest !== plan.authoredLane.stateDigest)
+      throw new Error("Authored preservation lane drifted after cloud retirement.");
+    let taskAuthorityBindingDigest = null;
+    if (descendant || requireCapability) {
+      if (!taskAuthorityFile) throw new Error("Protected-controller continuation requires the original task authority capability.");
+      const authorized = leaseStore.assertTaskAuthority({ branch: plan.subject.branch,
+        operation: `admitted-empty-abandoned-owner-retirement:${plan.planDigest}:${operation}` });
+      const expectedLeaseDigest = released ? digestValue(subject.rawLease) : plan.subject.lease.digest;
+      if (digestValue(authorized) !== expectedLeaseDigest)
+        throw new Error("Task authority no longer proves the exact retirement lease.");
+      taskAuthorityBindingDigest = authorized.taskAuthority?.bindingDigest || null;
+    } else if (released) taskAuthorityBindingDigest = subject.rawLease.taskAuthority?.bindingDigest || null;
+    if (released && descendant && taskAuthorityBindingDigest === null)
+      throw new Error("Released descendant retirement lease lost its task-authority binding.");
+    if (taskAuthorityBindingDigest !== null && !/^[0-9a-f]{64}$/u.test(taskAuthorityBindingDigest))
+      throw new Error("Retirement lease task-authority binding is invalid.");
+    const continuationEvidence = { disposition: descendant ? "protected-main-descendant" : "source-exact",
+      sourceControllerHeadSha: plan.controller.headSha, currentControllerHeadSha: controller.headSha,
+      currentControllerTreeSha: controller.treeSha,
+      authoredLaneDisposition: authoredDescendant ? "protected-main-descendant" : "source-exact",
+      authoredLaneStateDigest: authoredDescendant ? authored.stateDigest : plan.authoredLane.stateDigest,
+      retirementEntryDigest: digestValue(retirementEntry), taskAuthorityBindingDigest };
+    return { subject, authored, pull, cloud, controller, released, continuationEvidence };
+  }
+  async function withRetirementLock(context, action) { migrateLegacyAuthorizedLock(context);
+    return withPrivateOperationLock({ file: lockPath, context, action, now }); }
+  function migrateLegacyAuthorizedLock(context) {
+    if (!existsSync(lockPath)) return; const observed = readPrivateLock(lockPath);
+    if (observed.schema === "agentic-private-operation-lock/v1") return;
+    if (canonicalJson(Object.keys(observed).sort()) !== canonicalJson(["context", "pid", "token"])
+      || !Number.isSafeInteger(observed.pid) || observed.pid < 1 || typeof observed.token !== "string" || !observed.token
+      || canonicalJson(observed.context) !== canonicalJson(context)
+      || Object.keys(context).length !== 1 || typeof context.planDigest !== "string")
+      throw new Error("Retirement operation lock is malformed or foreign.");
+    const state = normalizeState(readJson(statePath));
+    if (state.phase !== "authorized" || state.plan.planDigest !== context.planDigest)
+      throw new Error("Legacy retirement lock is not bound to the authorized source journal.");
+    if (git(controllerRoot, ["ls-tree", "--name-only", state.plan.controller.headSha, "--",
+      "scripts/private-operation-lock.mjs"])) throw new Error("Legacy retirement lock was not authored by a pre-v1 controller.");
+    if (processExists(observed.pid)) throw new Error("Legacy retirement lock owner is live or cannot be disproved.");
+    const frame = assertPostClaimContinuation(state.plan,
+      { operation: "migrate-legacy-operation-lock", requireCapability: true });
+    if (frame.pull.state !== "OPEN" || frame.pull.mergedAt !== null)
+      throw new Error("Legacy retirement lock migration requires the exact open ownership pull request.");
+    const stale = `${lockPath}.legacy-stale.${randomUUID()}`; renameSync(lockPath, stale);
+    try { const captured = readPrivateLock(stale);
+      if (canonicalJson(captured) !== canonicalJson(observed)) throw new Error("Legacy retirement lock changed during atomic capture.");
+      unlinkSync(stale); fsyncDirectory(path.dirname(lockPath)); }
+    catch (error) { if (existsSync(stale) && !existsSync(lockPath)) renameSync(stale, lockPath); throw error; }
+  }
   function readSourceState() {
     if (!sourceStatePath) throw new Error("Retirement resume requires a distinct source state path.");
     const source = readJson(sourceStatePath);
     if (!source) throw new Error("Retirement resume source state is absent.");
     return normalizeState(source);
   }
-
   function resumeFrame(rawPlan = null) {
     const plan = rawPlan ? normalizeResumePlan(rawPlan) : null;
     const sourceState = readSourceState();
@@ -237,7 +288,6 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
     return { sourceState, sourcePlan, subject, authored, pull, cloud, controller, recovery,
       resumedRelease: Boolean(resumedRelease) };
   }
-
   return Object.freeze({
     async observe() {
       const cloud = cloudStatus();
@@ -270,19 +320,28 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
       const normalized = normalizePersistedState(next);
       writeAtomic(statePath, normalized); return normalized;
     },
-    withLock(context, action) { return withLock(lockPath, context, action); },
+    withLock(context, action) { return withRetirementLock(context, action); },
     classifyClaim(plan) {
-      const { subject } = assertStatic(plan);
       const cloud = cloudStatus(), claim = claimProjection(cloud);
-      if (claim && digestValue(claim) !== digestValue(plan.subject.claim)) throw new Error("Cloud claim drifted.");
-      if (!claim) requireRetirementEntry({ status: cloud, plan, gh, dependencies });
-      return claim ? { state: "pending" } : { state: "complete", values: effectValues("claim-retired", {
-        claimId, cloudMutation: true, ledgerRevision: cloud.ledgerRevision, ledgerDigest: cloud.ledgerDigest,
-        subjectStateDigest: subject.stateDigest }) };
+      if (claim) {
+        assertStatic(plan);
+        if (digestValue(claim) !== digestValue(plan.subject.claim)) throw new Error("Cloud claim drifted.");
+        return { state: "pending" };
+      }
+      const frame = assertPostClaimContinuation(plan, { operation: "classify-retired-claim", cloud });
+      return { state: "complete", values: effectValues("claim-retired", {
+        claimId, cloudMutation: true, ledgerRevision: frame.cloud.ledgerRevision,
+        ledgerDigest: frame.cloud.ledgerDigest,
+        subjectStateDigest: frame.subject.stateDigest,
+        continuationEvidence: frame.continuationEvidence }) };
     },
     retireClaim(plan) {
-      const state = assertStatic(plan), cloud = cloudStatus(), claim = claimProjection(cloud);
-      if (!claim) return;
+      const cloud = cloudStatus(), claim = claimProjection(cloud);
+      if (!claim) {
+        assertPostClaimContinuation(plan, { operation: "adopt-retired-claim", cloud });
+        return;
+      }
+      const state = assertStatic(plan);
       if (digestValue(claim) !== digestValue(plan.subject.claim)) throw new Error("Cloud claim drifted before retirement.");
       const request = { targetRepository, claimId, expectedFenceRevision: claim.claimDigest,
         expectedTransitionCounter: claim.transitionCounter, expectedLedgerDigest: cloud.ledgerDigest,
@@ -300,39 +359,54 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
         || state.authored.stateDigest !== preserved.authored.stateDigest) throw new Error("Preserved lanes changed during cloud retirement.");
     },
     classifyPullRequest(plan) {
-      assertPreserved(plan);
-      const pull = pullProjection();
-      assertPullIdentity(plan.subject.pullRequest, pull);
-      if (pull.state === "OPEN") return { state: "pending" };
-      if (pull.state !== "CLOSED" || pull.mergedAt !== null) throw new Error("Pull request reached a foreign terminal state.");
+      const frame = assertPostClaimContinuation(plan, { operation: "classify-pull-request" });
+      if (frame.pull.state === "OPEN") return { state: "pending" };
+      if (frame.pull.state !== "CLOSED" || frame.pull.mergedAt !== null) throw new Error("Pull request reached a foreign terminal state.");
       return { state: "complete", values: effectValues("pull-request-closed", {
-        pullRequestNumber, closedAt: new Date(pull.closedAt).toISOString(), providerMutation: true,
-        remoteBranchPreserved: remoteHead(git, repository, plan.subject.branch) === plan.subject.remoteHeadSha }) };
+        pullRequestNumber, closedAt: new Date(frame.pull.closedAt).toISOString(), providerMutation: true,
+        remoteBranchPreserved: remoteHead(git, repository, plan.subject.branch) === plan.subject.remoteHeadSha,
+        continuationEvidence: frame.continuationEvidence }) };
     },
     closePullRequest(plan) {
-      assertPreserved(plan);
-      const pull = pullProjection(); assertPullIdentity(plan.subject.pullRequest, pull);
-      if (pull.state === "CLOSED") return;
-      execute("gh", ["pr", "close", "--repo", targetRepository, pull.url], repository);
+      const close = frame => {
+        if (frame.pull.state === "CLOSED") return;
+        execute("gh", ["pr", "close", "--repo", targetRepository, frame.pull.url], repository);
+      };
+      const frame = assertPostClaimContinuation(plan, { operation: "close-pull-request" });
+      if (frame.continuationEvidence.disposition === "source-exact") return close(frame);
+      if (typeof leaseStore.withRegistryLock !== "function") {
+        throw new Error("Protected-controller continuation requires the writer-registry lock.");
+      }
+      return leaseStore.withRegistryLock(() => close(assertPostClaimContinuation(plan, {
+        operation: "close-pull-request",
+      })));
     },
     classifyOwnerReleased(plan) {
-      assertPreserved(plan);
-      const lease = leaseStore.read(plan.subject.branch);
-      if (isReleasedLease(lease, plan)) return { state: "complete", values: effectValues("owner-released", {
-        leaseDigest: digestValue(lease), localMutation: true, subjectPreserved: true }) };
-      if (!lease || digestValue(lease) !== plan.subject.lease.digest) throw new Error("Local lease drifted.");
+      const frame = assertPostClaimContinuation(plan, {
+        allowReleased: true,
+        operation: "classify-owner-release",
+      });
+      if (frame.released) return { state: "complete", values: effectValues("owner-released", {
+        leaseDigest: digestValue(frame.subject.rawLease), localMutation: true, subjectPreserved: true,
+        continuationEvidence: frame.continuationEvidence }) };
       return { state: "pending" };
     },
     releaseOwner(plan) {
-      assertPreserved(plan);
-      const current = leaseStore.read(plan.subject.branch);
-      if (isReleasedLease(current, plan)) return;
-      if (!current || digestValue(current) !== plan.subject.lease.digest) throw new Error("Local lease drifted before release.");
+      const frame = assertPostClaimContinuation(plan, {
+        allowReleased: true,
+        operation: "release-local-owner",
+      });
+      if (frame.released) return;
+      const current = frame.subject.rawLease;
       const completedAt = now().toISOString();
+      const releasedCore = { ...current, admission: null, cloudAuthority: null, status: "released",
+        heartbeatAt: completedAt, expiresAt: completedAt };
       const retirement = { schema: "agentic-admitted-empty-abandoned-owner-local-release/v1",
         status: "retired-preserved", planDigest: plan.planDigest, claimId,
         subjectStateDigest: plan.subject.stateDigest, authoredLaneStateDigest: plan.authoredLane.stateDigest,
-        originalLeaseDigest: plan.subject.lease.digest, completedAt };
+        originalLeaseDigest: plan.subject.lease.digest, completedAt,
+        taskAuthorityBindingDigest: current.taskAuthority?.bindingDigest || null,
+        releasedLeaseCoreDigest: digestValue(releasedCore) };
       retirement.receiptDigest = digestValue(retirement);
       leaseStore.release({ sessionId: current.sessionId, branch: current.branch,
         expectedLease: current, status: "released", timestamp: completedAt,
@@ -368,17 +442,19 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
           admittedEmptyAbandonedOwnerRetirement: retirement } });
     },
     verifyTerminal(plan) {
-      const subject = subjectProjection(), authored = authoredProjection(), pull = pullProjection();
-      const status = cloudStatus(), claim = claimProjection(status), lease = leaseStore.read(plan.subject.branch);
-      if (!claim) requireRetirementEntry({ status, plan, gh, dependencies });
-      if (claim || pull.state !== "CLOSED" || pull.mergedAt !== null || !isReleasedLease(lease, plan)
-        || subject.stateDigest !== plan.subject.stateDigest || authored.stateDigest !== plan.authoredLane.stateDigest
+      const frame = assertPostClaimContinuation(plan, {
+        allowReleased: true,
+        operation: "verify-terminal",
+      });
+      if (!frame.released || frame.pull.state !== "CLOSED" || frame.pull.mergedAt !== null
         || remoteHead(git, repository, plan.subject.branch) !== plan.subject.remoteHeadSha) {
         throw new Error("Terminal retirement evidence did not converge.");
       }
-      return { terminalEvidenceDigest: digestValue({ claimAbsent: true, pullState: pull.state,
-        leaseDigest: digestValue(lease), subjectStateDigest: subject.stateDigest,
-        authoredLaneStateDigest: authored.stateDigest, remoteHeadSha: subject.remoteHeadSha }) };
+      return { terminalEvidenceDigest: digestValue({ claimAbsent: true, pullState: frame.pull.state,
+        leaseDigest: digestValue(frame.subject.rawLease), subjectStateDigest: frame.subject.stateDigest,
+        authoredLaneStateDigest: frame.continuationEvidence.authoredLaneStateDigest,
+        continuationEvidence: frame.continuationEvidence,
+        remoteHeadSha: frame.subject.remoteHeadSha }) };
     },
     verifyResumedTerminal(plan) {
       const frame = resumeFrame(plan), lease = frame.subject.rawLease;
@@ -433,11 +509,27 @@ function resumeAuthoredRecovery({ sourcePlan, authored, controller, plan, resume
     authoredLaneTreeSha: authored.treeSha };
 }
 
-function assertPullIdentity(expected, actual) { for (const key of ["number", "nodeId", "url", "isDraft", "mergedAt",
-  "headBranch", "headSha", "baseBranch", "baseSha"]) if (actual[key] !== expected[key]) throw new Error("Pull request identity drifted."); }
+function assertPullIdentity(expected, actual, { protectedBaseSha = null } = {}) { for (const key of ["number", "nodeId", "url", "isDraft", "mergedAt",
+  "headBranch", "headSha", "baseBranch"]) if (actual[key] !== expected[key]) throw new Error("Pull request identity drifted.");
+  if (actual.baseSha !== (protectedBaseSha || expected.baseSha)) throw new Error("Pull request identity drifted."); }
 function isReleasedLease(lease, plan) { const receipt = lease?.admittedEmptyAbandonedOwnerRetirement;
-  return lease?.status === "released" && receipt?.status === "retired-preserved"
-    && receipt.planDigest === plan.planDigest && receipt.originalLeaseDigest === plan.subject.lease.digest; }
+  const receiptCore = receipt && { ...receipt }, releasedCore = lease && { ...lease };
+  if (receiptCore) delete receiptCore.receiptDigest;
+  if (releasedCore) delete releasedCore.admittedEmptyAbandonedOwnerRetirement;
+  return lease?.schema === "agentic-writer-lease/v2" && lease.status === "released"
+    && lease.admission == null && lease.cloudAuthority == null
+    && lease.branch === plan.subject.branch && lease.sessionId === plan.subject.lease.sessionId
+    && path.resolve(lease.worktreePath) === plan.subject.lease.worktreePath
+    && lease.baseSha === plan.subject.lease.baseSha && lease.fenceSha === plan.subject.lease.fenceSha
+    && receipt?.schema === "agentic-admitted-empty-abandoned-owner-local-release/v1"
+    && receipt.status === "retired-preserved" && receipt.receiptDigest === digestValue(receiptCore)
+    && receipt.planDigest === plan.planDigest && receipt.claimId === plan.subject.claim.claimId
+    && receipt.subjectStateDigest === plan.subject.stateDigest
+    && receipt.authoredLaneStateDigest === plan.authoredLane.stateDigest
+    && receipt.originalLeaseDigest === plan.subject.lease.digest
+    && receipt.completedAt === lease.heartbeatAt && receipt.completedAt === lease.expiresAt
+    && receipt.taskAuthorityBindingDigest === (lease.taskAuthority?.bindingDigest || null)
+    && receipt.releasedLeaseCoreDigest === digestValue(releasedCore); }
 function isResumedReleasedLease(lease, plan) { const receipt = lease?.admittedEmptyAbandonedOwnerRetirement;
   const receiptCore = receipt && { ...receipt }; if (receiptCore) delete receiptCore.receiptDigest;
   return lease?.status === "released" && lease.admission == null && lease.cloudAuthority == null
@@ -486,10 +578,17 @@ function writeAtomic(file, value) { const directory = path.dirname(file); mkdirS
   const temporary = `${file}.tmp-${process.pid}-${randomUUID()}`; const descriptor = openSync(temporary, "wx", 0o600);
   try { writeFileSync(descriptor, `${canonicalJson(value)}\n`); fsyncSync(descriptor); } finally { closeSync(descriptor); }
   renameSync(temporary, file); }
-async function withLock(file, context, action) { mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  let descriptor, owned = false; try { descriptor = openSync(file, "wx", 0o600); owned = true; writeFileSync(descriptor, `${canonicalJson({ pid: process.pid, token: randomUUID(), context })}\n`); closeSync(descriptor); descriptor = null;
-    return await action(); } catch (error) { if (error?.code === "EEXIST") throw new Error("Retirement operation is already locked."); throw error; }
-  finally { if (descriptor !== undefined && descriptor !== null) closeSync(descriptor); if (owned && existsSync(file)) unlinkSync(file); } }
+function readPrivateLock(file) { const stat = lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o777) !== 0o600
+    || (typeof process.getuid === "function" && stat.uid !== process.getuid())) throw new Error("Retirement operation lock must be an owner-private regular file.");
+  const bytes = readFileSync(file, "utf8"); if (Buffer.byteLength(bytes, "utf8") > 64 * 1024) throw new Error("Retirement operation lock is too large.");
+  let value; try { value = JSON.parse(bytes); } catch { throw new Error("Retirement operation lock is malformed."); }
+  if (!value || typeof value !== "object" || Array.isArray(value) || bytes !== `${canonicalJson(value)}\n`) throw new Error("Retirement operation lock is malformed or noncanonical.");
+  return value; }
+function processExists(pid) { try { process.kill(pid, 0); return true; }
+  catch (error) { return error?.code !== "ESRCH"; } }
+function fsyncDirectory(directory) { const descriptor = openSync(directory, "r");
+  try { fsyncSync(descriptor); } finally { closeSync(descriptor); } }
 function absolute(value, label) { return path.resolve(text(value, label)); }
 function text(value, label) { if (typeof value !== "string" || !value.trim()) throw new Error(`${label} is invalid.`); return value; }
 function repositoryName(value) { const result = text(value, "repository identity"); if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) throw new Error("Repository identity is invalid."); return result; }

@@ -10,7 +10,7 @@ status: "runtime-ready"
 authority: "bounded recovery for one expired planned fence-only owner"
 runtime_scope: "cloud claim retirement, draft closure, and local lease release"
 runtime_claim: "no source, ref, branch, worktree, authored-lane, or deployment mutation"
-runtime_proof: "../__tests__/admitted-empty-abandoned-owner-retirement-contract.test.mjs; ../__tests__/admitted-empty-abandoned-owner-retirement-controller.test.mjs; ../__tests__/admitted-empty-abandoned-owner-retirement-repository-adapter.test.mjs"
+runtime_proof: "../__tests__/admitted-empty-abandoned-owner-retirement-contract.test.mjs; ../__tests__/admitted-empty-abandoned-owner-retirement-controller.test.mjs; ../__tests__/admitted-empty-abandoned-owner-retirement-repository-adapter.test.mjs; ../__tests__/private-operation-lock.test.mjs"
 ---
 
 # Admitted Empty Abandoned Owner Retirement
@@ -95,3 +95,42 @@ Every phase is compare-and-swap persisted. A response-loss retry classifies the
 durable cloud, provider, or lease result before repeating an effect. Drift in
 the subject, authored lane, controller, provider identity, claim fence, or local
 lease blocks further mutation.
+
+## Durable operation serialization
+
+The state journal has one adjacent private operation lock. New owners use the
+versioned `agentic-private-operation-lock/v1` record with a process-start
+identity, canonical context digest, random token, and acquisition instant.
+Acquisition and release use owner-only exclusive files, file and directory
+durability, bounded atomic capture, and exact ownership rereads. A live,
+identity-ambiguous, malformed, noncanonical, permission-drifted, or
+concurrently replaced lock fails closed. A provably dead owner can be captured
+without deleting a replacement owner.
+
+One pre-v1 interrupted `authorized` journal may migrate its unversioned lock
+only when its exact plan context matches, the owner PID is provably absent, the
+sealed controller tree proves that the v1 lock runtime did not yet exist, the
+cloud claim is already absent through the plan-bound retirement entry, the
+ownership pull request and subject remain exact, and the original external task
+capability proves the active lease. The capture is atomic and the immediately
+reacquired lock is v1; the controller never authors another unversioned lock.
+
+## Protected-controller continuation
+
+While the cloud claim exists, the protected controller must remain byte- and
+revision-exact to the sealed plan. After the exact claim is absent and its
+plan-bound retirement ledger entry verifies, remaining provider closure and
+local release may continue from a clean protected-main descendant. The current
+local `main`, `origin/main`, and live remote `main` must agree; the planned
+controller tree object, subject Git and remote fence, pull-request identity,
+and active lease remain exact. A distinct authored lane stays byte-exact. Only
+an authored lane that was the controller's canonical `main` may advance with
+that protected descendant. Every descendant effect re-proves the original task
+capability and records controller, authored-lane, retirement-entry, and binding
+evidence in its phase receipt. This is ancestry- and evidence-bound recovery,
+not an exact-tip parity bypass.
+
+Owner release seals the complete resulting lease core and task-authority
+binding into a digest-verified receipt. Terminal replay rejects restored cloud
+authority, admission state, receipt drift, lease-field drift, or capability
+failure even after provider and local release effects have landed.

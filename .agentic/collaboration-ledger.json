@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5931,
-  "headDigest": "7cc28ae7a800fcd94f6b65fc9df23b31aa0845c5a87f2a89eca471f0a6c8f3e0",
+  "sequence": 5932,
+  "headDigest": "86e3dc82f674764d4ce76a01eb2012c9a27641f869ebdc04e66cfcab662bfbc0",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -301513,6 +301513,52 @@
       },
       "claimDigest": "fb8f034f49a58b7926ae8f1c2696063fab87045d690dadcfaf2389c2eff3d70b",
       "digest": "7cc28ae7a800fcd94f6b65fc9df23b31aa0845c5a87f2a89eca471f0a6c8f3e0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5932,
+      "parentDigest": "7cc28ae7a800fcd94f6b65fc9df23b31aa0845c5a87f2a89eca471f0a6c8f3e0",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "acbf04b2f02d8a5c2f80495319a219194a67b81cdd0232386c89f5d9ddb593b2",
+      "idempotencyKey": "cd8c10056d2839bba96c32c606ef944eca4b9ed3c55854a99c95ea841860ae6a",
+      "requestDigest": "b921c11703574a5d20682a66c8835f8dd417291e7aec366589853e12ac7c5e86",
+      "evaluationTime": "2026-08-29T06:28:21.000Z",
+      "claimCore": {
+        "claimId": "acbf04b2f02d8a5c2f80495319a219194a67b81cdd0232386c89f5d9ddb593b2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:897a0f7f51207793e9eb193b98a2c9fce3ed343fdcb24505f54003c52968be46",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:350ccb5aa32ab15d73e39c511630a5a1e5aef84d634acee0e43940b80d7c2888",
+        "canonicalBaseRevision": "a28b27713dc8cfbafa045c77e116c86673db24b3",
+        "declaredWriteScope": [
+          "path:__tests__/integrated-preserved-draft-lineage-recovery.test.mjs",
+          "path:__tests__/integrated-preserved-draft-recovery-repository-adapter.test.mjs",
+          "path:docs/INTEGRATED-PRESERVED-DRAFT-RECOVERY.md",
+          "path:scripts/cloud-authority-handoff-lineage.mjs",
+          "path:scripts/cloud-authority-scope-expansion-lineage-migration.mjs",
+          "path:scripts/cloud-authority-scope-expansion-lineage-projection.mjs",
+          "path:scripts/integrated-preserved-draft-recovery-contract.mjs",
+          "path:scripts/integrated-preserved-draft-recovery-repository-adapter.mjs",
+          "semantic:integrated-preserved-lineage-recovery"
+        ],
+        "writeSetDigest": "e934f3c65da4ac14868026683c0c491ce4e85d92fb5a9df2ad4cc027521e24d3",
+        "laneRevision": "2d1a7e846cc4c000e8744e5d5e3c346a85fe5e75",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T06:57:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBbAhdw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "cf27820153e89d87cb76a55d6caafe72803bdbd4d253b24b7acd20c1c0824734",
+      "digest": "86e3dc82f674764d4ce76a01eb2012c9a27641f869ebdc04e66cfcab662bfbc0"
     }
   ]
 }

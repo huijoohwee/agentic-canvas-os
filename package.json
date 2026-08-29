@@ -106,6 +106,7 @@
     "recovery:artifact:retirement:check": "node --test __tests__/recovery-artifact-retirement-contract.test.mjs __tests__/recovery-artifact-retirement-controller.test.mjs __tests__/recovery-artifact-retirement-repository-adapter.test.mjs __tests__/recovery-artifact-retirement-cli.test.mjs",
     "task-authority-loss-incident-recovery:revision-intent-supersession": "node ./scripts/task-authority-loss-incident-recovery-revision-intent-supersession.mjs",
     "task-authority-loss-incident-recovery:revision-intent-supersession:check": "node --test __tests__/task-authority-loss-incident-recovery-revision-intent-supersession.test.mjs",
+    "merged-integrated-preserved-lost-task-authority-recovery:check": "node --test __tests__/merged-integrated-preserved-lost-task-authority-recovery.test.mjs",
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",

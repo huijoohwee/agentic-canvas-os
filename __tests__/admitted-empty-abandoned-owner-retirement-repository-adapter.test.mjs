@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -7,7 +7,7 @@ import { buildPlan } from "../scripts/admitted-empty-abandoned-owner-retirement-
 import { createController } from "../scripts/admitted-empty-abandoned-owner-retirement-controller.mjs";
 import { applyCloudTransition, createEmptyLedger }
   from "../scripts/cloud-collaboration-contract.mjs";
-import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { canonicalJson, digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { createRepositoryAdapter } from "../scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs";
 
@@ -109,11 +109,17 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
   const claimId = transition.claim.claimId;
   let ledger = transition.ledger, retired = false, pullClosed = false, closeCalls = 0;
   let failRetireBeforeEffect = true;
-  const retireRequests = [], gitMutations = [];
-  let lease = { status: "active", device: "device", sessionId: "session", branch,
+  const retireRequests = [], gitMutations = [], statePath = path.join(temporary, "state.json");
+  const taskAuthorityFile = path.join(temporary, "task-authority.json");
+  writeFileSync(taskAuthorityFile, "{}\n", { mode: 0o600 }); chmodSync(taskAuthorityFile, 0o600);
+  const sourceControllerHead = "6".repeat(40), sourceControllerTree = "7".repeat(40);
+  let controllerHead = sourceControllerHead, controllerTree = sourceControllerTree;
+  let authorityCalls = 0, sourceHasV1Lock = false;
+  let lease = { schema: "agentic-writer-lease/v2", status: "active",
+    device: "device", sessionId: "session", branch,
     worktreePath: subject, baseSha: base, fenceSha: head,
     expiresAt: "2026-08-23T10:00:00.000Z", admission: { status: "planned" },
-    cloudAuthority: { claimId } };
+    cloudAuthority: { claimId }, taskAuthority: { bindingDigest: "f".repeat(64) } };
   const git = (cwd, args) => { const command = args.join(" ");
     if (command === "rev-parse --path-format=absolute --git-common-dir") return "/git-common";
     if (cwd === subject && command === "branch --show-current") return branch;
@@ -128,8 +134,15 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
     if (cwd === repository && command === `ls-remote --heads origin ${branch}`) {
       return `${head}\trefs/heads/${branch}`;
     }
-    if (command === "rev-parse HEAD" || command === "rev-parse origin/main") return "6".repeat(40);
-    if (command === "rev-parse HEAD^{tree}") return "7".repeat(40);
+    if (command === "branch --show-current") return "main";
+    if (command === "ls-remote --heads origin main") return `${controllerHead}\trefs/heads/main`;
+    if (command === `ls-tree --name-only ${sourceControllerHead} -- scripts/private-operation-lock.mjs`) {
+      return sourceHasV1Lock ? "scripts/private-operation-lock.mjs" : "";
+    }
+    if (command === `rev-parse ${sourceControllerHead}^{tree}`) return sourceControllerTree;
+    if (command.startsWith("merge-base --is-ancestor ")) return "";
+    if (command === "rev-parse HEAD" || command === "rev-parse origin/main") return controllerHead;
+    if (command === "rev-parse HEAD^{tree}") return controllerTree;
     throw new Error(`unexpected git ${cwd} ${command}`); };
   const gitRaw = (cwd, args) => { const command = args.join(" ");
     if (cwd === repository && command === "worktree list --porcelain -z") {
@@ -143,17 +156,24 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
       deviceId: pseudonymousIdentifier("device", lease.device),
       sessionId: pseudonymousIdentifier("session", lease.sessionId) }],
     sequence: ledger.sequence, ledgerRevision: "8".repeat(40), ledgerDigest: ledger.headDigest });
+  const readPull = () => JSON.stringify({ number: 7, id: nodeId,
+    url: "https://example.test/pull/7", state: pullClosed ? "CLOSED" : "OPEN",
+    isDraft: true, mergedAt: null, closedAt: pullClosed ? "2026-08-23T11:00:00.000Z" : null,
+    headRefName: branch, headRefOid: head, baseRefName: "main",
+    baseRefOid: retired ? controllerHead : base });
+  const leaseStore = { read: () => lease,
+    assertTaskAuthority: () => { authorityCalls += 1; return lease; },
+    withRegistryLock: action => action({ leases: { [branch]: lease } }),
+    release: ({ expectedLease, status, timestamp, values }) => {
+      assert.deepEqual(lease, expectedLease);
+      lease = { ...lease, ...values, status, heartbeatAt: timestamp, expiresAt: timestamp };
+    } };
   const adapter = createRepositoryAdapter({ repository, subjectWorktree: subject,
     authoredWorktree: authored, targetRepository: "owner/repo", pullRequestNumber: 7,
-    claimId, statePath: path.join(temporary, "state.json") }, { git, gitRaw,
-    leaseStore: { read: () => lease, release: ({ expectedLease, status, timestamp, values }) => {
-      assert.deepEqual(lease, expectedLease); lease = { ...lease, status, releasedAt: timestamp, ...values };
-    } }, readCloud, readLedger: () => ledger,
+    claimId, statePath, taskAuthorityFile }, { git, gitRaw,
+    leaseStore, readCloud, readLedger: () => ledger,
     now: () => new Date("2026-08-23T11:00:00.000Z"),
-    gh: () => JSON.stringify({ number: 7, id: nodeId, url: "https://example.test/pull/7",
-      state: pullClosed ? "CLOSED" : "OPEN", isDraft: true, mergedAt: null,
-      closedAt: pullClosed ? "2026-08-23T11:00:00.000Z" : null,
-      headRefName: branch, headRefOid: head, baseRefName: "main", baseRefOid: base }),
+    gh: readPull,
     execute: (command, args) => { if (command !== "gh" || args[0] !== "pr" || args[1] !== "close") {
       gitMutations.push([command, ...args]); throw new Error("unexpected mutation");
     }
@@ -175,24 +195,65 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
   assert.equal(plan.subject.claim.reviewRequestId, reviewRequestId);
   await assert.rejects(controller.run({ planDigest: plan.planDigest,
     authorization: plan.exactAuthorization }), /synthetic cloud retirement failure/u);
-  const partial = JSON.parse(readFileSync(path.join(temporary, "state.json"), "utf8"));
+  const partial = JSON.parse(readFileSync(statePath, "utf8"));
   assert.equal(partial.phase, "authorized");
   assert.equal(retired, false);
   assert.equal(pullClosed, false);
   assert.equal(lease.status, "active");
+  transition = applyCloudTransition({ ledger, action: "retire", actor,
+    repository: cloudRepository, evaluationTime: "2026-08-23T11:00:00.000Z",
+    request: { ...retireRequests[0], expectedLedgerDigest: ledger.headDigest } });
+  ledger = transition.ledger; retired = true;
+  controllerHead = "8".repeat(40); controllerTree = "9".repeat(40);
+  const lockPath = `${statePath}.lock`;
+  writeFileSync(lockPath, `${canonicalJson({ context: { planDigest: plan.planDigest },
+    pid: 2_147_483_647, token: "provably-dead-owner" })}\n`, { mode: 0o600 });
+  chmodSync(lockPath, 0o600);
+  sourceHasV1Lock = true;
+  await assert.rejects(controller.run({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization }), /not authored by a pre-v1 controller/u);
+  sourceHasV1Lock = false;
+  writeFileSync(lockPath, `${canonicalJson({ context: { planDigest: "0".repeat(64) },
+    pid: 2_147_483_647, token: "wrong-context" })}\n`, { mode: 0o600 });
+  await assert.rejects(controller.run({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization }), /malformed or foreign/u);
+  writeFileSync(lockPath, `${canonicalJson({ context: { planDigest: plan.planDigest },
+    pid: process.pid, token: "live-owner" })}\n`, { mode: 0o600 });
+  await assert.rejects(controller.run({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization }), /owner is live/u);
+  writeFileSync(lockPath, `${canonicalJson({ context: { planDigest: plan.planDigest },
+    pid: 2_147_483_647, token: "provably-dead-owner" })}\n`, { mode: 0o600 });
+  const unprivileged = createController({ adapter: createRepositoryAdapter({ repository,
+    subjectWorktree: subject, authoredWorktree: authored, targetRepository: "owner/repo",
+    pullRequestNumber: 7, claimId, statePath }, { git, gitRaw,
+    leaseStore, readCloud, readLedger: () => ledger, gh: readPull }) });
+  await assert.rejects(unprivileged.run({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization }), /original task authority capability/u);
   const receipt = await controller.run({ planDigest: plan.planDigest,
     authorization: plan.exactAuthorization });
+  const exactReleasedLease = structuredClone(lease);
+  lease.admission = { status: "planned" };
+  await assert.rejects(controller.run({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization }), /Local lease drifted/u);
+  lease = structuredClone(exactReleasedLease);
+  lease.admittedEmptyAbandonedOwnerRetirement.receiptDigest = "0".repeat(64);
+  await assert.rejects(controller.run({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization }), /Local lease drifted/u);
+  lease = exactReleasedLease;
   const replay = await controller.run({ planDigest: plan.planDigest,
     authorization: plan.exactAuthorization });
   assert.equal(replay.receiptDigest, receipt.receiptDigest);
-  assert.equal(retireRequests.length, 2);
-  assert.equal(retireRequests[1].finalRevision, head);
-  assert.equal(retireRequests[1].reviewRequestId, reviewRequestId);
-  assert.equal(retireRequests[1].deviceId, actor.deviceId);
-  assert.equal(retireRequests[1].sessionId, actor.sessionId);
+  assert.equal(retireRequests.length, 1);
+  assert.equal(retireRequests[0].finalRevision, head);
+  assert.equal(retireRequests[0].reviewRequestId, reviewRequestId);
+  assert.equal(retireRequests[0].deviceId, actor.deviceId);
+  assert.equal(retireRequests[0].sessionId, actor.sessionId);
   assert.equal(closeCalls, 1);
   assert.deepEqual(gitMutations, []);
   assert.equal(lease.status, "released");
+  assert.equal(authorityCalls > 0, true);
+  assert.equal(readFileSync(statePath, "utf8").includes("protected-main-descendant"), true);
+  assert.equal(existsSync(lockPath), false);
 });
 
 test("partial remote retirement follows canonical authored main and replays terminally", async t => {

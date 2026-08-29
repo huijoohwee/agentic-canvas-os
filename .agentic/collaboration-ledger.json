@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5915,
-  "headDigest": "1e0a52c236bed2b45416af3443673d32396746d0b92e47b30fce71df8a58fc2b",
+  "sequence": 5916,
+  "headDigest": "05f1f2742ce639d2ba09ec2dd07144d2eac7b02570ea4051bb89b882af2875c9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -300730,6 +300730,47 @@
       },
       "claimDigest": "5a3741aba0238e397853d47b44dad0f768c126024000be6cec9e2dbd73392707",
       "digest": "1e0a52c236bed2b45416af3443673d32396746d0b92e47b30fce71df8a58fc2b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5916,
+      "parentDigest": "1e0a52c236bed2b45416af3443673d32396746d0b92e47b30fce71df8a58fc2b",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a6674b7b34fd1f6bf73e8c28ac219fbd56069bd5f3657ed65efb55a27617bddc",
+      "idempotencyKey": "c0954aaa5174128529a4bf89321e0e222eecf063e77c0cfe9ca4df9c9b11b46f",
+      "requestDigest": "2567ace1282d916804c72ddc1531312769a0d771a249ca043622efef83fd6a89",
+      "evaluationTime": "2026-08-29T05:06:11.000Z",
+      "claimCore": {
+        "claimId": "a6674b7b34fd1f6bf73e8c28ac219fbd56069bd5f3657ed65efb55a27617bddc",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:1205cb83d41ae3bbe35d84a5a187ee30f7a83e76e06e65b3d04e2ee57f00b308",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1dbd53ad96f559ee96bdacdd5dcc720464dfbe16589c3e1369845fe1189a071b",
+        "canonicalBaseRevision": "4f497143c445aaa125da06cddf59469c5c6d85a5",
+        "declaredWriteScope": [
+          "path:__tests__/planned-dirty-admission-recovery.test.mjs",
+          "path:docs/PLANNED-DIRTY-ADMISSION-RECOVERY.md",
+          "path:scripts/planned-dirty-admission-recovery-cloud-frame.mjs",
+          "semantic:planned-dirty-initial-provenance-recovery"
+        ],
+        "writeSetDigest": "7c1ba544c01de5428fb369d1178a0ec815f4faa6eb1006901b35be45351b949e",
+        "laneRevision": "4f497143c445aaa125da06cddf59469c5c6d85a5",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-30T05:06:11.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "fad37df6c8f86d623dd345706ca86f4b147fe6dcf4c7f26036c7f569b5b5d1cd",
+        "eligibleSince": "2026-08-29T05:06:11.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ad89604448a36735eadec0f2daf97851418fc996a9200ef73107eb32b3d7fbf0",
+      "digest": "05f1f2742ce639d2ba09ec2dd07144d2eac7b02570ea4051bb89b882af2875c9"
     }
   ]
 }

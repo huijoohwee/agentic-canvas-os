@@ -1,5 +1,5 @@
 // Responsibility: seal provider-only pair plans, exact authorization, durable intents, and terminal receipts.
-import { canonicalJson, digestValue } from "./cloud-collaboration-primitives.mjs";
+import { canonicalJson, digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import {
   normalizeProviderOnlyMergedClaimPairReconciliationEvidence,
 } from "./provider-only-merged-claim-pair-reconciliation-evidence.mjs";
@@ -33,11 +33,33 @@ const INTEGRATION_PHASES = new Set([
 export function buildProviderOnlyMergedClaimPairReconciliationPlan(source) {
   const evidence = normalizeProviderOnlyMergedClaimPairReconciliationEvidence(source);
   const { cloud, controller, provider } = evidence;
+  const providerSubject = {
+    provider: provider.provider,
+    repository: provider.repository,
+    repositoryId: provider.repositoryId,
+    actorId: provider.actorId,
+    pullRequest: provider.pullRequest,
+    headCommit: provider.headCommit,
+    mergeCommit: provider.mergeCommit,
+    changedPaths: provider.changedPaths,
+    mergePathObjects: provider.mergePathObjects,
+    enrollmentSemanticDigest: provider.protection.enrollment.semanticDigest,
+    historicalControllerSemanticDigest: provider.protection.historicalController.semanticDigest,
+    requiredCheckWitnesses: provider.protection.requiredCheckWitnesses,
+  };
+  const localSubject = {
+    originRepository: evidence.local.originRepository,
+    branch: evidence.local.branch,
+    clean: evidence.local.clean,
+    sourceBranchRefPresent: evidence.local.sourceBranchRefPresent,
+    registeredSourceWorktreeCount: evidence.local.registeredSourceWorktreeCount,
+    matchingLeaseCount: evidence.local.matchingLeaseCount,
+  };
   const sourceEvidenceDigest = digestValue({
     schema: "agentic-provider-only-merged-claim-pair-stable-source-evidence/v1",
     controllerRuntimeDigest: controller.runtimeDigest,
-    provider,
-    local: evidence.local,
+    provider: providerSubject,
+    local: localSubject,
     source: cloud.source,
     waiter: cloud.waiter,
     sourceLineageDigest: cloud.sourceLineageDigest,
@@ -53,7 +75,6 @@ export function buildProviderOnlyMergedClaimPairReconciliationPlan(source) {
     repositoryId: provider.repositoryId,
     actorId: provider.actorId,
     ledgerRepository: cloud.ledgerRepository,
-    controllerRevision: controller.headSha,
     controllerRuntimeDigest: controller.runtimeDigest,
     sourceClaimId: cloud.source.claimId,
     sourceClaimDigest: cloud.source.claimDigest,
@@ -75,7 +96,6 @@ export function buildProviderOnlyMergedClaimPairReconciliationPlan(source) {
     pullRequestNumber: provider.pullRequest.number,
     pullRequestNodeId: provider.pullRequest.nodeId,
     mergeCommitSha: provider.mergeCommit.sha,
-    protectedMainSha: provider.protectedMain.sha,
     sourceEvidenceDigest,
     bytesDigest: evidence.bytesDigest,
     namedChecksDigest: evidence.namedChecksDigest,
@@ -87,7 +107,6 @@ export function buildProviderOnlyMergedClaimPairReconciliationPlan(source) {
       sourceLineageDigest: cloud.sourceLineageDigest,
       waiterLineageDigest: cloud.waiterLineageDigest,
       mergeCommitSha: provider.mergeCommit.sha,
-      protectedMainSha: provider.protectedMain.sha,
     }),
     waiterRetirementReason: "superseded",
     sourceRetirementReason: "integrated",
@@ -95,6 +114,9 @@ export function buildProviderOnlyMergedClaimPairReconciliationPlan(source) {
     phases: PHASES,
   };
   const observation = {
+    controllerRevision: controller.headSha,
+    controllerProtectedMainSha: controller.protectedMainSha,
+    protectedMainSha: provider.protectedMain.sha,
     expectedLedgerRevision: cloud.ledgerRevision,
     expectedLedgerDigest: cloud.ledgerDigest,
     expectedLedgerSequence: cloud.sequence,
@@ -318,6 +340,91 @@ export function buildProviderOnlyMergedClaimPairReconciliationReceipt({ plan, in
     evidenceDigest: expectedEvidenceDigest,
   };
   return Object.freeze({ ...core, receiptDigest: digestValue(core) });
+}
+
+const CONFLICT_BEFORE = Object.freeze({
+  "waiter-retired": Object.freeze(["source-baseline", "waiter-baseline"]),
+  "source-recovered": Object.freeze(["source-baseline"]),
+  "source-integrated": Object.freeze(["source-reviewed"]),
+  "source-retired": Object.freeze(["source-integrated"]),
+});
+const CONFLICT_AFTER = Object.freeze({
+  prepared: Object.freeze(["source-baseline", "waiter-baseline"]),
+  "waiter-retired": Object.freeze(["source-baseline"]),
+  "source-recovered": Object.freeze(["source-reviewed"]),
+  "source-integrated": Object.freeze(["source-integrated"]),
+  "source-retired": Object.freeze([]),
+  verified: Object.freeze([]),
+});
+
+export function assertProviderOnlyMergedClaimPairPhaseConflictSet(plan, snapshot, { phase, stage }) {
+  if (!plan?.evidence?.cloud?.source || !plan?.evidence?.cloud?.waiter) {
+    throw new Error("Provider-only conflict proof requires the sealed pair snapshot.");
+  }
+  if (!snapshot || !Array.isArray(snapshot.currentClaims)) {
+    throw new Error("Provider-only conflict proof requires the complete current-claim inventory.");
+  }
+  const expectedKinds = (stage === "before-effect" ? CONFLICT_BEFORE : CONFLICT_AFTER)[phase];
+  if (!expectedKinds) throw new Error(`Unsupported provider-only conflict phase ${stage}:${phase}.`);
+  const source = plan.evidence.cloud.source;
+  const waiter = plan.evidence.cloud.waiter;
+  const relevant = snapshot.currentClaims.filter(claim => conflictRelevant(claim, source, waiter));
+  const expected = expectedKinds.map(kind => expectedConflictClaim(kind, source, waiter));
+  if (canonicalJson(relevant.map(claim => claim.claimId).sort())
+    !== canonicalJson(expected.map(claim => claim.claimId).sort())) {
+    throw new Error(
+      "Provider-only ledger conflict set contains a foreign same-work-item, successor, predecessor, or overlapping claim.",
+    );
+  }
+  for (const expectation of expected) {
+    assertExpectedConflictClaim(
+      relevant.find(claim => claim.claimId === expectation.claimId),
+      expectation,
+      source,
+    );
+  }
+  return Object.freeze(relevant);
+}
+
+function conflictRelevant(claim, source, waiter) {
+  if (!claim || claim.repositoryId !== source.repositoryId) return false;
+  const scope = normalizeWriteSet(claim.declaredWriteScope || []);
+  return claim.workItemId === source.workItemId
+    || claim.claimId === source.claimId
+    || claim.claimId === waiter.claimId
+    || claim.predecessorClaimId === source.claimId
+    || claim.predecessorClaimId === waiter.claimId
+    || [source.predecessorClaimId, waiter.predecessorClaimId].includes(claim.claimId)
+    || writeSetsOverlap(scope, source.declaredWriteScope)
+    || writeSetsOverlap(scope, waiter.declaredWriteScope);
+}
+
+function expectedConflictClaim(kind, source, waiter) {
+  if (kind === "waiter-baseline") return { ...waiter, expectedKind: kind };
+  if (kind === "source-baseline") return { ...source, expectedKind: kind };
+  if (kind === "source-reviewed") return {
+    ...source, claimDigest: null, expectedKind: kind, recordedState: "reviewed", state: "reviewed",
+    transitionCounter: source.transitionCounter + 1, writeAuthority: true,
+  };
+  return {
+    ...source, claimDigest: null, expectedKind: kind, recordedState: "integrated-preserved",
+    state: "integrated-preserved", transitionCounter: source.transitionCounter + 2, writeAuthority: false,
+  };
+}
+
+function assertExpectedConflictClaim(actual, expected, source) {
+  if (!actual) throw new Error(`Provider-only ${expected.expectedKind} claim is absent.`);
+  const stableFields = ["actorId", "canonicalBaseRevision", "declaredWriteScope", "deviceId",
+    "laneRevision", "leaseEpoch", "repositoryId", "sessionId", "workItemId", "writeSetDigest"];
+  if (stableFields.some(field => canonicalJson(actual[field]) !== canonicalJson(expected[field]))
+    || actual.claimId !== expected.claimId || actual.state !== expected.state
+    || actual.recordedState !== expected.recordedState
+    || actual.transitionCounter !== expected.transitionCounter
+    || actual.writeAuthority !== expected.writeAuthority
+    || (expected.claimDigest !== null && actual.claimDigest !== expected.claimDigest)
+    || (expected.expectedKind === "waiter-baseline" && actual.predecessorClaimId !== source.claimId)) {
+    throw new Error(`Provider-only ${expected.expectedKind} claim drifted from its sealed phase identity.`);
+  }
 }
 
 function normalizeAuthorization(value, plan) {

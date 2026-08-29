@@ -8,9 +8,9 @@ schema: "agentic-provider-only-merged-claim-pair-reconciliation-doc/v1"
 frontmatter_contract: "required"
 status: "focused-tested"
 authority: "receipt-bound reconciliation of one provider-only merged reviewed source and its direct waiting successor"
-runtime_scope: "read-only provider and ledger planning, waiter-first cloud transitions, private intent CAS, and terminal double-read verification"
-runtime_claim: "focused tests prove exact evidence joins, authorization, phase order, response-loss adoption, persistence resume, request construction, and fail-closed drift; live provider execution remains token-gated"
-runtime_owner: "../scripts/provider-only-merged-claim-pair-reconciliation-contract.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation-controller.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation-evidence.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation-repository-adapter.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation.mjs"
+runtime_scope: "subject-scoped provider and ledger planning, privately sealed plan and intent CAS, waiter-first cloud transitions, and terminal external-plus-ledger double-read verification"
+runtime_claim: "focused tests prove historical-controller ancestry, scoped evidence stability, exact authorization, phase order, TOCTOU rejection, response-loss adoption, persistence resume, request construction, and fail-closed drift; live provider execution remains token-gated"
+runtime_owner: "../scripts/private-operation-lock.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation-contract.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation-controller.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation-evidence.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation-repository-adapter.mjs; ../scripts/provider-only-merged-claim-pair-reconciliation.mjs"
 runtime_proof: "../__tests__/provider-only-merged-claim-pair-reconciliation-contract.test.mjs; ../__tests__/provider-only-merged-claim-pair-reconciliation-controller.test.mjs; ../__tests__/provider-only-merged-claim-pair-reconciliation-evidence.test.mjs; ../__tests__/provider-only-merged-claim-pair-reconciliation-repository-adapter.test.mjs; ../__tests__/provider-only-merged-claim-pair-reconciliation-cli.test.mjs"
 publish_policy: "Dev-only; no source, Git, pull-request, release, deployment, or direct-ledger mutation authority"
 ---
@@ -22,8 +22,8 @@ publish_policy: "Dev-only; no source, Git, pull-request, release, deployment, or
 
 A merged pull request does not by itself settle cloud coordination state. This
 controller handles one narrower case that the preserved-source reconciliation
-cannot truthfully admit: the original local lane, branch refs, commit object,
-registered worktree, and writer lease are all absent, while the provider and
+cannot truthfully admit: the authoritative local branch, registered worktree,
+and writer lease are all absent, while the provider and
 immutable cloud ledger still prove the exact reviewed source and its direct
 waiting successor.
 
@@ -47,20 +47,29 @@ Planning seals four joined evidence surfaces into one immutable plan.
 
 ### Controller
 
-The executing repository must be clean on `main`, with `HEAD` exactly equal to
-the live protected `origin/main`, and its normalized `origin` must be exactly
-`huijoohwee/agentic-canvas-os`. The runtime digest binds the exact five
-dedicated contract, controller, evidence, repository-adapter, and CLI files by
-repository-relative path, Git blob SHA, and content digest. The protected
-target's exact auto-delivery workflow path and enrolled controller revision
-must join that protected controller revision.
+The executing repository must be clean on `main`, and its normalized `origin`
+must be exactly `huijoohwee/agentic-canvas-os`. Its revision and the planned
+controller frontier must both be ancestors of live protected `main`. The
+runtime digest binds the complete operation-specific runtime and its shared
+cloud, ledger, GitHub, locking, and action dependencies by path, Git blob SHA,
+and content digest; those exact path objects must remain unchanged on the live
+protected descendant.
+
+Delivery enrollment is separate historical evidence. The downstream workflow
+may immutably pin `af3bff6f15ea2e6e7a01e461c077a6c99ac22a28` while this
+reconciliation runtime executes from protected `4f497143c445aaa125da06cddf59469c5c6d85a5`
+or an unchanged-runtime descendant. The historical pin must be an ancestor of
+the current controller and its immutable `scripts/sync-open-pr.mjs` must prove
+the `--protected-head-refresh` entrypoint semantics. Pin equality with the
+current controller is neither expected nor required.
 
 ### Cloud ledger
 
 The adapter reads one immutable ledger ref and complete validated ledger blob.
-The plan binds its revision, digest, sequence, validation digest, both exact
-claims, both complete claim lineages, current inventory, and the digest of all
-unrelated current claims. Source lineage begins with `claim`, continues only
+The evidence records revision, digest, sequence, validation digest, both exact
+claims, both complete claim lineages, current inventory, and unrelated claims,
+while authorization identity projects only the pair and its empty overlapping
+conflict set. Source lineage begins with `claim`, continues only
 through contiguous `continue` transitions, and ends at the reviewed source.
 The direct waiter has exactly one genesis transition.
 
@@ -84,11 +93,15 @@ claim and prove all of the following:
 - containment of that squash commit by current protected `main`;
 - complete, equal pull-request and squash changed-path sets, every path inside
   the admitted source scope, plus the corresponding protected-main file
-  objects;
-- exact classic and ruleset required-check enrollment, live enforcement, and
-  successful completed runs on both the reviewed head and squash commit; and
-- absence of the remote head ref and any writer-lease marker in the pull
-  request.
+  objects, with the current objects byte-identical to the squash objects;
+- exact classic and ruleset enrollment semantics plus one stable successful
+  required-check witness for each enrolled check on the reviewed head and
+  squash commit; and
+- absence of any writer-lease marker in the pull request.
+
+Unrelated rules, checks, failed or duplicate reruns, and inventory ordering are
+retained as observations but do not change authorization when the projected
+successful required witnesses are unchanged.
 
 Truncated compare, rule, path, commit, or check evidence is not equivalent to
 absence and fails closed.
@@ -97,12 +110,12 @@ absence and fails closed.
 
 The source repository argument is a read-only canonical anchor, not a recreated
 historical lane. It must be clean on `main`, equal to its fetched
-`origin/main`, equal to the provider's protected-main commit, and have an
-`origin` normalized to the exact target repository. A missing, malformed, or
-ambiguous origin is not accepted. The historical local branch,
-remote-tracking ref, reviewed commit object, registered source worktree, and
-matching lease must all be absent. A malformed lease registry or a failed Git
-absence probe blocks; an operational error is never converted into absence.
+`origin/main`, be an ancestor of the provider's current protected main, and
+have an `origin` normalized to the exact target repository. The authoritative
+historical local branch, registered source worktree, and matching lease must
+all be absent. A retained object in the Git object database or a remote-tracking
+ref is inert residue, not ownership, and is neither queried nor used as a
+blocker. Malformed subject-relevant lease metadata still fails closed.
 
 ## Plan and Exact Authorization
 
@@ -115,6 +128,8 @@ node scripts/provider-only-merged-claim-pair-reconciliation.mjs plan \
   --pull-request=784 \
   --source-claim-id=<64-character-source-claim-id> \
   --waiter-claim-id=<64-character-waiter-claim-id> \
+  --plan-path=/absolute/private/reconciliation.plan.json \
+  --state-path=/absolute/private/reconciliation.intent.json \
   --json
 ```
 
@@ -133,21 +148,26 @@ node scripts/provider-only-merged-claim-pair-reconciliation.mjs run \
   --pull-request=784 \
   --source-claim-id=<64-character-source-claim-id> \
   --waiter-claim-id=<64-character-waiter-claim-id> \
+  --plan-path=/absolute/private/reconciliation.plan.json \
+  --state-path=/absolute/private/reconciliation.intent.json \
   --plan-digest=<planDigest> \
   --authorize='authorize provider-only-merged-claim-pair-reconciliation <planDigest>' \
   --json
 ```
 
 `--ledger-repository` may select the repository-owned ledger and defaults to
-`huijoohwee/agentic-canvas-os`. `--state-path` may select the private intent
-journal; the default remains under the source repository's Git common
-directory rather than in authored source. `--ttl-seconds` bounds only the
-source recovery lease, is sealed into the plan, accepts 60 through 86,400
-seconds inclusive, and defaults to 1,800 seconds.
+`huijoohwee/agentic-canvas-os`. `--plan-path` selects the immutable private
+plan journal and `--state-path` selects the private intent journal. When the
+plan path is omitted it is derived beside the intent journal; the default
+intent journal remains under the source repository's Git common directory
+rather than in authored source. `--ttl-seconds` bounds only the source recovery
+lease, is sealed into the plan, accepts 60 through 86,400 seconds inclusive,
+and defaults to 1,800 seconds.
 
 Planning rejects `--authorize`. Running never infers authority and rejects a
 missing or drifted plan digest, any byte change in the authorization statement,
-and any stored authorization mismatch.
+any absent or changed sealed-plan journal, and any stored authorization
+mismatch. The run never rebuilds its baseline from a later provider snapshot.
 
 ## Closed Transition Sequence
 
@@ -174,6 +194,13 @@ live ledger. The four cloud effects then occur in waiter-first order:
 4. retire the integrated source as `integrated`, carrying its reconstructed
    integration receipt.
 
+Immediately before the first cloud effect, two fresh provider/local/controller
+captures must produce the planned subject digest. This scoped comparison
+allows unrelated protected-main and controller descendants only after ancestry
+and unchanged relevant-path proof; overlap, non-descendant history, controller
+runtime change, subject ownership reappearance, or required-witness drift
+blocks before the waiter transition.
+
 Each transition uses the fresh claim fence, transition counter, and ledger
 digest from an immediate read. Its semantic idempotency key is derived from
 the plan-and-phase operation key. The pair-scoped target-repository tail may
@@ -181,22 +208,28 @@ contain only the four expected actions, claims, counters, semantic fields, and
 hashed idempotency keys. Append-only entries proven disjoint from the pair may
 interleave without invalidating the stable authorization.
 
-`verified` performs two independent ledger reads. Completion requires the same
-pair-scoped terminal digest across both reads, both exact retire transitions,
-an append-only disjoint remainder, and the reconstructed source integration
-receipt. `complete` seals those values into the terminal reconciliation
-receipt.
+`verified` brackets another two-pass scoped provider/local/controller recapture
+with two independent ledger reads. Completion requires the same pair-scoped
+terminal digest across both ledger reads, stable external subject evidence,
+both exact retire transitions, and the reconstructed source integration
+receipt. Unrelated ledger appends between the reads do not perturb the pair
+digest. `complete` seals those values into the terminal reconciliation receipt.
 
 ## Crash, CAS, and Response-Loss Recovery
 
-One token-bound entrypoint lock serializes a run. Any pre-existing lock blocks;
-the adapter does not infer liveness or take over a supposedly stale owner.
-Release removes only the caller's exact unchanged token.
+The repository-governed private operation lock serializes both entrypoint and
+intent CAS operations. It binds a random token, process-start identity,
+canonical context, and the created inode. A live or ambiguous owner blocks;
+bounded dead-owner recovery captures the exact inode before replacement.
+Release succeeds only for the unchanged token and inode, so foreign replacement
+is reported and never unlinked.
 
-The mode-0600 intent journal uses a separate lock, atomic rename, and
-compare-and-swap on the full previous intent digest. It records `authorized`
-and every contiguous phase before later work proceeds. A write that observes a
-different prior intent blocks instead of merging histories.
+The distinct mode-0600 plan and intent journals use separate locks,
+unpredictable create-exclusive no-follow temporary files, atomic installation,
+and compare-and-swap on the full previous digest. The plan journal is immutable
+after its first seal. The intent journal records `authorized` and every
+contiguous phase before later work proceeds. A write that observes a different
+prior intent blocks instead of merging histories.
 
 Before every effect, the controller first observes whether that exact phase is
 already complete. After every effect, including a thrown or lost response, it
@@ -207,8 +240,8 @@ blocked. On resume, every persisted phase is re-observed; same-phase operation,
 evidence, or integration-receipt drift stops before the next effect.
 
 A terminal replay validates the complete stored intent and receipt, rechecks
-all live effect phases, returns the same receipt, and performs no duplicate
-transition.
+all live effect phases and fresh terminal evidence, returns the same receipt,
+and performs no duplicate transition.
 
 ## Mutation and Release Boundary
 

@@ -9,6 +9,7 @@ import {
 } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   PROVIDER_ONLY_MERGED_CLAIM_PAIR_RECONCILIATION_EVIDENCE_SCHEMA,
+  PROVIDER_ONLY_MERGED_CLAIM_PAIR_RECONCILIATION_RUNTIME_PATHS,
   buildProviderOnlyMergedClaimPairReconciliationEvidence,
   normalizeProviderOnlyMergedClaimPairReconciliationEvidence,
   providerOnlyMergedClaimPairInventoryDigest,
@@ -69,7 +70,7 @@ test("fails closed when provider merge, path, protection, or required-check proo
     raw => {
       raw.provider.checkRuns.find(run => run.headSha === raw.provider.mergeCommit.sha).conclusion = "FAILURE";
     },
-    raw => { raw.provider.remoteHeadRefPresent = true; },
+    raw => { raw.provider.writerMarkerPresent = true; },
   ];
   for (const corrupt of cases) {
     const raw = providerOnlyEvidenceFixture();
@@ -78,7 +79,7 @@ test("fails closed when provider merge, path, protection, or required-check proo
   }
 });
 
-test("canonicalizes provider check-run order and rejects duplicate observations", async context => {
+test("canonicalizes provider checks and projects rerun-stable required witnesses", async context => {
   const baseline = buildProviderOnlyMergedClaimPairReconciliationEvidence(
     providerOnlyEvidenceFixture(),
   );
@@ -90,12 +91,17 @@ test("canonicalizes provider check-run order and rejects duplicate observations"
       baseline.evidenceDigest,
     );
   });
-  await context.test("duplicate rejection", () => {
+  await context.test("duplicate/rerun stability", () => {
     const duplicated = providerOnlyEvidenceFixture();
     duplicated.provider.checkRuns.push(structuredClone(duplicated.provider.checkRuns[0]));
-    assert.throws(
-      () => buildProviderOnlyMergedClaimPairReconciliationEvidence(duplicated),
-      /check run.*unique|duplicate/iu,
+    duplicated.provider.checkRuns.push({ ...structuredClone(duplicated.provider.checkRuns[0]),
+      status: "COMPLETED", conclusion: "FAILURE" });
+    duplicated.provider.protection.liveRequiredChecks.push({
+      context: "Unrelated Advisory", appId: 99, source: "classic", strict: false,
+    });
+    assert.equal(
+      buildProviderOnlyMergedClaimPairReconciliationEvidence(duplicated).namedChecksDigest,
+      baseline.namedChecksDigest,
     );
   });
 });
@@ -109,15 +115,18 @@ test("requires a clean exact-main controller and complete local source absence",
       raw.controller.runtimeFiles.sort((left, right) => left.path.localeCompare(right.path));
       raw.controller.runtimeDigest = digestValue(raw.controller.runtimeFiles);
     }],
-    ["enrolled controller drift", raw => {
-      raw.provider.protection.enrollment.controllerRevision = sha("other-controller");
+    ["historical controller ancestry", raw => {
+      raw.provider.protection.historicalController.isAncestorOfCurrentController = false;
+    }],
+    ["historical controller semantic drift", raw => {
+      raw.provider.protection.historicalController.entrypoint = "scripts/other.mjs";
     }],
     ["workflow path substitution", raw => {
       raw.provider.protection.enrollment.workflowPath = ".github/workflows/other.yml";
     }],
     ["wrong local origin", raw => { raw.local.originRepository = "other/target"; }],
     ["non-main local anchor", raw => { raw.local.branch = "agent/device/old-source"; }],
-    ["historical object present", raw => { raw.local.sourceObjectPresent = true; }],
+    ["local main non-ancestor", raw => { raw.local.headIsAncestorOfProviderProtectedMain = false; }],
     ["historical lease present", raw => { raw.local.matchingLeaseCount = 1; }],
   ];
   for (const [label, corrupt] of cases) {
@@ -127,6 +136,18 @@ test("requires a clean exact-main controller and complete local source absence",
       assert.throws(() => buildProviderOnlyMergedClaimPairReconciliationEvidence(raw));
     });
   }
+});
+
+test("accepts live af3 delivery enrollment against current 4f controller and inert Git residue", () => {
+  const raw = providerOnlyEvidenceFixture();
+  assert.equal(raw.provider.protection.enrollment.controllerRevision,
+    "af3bff6f15ea2e6e7a01e461c077a6c99ac22a28");
+  assert.equal(raw.controller.protectedMainSha,
+    "4f497143c445aaa125da06cddf59469c5c6d85a5");
+  raw.provider.remoteHeadRefPresent = true;
+  raw.local.sourceRemoteTrackingRefPresent = true;
+  raw.local.sourceObjectPresent = true;
+  assert.doesNotThrow(() => buildProviderOnlyMergedClaimPairReconciliationEvidence(raw));
 });
 
 test("inventory digests are order-stable and relevance includes overlap and lineage edges", () => {
@@ -198,13 +219,7 @@ export function providerOnlyEvidenceFixture() {
     leaseEpoch: 5, transitionCounter: 1, reviewRequestId: null,
     predecessorClaimId: sourceClaimId, evidenceDigest: null,
   };
-  const runtimeFiles = [
-    "scripts/provider-only-merged-claim-pair-reconciliation-contract.mjs",
-    "scripts/provider-only-merged-claim-pair-reconciliation-controller.mjs",
-    "scripts/provider-only-merged-claim-pair-reconciliation-evidence.mjs",
-    "scripts/provider-only-merged-claim-pair-reconciliation-repository-adapter.mjs",
-    "scripts/provider-only-merged-claim-pair-reconciliation.mjs",
-  ].map(runtimePath => ({
+  const runtimeFiles = PROVIDER_ONLY_MERGED_CLAIM_PAIR_RECONCILIATION_RUNTIME_PATHS.map(runtimePath => ({
     path: runtimePath,
     blobSha: sha(`runtime-blob-${runtimePath}`),
     contentDigest: digest(`runtime-content-${runtimePath}`),
@@ -220,14 +235,39 @@ export function providerOnlyEvidenceFixture() {
     parents: [mergeCommit.sha],
   };
   const requiredContext = "Integration Gate";
+  const controllerRevision = "4f497143c445aaa125da06cddf59469c5c6d85a5";
+  const historicalRevision = "af3bff6f15ea2e6e7a01e461c077a6c99ac22a28";
+  const historicalSemantic = {
+    repository: "huijoohwee/agentic-canvas-os", revision: historicalRevision,
+    treeSha: sha("historical-controller-tree"), entrypoint: "scripts/sync-open-pr.mjs",
+    mode: "--protected-head-refresh", entrypointBlobSha: sha("historical-entrypoint"),
+    entrypointContentDigest: digest("historical-entrypoint-content"),
+    adapterPath: "scripts/protected-head-refresh-github-adapter.mjs",
+    adapterBlobSha: sha("historical-adapter"),
+    adapterContentDigest: digest("historical-adapter-content"),
+    executableWitnessDigest: digest("historical-executable-witness"),
+  };
+  const enrollmentSemantic = {
+    workflowPath: ".github/workflows/auto-delivery.yml",
+    workflowJob: "protected-head-refresh",
+    checkoutActionRevision: sha("checkout-action"),
+    controllerPath: ".",
+    controllerRevision: historicalRevision,
+    runCommand: "node scripts/sync-open-pr.mjs --protected-head-refresh",
+    classicRequiredChecks: [requiredContext],
+    rulesetRequiredChecks: [],
+    requiredCiContexts: [requiredContext],
+  };
   const ledgerDigest = digest("ledger-head");
   const sequence = 3;
   return {
     controller: {
-      repositoryRoot: "/controller", branch: "main", headSha: sha("controller-main"),
+      repositoryRoot: "/controller", branch: "main", headSha: controllerRevision,
       originRepository: "huijoohwee/agentic-canvas-os",
-      protectedMainSha: sha("controller-main"), clean: true, runtimeFiles,
-      runtimeDigest: digestValue(runtimeFiles),
+      protectedMainSha: controllerRevision, baselineProtectedMainSha: controllerRevision,
+      headIsAncestorOfProtectedMain: true, baselineIsAncestorOfProtectedMain: true,
+      clean: true, runtimeFiles, runtimeDigest: digestValue(runtimeFiles),
+      protectedRuntimeDigest: digestValue(runtimeFiles),
     },
     cloud: {
       ledgerRepository: "huijoohwee/agentic-canvas-os",
@@ -257,7 +297,9 @@ export function providerOnlyEvidenceFixture() {
         headSha: laneRevision, baseRepository: "owner/target", baseBranch: "main",
         baseSha: canonicalBaseRevision, mergeCommitSha: mergeCommit.sha,
       },
-      headCommit, mergeCommit, protectedMain,
+      headCommit, mergeCommit, protectedMain, plannedProtectedMainSha: protectedMain.sha,
+      plannedProtectedMainIsAncestorOfProtectedMain: true,
+      mergePathObjects: [{ path: "src/runtime/index.mjs", type: "file", objectSha: sha("main-file") }],
       protectedMainPaths: [{ path: "src/runtime/index.mjs", type: "file", objectSha: sha("main-file") }],
       mergeCommitIsAncestorOfProtectedMain: true,
       changedPaths: {
@@ -265,11 +307,13 @@ export function providerOnlyEvidenceFixture() {
       },
       protection: {
         enrollment: {
-          workflowPath: ".github/workflows/auto-delivery.yml",
-          contentDigest: digest("workflow"), controllerRevision: sha("controller-main"),
-          classicRequiredChecks: [requiredContext], rulesetRequiredChecks: [],
-          requiredCiContexts: [requiredContext],
+          ...enrollmentSemantic,
+          contentDigest: digest("workflow"),
+          semanticDigest: digestValue(enrollmentSemantic),
         },
+        historicalController: { ...historicalSemantic,
+          currentControllerRevision: controllerRevision, isAncestorOfCurrentController: true,
+          semanticDigest: digestValue(historicalSemantic) },
         liveRequiredChecks: [
           { context: requiredContext, appId: 15368, source: "classic", strict: true },
         ],
@@ -284,7 +328,8 @@ export function providerOnlyEvidenceFixture() {
     local: {
       repositoryRoot: "/clean-main", originRepository: "owner/target",
       branch: "main", headSha: protectedMain.sha,
-      protectedMainSha: protectedMain.sha, clean: true,
+      protectedMainSha: protectedMain.sha, providerProtectedMainSha: protectedMain.sha,
+      headIsAncestorOfProviderProtectedMain: true, clean: true,
       sourceBranchRefPresent: false, sourceRemoteTrackingRefPresent: false,
       sourceObjectPresent: false, registeredSourceWorktreeCount: 0, matchingLeaseCount: 0,
     },

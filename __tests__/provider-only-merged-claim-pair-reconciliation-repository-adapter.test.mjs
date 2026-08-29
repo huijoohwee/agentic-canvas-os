@@ -1,18 +1,15 @@
 // Responsibility: prove repository seams, private intent CAS/fencing, and exact cloud requests.
 import assert from "node:assert/strict";
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import {
   buildProviderOnlyMergedClaimPairReconciliationPlan,
@@ -24,20 +21,18 @@ import {
 import {
   createProviderOnlyMergedClaimPairReconciliationAdapter,
   createProviderOnlyMergedClaimPairReconciliationCloudActions,
-  createProviderOnlyMergedClaimPairReconciliationIntentStore,
   providerOnlyMergedClaimPairPhaseEntry,
+  readHistoricalDeliveryController,
   readProviderOnlyMergedClaimPairEnrollment,
   readProviderOnlyMergedClaimPairLocalAbsence,
 } from "../scripts/provider-only-merged-claim-pair-reconciliation-repository-adapter.mjs";
 import {
   providerOnlyEvidenceFixture,
 } from "./provider-only-merged-claim-pair-reconciliation-evidence.test.mjs";
-
 const methodNames = [
-  "withEntrypointFence", "readSourceEvidence", "readIntent", "writeIntent", "observePhase",
-  "retireWaiter", "recoverSource", "integrateSource", "retireSource", "verifyTerminal",
+  "withEntrypointFence", "readSourceEvidence", "readPlan", "writePlan", "readIntent", "writeIntent", "observePhase",
+  "verifyFreshSource", "retireWaiter", "recoverSource", "integrateSource", "retireSource", "verifyTerminal",
 ];
-
 test("repository adapter requires and freezes every closed-sequence seam", () => {
   for (let count = 0; count < methodNames.length; count += 1) {
     const methods = Object.fromEntries(methodNames.slice(0, count).map(name => [name, () => {}]));
@@ -55,90 +50,6 @@ test("repository adapter requires and freezes every closed-sequence seam", () =>
   assert.equal(Object.isFrozen(adapter), true);
   assert.equal("ignoredEscapeHatch" in adapter, false);
 });
-
-test("intent store performs atomic private CAS and rejects journal corruption", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "provider-only-intent-"));
-  const statePath = path.join(root, "private", "intent.json");
-  try {
-    const store = createProviderOnlyMergedClaimPairReconciliationIntentStore({
-      statePath,
-      now: () => new Date("2026-08-29T08:00:00.000Z"),
-    });
-    const authorized = { status: "authorized", digest: "a".repeat(64) };
-    const prepared = { status: "prepared", digest: "b".repeat(64) };
-    assert.equal(store.readIntent(), null);
-    assert.deepEqual(store.writeIntent({ expectedIntent: null, nextIntent: authorized }), authorized);
-    assert.deepEqual(store.readIntent(), authorized);
-    assert.equal(statSync(statePath).mode & 0o777, 0o600);
-    assert.equal(JSON.parse(readFileSync(statePath, "utf8")).updatedAt, "2026-08-29T08:00:00.000Z");
-
-    assert.throws(() => store.writeIntent({
-      expectedIntent: { status: "foreign" },
-      nextIntent: prepared,
-    }), /intent changed before CAS/iu);
-    assert.deepEqual(store.readIntent(), authorized);
-    assert.deepEqual(store.writeIntent({ expectedIntent: authorized, nextIntent: prepared }), prepared);
-
-    const journal = JSON.parse(readFileSync(statePath, "utf8"));
-    journal.intent.status = "tampered";
-    writeFileSync(statePath, `${JSON.stringify(journal)}\n`);
-    assert.throws(() => store.readIntent(), /journal is invalid/iu);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test("entrypoint fence fails closed on every owner and releases only its own token", async () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "provider-only-fence-"));
-  const statePath = path.join(root, "intent.json");
-  try {
-    const store = createProviderOnlyMergedClaimPairReconciliationIntentStore({ statePath });
-    const entrypointPath = `${statePath}.entrypoint.lock`;
-    writeFileSync(entrypointPath, JSON.stringify({
-      pid: 2_147_483_647,
-      token: "unverifiable-owner",
-      subject: {},
-    }));
-    await assert.rejects(
-      store.withEntrypointFence({}, async () => {}),
-      /already fenced|manual recovery/iu,
-    );
-    assert.equal(JSON.parse(readFileSync(entrypointPath, "utf8")).token, "unverifiable-owner");
-    rmSync(entrypointPath);
-
-    writeFileSync(entrypointPath, "{}\n");
-    await assert.rejects(
-      store.withEntrypointFence({}, async () => {}),
-      /already fenced|malformed|manual recovery/iu,
-    );
-    rmSync(entrypointPath);
-
-    const outer = await store.withEntrypointFence({ planDigest: "a".repeat(64) }, async fence => {
-      assert.match(fence.fenceDigest, /^[0-9a-f]{64}$/u);
-      assert.equal(existsSync(entrypointPath), true);
-      await assert.rejects(
-        store.withEntrypointFence({ planDigest: "b".repeat(64) }, async () => {}),
-        /already fenced/iu,
-      );
-      assert.equal(existsSync(entrypointPath), true);
-      return "complete";
-    });
-    assert.equal(outer, "complete");
-    assert.equal(existsSync(entrypointPath), false);
-
-    await store.withEntrypointFence({}, async () => {
-      writeFileSync(entrypointPath, JSON.stringify({
-        pid: process.pid,
-        token: "replacement-owner",
-        subject: {},
-      }));
-    });
-    assert.equal(JSON.parse(readFileSync(entrypointPath, "utf8")).token, "replacement-owner");
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
 test("recovery TTL accepts only the sealed 60 through 86400 second range", () => {
   for (const ttlSeconds of [60, 86_400]) {
     assert.doesNotThrow(() => createProviderOnlyMergedClaimPairReconciliationCloudActions({
@@ -155,7 +66,6 @@ test("recovery TTL accepts only the sealed 60 through 86400 second range", () =>
     }), /TTL.*60.*86400|between 60 and 86400/iu);
   }
 });
-
 test("enrollment accepts exact self-checkout and keeps cross-repository pins exact", () => {
   const protectedMainSha = "1".repeat(40);
   const self = readProviderOnlyMergedClaimPairEnrollment(enrollmentFixture({
@@ -171,7 +81,6 @@ test("enrollment accepts exact self-checkout and keeps cross-repository pins exa
   assert.equal(self.controllerRevision, protectedMainSha);
   assert.equal(self.workflowPath, ".github/workflows/auto-delivery.yml");
   assert.deepEqual(self.requiredCiContexts, ["Integration Gate"]);
-
   const pinnedRevision = "2".repeat(40);
   const crossRepository = readProviderOnlyMergedClaimPairEnrollment(enrollmentFixture({
     checkout: `repository: huijoohwee/agentic-canvas-os\n          ref: ${pinnedRevision}`,
@@ -187,10 +96,117 @@ test("enrollment accepts exact self-checkout and keeps cross-repository pins exa
     controllerRepository: "huijoohwee/agentic-canvas-os",
     protectedMainSha,
     targetRepository: "owner/target",
-  }), /enrolled controller revision.*SHA|required/iu);
+  }), /enrolled controller revision.*SHA|required|exact pinned controller checkout/iu);
 });
-
-test("local absence rejects malformed leases and fatal Git probes", () => {
+test("workflow enrollment rejects lexical run decoys and conditional checkouts", () => {
+  const protectedMainSha = "1".repeat(40);
+  const base = enrollmentFixture({ checkout: "ref: ${{ github.sha }}" });
+  const options = {
+    controllerRepository: "huijoohwee/agentic-canvas-os",
+    liveRequiredChecks: [],
+    protectedMainSha,
+    targetRepository: "huijoohwee/agentic-canvas-os",
+  };
+  assert.throws(() => readProviderOnlyMergedClaimPairEnrollment(
+    base.replace(
+      "run: node scripts/sync-open-pr.mjs --protected-head-refresh",
+      "run: echo node scripts/sync-open-pr.mjs --protected-head-refresh",
+    ),
+    options,
+  ), /does not execute the exact pinned controller path/iu);
+  assert.throws(() => readProviderOnlyMergedClaimPairEnrollment(
+    base.replace(
+      `- uses: actions/checkout@${"3".repeat(40)}`,
+      `- uses: actions/checkout@${"3".repeat(40)}\n        if: false`,
+    ),
+    options,
+  ), /checkout cannot be conditional/iu);
+});
+test("workflow enrollment parses the protected repository workflow itself", () => {
+  const protectedMainSha = "1".repeat(40);
+  const content = readFileSync(new URL("../.github/workflows/auto-delivery.yml", import.meta.url), "utf8");
+  const proof = readProviderOnlyMergedClaimPairEnrollment(content, {
+    controllerRepository: "huijoohwee/agentic-canvas-os",
+    liveRequiredChecks: [],
+    protectedMainSha,
+    targetRepository: "huijoohwee/agentic-canvas-os",
+  });
+  assert.equal(proof.controllerRevision, protectedMainSha);
+  assert.equal(proof.runCommand, "node scripts/sync-open-pr.mjs --protected-head-refresh");
+  assert.equal(proof.workflowJob, "protected-head-refresh");
+});
+test("historical af3 enrollment is semantic ancestry evidence, not current 4f equality", async () => {
+  const historical = "af3bff6f15ea2e6e7a01e461c077a6c99ac22a28";
+  const current = "4f497143c445aaa125da06cddf59469c5c6d85a5";
+  const github = async endpoint => {
+    if (endpoint.includes("/git/commits/")) return { sha: historical, tree: { sha: "1".repeat(40) }, parents: [] };
+    if (endpoint.includes("/compare/")) return { status: "ahead", total_commits: 1, commits: [{}] };
+    if (endpoint.includes("/contents/scripts/sync-open-pr.mjs")) return { sha: "2".repeat(40),
+      content: Buffer.from([
+        'import { runProtectedHeadRefresh } from "./protected-head-refresh-github-adapter.mjs";',
+        'if (process.argv.includes("--protected-head-refresh")) {',
+        '  runProtectedHeadRefresh({ repository: process.env.GITHUB_REPOSITORY });',
+        '  process.exit(0);',
+        '}',
+        '',
+      ].join("\n")).toString("base64") };
+    if (endpoint.includes("/contents/scripts/protected-head-refresh-github-adapter.mjs")) return {
+      sha: "3".repeat(40),
+      content: Buffer.from("export function runProtectedHeadRefresh() {}\n").toString("base64"),
+    };
+    throw new Error(`Unexpected endpoint ${endpoint}`);
+  };
+  const proof = await readHistoricalDeliveryController({ github,
+    controllerRepository: "huijoohwee/agentic-canvas-os", enrollment: { controllerRevision: historical },
+    currentControllerRevision: current });
+  assert.equal(proof.revision, historical);
+  assert.equal(proof.currentControllerRevision, current);
+  assert.equal(proof.isAncestorOfCurrentController, true);
+  const divergent = async endpoint => endpoint.includes("/compare/")
+    ? { status: "diverged", total_commits: 1, commits: [{}] } : github(endpoint);
+  await assert.rejects(readHistoricalDeliveryController({ github: divergent,
+    controllerRepository: "huijoohwee/agentic-canvas-os", enrollment: { controllerRevision: historical },
+    currentControllerRevision: current }), /not an ancestor/iu);
+});
+test("historical controller comments cannot impersonate executable dispatch", async () => {
+  const historical = "a".repeat(40);
+  const current = "b".repeat(40);
+  const github = async endpoint => {
+    if (endpoint.includes("/git/commits/")) return {
+      sha: historical, tree: { sha: "1".repeat(40) }, parents: [],
+    };
+    if (endpoint.includes("/compare/")) return {
+      status: "ahead", total_commits: 1, commits: [{}],
+    };
+    if (endpoint.includes("/contents/scripts/sync-open-pr.mjs")) return {
+      sha: "2".repeat(40),
+      content: Buffer.from([
+        '// import { runProtectedHeadRefresh } from "./protected-head-refresh-github-adapter.mjs";',
+        "// --protected-head-refresh",
+        "",
+      ].join("\n")).toString("base64"),
+    };
+    if (endpoint.includes("/contents/scripts/protected-head-refresh-github-adapter.mjs")) return {
+      sha: "3".repeat(40),
+      content: Buffer.from("export function runProtectedHeadRefresh() {}\n").toString("base64"),
+    };
+    throw new Error(`Unexpected endpoint ${endpoint}`);
+  };
+  await assert.rejects(readHistoricalDeliveryController({
+    github,
+    controllerRepository: "huijoohwee/agentic-canvas-os",
+    enrollment: { controllerRevision: historical },
+    currentControllerRevision: current,
+  }), /no executable dispatch witness/iu);
+});
+test("provider pull identity captures the real GitHub base SHA", () => {
+  const source = readFileSync(new URL(
+    "../scripts/provider-only-merged-claim-pair-reconciliation-repository-adapter.mjs",
+    import.meta.url), "utf8");
+  assert.match(source, /baseSha:\s*sha\(pull\.base\?\.sha,\s*"pull base"\)/u);
+  assert.doesNotMatch(source, /baseSha:\s*merge\.parents\[0\]/u);
+});
+test("local absence rejects malformed leases but treats inert Git probes as observations", () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "provider-only-local-"));
   const commonDirectory = path.join(root, ".git-common");
   const source = { claimId: "a".repeat(64), laneRevision: "1".repeat(40) };
@@ -210,10 +226,7 @@ test("local absence rejects malformed leases and fatal Git probes", () => {
     });
     assert.equal(local.originRepository, "owner/target");
     assert.equal(local.sourceBranchRefPresent, false);
-    assert.equal(local.sourceRemoteTrackingRefPresent, false);
-    assert.equal(local.sourceObjectPresent, false);
     assert.equal(local.matchingLeaseCount, 0);
-
     const leaseDirectory = path.join(commonDirectory, "agentic-canvas-os");
     mkdirSync(leaseDirectory, { recursive: true });
     writeFileSync(path.join(leaseDirectory, "writer-leases.json"), JSON.stringify({
@@ -225,17 +238,22 @@ test("local absence rejects malformed leases and fatal Git probes", () => {
       ...input,
       git: localAbsenceGit(),
     }), /writer-lease metadata.*malformed/iu);
+    writeFileSync(path.join(leaseDirectory, "writer-leases.json"), JSON.stringify({
+      schema: "agentic-writer-lease-registry/v2", revision: 99,
+      leases: { "agent/other": { branch: "agent/other", fenceSha: "f".repeat(40) } },
+    }));
+    assert.equal(readProviderOnlyMergedClaimPairLocalAbsence({
+      ...input, git: localAbsenceGit(),
+    }).matchingLeaseCount, 0);
     rmSync(leaseDirectory, { recursive: true, force: true });
-
-    assert.throws(() => readProviderOnlyMergedClaimPairLocalAbsence({
+    assert.doesNotThrow(() => readProviderOnlyMergedClaimPairLocalAbsence({
       ...input,
       git: localAbsenceGit({ fatalProbe: true }),
-    }), /Git absence probe failed/iu);
+    }));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
-
 test("phase entries require every operation-bound semantic field", () => {
   const plan = planFixture();
   const authorizationDigest = digestValue({ authorization: "exact" });
@@ -251,7 +269,6 @@ test("phase entries require every operation-bound semantic field", () => {
     };
     assert.ok(providerOnlyMergedClaimPairPhaseEntry(context, snapshot), phase);
   }
-
   const cases = [
     ["waiter-retired", values => { values.waiterLineage[0].claimCore.retirement.bytesDigest = "f".repeat(64); }],
     ["source-recovered", values => {
@@ -279,32 +296,42 @@ test("phase entries require every operation-bound semantic field", () => {
     assert.equal(providerOnlyMergedClaimPairPhaseEntry(context, changed), null, phase);
   }
 });
-
 test("cloud actions emit only the exact waiter-first operation-bound requests", async () => {
   const plan = planFixture(900);
   const calls = [];
   let snapshotReads = 0;
   const integrationEntry = integrationLedgerEntry(plan);
+  const sourceBaseline = structuredClone(plan.evidence.cloud.source);
+  const waiterBaseline = structuredClone(plan.evidence.cloud.waiter);
+  const sourceReviewed = {
+    ...sourceBaseline,
+    claimDigest: "c".repeat(64),
+    state: "reviewed",
+    recordedState: "reviewed",
+    transitionCounter: plan.sourceTransitionCounter + 1,
+    writeAuthority: true,
+  };
+  const sourceIntegrated = {
+    ...sourceReviewed,
+    claimDigest: "d".repeat(64),
+    state: "integrated-preserved",
+    recordedState: "integrated-preserved",
+    transitionCounter: plan.sourceTransitionCounter + 2,
+    writeAuthority: false,
+  };
   const snapshot = {
     ledger: { entries: [] },
     ledgerDigest: plan.expectedLedgerDigest,
-    source: {
-      claimId: plan.sourceClaimId,
-      claimDigest: plan.sourceClaimDigest,
-      transitionCounter: plan.sourceTransitionCounter,
-      laneRevision: plan.sourceLaneRevision,
-      reviewRequestId: plan.sourceReviewRequestId,
-      evidenceDigest: plan.sourceFocusedEvidenceDigest,
-    },
-    waiter: {
-      claimId: plan.waiterClaimId,
-      claimDigest: plan.waiterClaimDigest,
-      transitionCounter: plan.waiterTransitionCounter,
-      laneRevision: plan.sourceLaneRevision,
-      reviewRequestId: null,
-    },
+    source: sourceBaseline,
+    waiter: waiterBaseline,
     sourceLineage: [integrationEntry],
   };
+  const snapshots = [
+    { ...snapshot, currentClaims: [sourceBaseline, waiterBaseline] },
+    { ...snapshot, currentClaims: [sourceBaseline] },
+    { ...snapshot, source: sourceReviewed, currentClaims: [sourceReviewed] },
+    { ...snapshot, source: sourceIntegrated, currentClaims: [sourceIntegrated] },
+  ];
   const actions = createProviderOnlyMergedClaimPairReconciliationCloudActions({
     ledgerRepository: "owner/ledger",
     targetRepository: "owner/target",
@@ -319,7 +346,7 @@ test("cloud actions emit only the exact waiter-first operation-bound requests", 
     invokeCloudAction: async input => { calls.push(input); },
   });
   const intent = { authorizationDigest: digestValue({ authorization: "exact" }) };
-  const snapshotReader = async () => { snapshotReads += 1; return snapshot; };
+  const snapshotReader = async () => snapshots[snapshotReads++];
   const results = [];
   for (const [phase, method] of [
     ["waiter-retired", "retireWaiter"],
@@ -330,7 +357,6 @@ test("cloud actions emit only the exact waiter-first operation-bound requests", 
     const operationKey = providerOnlyMergedClaimPairReconciliationOperationKey(plan, phase);
     results.push(await actions[method]({ plan, intent, operationKey, snapshot: snapshotReader }));
   }
-
   assert.deepEqual(results.map(result => result.operationKey), [
     "waiter-retired", "source-recovered", "source-integrated", "source-retired",
   ].map(phase => providerOnlyMergedClaimPairReconciliationOperationKey(plan, phase)));
@@ -342,8 +368,8 @@ test("cloud actions emit only the exact waiter-first operation-bound requests", 
   assert.deepEqual(calls.map(call => call.request.expectedTransitionCounter), [
     plan.waiterTransitionCounter,
     plan.sourceTransitionCounter,
-    plan.sourceTransitionCounter,
-    plan.sourceTransitionCounter,
+    plan.sourceTransitionCounter + 1,
+    plan.sourceTransitionCounter + 2,
   ]);
   assert.equal(calls[0].request.reason, "superseded");
   assert.equal(calls[1].request.mode, "recovery");
@@ -366,8 +392,37 @@ test("cloud actions emit only the exact waiter-first operation-bound requests", 
     assert.equal("AGENTIC_CLOUD_AUTHORIZATION" in call.environment, false);
     assert.equal("AGENTIC_TARGET_REPOSITORY" in call.environment, false);
   }
+  const foreign = {
+    ...sourceBaseline,
+    claimId: "e".repeat(64),
+    claimDigest: "f".repeat(64),
+    workItemId: sourceBaseline.workItemId,
+  };
+  for (const [index, [phase, method]] of [
+    ["waiter-retired", "retireWaiter"],
+    ["source-recovered", "recoverSource"],
+    ["source-integrated", "integrateSource"],
+    ["source-retired", "retireSource"],
+  ].entries()) {
+    let invoked = false;
+    const blocked = createProviderOnlyMergedClaimPairReconciliationCloudActions({
+      ledgerRepository: "owner/ledger",
+      targetRepository: "owner/target",
+      ttlSeconds: 900,
+      invokeCloudAction: async () => { invoked = true; },
+    });
+    await assert.rejects(blocked[method]({
+      plan,
+      intent,
+      operationKey: providerOnlyMergedClaimPairReconciliationOperationKey(plan, phase),
+      snapshot: async () => ({
+        ...snapshots[index],
+        currentClaims: [...snapshots[index].currentClaims, foreign],
+      }),
+    }), /foreign same-work-item|conflict set/iu);
+    assert.equal(invoked, false, phase);
+  }
 });
-
 function planFixture(recoveryTtlSeconds = 1_800) {
   const raw = providerOnlyEvidenceFixture();
   raw.recoveryTtlSeconds = recoveryTtlSeconds;
@@ -375,7 +430,6 @@ function planFixture(recoveryTtlSeconds = 1_800) {
     buildProviderOnlyMergedClaimPairReconciliationEvidence(raw),
   );
 }
-
 function integrationLedgerEntry(plan) {
   const operationKey = providerOnlyMergedClaimPairReconciliationOperationKey(
     plan,
@@ -396,22 +450,36 @@ function integrationLedgerEntry(plan) {
     claimCore: { transitionCounter: plan.sourceTransitionCounter + 2 },
   };
 }
-
 function enrollmentFixture({ checkout }) {
-  return `
-env:
-  PROTECTED_HEAD_REFRESH_CLASSIC_REQUIRED_CHECKS_JSON: '["Integration Gate"]'
-  PROTECTED_HEAD_REFRESH_RULESET_REQUIRED_CHECKS_JSON: '[]'
-  PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS_JSON: '["Integration Gate"]'
-jobs:
-  enroll:
-    steps:
+  const crossRepository = checkout.includes("repository:");
+  const controllerPath = crossRepository ? ".agentic-canvas-os/" : "";
+  const checkoutSteps = crossRepository ? `
+      - uses: actions/checkout@${"3".repeat(40)}
+        with:
+          ref: \${{ github.sha }}
+          persist-credentials: false
       - uses: actions/checkout@${"3".repeat(40)}
         with:
           ${checkout}
+          path: .agentic-canvas-os
+          persist-credentials: false` : `
+      - uses: actions/checkout@${"3".repeat(40)}
+        with:
+          ${checkout}
+          persist-credentials: false`;
+  return `
+jobs:
+  protected-head-refresh:
+    if: github.ref == 'refs/heads/main' && inputs.operation == 'protected-head-refresh'
+    steps:${checkoutSteps}
+      - name: Execute controller
+        env:
+          PROTECTED_HEAD_REFRESH_CLASSIC_REQUIRED_CHECKS_JSON: '["Integration Gate"]'
+          PROTECTED_HEAD_REFRESH_RULESET_REQUIRED_CHECKS_JSON: '[]'
+          PROTECTED_HEAD_REFRESH_REQUIRED_CI_CONTEXTS_JSON: '["Integration Gate"]'
+        run: node ${controllerPath}scripts/sync-open-pr.mjs --protected-head-refresh
 `;
 }
-
 function localAbsenceGit({ fatalProbe = false } = {}) {
   const mainSha = "2".repeat(40);
   return args => {
@@ -431,7 +499,6 @@ function localAbsenceGit({ fatalProbe = false } = {}) {
     throw new Error(`Unexpected Git call: ${[command, ...rest].join(" ")}`);
   };
 }
-
 function phaseEntries(plan, authorizationDigest) {
   const operation = phase => providerOnlyMergedClaimPairReconciliationOperationKey(plan, phase);
   const entry = ({ action, claimId, counter, phase, claimCore }) => ({
@@ -497,7 +564,6 @@ function phaseEntries(plan, authorizationDigest) {
   });
   return { sourceLineage: [recovered, integrated, retired], waiterLineage: [waiter] };
 }
-
 function retirementValues(plan, {
   reason, reviewRequestId = null, integrationReceiptDigest = null,
 }) {
@@ -512,7 +578,6 @@ function retirementValues(plan, {
     retiredAt: "2026-08-29T08:00:00.000Z",
   };
 }
-
 function ledgerOperationReceipt(entry, status) {
   return digestValue({
     schema: "agentic-collaboration-integration-receipt/v1",

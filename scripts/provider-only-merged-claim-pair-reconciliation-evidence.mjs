@@ -1,22 +1,19 @@
 // Responsibility: bind the exact provider-only reviewed source/waiter pair and merged provider proof.
-import {
-  digestValue,
-  normalizeWriteSet,
-  writeSetsOverlap,
-} from "./cloud-collaboration-primitives.mjs";
-
+import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 export const PROVIDER_ONLY_MERGED_CLAIM_PAIR_RECONCILIATION_EVIDENCE_SCHEMA =
   "agentic-provider-only-merged-claim-pair-reconciliation-evidence/v1";
 export const PROVIDER_ONLY_MERGED_CLAIM_PAIR_RECONCILIATION_RUNTIME_PATHS = Object.freeze([
+  ...["cloud-collaboration-contract", "cloud-collaboration-primitives", "github-cloud-collaboration-adapter",
+    "merged-dormant-claim-reconciliation-repository-adapter", "private-operation-lock"].map(name => `scripts/${name}.mjs`),
   ...["contract", "controller", "evidence", "repository-adapter"].map(
     name => `scripts/provider-only-merged-claim-pair-reconciliation-${name}.mjs`,
   ),
   "scripts/provider-only-merged-claim-pair-reconciliation.mjs",
+  "scripts/scoped-lane-cloud-authority.mjs",
 ]);
 
 const SHA = /^[0-9a-f]{40}$/u;
 const DIGEST = /^[0-9a-f]{64}$/u;
-
 export function buildProviderOnlyMergedClaimPairReconciliationEvidence(input) {
   object(input, "Provider-only reconciliation evidence input");
   return assemble({
@@ -27,7 +24,6 @@ export function buildProviderOnlyMergedClaimPairReconciliationEvidence(input) {
     recoveryTtlSeconds: boundedTtl(input.recoveryTtlSeconds),
   });
 }
-
 export function normalizeProviderOnlyMergedClaimPairReconciliationEvidence(value) {
   object(value, "Provider-only reconciliation evidence");
   if (value.schema !== PROVIDER_ONLY_MERGED_CLAIM_PAIR_RECONCILIATION_EVIDENCE_SCHEMA) {
@@ -45,7 +41,6 @@ export function normalizeProviderOnlyMergedClaimPairReconciliationEvidence(value
   }
   return normalized;
 }
-
 export function providerOnlyMergedClaimPairRelevantClaims(claims, source, waiter) {
   const normalized = normalizeClaims(claims);
   return normalized.filter(claim => (
@@ -57,11 +52,9 @@ export function providerOnlyMergedClaimPairRelevantClaims(claims, source, waiter
     || writeSetsOverlap(claim.declaredWriteScope, source.declaredWriteScope)
   ));
 }
-
 export function providerOnlyMergedClaimPairInventoryDigest(claims) {
   return digestValue(normalizeClaims(claims));
 }
-
 function assemble({ controller, cloud, provider, local, recoveryTtlSeconds }) {
   const { source, waiter } = cloud;
   assertPair(source, waiter);
@@ -105,12 +98,12 @@ function assemble({ controller, cloud, provider, local, recoveryTtlSeconds }) {
       head: provider.headCommit,
       merge: provider.mergeCommit,
       changedPaths: provider.changedPaths,
-      protectedMain: provider.protectedMain,
-      protectedMainPaths: provider.protectedMainPaths,
+      mergePathObjects: provider.mergePathObjects,
     }),
     namedChecksDigest: digestValue({
-      protection: provider.protection,
-      checkRuns: provider.checkRuns,
+      enrollment: provider.protection.enrollment.semanticDigest,
+      historicalController: provider.protection.historicalController.semanticDigest,
+      requiredCheckWitnesses: provider.protection.requiredCheckWitnesses,
     }),
     handoffEvidenceDigest: digestValue({
       sourceClaimId: source.claimId,
@@ -122,7 +115,6 @@ function assemble({ controller, cloud, provider, local, recoveryTtlSeconds }) {
   };
   return deepFreeze({ ...core, evidenceDigest: digestValue(core) });
 }
-
 function normalizeController(value) {
   object(value, "Controller evidence");
   const runtimeFiles = array(value.runtimeFiles, "controller runtime files").map((file, index) => {
@@ -144,18 +136,23 @@ function normalizeController(value) {
     branch: text(value.branch, "controller branch"),
     headSha: sha(value.headSha, "controller head"),
     protectedMainSha: sha(value.protectedMainSha, "controller protected main"),
+    baselineProtectedMainSha: sha(value.baselineProtectedMainSha, "controller baseline protected main"),
+    headIsAncestorOfProtectedMain: value.headIsAncestorOfProtectedMain,
+    baselineIsAncestorOfProtectedMain: value.baselineIsAncestorOfProtectedMain,
     clean: value.clean,
     runtimeFiles: Object.freeze(runtimeFiles),
     runtimeDigest: digest(value.runtimeDigest, "controller runtime digest"),
+    protectedRuntimeDigest: digest(value.protectedRuntimeDigest, "protected controller runtime digest"),
   });
   if (normalized.branch !== "main" || normalized.clean !== true
-    || normalized.headSha !== normalized.protectedMainSha
-    || normalized.runtimeDigest !== digestValue(runtimeFiles)) {
-    throw new Error("Controller must be clean exact protected main with content-bound runtime files.");
+    || normalized.headIsAncestorOfProtectedMain !== true
+    || normalized.baselineIsAncestorOfProtectedMain !== true
+    || normalized.runtimeDigest !== digestValue(runtimeFiles)
+    || normalized.protectedRuntimeDigest !== normalized.runtimeDigest) {
+    throw new Error("Controller must be a clean protected descendant with unchanged content-bound runtime files.");
   }
   return normalized;
 }
-
 function normalizeCloud(value) {
   object(value, "Cloud evidence");
   const sequence = positive(value.sequence, "cloud ledger sequence");
@@ -177,7 +174,6 @@ function normalizeCloud(value) {
     currentClaims: Object.freeze(normalizeClaims(value.currentClaims)),
   });
 }
-
 function normalizeClaim(value, label = "cloud claim") {
   object(value, label);
   const declaredWriteScope = Object.freeze(normalizeWriteSet(value.declaredWriteScope));
@@ -222,7 +218,6 @@ function normalizeClaim(value, label = "cloud claim") {
   }
   return deepFreeze(normalized);
 }
-
 function normalizeClaims(values) {
   const claims = array(values, "current cloud claims").map((value, index) => (
     normalizeClaim(value, `current cloud claim ${index}`)
@@ -230,7 +225,6 @@ function normalizeClaims(values) {
   unique(claims.map(claim => claim.claimId), "current cloud claim IDs");
   return Object.freeze(claims);
 }
-
 function normalizeLineage(values, label) {
   const entries = array(values, label).map((value, index) => {
     object(value, `${label} entry ${index}`);
@@ -265,9 +259,12 @@ function normalizeProvider(value) {
     pullRequest: Object.freeze(paths(value.changedPaths?.pullRequest, "pull-request changed paths")),
     mergeCommit: Object.freeze(paths(value.changedPaths?.mergeCommit, "merge changed paths")),
   };
-  const checkRuns = array(value.checkRuns, "provider check runs").map(normalizeCheckRun)
-    .sort(compareChecks);
-  unique(checkRuns.map(run => JSON.stringify(run)), "provider check runs");
+  const checkRuns = deduplicate(array(value.checkRuns, "provider check runs").map(normalizeCheckRun)
+    .sort(compareChecks));
+  const protection = normalizeProtection(value.protection);
+  const requiredCheckWitnesses = projectRequiredCheckWitnesses(
+    protection, checkRuns, [headCommit.sha, mergeCommit.sha],
+  );
   return deepFreeze({
     provider: text(value.provider, "provider"),
     repository: repository(value.repository, "provider repository"),
@@ -278,22 +275,18 @@ function normalizeProvider(value) {
     headCommit,
     mergeCommit,
     protectedMain: normalizeCommit(value.protectedMain, "protected main commit"),
+    plannedProtectedMainSha: sha(value.plannedProtectedMainSha, "planned protected main"),
+    plannedProtectedMainIsAncestorOfProtectedMain:
+      value.plannedProtectedMainIsAncestorOfProtectedMain,
+    mergePathObjects: Object.freeze(normalizePathObjects(value.mergePathObjects, "merge path")),
     protectedMainPaths: Object.freeze(array(
       value.protectedMainPaths,
       "protected-main path objects",
-    ).map((item, index) => {
-      object(item, `protected-main path object ${index}`);
-      return deepFreeze({
-        path: relativePath(item.path, `protected-main path ${index}`),
-        type: text(item.type, `protected-main path type ${index}`),
-        objectSha: sha(item.objectSha, `protected-main path object SHA ${index}`),
-      });
-    }).sort((left, right) => left.path.localeCompare(right.path))),
+    ).length === 0 ? [] : normalizePathObjects(value.protectedMainPaths, "protected-main path")),
     mergeCommitIsAncestorOfProtectedMain: value.mergeCommitIsAncestorOfProtectedMain,
     changedPaths: deepFreeze(changedPaths),
-    protection: normalizeProtection(value.protection),
+    protection: deepFreeze({ ...protection, requiredCheckWitnesses }),
     checkRuns: Object.freeze(checkRuns),
-    remoteHeadRefPresent: value.remoteHeadRefPresent,
     writerMarkerPresent: value.writerMarkerPresent,
   });
 }
@@ -336,7 +329,7 @@ function normalizeProtection(value) {
   const classic = strings(enrollment.classicRequiredChecks, "classic enrollment checks");
   const ruleset = strings(enrollment.rulesetRequiredChecks, "ruleset enrollment checks");
   const requiredCi = strings(enrollment.requiredCiContexts, "required CI enrollment checks");
-  const live = array(value.liveRequiredChecks, "live required checks").map((check, index) => {
+  const live = deduplicate(array(value.liveRequiredChecks, "live required checks").map((check, index) => {
     object(check, `live required check ${index}`);
     return deepFreeze({
       context: text(check.context, `live required check context ${index}`),
@@ -344,21 +337,64 @@ function normalizeProtection(value) {
       source: text(check.source, `live required check source ${index}`),
       strict: check.strict,
     });
-  }).sort(compareChecks);
-  unique(live.map(check => JSON.stringify(check)), "live required checks");
-  return deepFreeze({
-    enrollment: deepFreeze({
+  }).sort(compareChecks));
+  const enrollmentCore = {
       workflowPath: relativePath(enrollment.workflowPath, "enrollment workflow path"),
       contentDigest: digest(enrollment.contentDigest, "enrollment content digest"),
+      workflowJob: text(enrollment.workflowJob, "enrollment workflow job"),
+      checkoutActionRevision: sha(enrollment.checkoutActionRevision, "enrollment checkout action revision"),
+      controllerPath: enrollmentControllerPath(enrollment.controllerPath),
       controllerRevision: sha(enrollment.controllerRevision, "enrollment controller revision"),
-      classicRequiredChecks: Object.freeze(classic),
-      rulesetRequiredChecks: Object.freeze(ruleset),
+      runCommand: text(enrollment.runCommand, "enrollment run command"),
+      classicRequiredChecks: Object.freeze(classic), rulesetRequiredChecks: Object.freeze(ruleset),
       requiredCiContexts: Object.freeze(requiredCi),
-    }),
+  };
+  const semanticEnrollment = { ...enrollmentCore };
+  delete semanticEnrollment.contentDigest;
+  if (enrollmentCore.workflowPath !== ".github/workflows/auto-delivery.yml"
+    || enrollmentCore.workflowJob !== "protected-head-refresh"
+    || enrollmentCore.runCommand !== `node ${enrollmentCore.controllerPath === "." ? "" : `${enrollmentCore.controllerPath}/`}scripts/sync-open-pr.mjs --protected-head-refresh`
+    || enrollment.semanticDigest !== digestValue(semanticEnrollment)) {
+    throw new Error("Protected-refresh enrollment semantic proof is incomplete.");
+  }
+  return deepFreeze({
+    enrollment: deepFreeze({ ...enrollmentCore,
+      semanticDigest: digestValue(semanticEnrollment) }),
+    historicalController: normalizeHistoricalController(value.historicalController),
     liveRequiredChecks: Object.freeze(live),
     applicableRulesDigest: digest(value.applicableRulesDigest, "applicable rules digest"),
   });
 }
+
+function normalizeHistoricalController(value) {
+  object(value, "Historical delivery controller evidence");
+  const semantic = { repository: repository(value.repository, "historical controller repository"),
+    revision: sha(value.revision, "historical controller revision"),
+    treeSha: sha(value.treeSha, "historical controller tree"),
+    entrypoint: relativePath(value.entrypoint, "historical controller entrypoint"),
+    mode: text(value.mode, "historical controller mode"),
+    entrypointBlobSha: sha(value.entrypointBlobSha, "historical controller entrypoint blob"),
+    entrypointContentDigest: digest(value.entrypointContentDigest, "historical controller entrypoint content"),
+    adapterPath: relativePath(value.adapterPath, "historical controller adapter path"),
+    adapterBlobSha: sha(value.adapterBlobSha, "historical controller adapter blob"),
+    adapterContentDigest: digest(value.adapterContentDigest, "historical controller adapter content"),
+    executableWitnessDigest: digest(value.executableWitnessDigest, "historical controller executable witness") };
+  const normalized = deepFreeze({ ...semantic,
+    currentControllerRevision: sha(value.currentControllerRevision, "current controller revision"),
+    isAncestorOfCurrentController: value.isAncestorOfCurrentController,
+    semanticDigest: digest(value.semanticDigest, "historical controller semantic digest"),
+  });
+  if (normalized.entrypoint !== "scripts/sync-open-pr.mjs"
+    || normalized.adapterPath !== "scripts/protected-head-refresh-github-adapter.mjs"
+    || normalized.mode !== "--protected-head-refresh"
+    || normalized.isAncestorOfCurrentController !== true || normalized.semanticDigest !== digestValue(semantic)) {
+    throw new Error("Historical delivery controller proof is incomplete or non-ancestral.");
+  }
+  return normalized;
+}
+
+function enrollmentControllerPath(value) { return value === "." ? "."
+  : relativePath(value, "enrollment controller path"); }
 
 function normalizeCheckRun(value, index) {
   object(value, `check run ${index}`);
@@ -379,10 +415,10 @@ function normalizeLocal(value) {
     branch: text(value.branch, "local branch"),
     headSha: sha(value.headSha, "local head"),
     protectedMainSha: sha(value.protectedMainSha, "local protected main"),
+    providerProtectedMainSha: sha(value.providerProtectedMainSha, "provider protected main"),
+    headIsAncestorOfProviderProtectedMain: value.headIsAncestorOfProviderProtectedMain,
     clean: value.clean,
     sourceBranchRefPresent: value.sourceBranchRefPresent,
-    sourceRemoteTrackingRefPresent: value.sourceRemoteTrackingRefPresent,
-    sourceObjectPresent: value.sourceObjectPresent,
     registeredSourceWorktreeCount: nonnegative(
       value.registeredSourceWorktreeCount,
       "registered source worktree count",
@@ -448,21 +484,27 @@ function assertJoins({ controller, cloud, provider, local }) {
     || pull.baseSha !== source.canonicalBaseRevision
     || source.reviewRequestId !== `github-pull-request:${pull.nodeId}`
     || provider.mergeCommitIsAncestorOfProtectedMain !== true
-    || provider.remoteHeadRefPresent !== false || provider.writerMarkerPresent !== false) {
+    || provider.plannedProtectedMainIsAncestorOfProtectedMain !== true
+    || provider.writerMarkerPresent !== false) {
     throw new Error("Provider, pair, direct squash, and merged protected-main identities do not join.");
   }
   if (controller.originRepository.toLowerCase() !== cloud.ledgerRepository.toLowerCase()) {
     throw new Error("Controller origin does not join the repository-owned cloud ledger.");
   }
+  const historical = provider.protection.historicalController;
   if (provider.protection.enrollment.workflowPath !== ".github/workflows/auto-delivery.yml"
-    || provider.protection.enrollment.controllerRevision !== controller.headSha) {
-    throw new Error("Protected workflow enrollment does not join the exact controller revision.");
+    || provider.protection.enrollment.controllerRevision !== historical.revision
+    || historical.repository.toLowerCase() !== controller.originRepository.toLowerCase()
+    || historical.currentControllerRevision !== controller.protectedMainSha) {
+    throw new Error("Protected workflow enrollment does not join its historical controller proof.");
   }
   if (JSON.stringify(provider.changedPaths.pullRequest)
       !== JSON.stringify(provider.changedPaths.mergeCommit)
     || provider.changedPaths.pullRequest.some(path => !covered(path))
-    || JSON.stringify(provider.protectedMainPaths.map(item => item.path))
+    || JSON.stringify(provider.mergePathObjects.map(item => item.path))
       !== JSON.stringify(provider.changedPaths.pullRequest)
+    || JSON.stringify(provider.protectedMainPaths)
+      !== JSON.stringify(provider.mergePathObjects)
     || provider.protectedMainPaths.some(item => item.type !== "file")) {
     throw new Error("Merged provider changed paths are incomplete or escape the claim write set.");
   }
@@ -470,10 +512,9 @@ function assertJoins({ controller, cloud, provider, local }) {
   if (local.branch !== "main" || local.clean !== true
     || local.originRepository.toLowerCase() !== provider.repository.toLowerCase()
     || local.headSha !== local.protectedMainSha
-    || local.headSha !== provider.protectedMain.sha
+    || local.providerProtectedMainSha !== provider.protectedMain.sha
+    || local.headIsAncestorOfProviderProtectedMain !== true
     || local.sourceBranchRefPresent !== false
-    || local.sourceRemoteTrackingRefPresent !== false
-    || local.sourceObjectPresent !== false
     || local.registeredSourceWorktreeCount !== 0 || local.matchingLeaseCount !== 0) {
     throw new Error("Provider-only mode requires clean canonical local absence without a historical lease.");
   }
@@ -481,117 +522,77 @@ function assertJoins({ controller, cloud, provider, local }) {
 
 function assertProtectionAndChecks(provider) {
   const { enrollment, liveRequiredChecks } = provider.protection;
-  const enrolled = [...new Set([
-    ...enrollment.classicRequiredChecks,
-    ...enrollment.rulesetRequiredChecks,
-  ])].sort();
+  const enrolled = [...new Set([...enrollment.classicRequiredChecks,
+    ...enrollment.rulesetRequiredChecks])].sort();
   if (enrolled.length === 0 || JSON.stringify(enrolled) !== JSON.stringify(enrollment.requiredCiContexts)) {
     throw new Error("Protection enrollment required-check sets do not join.");
   }
-  for (const context of enrollment.classicRequiredChecks) {
-    if (!liveRequiredChecks.some(check => check.context === context && check.source === "classic")) {
-      throw new Error(`Classic required check ${context} is not live-enforced.`);
-    }
-  }
+  for (const context of enrollment.classicRequiredChecks) if (!liveRequiredChecks.some(check =>
+    check.context === context && check.source === "classic")) throw new Error(
+    `Classic required check ${context} is not live-enforced.`);
   for (const context of enrollment.rulesetRequiredChecks) {
     if (!liveRequiredChecks.some(check => (
       check.context === context && check.source === "ruleset" && check.strict === true
     ))) throw new Error(`Ruleset required check ${context} is not strict live-enforced.`);
   }
-  for (const revision of [provider.headCommit.sha, provider.mergeCommit.sha]) {
-    for (const required of liveRequiredChecks) {
-      if (!provider.checkRuns.some(run => (
-        run.name === required.context
-        && (required.appId === null || run.appId === required.appId)
-        && run.headSha === revision
-        && run.status === "COMPLETED"
-        && run.conclusion === "SUCCESS"
-      ))) throw new Error(`Required check ${required.context} lacks success on ${revision}.`);
-    }
+  if (provider.protection.requiredCheckWitnesses.length
+    !== (enrollment.classicRequiredChecks.length + enrollment.rulesetRequiredChecks.length) * 2) {
+    throw new Error("Required-check witnesses do not cover both reviewed revisions.");
   }
 }
 
-function strings(values, label) {
-  const result = array(values, label).map(value => text(value, label)).sort();
-  unique(result, label);
+function projectRequiredCheckWitnesses(protection, runs, revisions) {
+  const { enrollment, liveRequiredChecks } = protection;
+  const requirements = [...enrollment.classicRequiredChecks.map(context => ({ context, source: "classic" })),
+    ...enrollment.rulesetRequiredChecks.map(context => ({ context, source: "ruleset" }))];
+  const witnesses = [];
+  for (const revision of revisions) for (const requirement of requirements) {
+    const live = liveRequiredChecks.find(check => check.context === requirement.context
+      && check.source === requirement.source && (check.source !== "ruleset" || check.strict === true));
+    if (!live) throw new Error(`${requirement.source} required check ${requirement.context} is not live-enforced.`);
+    const run = runs.find(item => item.name === live.context
+      && (live.appId === null || item.appId === live.appId) && item.headSha === revision
+      && item.status === "COMPLETED" && item.conclusion === "SUCCESS");
+    if (!run) throw new Error(`Required check ${live.context} lacks success on ${revision}.`);
+    witnesses.push(deepFreeze({ context: live.context, appId: live.appId,
+      source: live.source, strict: live.strict, headSha: revision,
+      status: "COMPLETED", conclusion: "SUCCESS" }));
+  }
+  return Object.freeze(witnesses.sort(compareChecks));
+}
+
+function normalizePathObjects(values, label) { const result = array(values, `${label} objects`).map((item, index) => {
+  object(item, `${label} object ${index}`); return deepFreeze({ path: relativePath(item.path, `${label} ${index}`),
+    type: text(item.type, `${label} type ${index}`), objectSha: sha(item.objectSha,
+      `${label} object SHA ${index}`) }); }).sort((left, right) => left.path.localeCompare(right.path));
+  unique(result.map(item => item.path), `${label} paths`);
   return result;
 }
-function paths(values, label) {
-  const result = array(values, label).map(value => relativePath(value, label)).sort();
-  if (result.length === 0) throw new Error(`${label} must not be empty.`);
-  unique(result, label);
-  return result;
-}
-function unique(values, label) {
-  if (new Set(values).size !== values.length) throw new Error(`${label} must be unique.`);
-}
-function compareChecks(left, right) {
-  return ["context", "name", "source", "headSha", "appId", "status", "conclusion", "strict"]
-    .map(key => String(left[key] ?? "").localeCompare(String(right[key] ?? "")))
-    .find(result => result !== 0) || 0;
-}
-function array(value, label) {
-  if (!Array.isArray(value)) throw new Error(`${label} must be an array.`);
-  return value;
-}
-function object(value, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object.`);
-}
-function text(value, label) {
-  if (typeof value !== "string" || !value.normalize("NFC").trim()) throw new Error(`${label} is required.`);
-  return value.normalize("NFC").trim();
-}
-function sha(value, label) {
-  const result = text(value, label);
-  if (!SHA.test(result)) throw new Error(`${label} must be a lowercase SHA.`);
-  return result;
-}
-function digest(value, label) {
-  const result = text(value, label);
-  if (!DIGEST.test(result)) throw new Error(`${label} must be a SHA-256 digest.`);
-  return result;
-}
+
+function deduplicate(values) { return values.filter((value, index) => index === 0
+  || JSON.stringify(value) !== JSON.stringify(values[index - 1])); }
+
+function strings(values, label) { const result = array(values, label).map(value => text(value, label)).sort(); unique(result, label); return result; }
+function paths(values, label) { const result = array(values, label).map(value => relativePath(value, label)).sort(); if (result.length === 0) throw new Error(`${label} must not be empty.`); unique(result, label); return result; }
+function unique(values, label) { if (new Set(values).size !== values.length) throw new Error(`${label} must be unique.`); }
+function compareChecks(left, right) { return ["context", "name", "source", "headSha", "appId", "status",
+  "conclusion", "strict"].map(key => String(left[key] ?? "").localeCompare(String(right[key] ?? "")))
+  .find(result => result !== 0) || 0; }
+function array(value, label) { if (!Array.isArray(value)) throw new Error(`${label} must be an array.`); return value; }
+function object(value, label) { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object.`); }
+function text(value, label) { if (typeof value !== "string" || !value.normalize("NFC").trim()) throw new Error(`${label} is required.`); return value.normalize("NFC").trim(); }
+function sha(value, label) { const result = text(value, label); if (!SHA.test(result)) throw new Error(`${label} must be a lowercase SHA.`); return result; }
+function digest(value, label) { const result = text(value, label); if (!DIGEST.test(result)) throw new Error(`${label} must be a SHA-256 digest.`); return result; }
 function optionalDigest(value) { return value == null ? null : digest(value, "optional digest"); }
 function optionalText(value) { return value == null ? null : text(value, "optional text"); }
-function positive(value, label) {
-  if (!Number.isSafeInteger(Number(value)) || Number(value) < 1) throw new Error(`${label} must be positive.`);
-  return Number(value);
-}
-function nonnegative(value, label) {
-  if (!Number.isSafeInteger(Number(value)) || Number(value) < 0) throw new Error(`${label} must be nonnegative.`);
-  return Number(value);
-}
-function boundedTtl(value) {
-  const result = positive(value, "recovery TTL seconds");
-  if (result < 60 || result > 86_400) throw new Error("Recovery TTL must be between 60 and 86400 seconds.");
-  return result;
-}
-function instant(value, label) {
-  const result = text(value, label);
-  if (!Number.isFinite(Date.parse(result))) throw new Error(`${label} must be an instant.`);
-  return result;
-}
-function repository(value, label) {
-  const result = text(value, label);
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) throw new Error(`${label} must be owner/name.`);
-  return result;
-}
-function relativePath(value, label) {
-  const result = text(value, label);
-  if (result.startsWith("/") || result.split("/").includes("..")) throw new Error(`${label} must be repository-relative.`);
-  return result;
-}
-function absolutePath(value, label) {
-  const result = text(value, label);
-  if (!result.startsWith("/")) throw new Error(`${label} must be absolute.`);
-  return result;
-}
-function jsonValue(value, label) {
-  try { return deepFreeze(JSON.parse(JSON.stringify(value))); }
-  catch { throw new Error(`${label} must be JSON-compatible.`); }
-}
-function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
-  for (const child of Object.values(value)) deepFreeze(child);
-  return Object.freeze(value);
-}
+function positive(value, label) { if (!Number.isSafeInteger(Number(value)) || Number(value) < 1) throw new Error(`${label} must be positive.`); return Number(value); }
+function nonnegative(value, label) { if (!Number.isSafeInteger(Number(value)) || Number(value) < 0) throw new Error(`${label} must be nonnegative.`); return Number(value); }
+function boundedTtl(value) { const result = positive(value, "recovery TTL seconds"); if (result < 60 || result > 86_400) throw new Error("Recovery TTL must be between 60 and 86400 seconds."); return result; }
+function instant(value, label) { const result = text(value, label); if (!Number.isFinite(Date.parse(result))) throw new Error(`${label} must be an instant.`); return result; }
+function repository(value, label) { const result = text(value, label); if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) throw new Error(`${label} must be owner/name.`); return result; }
+function relativePath(value, label) { const result = text(value, label); if (result.startsWith("/") || result.split("/").includes("..")) throw new Error(`${label} must be repository-relative.`); return result; }
+function absolutePath(value, label) { const result = text(value, label); if (!result.startsWith("/")) throw new Error(`${label} must be absolute.`); return result; }
+function jsonValue(value, label) { try { return deepFreeze(JSON.parse(JSON.stringify(value))); }
+  catch { throw new Error(`${label} must be JSON-compatible.`); } }
+function deepFreeze(value) { if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child); return Object.freeze(value); }

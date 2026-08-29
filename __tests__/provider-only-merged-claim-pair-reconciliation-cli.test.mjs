@@ -41,6 +41,7 @@ test("plan forwards normalized defaults and never calls the run surface", async 
     sourceClaimId,
     waiterClaimId,
     ledgerRepository: "huijoohwee/agentic-canvas-os",
+    planPath: null,
     statePath: null,
     ttlSeconds: 1_800,
   });
@@ -53,6 +54,7 @@ test("run forwards only an explicit digest and exact authorization with override
   const result = await main([
     "run", ...required,
     "--ledger-repository=owner/ledger",
+    "--plan-path=/private/reconciliation.plan.json",
     "--state-path=/private/reconciliation.json",
     "--ttl-seconds=900",
     `--plan-digest=${planDigest}`,
@@ -72,6 +74,7 @@ test("run forwards only an explicit digest and exact authorization with override
   assert.deepEqual(result, { status: "complete" });
   assert.deepEqual(calls[0].input, { planDigest, authorization });
   assert.equal(calls[0].adapter.options.ledgerRepository, "owner/ledger");
+  assert.equal(calls[0].adapter.options.planPath, "/private/reconciliation.plan.json");
   assert.equal(calls[0].adapter.options.statePath, "/private/reconciliation.json");
   assert.equal(calls[0].adapter.options.ttlSeconds, 900);
 });

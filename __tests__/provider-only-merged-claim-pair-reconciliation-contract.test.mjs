@@ -91,6 +91,46 @@ test("keeps authorization stable across disjoint ledger observations and seals r
   assert.equal(otherTtl.recoveryTtlSeconds, 900);
 });
 
+test("keeps identity stable across disjoint main/controller/check advances and rejects relevant drift", () => {
+  const baselineRaw = providerOnlyEvidenceFixture();
+  const baseline = buildProviderOnlyMergedClaimPairReconciliationPlan(
+    buildProviderOnlyMergedClaimPairReconciliationEvidence(baselineRaw));
+  const advancedRaw = providerOnlyEvidenceFixture();
+  const nextMain = "d".repeat(40), nextController = "e".repeat(40);
+  advancedRaw.provider.protectedMain = { sha: nextMain, treeSha: "c".repeat(40),
+    parents: [advancedRaw.provider.protectedMain.sha] };
+  advancedRaw.provider.plannedProtectedMainIsAncestorOfProtectedMain = true;
+  advancedRaw.local.providerProtectedMainSha = nextMain;
+  advancedRaw.controller.protectedMainSha = nextController;
+  advancedRaw.controller.baselineProtectedMainSha = baseline.controllerProtectedMainSha;
+  advancedRaw.controller.baselineIsAncestorOfProtectedMain = true;
+  advancedRaw.controller.headIsAncestorOfProtectedMain = true;
+  advancedRaw.provider.protection.historicalController.currentControllerRevision = nextController;
+  advancedRaw.provider.checkRuns.push(structuredClone(advancedRaw.provider.checkRuns[0]));
+  advancedRaw.provider.protection.liveRequiredChecks.push({
+    context: "Unrelated Advisory", appId: 44, source: "classic", strict: false,
+  });
+  advancedRaw.provider.protection.applicableRulesDigest = digest("advanced-rules-inventory");
+  const advanced = buildProviderOnlyMergedClaimPairReconciliationPlan(
+    buildProviderOnlyMergedClaimPairReconciliationEvidence(advancedRaw));
+  assert.equal(advanced.planDigest, baseline.planDigest);
+  assert.equal(advanced.exactAuthorization, baseline.exactAuthorization);
+  assert.notEqual(advanced.protectedMainSha, baseline.protectedMainSha);
+  assert.notEqual(advanced.controllerProtectedMainSha, baseline.controllerProtectedMainSha);
+
+  for (const mutate of [
+    raw => { raw.provider.plannedProtectedMainIsAncestorOfProtectedMain = false; },
+    raw => { raw.controller.baselineIsAncestorOfProtectedMain = false; },
+    raw => { raw.controller.protectedRuntimeDigest = digest("overlapping-controller-runtime"); },
+    raw => { raw.provider.protectedMainPaths[0].objectSha = "f".repeat(40); },
+  ]) {
+    const rejected = providerOnlyEvidenceFixture();
+    mutate(rejected);
+    assert.throws(() => buildProviderOnlyMergedClaimPairReconciliationEvidence(rejected),
+      /ancestor|controller|runtime|path|bytes|join/iu);
+  }
+});
+
 test("authorization is byte-exact and operation keys are plan-and-phase bound", () => {
   const plan = planFixture();
   const authorization = authorizeProviderOnlyMergedClaimPairReconciliation({

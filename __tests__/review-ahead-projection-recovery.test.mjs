@@ -227,6 +227,7 @@ test("execute projects review-ready once then delegates exact same-session recla
         repositoryId: base.repositoryId,
         claims: [{
           claimId: base.claimId, state: "dormant-preserved", repositoryId: base.repositoryId,
+          predecessorClaimId: digest("9"),
           reviewRequestId: base.reviewRequestId, writeSetDigest: base.writeSetDigest,
           laneRevision: sha("a"), deviceId: "device.local", sessionId: base.sessionId,
           declaredWriteScope: base.declaredWriteScope, leaseEpoch: 1, expiresAt: expired,
@@ -234,6 +235,9 @@ test("execute projects review-ready once then delegates exact same-session recla
       };
     },
     async readAuthenticatedOwner() { return { login: "owner" }; },
+    async createLineageProjectionProof() {
+      throw new Error("Dormant successor reclaim must not build an integrated replay proof.");
+    },
     async persistReviewProjection() {
       projected += 1;
       status = "review_ready";
@@ -244,9 +248,10 @@ test("execute projects review-ready once then delegates exact same-session recla
   const controller = createReviewAheadProjectionController({
     adapter,
     now: () => new Date("2026-08-10T01:00:00.000Z"),
-    async reclaim(request) {
+    async reclaim(request, options) {
       reclaimed += 1;
       assert.equal(request.sessionId, base.sessionId);
+      assert.equal(options.lineageProjectionProof, null);
       return {
         outcome: reclaimed === 1 ? "reclaimed-live" : "reclaimed-live-replay",
         successorClaimId: digest("5"),

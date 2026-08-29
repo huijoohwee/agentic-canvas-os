@@ -1,5 +1,5 @@
-// Tests for the run-scoped knowgrph canvas embed (agentic-canvas-os product
-// tier). Mirrors the knowgrph SSOT scheme. ZERO network / ZERO browser.
+// Tests for the run-scoped AgenticGraph canvas embed (agentic-canvas-os product
+// tier). Mirrors the `knowgrph` repository SSOT scheme. ZERO network / ZERO browser.
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -44,6 +44,7 @@ test("buildCanvasEmbed is available with base + runId + ready storyboard", () =>
   const embed = buildCanvasEmbed(ready(), { canvasBaseUrl: BASE });
   assert.equal(embed.available, true);
   assert.equal(embed.src, `${BASE}/doc-view?run=run-1`);
+  assert.equal(embed.title, "AgenticGraph canvas — run run-1");
   assert.equal(embed.sandbox, CANVAS_EMBED_SANDBOX);
   assert.equal(embed.referrerPolicy, CANVAS_EMBED_REFERRER_POLICY);
 });

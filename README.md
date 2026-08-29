@@ -1,8 +1,8 @@
 # agentic-canvas-os
 
-Cloudflare Worker product tier demonstrating `knowgrph` MCP Readiness & Command Grammar Integration. 
+Cloudflare Worker product tier demonstrating AgenticGraph MCP Readiness & Command Grammar Integration.
 One Worker serves the static UI, authenticates callers, forwards `/api/invoke` and `/api/run` 
-to the knowgrph MCP control plane, exposes runtime readiness, and embeds the live knowgrph canvas.
+to the AgenticGraph MCP control plane, exposes runtime readiness, and embeds the live AgenticGraph canvas.
 
 This repo holds no model provider keys in source or client bundles. Runtime
 secrets are Cloudflare secret bindings; the browser only sees public URLs.
@@ -202,12 +202,12 @@ Before changing workflow or control-surface docs, read:
 agentic-canvas-os Cloudflare Worker
   /                  -> Workers Static Assets from web/dist
   /api/auth/session  -> stateless Auth_Token
-  /api/invoke        -> MCP forward to knowgrph.agentic_canvas_os.docs.invoke
-  /api/run           -> MCP forward to knowgrph.video_remix.run
+  /api/invoke        -> MCP forward to agenticgraph.agentic_canvas_os.docs.invoke
+  /api/run           -> MCP forward to agenticgraph.video_remix.run
   /api/agent/run     -> opt-in authenticated composed agent execution
   /api/ready         -> sanitized runtime readiness
 
-knowgrph control plane
+AgenticGraph control plane
   airvio.co/knowgrph/control-plane/mcp
   airvio.co/knowgrph/doc-view?run=<runId>
 
@@ -215,7 +215,7 @@ application-registered model provider
   provider adapter + selected transport
 ```
 
-The connector contracts are authored and proven in the knowgrph monorepo. This
+The connector contracts are authored and proven in the AgenticGraph (`knowgrph`) repository. This
 repo is the split product tier and keeps only the runtime seams it needs:
 Cloudflare request adaptation, MCP forwarding, model-provider selection, and the
 run-scoped canvas embed URL.
@@ -229,7 +229,7 @@ run-scoped canvas embed URL.
 | `src/config.js` | Public config: Agent-API base and canvas base only. |
 | `src/agent-api-endpoints.js` | Same-origin browser request helper for Cloudflare API routes. |
 | `src/knowgrph-mcp-client.js` | Keyless MCP Streamable HTTP client. |
-| `src/canvas-embed.js` | Run-scoped knowgrph canvas doc-view URL + embed descriptor. |
+| `src/canvas-embed.js` | Run-scoped AgenticGraph canvas doc-view URL + embed descriptor. |
 | `src/fail-soft-fan-out.js` | Provider- and transport-neutral all-branch settlement with successful values, sanitized audit records, and explicit partial or exhausted totals. |
 | `agent-api/src/app.js` | Platform-neutral Agent-API core: auth, MCP forward, readiness. |
 | `agent-api/src/auth.js` | Stateless HS256 session token; server-side secret only. |
@@ -382,7 +382,7 @@ live provider behavior stays `unverified`. See
 Application Composition adds a versioned application layer over those owners.
 The canonical host aliases compile exact component, interface, schema, and
 capability revisions into one immutable deterministic dependency plan; the
-three `knowgrph.application.*` MCP tools catalog, plan, and optionally sequence
+three `agenticgraph.application.*` MCP tools catalog, plan, and optionally sequence
 bounded ready steps through existing agent, model, tool, integration, policy,
 and persistence owners. Opaque integration profiles keep endpoints, commands,
 and credentials outside manifests, while explicit migration diagnostics avoid

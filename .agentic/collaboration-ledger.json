@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6012,
-  "headDigest": "552434a3a49a3563b5fb38b40befa33b9b66d5fcd889d2d76be17dd90f44ae38",
+  "sequence": 6013,
+  "headDigest": "e21723d5e5dd8aa909121da155ea8139bc918ab10bc0b375d0f4efb6b7d77d9e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -305446,6 +305446,59 @@
       },
       "claimDigest": "683a8e1666529dddddc094291b4953d67bc0e684e89f57373f0733d62f5ba178",
       "digest": "552434a3a49a3563b5fb38b40befa33b9b66d5fcd889d2d76be17dd90f44ae38"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6013,
+      "parentDigest": "552434a3a49a3563b5fb38b40befa33b9b66d5fcd889d2d76be17dd90f44ae38",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "d414c052d0650605839f2e15f03cc03c1c3764047fe37a30cf6bf8352960cb76",
+      "idempotencyKey": "cb750af509b5327ea3b090486de6692d31a7df39f4e57b8809e7d3b7085dfcda",
+      "requestDigest": "d2477d9950008f48b70aad66e2549d2dbba62f14a5a84c4a32cd84c2d021df7f",
+      "evaluationTime": "2026-08-29T11:50:20.000Z",
+      "claimCore": {
+        "claimId": "d414c052d0650605839f2e15f03cc03c1c3764047fe37a30cf6bf8352960cb76",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9cbf0dfabdd7dbf00600da733ffb70a373869fe7c30fd5c249356ff620caf6e9",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:094fb16c21ce88e25519521a810a7b7c7b4570de4a68bb5961c86b7aea216d91",
+        "canonicalBaseRevision": "14e45771c6c9864705d13c484281c0bf5025de86",
+        "declaredWriteScope": [
+          "path:canvas/scripts/prepare-xr-v2-depth-assets.mjs",
+          "path:canvas/src/__tests__/spatialCaptureRenderPerformance.test.ts",
+          "path:canvas/src/features/three/SpatialCaptureManifestStage.tsx",
+          "path:docs/conflict-resolution.md",
+          "path:docs/documents/agenticgraph-cross-repo-publish-topology.md",
+          "path:docs/documents/agenticgraph-feature-map.md",
+          "path:docs/documents/agenticgraph-integrations-ssot-sync-directives.md",
+          "path:scripts/__tests__/production-mirror-artifact.test.mjs",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "path:scripts/__tests__/sync-pages-stale-asset-cleanup.test.mjs",
+          "path:scripts/production-mirror-artifact.mjs",
+          "path:scripts/production-pages-routing.mjs",
+          "path:scripts/sync-pages-agenticgraph.mjs",
+          "path:scripts/verify-production-fidelity.mjs",
+          "path:scripts/xr-v2/production-publish-contract.mjs",
+          "semantic:xr-v2-publish-repair"
+        ],
+        "writeSetDigest": "73af9a9b14189fbd1892593bd13344f2a01b03a5693b7d5c9bae351c26165485",
+        "laneRevision": "e720f07e2359b6400396b4b93f1a2d4a11829967",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 2,
+        "state": "current",
+        "expiresAt": "2026-08-29T12:50:20.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBb7rVg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b6c8fe2bb4a9d7c2542e9e3a402b9084f284f40848baf0b59079692210e0482c",
+      "digest": "e21723d5e5dd8aa909121da155ea8139bc918ab10bc0b375d0f4efb6b7d77d9e"
     }
   ]
 }

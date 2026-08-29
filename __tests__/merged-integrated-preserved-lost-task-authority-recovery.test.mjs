@@ -131,6 +131,69 @@ test("journals before one CAS and accepts only its idempotent replay", async () 
   assert.equal(events.filter(event => event === "cas").length, 1);
 });
 
+test("allows disjoint ledger movement after authorization", async () => {
+  const evidence = sourceEvidence();
+  const capability = targetCapability();
+  const plan = buildMergedIntegratedPreservedLostAuthorityPlan({
+    evidence,
+    targetCapability: capability,
+    plannedAt: "2026-08-29T00:00:00.000Z",
+  });
+  const ledgerMoved = buildMergedIntegratedPreservedLostAuthorityEvidence({
+    ...evidence,
+    integratedTerminal: {
+      ...evidence.integratedTerminal,
+      ledgerDigest: hex("f"),
+      ledgerRevision: sha("0"),
+    },
+  });
+  const events = [];
+  const controller = createMergedIntegratedPreservedLostAuthorityRecoveryController({
+    adapter: fakeAdapter(evidence, capability, event => events.push(event), [ledgerMoved, ledgerMoved]),
+  });
+  let stored = null;
+  const result = await controller.run({
+    plan,
+    authorization: plan.exactAuthorization,
+    journalStore: {
+      read: () => stored,
+      write: value => { stored = value; return value; },
+    },
+  });
+  assert.equal(result.status, "complete");
+  assert.deepEqual(events, ["cas", "terminal"]);
+});
+
+test("rejects same-claim fence and transition changes before CAS", async () => {
+  const evidence = sourceEvidence();
+  const capability = targetCapability();
+  const plan = buildMergedIntegratedPreservedLostAuthorityPlan({
+    evidence,
+    targetCapability: capability,
+    plannedAt: "2026-08-29T00:00:00.000Z",
+  });
+  for (const integratedTerminal of [
+    { ...evidence.integratedTerminal, currentClaimDigest: hex("f") },
+    { ...evidence.integratedTerminal, transitionCounter: 8 },
+  ]) {
+    const events = [];
+    const controller = createMergedIntegratedPreservedLostAuthorityRecoveryController({
+      adapter: fakeAdapter(evidence, capability, event => events.push(event), [
+        buildMergedIntegratedPreservedLostAuthorityEvidence({ ...evidence, integratedTerminal }),
+      ]),
+    });
+    await assert.rejects(
+      controller.run({
+        plan,
+        authorization: plan.exactAuthorization,
+        journalStore: { read: () => null, write: value => value },
+      }),
+      /Recovery evidence drifted/u,
+    );
+    assert.deepEqual(events, []);
+  }
+});
+
 test("rejects a replacement that does not advance exactly one generation", () => {
   const capability = { ...targetCapability(), generation: 1 };
   assert.throws(() => buildMergedIntegratedPreservedLostAuthorityPlan({
@@ -143,13 +206,14 @@ test("rejects a replacement that does not advance exactly one generation", () =>
   }), /distinct subject/u);
 });
 
-function fakeAdapter(evidence, capability, record) {
+function fakeAdapter(evidence, capability, record, captures = [evidence]) {
   const target = {
     binding: { bindingDigest: hex("0") },
     proofReceipt: receipt("proof"),
   };
+  let captureIndex = 0;
   return {
-    captureSource: async () => evidence,
+    captureSource: async () => captures[Math.min(captureIndex++, captures.length - 1)],
     readTargetCapabilityProjection: async () => capability,
     createTargetBinding: async () => target,
     replaceLocalBinding: async () => {

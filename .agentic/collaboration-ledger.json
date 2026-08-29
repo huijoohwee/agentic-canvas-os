@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6045,
-  "headDigest": "e35a65744f2bcfde15570315e2f462e9508208c5c0d3a9694e1b7841c0443e13",
+  "sequence": 6046,
+  "headDigest": "97fe471a82df990d01905dd11f20fbab8adb9cc6a046f8fdcc50ab760e1f40c1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -307336,6 +307336,51 @@
       },
       "claimDigest": "b1237f981adc4fd41491c3a24362dc2f5d3fd76e1cd61883d3b68bf5e3e4ce0f",
       "digest": "e35a65744f2bcfde15570315e2f462e9508208c5c0d3a9694e1b7841c0443e13"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6046,
+      "parentDigest": "e35a65744f2bcfde15570315e2f462e9508208c5c0d3a9694e1b7841c0443e13",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "047345c36799781587ebd4ed22a6a7ff4885693dcf870d497e10c622ac6532d4",
+      "idempotencyKey": "16555f15d276a212cd4bcda1d4ae97679ccecb3cae0716828b34f27fc67e78e5",
+      "requestDigest": "b1afc9792a3d790fdbc95b29f4777e5ad93fd0cf1b36621bb0785535215b5c40",
+      "evaluationTime": "2026-08-29T14:21:26.000Z",
+      "claimCore": {
+        "claimId": "047345c36799781587ebd4ed22a6a7ff4885693dcf870d497e10c622ac6532d4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5326ce87d46fa5195c495a331ca51a1c715c976f6a6e0f16c10a0ca7b4acb6b2",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0d5a6de7a8bb524adc8dec16ded62dc5c92bbe458b2110ccf2abca5a68644e6e",
+        "canonicalBaseRevision": "08a3a0c55d0298782dc9c6241d2d534c97b8e629",
+        "declaredWriteScope": [
+          "path:__tests__/merged-integrated-preserved-lost-task-authority-recovery.test.mjs",
+          "path:docs/MERGED-INTEGRATED-PRESERVED-LOST-TASK-AUTHORITY-RECOVERY.md",
+          "path:package.json",
+          "path:scripts/merged-integrated-preserved-lost-task-authority-recovery-contract.mjs",
+          "path:scripts/merged-integrated-preserved-lost-task-authority-recovery-controller.mjs",
+          "path:scripts/merged-integrated-preserved-lost-task-authority-recovery-repository-adapter.mjs",
+          "path:scripts/merged-integrated-preserved-lost-task-authority-recovery.mjs",
+          "semantic:merged-orphaned-authority-recovery"
+        ],
+        "writeSetDigest": "5994870fb924ef7b01c820c58c074d84f6c16f44ec7bb9b591fb9b89f0c38de5",
+        "laneRevision": "08a3a0c55d0298782dc9c6241d2d534c97b8e629",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T14:51:26.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "cda6c994dc317a3623c002fa9f69e296f8e498e73ecbaa12a69ce61a946a15d6",
+      "digest": "97fe471a82df990d01905dd11f20fbab8adb9cc6a046f8fdcc50ab760e1f40c1"
     }
   ]
 }

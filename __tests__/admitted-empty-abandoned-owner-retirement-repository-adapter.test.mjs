@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -10,6 +10,8 @@ import { applyCloudTransition, createEmptyLedger }
 import { canonicalJson, digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
 import { createRepositoryAdapter } from "../scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs";
+import { authorizeTaskBoundLeaseMutation, createTaskAuthorityLeaseBinding,
+  writeTaskAuthorityCapability } from "../scripts/task-bound-lane-authority-store.mjs";
 
 test("repository adapter rejects a relative state path before any observation", () => {
   assert.throws(() => createRepositoryAdapter({ repository: process.cwd(), subjectWorktree: process.cwd(),
@@ -110,16 +112,19 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
   let ledger = transition.ledger, retired = false, pullClosed = false, closeCalls = 0;
   let failRetireBeforeEffect = true;
   const retireRequests = [], gitMutations = [], statePath = path.join(temporary, "state.json");
-  const taskAuthorityFile = path.join(temporary, "task-authority.json");
-  writeFileSync(taskAuthorityFile, "{}\n", { mode: 0o600 }); chmodSync(taskAuthorityFile, 0o600);
+  const taskAuthorityFile = path.join(realpathSync(temporary), "task-authority.json");
+  writeTaskAuthorityCapability({ outputPath: taskAuthorityFile,
+    issuedAt: "2026-08-23T07:59:00.000Z" });
   const sourceControllerHead = "6".repeat(40), sourceControllerTree = "7".repeat(40);
   let controllerHead = sourceControllerHead, controllerTree = sourceControllerTree;
-  let authorityCalls = 0, sourceHasV1Lock = false;
-  let lease = { schema: "agentic-writer-lease/v2", status: "active",
-    device: "device", sessionId: "session", branch,
+  let authorityCalls = 0, sourceHasV1Lock = false, failReleaseAfterEffect = true;
+  const leaseCore = { schema: "agentic-writer-lease/v2", status: "active",
+    scope: "empty-owner", epoch: 1, device: "device", sessionId: "session", branch,
     worktreePath: subject, baseSha: base, fenceSha: head,
     expiresAt: "2026-08-23T10:00:00.000Z", admission: { status: "planned" },
-    cloudAuthority: { claimId }, taskAuthority: { bindingDigest: "f".repeat(64) } };
+    cloudAuthority: { claimId } };
+  let lease = { ...leaseCore, taskAuthority: createTaskAuthorityLeaseBinding({ lease: leaseCore,
+    capabilityPath: taskAuthorityFile, boundAt: "2026-08-23T08:00:00.000Z" }) };
   const git = (cwd, args) => { const command = args.join(" ");
     if (command === "rev-parse --path-format=absolute --git-common-dir") return "/git-common";
     if (cwd === subject && command === "branch --show-current") return branch;
@@ -162,11 +167,18 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
     headRefName: branch, headRefOid: head, baseRefName: "main",
     baseRefOid: base });
   const leaseStore = { read: () => lease,
-    assertTaskAuthority: () => { authorityCalls += 1; return lease; },
+    assertTaskAuthority: ({ branch: assertedBranch, operation }) => { authorityCalls += 1;
+      assert.equal(assertedBranch, branch);
+      authorizeTaskBoundLeaseMutation({ lease, capabilityPath: taskAuthorityFile,
+        operation, now: new Date("2026-08-23T11:00:00.000Z") });
+      return lease; },
     withRegistryLock: action => action({ leases: { [branch]: lease } }),
     release: ({ expectedLease, status, timestamp, values }) => {
       assert.deepEqual(lease, expectedLease);
       lease = { ...lease, ...values, status, heartbeatAt: timestamp, expiresAt: timestamp };
+      if (failReleaseAfterEffect) { failReleaseAfterEffect = false;
+        throw new Error("synthetic local release response loss"); }
+      return lease;
     } };
   const adapter = createRepositoryAdapter({ repository, subjectWorktree: subject,
     authoredWorktree: authored, targetRepository: "owner/repo", pullRequestNumber: 7,
@@ -231,7 +243,21 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
     authorization: plan.exactAuthorization }), /original task authority capability/u);
   const receipt = await controller.run({ planDigest: plan.planDigest,
     authorization: plan.exactAuthorization });
+  assert.equal(failReleaseAfterEffect, false);
+  assert.equal(lease.status, "released");
   const exactReleasedLease = structuredClone(lease);
+  lease = structuredClone(exactReleasedLease);
+  lease.scope = "foreign-scope";
+  const releasedCore = { ...lease };
+  delete releasedCore.admittedEmptyAbandonedOwnerRetirement;
+  const retirementCore = lease.admittedEmptyAbandonedOwnerRetirement;
+  retirementCore.releasedLeaseCoreDigest = digestValue(releasedCore);
+  const changedRetirementCore = { ...retirementCore };
+  delete changedRetirementCore.receiptDigest;
+  retirementCore.receiptDigest = digestValue(changedRetirementCore);
+  await assert.rejects(controller.run({ planDigest: plan.planDigest,
+    authorization: plan.exactAuthorization }), /Task authority binding does not match the writer lease lane/u);
+  lease = structuredClone(exactReleasedLease);
   lease.admission = { status: "planned" };
   await assert.rejects(controller.run({ planDigest: plan.planDigest,
     authorization: plan.exactAuthorization }), /Local lease drifted/u);

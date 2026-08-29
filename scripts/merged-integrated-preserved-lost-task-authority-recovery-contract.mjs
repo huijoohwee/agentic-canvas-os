@@ -115,6 +115,20 @@ export function buildMergedIntegratedPreservedLostAuthorityEvidence(value = {}) 
   return Object.freeze({ ...core, evidenceDigest: digestValue(core) });
 }
 
+export function projectMergedIntegratedPreservedLostAuthorityStableEvidence(value = {}) {
+  const evidence = buildMergedIntegratedPreservedLostAuthorityEvidence(value);
+  const { evidenceDigest: _evidenceDigest, integratedTerminal, ...stableEvidence } = evidence;
+  const {
+    ledgerDigest: _ledgerDigest,
+    ledgerRevision: _ledgerRevision,
+    ...stableTerminal
+  } = integratedTerminal;
+  return Object.freeze({
+    ...stableEvidence,
+    integratedTerminal: Object.freeze(stableTerminal),
+  });
+}
+
 export function buildMergedIntegratedPreservedLostAuthorityPlan({
   evidence,
   targetCapability,

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6039,
-  "headDigest": "e72da90c92d21e3d00f1a6a9b4eb81fe7a0d713006abfb0dbd5011db083c3e1e",
+  "sequence": 6040,
+  "headDigest": "00307b12644bfcc3e88ed0699109d904a7c37b1a472e8dc77fbecd067337639c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -306992,6 +306992,47 @@
       },
       "claimDigest": "5a67c9720b9df97acf16c413305612f98f984e1c19e129da7772b83604e9f8b4",
       "digest": "e72da90c92d21e3d00f1a6a9b4eb81fe7a0d713006abfb0dbd5011db083c3e1e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6040,
+      "parentDigest": "e72da90c92d21e3d00f1a6a9b4eb81fe7a0d713006abfb0dbd5011db083c3e1e",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cc11bdf5e195f7fcaf711e2eebadaf6812bd341c4f8df6b7f0fe398a393d03b2",
+      "idempotencyKey": "399ab2d0d3a378602f36ffab80b1ef5d855fe6d5854af80c6baeaca988efc351",
+      "requestDigest": "a1a67ac92ddd347176d0b2010f6abbb24476d675b369f8925909e46dffe64e41",
+      "evaluationTime": "2026-08-29T13:54:52.000Z",
+      "claimCore": {
+        "claimId": "cc11bdf5e195f7fcaf711e2eebadaf6812bd341c4f8df6b7f0fe398a393d03b2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5fb221c8dd74936f6f17e744744c7b354e2a11e9af42da42620cba8ee30ee505",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:626366e94656e1fbf085ecccf6783919f1b78cb7c9ce829a846d131b0897780f",
+        "canonicalBaseRevision": "1d384904c907277b6ac9d22a1bbfa0bf2e53fc2b",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-mixed-identity-pair-retirement.test.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-repository-adapter.mjs",
+          "path:todo/2026-08/pair-terminal-join-fix.md",
+          "semantic:pair-terminal-join-fix"
+        ],
+        "writeSetDigest": "3fa1fca10791e9186e1d3c91171938b76a5f8f95ea1f2ad1d5dfe4b3edfadbc0",
+        "laneRevision": "c5b8f97c2e4d072746a349e3b5be4f8a762497b2",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T13:53:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBcZfpw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "027064984ea3c1ad33c7ed3f9e1e1e177e58d4ec8109546e44264cbdf92b015b",
+      "digest": "00307b12644bfcc3e88ed0699109d904a7c37b1a472e8dc77fbecd067337639c"
     }
   ]
 }

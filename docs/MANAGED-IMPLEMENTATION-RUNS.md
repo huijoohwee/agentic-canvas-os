@@ -61,6 +61,19 @@ It reads an immutable run-ledger receipt and projects source state through exist
 | Configured runner | Work-item implementation inside the leased task worktree and allowed-path boundary. | Canonical main, sibling worktrees, credentials, lifecycle metadata, PR merge, or deployment. |
 | Operator or reviewer | Approval, rejection, requested changes, and explicit selection of protected delivery when appropriate. | Implicit approval inferred from a run reaching `delivery_ready`. |
 
+## Execution Placement Boundary
+
+`executionPlacement` records `local` or `cloud` as replaceable run metadata; it
+does not select workspace topology or integration method. The optional
+`workspace:cloud:bootstrap` CLI observes only the current canonical entry
+checkout before admission and always reports `mutationAuthority: false`.
+
+The CLI is outside the MCP mutation surface. It cannot plan or provision a task
+lane, start or resume a run, move ownership between devices, review or integrate
+a candidate, release or deploy a build, or clean a worktree. Cross-placement
+continuation still requires the authenticated lifecycle handoff, reclaim, or
+successor transition and a fresh current fence.
+
 ## Work Item And Run Identity
 
 `@work-item` binds the durable request: stable work-item id, objective, acceptance criteria, repository root, human `semanticScope`, allowed paths, verifier profile ids, runner id, attempt limit, and time bound. Knowgrph resolves each verifier profile to an exact host-owned command; the work item contains no verification argv, arbitrary executable string, or secret.

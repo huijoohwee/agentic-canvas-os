@@ -63,7 +63,7 @@ do not have, plus one fail-closed gate.
 
 | Rule | Requirement |
 |---|---|
-| Parallelism is the default | Concurrent sessions across distinct lanes are permitted and expected; serialization is never the safety mechanism. |
+| Placement-neutral parallelism is the default | Concurrent sessions across distinct lanes may execute locally or in cloud workspaces; serialization is never the safety mechanism. Bootstrap readiness covers only the current canonical entry checkout and grants no lane, claim, ownership, or mutation authority. |
 | One lane, one session | A lane is one `repository` plus one `worktree` path. Exactly one session owns it at a time. |
 | One branch, one worktree | A branch is checked out in at most one worktree inside a repository. |
 | One current writer per overlap | Two claims whose normalized declared write sets overlap never hold current write authority at the same time. |

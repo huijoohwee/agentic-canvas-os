@@ -429,7 +429,7 @@ task-branch check completion do not define integration order.
 
 ## Workspace and Integration Profiles
 
-A repository adapter must declare `workspaceTopology` and `integrationMethod` independently before claim or review. Supported topology tokens are `isolated-worktree`, `guarded-single-checkout`, and `provider-managed-queue`; supported method tokens are `squash`, `rebase-linear`, and `merge-commit`. Unsupported tokens, implicit provider defaults, or a method change after review block mutation.
+A repository adapter must declare `workspaceTopology` and `integrationMethod` independently before claim or review. `executionPlacement` (`local` or `cloud`) is separate replaceable metadata; optional `workspace:cloud:bootstrap` reports only the current canonical entry checkout and grants no scope, admission, claim, ownership, or mutation authority. Supported topology tokens are `isolated-worktree`, `guarded-single-checkout`, and `provider-managed-queue`; supported method tokens are `squash`, `rebase-linear`, and `merge-commit`. Unsupported tokens, implicit provider defaults, or a method change after review block mutation.
 
 | Method | Integration Receipt proof |
 |---|---|
@@ -439,7 +439,7 @@ A repository adapter must declare `workspaceTopology` and `integrationMethod` in
 
 `guarded-single-checkout` is the trunk-based middle ground: admit it only for one clean, exclusively owned checkout with no overlapping writer; create an ephemeral task ref from the exact fetched frontier, keep the canonical ref read-only, freeze one reviewed candidate, serialize protected integration, then restore the checkout to clean exact canonical parity. `provider-managed-queue` must prove the same authority and immutable-candidate invariants without assuming a local worktree. Direct canonical edits or pushes remain forbidden in every topology.
 
-An existing owned branch may be updated only when the update is intentional, its workspace is clean, it is not the canonical branch, exactly one current writer owns it, its upstream is verified, and the merge or rebase behavior is explicit.
+An existing owned branch may be updated only when the update is intentional, its workspace is clean, it is not the canonical branch, exactly one current writer owns it, its upstream is verified, and the merge or rebase behavior is explicit. Execution placement neither selects topology nor changes integration; cross-placement continuation requires an authenticated handoff, reclaim, or successor transition plus a fresh current fence before mutation.
 
 ## Mandatory Completion Protocol
 

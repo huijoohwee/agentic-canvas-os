@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "focused-tested"
 authority: "Subject-routed discovery of historical dormant-preservation receipts"
 runtime_owner: "../scripts/recoverable-lane-cleanup-repository-adapter.mjs"
-runtime_proof: "../__tests__/recoverable-lane-cleanup-repository-adapter.test.mjs"
+runtime_proof: "../__tests__/recoverable-lane-cleanup-repository-adapter.test.mjs; ../__tests__/recoverable-lane-cleanup-ledger-routing.test.mjs; ../__tests__/recoverable-lane-cleanup-cli.test.mjs"
 publish_policy: "Cleanup planning only; exact cleanup authorization remains required"
 ---
 <!-- Responsibility: Define fail-closed evidence and quarantine rules for recoverable cleanup. -->
@@ -26,6 +26,30 @@ and tree SHA is still normalized completely. Malformed JSON, ambiguous subject
 records, and malformed target-matching journals fail closed. Cleanup continues to require terminal
 local and remote authority, an exact plan authorization, a verified Git bundle,
 durable worktree and Git-directory snapshots, and non-force removal.
+
+## Cross-repository authority routing
+
+`plan`, `run`, and `observe` accept an optional
+`--ledger-repository=owner/name`. The target repository is always derived from
+the canonical checkout's GitHub `origin`; the explicit option selects only the
+repository whose collaboration ledger is queried. When omitted, the ledger
+defaults backward-compatibly to that origin-derived target repository.
+
+The cleanup evidence binds `ledgerRepository` and `targetRepository` as
+separate digest-covered identities. Pass the same explicit ledger on every
+command when they differ. Malformed identities, ambiguous origins, or replay
+against a different ledger/target pair fail closed before cleanup effects.
+
+```sh
+node scripts/recoverable-lane-cleanup.mjs plan \
+  --repository=/absolute/canonical/repository \
+  --worktree=/absolute/registered/terminal-lane \
+  --recovery-directory=/absolute/external/absent-recovery-directory \
+  --ledger-repository=owner/collaboration-ledger \
+  --session=cleanup-session \
+  --operator-decision-digest=<sha256> \
+  --json
+```
 
 A clean detached worktree is eligible only when it has no local branch, remote
 branch, writer lease, or cloud claim and at least one completed dormant-preservation

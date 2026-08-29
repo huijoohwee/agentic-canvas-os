@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6149,
-  "headDigest": "91e7a7ab5fd020f6f9d9abea377b2b156d76daff89dcec5d51f0714dbd513358",
+  "sequence": 6150,
+  "headDigest": "87cdf4d30b20aaa44959e023bb4b83b0de3c3155078f673ecf97d4cc6e0a7c7f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -312577,6 +312577,47 @@
       },
       "claimDigest": "59377775f6b73510aab6b3f784052950a29e76dae1fa46fa0e5919916a2f663b",
       "digest": "91e7a7ab5fd020f6f9d9abea377b2b156d76daff89dcec5d51f0714dbd513358"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6150,
+      "parentDigest": "91e7a7ab5fd020f6f9d9abea377b2b156d76daff89dcec5d51f0714dbd513358",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "c357621d52f5dba5759514814a61752014b2fa134b089c843ed987d20988950f",
+      "idempotencyKey": "b0f91b44caef3742038998eee5894b0a0f165f882bb89aa38f31b4de0e452d19",
+      "requestDigest": "8528f68426ac881d38a680e70ea6594f7d2f2c040e3555cc301bfa456891d89f",
+      "evaluationTime": "2026-08-29T21:13:10.000Z",
+      "claimCore": {
+        "claimId": "c357621d52f5dba5759514814a61752014b2fa134b089c843ed987d20988950f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:a38b46ff7514c0738bc45ca185957aff8eb7ddfba2060771e949e089ae444726",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:9395e50dbcd725ff5098dc3bd0c095474cf94ed24885c0d5112315046da9bf9d",
+        "canonicalBaseRevision": "70368e44af372380127987cf6015d8e933c46abf",
+        "declaredWriteScope": [
+          "path:docs/collaboration-runtime-contract.md",
+          "path:scripts/__tests__/collaboration-contract.test.mjs",
+          "path:scripts/collaboration-contract.mjs",
+          "semantic:generated-worker-types-ci-planner"
+        ],
+        "writeSetDigest": "83e21da8e4f565193eb02e263f25a68a9a40a9cf903d385e76c7290ab791e999",
+        "laneRevision": "87df35b60025c1a5f6d398c6917c0b559bd29e89",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T22:11:38.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBd0rPQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "69673cf8fffd7b3433052137bf6c191fd043ffaac924b76f41e0be3a2d9b0c88",
+      "digest": "87cdf4d30b20aaa44959e023bb4b83b0de3c3155078f673ecf97d4cc6e0a7c7f"
     }
   ]
 }

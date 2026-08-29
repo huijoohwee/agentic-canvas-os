@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6150,
-  "headDigest": "87cdf4d30b20aaa44959e023bb4b83b0de3c3155078f673ecf97d4cc6e0a7c7f",
+  "sequence": 6151,
+  "headDigest": "133406d75adb1e48d00b47877b1b77fd2a2a9f6cab03e96fc40fdb9f2d47bf44",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -312618,6 +312618,48 @@
       },
       "claimDigest": "69673cf8fffd7b3433052137bf6c191fd043ffaac924b76f41e0be3a2d9b0c88",
       "digest": "87cdf4d30b20aaa44959e023bb4b83b0de3c3155078f673ecf97d4cc6e0a7c7f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6151,
+      "parentDigest": "87cdf4d30b20aaa44959e023bb4b83b0de3c3155078f673ecf97d4cc6e0a7c7f",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "0bbc24c4dedfdd8c124a4debe9cb3ac7bf98dfef40568a2d5bc45997fff0eeb4",
+      "idempotencyKey": "e8ab004aaec1d925939a888110ca7984ae79fc79557995a9c3be76877933debe",
+      "requestDigest": "b4e390bf99c836bf749c85d37eaaf78691e2a9f6aaae7c9153cf72c71d859327",
+      "evaluationTime": "2026-08-29T21:21:22.000Z",
+      "claimCore": {
+        "claimId": "0bbc24c4dedfdd8c124a4debe9cb3ac7bf98dfef40568a2d5bc45997fff0eeb4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:a38b46ff7514c0738bc45ca185957aff8eb7ddfba2060771e949e089ae444726",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:9395e50dbcd725ff5098dc3bd0c095474cf94ed24885c0d5112315046da9bf9d",
+        "canonicalBaseRevision": "70368e44af372380127987cf6015d8e933c46abf",
+        "declaredWriteScope": [
+          "path:docs/collaboration-runtime-contract.md",
+          "path:scripts/__tests__/collaboration-contract.test.mjs",
+          "path:scripts/collaboration-contract.mjs",
+          "path:scripts/run-affected-ci.mjs",
+          "semantic:generated-worker-types-ci-planner"
+        ],
+        "writeSetDigest": "28bc3a1335cc54fb7c5b17b311d8a63261eed5e03baa549775b16905b4f6a1e0",
+        "laneRevision": "87df35b60025c1a5f6d398c6917c0b559bd29e89",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-29T22:21:22.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "c357621d52f5dba5759514814a61752014b2fa134b089c843ed987d20988950f",
+        "eligibleSince": "2026-08-29T21:21:22.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e57095b23ddafa9a1af5c28eefbe6c85fd576f12b5b1d945a2bd6d1ecaab09a0",
+      "digest": "133406d75adb1e48d00b47877b1b77fd2a2a9f6cab03e96fc40fdb9f2d47bf44"
     }
   ]
 }

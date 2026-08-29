@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5878,
-  "headDigest": "42dca46e7135c595a9fec53d3e9d2d3a1bd631c3a3aea453c023c7622b3642dc",
+  "sequence": 5879,
+  "headDigest": "7eb016f4f6c60bda22514a4e8633ff36978609012cc4458da33c7e2981acb875",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -298965,6 +298965,49 @@
       },
       "claimDigest": "25c691c1642330f867653764244f3604206509cb95fe489dd9923096d429d3b5",
       "digest": "42dca46e7135c595a9fec53d3e9d2d3a1bd631c3a3aea453c023c7622b3642dc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5879,
+      "parentDigest": "42dca46e7135c595a9fec53d3e9d2d3a1bd631c3a3aea453c023c7622b3642dc",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9d86766cecb3c5c98c108919cca65dae18a24d0649c63bb09aa4b43e1c693a4f",
+      "idempotencyKey": "dc98f5b9c4d340ff93fcee91d7824792861899ff75ac831c2f317a8bf11b1e1f",
+      "requestDigest": "3c3a4326a66aa5daf4dd4ebd32855cf0f65e70507934f25ff80eaa2e90eb1c0e",
+      "evaluationTime": "2026-08-29T00:10:31.000Z",
+      "claimCore": {
+        "claimId": "9d86766cecb3c5c98c108919cca65dae18a24d0649c63bb09aa4b43e1c693a4f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4fbd5fc140449b24177342ad1f2726d7b7ac80768c1559e2143df2b63de81487",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b6ca204e93f48eaa80f90b8f2beab70591acf8617d9ed1c205dc41d065f21bef",
+        "canonicalBaseRevision": "0559d0ae198aa581fec9725602f1b49a472d81f1",
+        "declaredWriteScope": [
+          "path:__tests__/recoverable-lane-cleanup-cli.test.mjs",
+          "path:__tests__/recoverable-lane-cleanup-ledger-routing.test.mjs",
+          "path:docs/RECOVERABLE-LANE-CLEANUP.md",
+          "path:scripts/recoverable-lane-cleanup-repository-adapter.mjs",
+          "path:scripts/recoverable-lane-cleanup.mjs",
+          "semantic:recoverable-cleanup-ledger-separation"
+        ],
+        "writeSetDigest": "dd347f88b3d6b9c803c4544cb0fe77b45edac8c6737d398718618aaf7d270290",
+        "laneRevision": "fa3f85308dbbd524d5f2ce5a032db7e25188f16c",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T00:08:53.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBZqhNA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "85fc4c7a6e3b9324e5ab3a82ab98c3530c7b4d7be33bf75b4cc1fc5e929798c3",
+      "digest": "7eb016f4f6c60bda22514a4e8633ff36978609012cc4458da33c7e2981acb875"
     }
   ]
 }

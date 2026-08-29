@@ -10,6 +10,7 @@ import { authorizeScopeExpansionLineageMigration, buildScopeExpansionLineageAdmi
   scopeExpansionLineageAdmissionMatches, verifyScopeExpansionLineageMigrationPlan,
 } from "../scripts/cloud-authority-scope-expansion-lineage-contract.mjs";
 import { createScopeExpansionLineageMigrationAdapter,
+  createRepositoryScopeExpansionLineageMigrationAdapter,
   githubLedgerCommandOptions,
   runScopeExpansionLineageMigration } from "../scripts/cloud-authority-scope-expansion-lineage-migration.mjs";
 import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
@@ -358,12 +359,41 @@ function migrationAdapter(state, beforeContinue = () => {}) {
   });
 }
 
+function repositoryMigrationAdapter(state, taskAuthorityFile = "/private/tmp/task-authority.json") {
+  const repositoryAdapter = createRepositoryScopeExpansionLineageMigrationAdapter({
+    repository: process.cwd(),
+    sessionId: state.lane.lease.sessionId,
+    taskAuthorityFile,
+    createHandoffAdapter: input => {
+      state.handoffFactoryInput = input;
+      return handoffAdapter(state);
+    },
+    ghText: () => JSON.stringify({
+      content: Buffer.from(JSON.stringify(state.ledger)).toString("base64"),
+    }),
+  });
+  return createScopeExpansionLineageMigrationAdapter({
+    readLane: input => repositoryAdapter.readLane(input),
+    readActor: input => repositoryAdapter.readActor(input),
+    readStatus: input => repositoryAdapter.readStatus(input),
+    readLedger: input => repositoryAdapter.readLedger(input),
+    continueAuthority: async input => {
+      state.lastLineageAdmission = input.lineageAdmission;
+      state.lastContinuationRequest = input.request;
+      state.lastContinued = await repositoryAdapter.continueAuthority(input);
+      return state.lastContinued;
+    },
+  });
+}
+
 function handoffAdapter(state) {
+  const calls = state.handoffCalls ||= [];
   return {
     readPreservedReviewLane: () => state.lane,
     readAuthenticatedOwner: () => CLOUD_ACTOR,
     readCloudStatus: () => state.status,
     claimSuccessor: ({ predecessor }) => {
+      calls.push("claim");
       const result = mutate(state.ledger, "claim", MIGRATION_TIMES[0], {
         workItemId: predecessor.workItemId,
         canonicalBaseRevision: predecessor.canonicalBaseRevision,
@@ -379,6 +409,7 @@ function handoffAdapter(state) {
       return cloudResult("claim", result, state.status);
     },
     bindAndReviewReady: ({ claimResult }) => {
+      calls.push("bind");
       let successor = claimResult.claim;
       const predecessor = state.status.claims.find(claim => claim.claimId === successor.predecessorClaimId);
       let result = mutate(state.ledger, "retire", MIGRATION_TIMES[1], {
@@ -434,6 +465,7 @@ function handoffAdapter(state) {
       };
     },
     persistReviewProjection: ({ authority }) => {
+      calls.push("persist");
       state.lane = {
         ...state.lane,
         authority,
@@ -443,6 +475,7 @@ function handoffAdapter(state) {
       return { receiptDigest: digestValue({ projection: authority.claimId }) };
     },
     recoverIntegratedAuthority: ({ integratedReplay }) => {
+      calls.push("recover");
       const claim = integratedReplay.claim;
       const repeatedRecovery = state.integratedRecoveryCount > 0;
       const result = mutate(state.ledger, "continue",
@@ -601,13 +634,26 @@ test("GitHub ledger reads retain provider responses larger than Node's default b
 
 test("execute uses the existing handoff controller and replays the standard epoch-2 successor", async () => {
   const state = fixture();
-  const adapter = migrationAdapter(state);
+  const adapter = repositoryMigrationAdapter(state);
   const planned = await runScopeExpansionLineageMigration({ mode: "plan", branch: BRANCH }, { adapter });
+  const before = { lane: state.lane, status: state.status };
+  const predecessor = before.status.claims.find(claim => claim.claimId === planned.predecessorClaimId);
+  assert.equal(predecessor.state, "dormant-preserved");
   const request = executeRequest(planned.plan);
   const migrated = await runScopeExpansionLineageMigration(request, { adapter });
   assert.equal(migrated.outcome, "migrated-live");
   assert.equal(migrated.successorLeaseEpoch, 2);
   assert.notEqual(migrated.successorClaimId, migrated.predecessorClaimId);
+  assert.equal(state.handoffFactoryInput.taskAuthorityFile, "/private/tmp/task-authority.json");
+  assert.equal(state.lastContinued.outcome, "reclaimed-live");
+  assert.deepEqual(state.lastContinued.blockingFindings, []);
+  assert.equal(state.lastContinued.projectionUpdated, true);
+  assert.deepEqual(state.handoffCalls, ["claim", "bind", "persist"]);
+  assert.equal(scopeExpansionLineageAdmissionMatches({
+    admission: state.lastLineageAdmission, claim: predecessor, lane: before.lane,
+    status: before.status, repositoryId: before.status.repositoryId,
+    request: state.lastContinuationRequest,
+  }), true);
   const replay = await runScopeExpansionLineageMigration(request, { adapter });
   assert.equal(replay.outcome, "already-migrated");
   assert.equal(replay.successorClaimId, migrated.successorClaimId);
@@ -615,10 +661,15 @@ test("execute uses the existing handoff controller and replays the standard epoc
 
 test("integrated lineage recovery converges the same epoch-1 claim and replays idempotently", async () => {
   const state = fixture({ lineageVariant: REVIEWED_RECOVERY_LINEAGE, integrated: true });
-  const adapter = migrationAdapter(state);
+  state.observedAt = "2020-01-01T01:11:00.000Z";
+  refreshStatus(state);
+  const adapter = repositoryMigrationAdapter(state);
   const planned = await runScopeExpansionLineageMigration(
     { mode: "plan", branch: BRANCH }, { adapter },
   );
+  const before = { lane: state.lane, status: state.status };
+  const predecessor = before.status.claims.find(claim => claim.claimId === planned.predecessorClaimId);
+  assert.equal(predecessor.state, "integrated-preserved");
   const request = executeRequest(planned.plan, {
     sessionId: "successor-session",
     successorSessionId: "successor-session",
@@ -627,6 +678,15 @@ test("integrated lineage recovery converges the same epoch-1 claim and replays i
   assert.equal(recovered.outcome, "integrated-replay-recovered");
   assert.equal(recovered.successorClaimId, recovered.predecessorClaimId);
   assert.equal(recovered.successorLeaseEpoch, 1);
+  assert.equal(state.lastContinued.outcome, "reclaimed-live-replay");
+  assert.deepEqual(state.lastContinued.blockingFindings, []);
+  assert.equal(state.lastContinued.projectionUpdated, false);
+  assert.deepEqual(state.handoffCalls, ["recover"]);
+  assert.equal(scopeExpansionLineageAdmissionMatches({
+    admission: state.lastLineageAdmission, claim: predecessor, lane: before.lane,
+    status: before.status, repositoryId: before.status.repositoryId,
+    request: state.lastContinuationRequest,
+  }), true);
   const sequence = state.ledger.sequence;
   const replay = await runScopeExpansionLineageMigration(request, { adapter });
   assert.equal(replay.outcome, "already-migrated");

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6008,
-  "headDigest": "bd307bcbf229561d36c637d3fd1281577540773dc72b394756e0ebf6d6b1233a",
+  "sequence": 6009,
+  "headDigest": "75d445ec1a6a9428539b716c77c9ae20d4dd24aa67f93a8b18c7ba7710b3ddce",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -305287,6 +305287,46 @@
       },
       "claimDigest": "0dca23490bc0126c822ae6ae18bba8553c4bbd4d873c33b392b54e0ccb17a867",
       "digest": "bd307bcbf229561d36c637d3fd1281577540773dc72b394756e0ebf6d6b1233a"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6009,
+      "parentDigest": "bd307bcbf229561d36c637d3fd1281577540773dc72b394756e0ebf6d6b1233a",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "7e9d6e3a9016e8a740c306a59fb386a866a7a21b812b23dbc5577f942c6a16cf",
+      "idempotencyKey": "8c166ce742470df28512ac8788a8b8f08400ca7a48b15fc802ecbe41c41e832e",
+      "requestDigest": "0c67c5f5fb7872883b04b85dc125e8fe4416cada591117cb2bdefaa60e5eb31e",
+      "evaluationTime": "2026-08-29T11:41:09.000Z",
+      "claimCore": {
+        "claimId": "7e9d6e3a9016e8a740c306a59fb386a866a7a21b812b23dbc5577f942c6a16cf",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:0d9047c98071551c1b518bec5a3b4daa7ea941a1ce4005601318f3ed222973d7",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:52c36c17fcd13991921477be01fdd071d4229d593c35ebd1cc73c7ca99a28c07",
+        "canonicalBaseRevision": "14e45771c6c9864705d13c484281c0bf5025de86",
+        "declaredWriteScope": [
+          "path:.github/workflows/promote-agentic-canvas-os.yml",
+          "path:scripts/__tests__/promote-agentic-canvas-os-revision.test.mjs",
+          "semantic:runtime-readiness-promotion-branch-contract"
+        ],
+        "writeSetDigest": "f92658301efdba9f3f2768345e11a4428a88be4ef8e7e1485967b1ba7feb8dd6",
+        "laneRevision": "14e45771c6c9864705d13c484281c0bf5025de86",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T12:41:09.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ca0a77ee94d90ef7ef79a5f1ba2275383ef9243afcbf7787d2db91f9296c47ad",
+      "digest": "75d445ec1a6a9428539b716c77c9ae20d4dd24aa67f93a8b18c7ba7710b3ddce"
     }
   ]
 }

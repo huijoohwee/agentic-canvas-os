@@ -14,14 +14,18 @@ export function parseRecoverableLaneCleanupArguments(argv = []) {
   const allowed = new Set({
     plan: [
       "repository", "worktree", "recovery-directory", "session",
-      "operator-decision-digest", "supersede-preservation", "json",
+      "operator-decision-digest", "supersede-preservation",
+      "ledger-repository", "json",
     ],
     run: [
       "repository", "worktree", "recovery-directory", "session",
       "operator-decision-digest", "supersede-preservation", "plan-digest",
-      "authorize", "json",
+      "authorize", "ledger-repository", "json",
     ],
-    observe: ["repository", "worktree", "recovery-directory", "plan-digest", "json"],
+    observe: [
+      "repository", "worktree", "recovery-directory", "plan-digest",
+      "ledger-repository", "json",
+    ],
   }[mode]);
   const options = new Map();
   const repeated = new Map();
@@ -54,6 +58,9 @@ export function parseRecoverableLaneCleanupArguments(argv = []) {
     supersededPreservationDigests: repeated.get("supersede-preservation") || [],
     planDigest: options.get("plan-digest") || "",
     authorization: options.get("authorize") || "",
+    ledgerRepository: options.has("ledger-repository")
+      ? repositoryIdentity(options.get("ledger-repository"), "--ledger-repository")
+      : null,
   };
   if (mode === "plan") {
     if (!input.sessionId || !input.operatorDecisionDigest) {
@@ -71,10 +78,13 @@ export function parseRecoverableLaneCleanupArguments(argv = []) {
 
 export function runRecoverableLaneCleanupCli(argv = process.argv.slice(2), dependencies = {}) {
   const parsed = parseRecoverableLaneCleanupArguments(argv);
-  const adapter = dependencies.adapter || createRecoverableLaneCleanupRepositoryAdapter({
+  const createAdapter = dependencies.createAdapter
+    || createRecoverableLaneCleanupRepositoryAdapter;
+  const adapter = dependencies.adapter || createAdapter({
     repository: parsed.input.repository,
     worktree: parsed.input.worktree,
     recoveryDirectory: parsed.input.recoveryDirectory,
+    ledgerRepository: parsed.input.ledgerRepository,
   });
   const controller = dependencies.controller || createRecoverableLaneCleanupController({ adapter });
   const result = controller[parsed.mode](parsed.input);
@@ -92,11 +102,20 @@ function required(options, name) {
   return value;
 }
 
+function repositoryIdentity(value, label) {
+  const repository = typeof value === "string" ? value : "";
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(repository)) {
+    throw new Error(`${label} must be an exact owner/name repository identity.`);
+  }
+  return repository;
+}
+
 function usage() {
   throw new Error(
     "Usage: recoverable-lane-cleanup.mjs <plan|run|observe> "
     + "--repository=<canonical-root> --worktree=<registered-clean-lane> "
     + "--recovery-directory=<external-absent-directory> "
+    + "[--ledger-repository=<owner/name>] "
     + "[--session=<id> --operator-decision-digest=<sha256>] "
     + "[--supersede-preservation=<sha256> ...] "
     + "[--plan-digest=<sha256> --authorize='authorize recoverable-lane-cleanup <sha256>'] [--json]",

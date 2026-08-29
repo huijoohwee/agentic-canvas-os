@@ -30,7 +30,8 @@ const OPERATION_MARKERS = Object.freeze([
 const CURRENT_LEASE_STATES = new Set(["active", "review_ready", "delivery", "parked"]);
 
 export function createRecoverableLaneCleanupRepositoryAdapter({
-  repository, worktree, recoveryDirectory, git = runGit, now = () => new Date(),
+  repository, worktree, recoveryDirectory, ledgerRepository = null,
+  git = runGit, now = () => new Date(),
   checkpoint = () => {},
   readPreservationReceipts = discoverPreservationReceiptDigests,
   normalizeDormantIntent = normalizeDormantPreservationAdmissionIntent,
@@ -41,6 +42,8 @@ export function createRecoverableLaneCleanupRepositoryAdapter({
   const root = realDirectory(repository, "canonical repository");
   const target = normalizedAbsolute(worktree, "target worktree");
   const recovery = normalizedAbsolute(recoveryDirectory, "recovery directory");
+  const explicitLedgerRepository = ledgerRepository === null
+    ? null : repositoryIdentity(ledgerRepository, "ledger repository");
   const commonDir = realDirectory(resolveGitPath(
     root, git(root, ["rev-parse", "--git-common-dir"]).trim(),
   ), "Git common directory");
@@ -54,11 +57,22 @@ export function createRecoverableLaneCleanupRepositoryAdapter({
     root, target, recovery, commonDir, git, leaseStore, store, input,
     readPreservationReceipts, normalizeDormantIntent, readRemoteAuthority,
     invokeCloudAction, observeGeneratedResidueEntry,
+    configuredLedgerRepository: explicitLedgerRepository,
   });
+  const readIntent = () => {
+    const intent = store.readIntent();
+    return assertConfiguredRepositoryRouting({
+      intent,
+      explicitLedgerRepository,
+      configuredTargetRepository: intent && readRemoteAuthority === inspectRemoteAuthority
+        ? githubRepository(git(root, ["remote", "get-url", "origin"]).trim())
+        : null,
+    });
+  };
   return Object.freeze({
     captureEvidence: capture,
     withSubjectFence: store.withSubjectFence,
-    readIntent: store.readIntent,
+    readIntent,
     writeIntent: store.writeIntent,
     ensureBundle: plan => ensureBundle({ root, recovery, plan, git }),
     verifyBundle: (plan, bundle) => verifyBundle({ root, plan, bundle, git }),
@@ -102,10 +116,10 @@ function observeRestored({ root, plan, git }) {
 
 
 export function captureRecoverableLaneCleanupEvidence({
-  repository, worktree, recoveryDirectory, git = runGit,
+  repository, worktree, recoveryDirectory, ledgerRepository = null, git = runGit,
 } = {}) {
   return createRecoverableLaneCleanupRepositoryAdapter({
-    repository, worktree, recoveryDirectory, git,
+    repository, worktree, recoveryDirectory, ledgerRepository, git,
   }).captureEvidence({});
 }
 
@@ -113,6 +127,7 @@ function captureEvidence({
   root, target, recovery, commonDir, git, leaseStore, store,
   readPreservationReceipts, normalizeDormantIntent, readRemoteAuthority,
   invokeCloudAction, observeGeneratedResidueEntry,
+  configuredLedgerRepository,
 }) {
   const records = parseWorktreeRecords(git(root, ["worktree", "list", "--porcelain"]));
   store.assertInitialLocation(records);
@@ -194,7 +209,7 @@ function captureEvidence({
   const originUrl = git(root, ["remote", "get-url", "origin"]).trim();
   const remoteAuthority = readRemoteAuthority({
     originUrl, headSha, claimId: lease?.cloudAuthority?.claimId || null,
-    invokeCloudAction,
+    ledgerRepository: configuredLedgerRepository, invokeCloudAction,
   });
   const authorityCore = {
     lifecycleState: lifecycleItem.state,
@@ -232,11 +247,16 @@ function captureEvidence({
   return Object.freeze({ ...core, evidenceDigest: digestValue(core) });
 }
 
-export function inspectRemoteAuthority({ originUrl, headSha, claimId, invokeCloudAction }) {
-  const repository = githubRepository(originUrl);
+export function inspectRemoteAuthority({
+  originUrl, ledgerRepository = null, headSha, claimId, invokeCloudAction,
+}) {
+  const targetRepository = githubRepository(originUrl);
+  const resolvedLedgerRepository = ledgerRepository === null
+    ? targetRepository
+    : repositoryIdentity(ledgerRepository, "ledger repository");
   const result = invokeCloudAction({
-    action: "status", ledgerRepository: repository,
-    request: { targetRepository: repository },
+    action: "status", ledgerRepository: resolvedLedgerRepository,
+    request: { targetRepository },
   });
   const freshInventoryStatus = result?.status === "ready" || result?.status === "empty";
   if (result?.schema !== "agentic-cloud-collaboration-result/v1"
@@ -256,8 +276,8 @@ export function inspectRemoteAuthority({ originUrl, headSha, claimId, invokeClou
   })).sort((left, right) => left.claimId.localeCompare(right.claimId));
   const core = {
     provider: "github",
-    ledgerRepository: repository,
-    targetRepository: repository,
+    ledgerRepository: resolvedLedgerRepository,
+    targetRepository,
     targetClaims,
     currentRemoteWriter: targetClaims.some(claim => claim.writeAuthority),
     waitingSuccessors: targetClaims.filter(claim => claim.state === "waiting-successor").length,
@@ -393,10 +413,34 @@ function journalIsProvenUnrelated(journal, { target }) {
   return !subjects.some(subject => subject.path === target);
 }
 
+function assertConfiguredRepositoryRouting({
+  intent, explicitLedgerRepository, configuredTargetRepository,
+}) {
+  if (!intent) return null;
+  const remote = intent?.plan?.evidence?.authority?.remoteAuthority;
+  const ledgerMatches = explicitLedgerRepository
+    ? remote?.ledgerRepository === explicitLedgerRepository
+    : remote?.ledgerRepository === remote?.targetRepository;
+  const targetMatches = configuredTargetRepository === null
+    || remote?.targetRepository === configuredTargetRepository;
+  if (!ledgerMatches || !targetMatches) {
+    throw new Error("Cleanup ledger or target repository differs from the stored plan.");
+  }
+  return intent;
+}
+
 function githubRepository(originUrl) {
-  const match = String(originUrl).match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/u);
+  const value = String(originUrl || "");
+  const match = value.match(/^(?:https?:\/\/github\.com\/|ssh:\/\/git@github\.com\/|git@github\.com:)([^/]+)\/([^/]+?)(?:\.git)?$/u);
   if (!match) throw new Error("GitHub reference mapping could not resolve the repository origin.");
-  return `${match[1]}/${match[2]}`;
+  return repositoryIdentity(`${match[1]}/${match[2]}`, "target repository");
+}
+function repositoryIdentity(value, label) {
+  const repository = typeof value === "string" ? value : "";
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(repository)) {
+    throw new Error(`${label} must be an exact owner/name repository identity.`);
+  }
+  return repository;
 }
 function remoteSha(root, ref, git) {
   const output = git(root, ["ls-remote", "--refs", "origin", ref]).trim();

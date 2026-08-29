@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6097,
-  "headDigest": "2b1b6a0f50cb69d0ffe1021483e05f01c4d07ea226f62ad47cbd1de2e89be518",
+  "sequence": 6098,
+  "headDigest": "3091413ca7b305a8749cd222565ab52834af96af5ace94450dcbdae3001006bd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -309964,6 +309964,66 @@
       },
       "claimDigest": "5398008ceabf2c76acc6d0e2423ddbe90b0dfa8ec6e1934824ff5f6b83fbedb7",
       "digest": "2b1b6a0f50cb69d0ffe1021483e05f01c4d07ea226f62ad47cbd1de2e89be518"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6098,
+      "parentDigest": "2b1b6a0f50cb69d0ffe1021483e05f01c4d07ea226f62ad47cbd1de2e89be518",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a5c93f38d9f298e550c27a4838fcf041457f720c9e2ef4563895e012112b8c15",
+      "idempotencyKey": "397de674c6afc9ae5e778324f303e94ece203a381b39f61fbc44fa15fe19f8ef",
+      "requestDigest": "7e0d400b691045a67199aa5a3bc7cdc880f8eeb8f89a2603b5ba871697f25444",
+      "evaluationTime": "2026-08-29T16:20:21.000Z",
+      "claimCore": {
+        "claimId": "a5c93f38d9f298e550c27a4838fcf041457f720c9e2ef4563895e012112b8c15",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a09452328a0e0024a66850e7a8743c469f8277c25e9f3d85717929a3799e902c",
+        "canonicalBaseRevision": "ee7e339bb3ed8f48d80759e817310de8b378c0f7",
+        "declaredWriteScope": [
+          "path:__tests__/expired-published-bind-ahead-clean-descendant-recovery.test.mjs",
+          "path:docs/EXPIRED-PUBLISHED-BIND-AHEAD-CLEAN-DESCENDANT-RECOVERY.md",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery-contract.mjs",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery-controller.mjs",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery-evidence.mjs",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery-repository-adapter.mjs",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery.mjs",
+          "semantic:expired-published-bind-ahead-clean-descendant-re"
+        ],
+        "writeSetDigest": "8e5d4fd9bcd900318bb283b872837a8747d8772edd72ce6f2e9bf7fd563ca8be",
+        "laneRevision": "ee7e339bb3ed8f48d80759e817310de8b378c0f7",
+        "leaseEpoch": 1,
+        "transitionCounter": 9,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-29T16:17:27.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "handoffEvidenceDigest": "46127ea14ee17465cf23d4264e04c24647a27614653ebd5d6ec263665d6664a5",
+        "recovery": {
+          "evidenceDigest": "502ec232c5d47759002550eec27a91d83246f72c956d94f42551156fb04f7942",
+          "recoveredAt": "2026-08-29T16:15:27.000Z"
+        },
+        "retirement": {
+          "reason": "abandoned",
+          "finalRevision": "ee7e339bb3ed8f48d80759e817310de8b378c0f7",
+          "reviewRequestId": null,
+          "bytesDigest": "39e7a3ad3228b656db550fd0499fdb96c09d6490fda50ac198d6925f06a29af0",
+          "namedChecksDigest": "78773b0f10ea506f0921ba89cc11f077c8cbd31b59bffce6a14a40ab2ebc2f6b",
+          "handoffEvidenceDigest": "f98950f44eac7473a63a846c6d90cd5335fff4f9625058d69d1f17ee32d76a89",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-29T16:20:21.000Z"
+        }
+      },
+      "claimDigest": "36ad44167302af67494ef2fea0a433f2da7f817c0e4c25c1300e02d4a4d816ad",
+      "digest": "3091413ca7b305a8749cd222565ab52834af96af5ace94450dcbdae3001006bd"
     }
   ]
 }

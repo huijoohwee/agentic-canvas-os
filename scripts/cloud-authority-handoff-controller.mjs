@@ -24,10 +24,21 @@ import {
   validateContinuation,
 } from "./cloud-authority-handoff-lineage.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
+import { projectClaimOnlyProviderPulls }
+  from "./claim-only-partial-start-retirement-controller.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { continueTaskAuthorityCloudSuccessorBinding } from "./task-bound-lane-authority-store.mjs";
 import { createWriterLeaseStore, parseDeviceBranch, parseWriterLeasePullRequestBody, updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 export { buildCloudAuthoritySuccessorClaimRequest, CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA, CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA };
 const SHA_PATTERN = /^[0-9a-f]{40}$/u, DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
+const MAX_PULL_REQUEST_ASSOCIATION_PAGES = 1_000;
+const PULL_REQUEST_ASSOCIATION_QUERY = [
+  "query($owner:String!,$name:String!,$after:String)",
+  "{repository(owner:$owner,name:$name)",
+  "{pullRequests(first:100,after:$after)",
+  "{nodes{number id state isDraft mergedAt closedAt headRefName headRefOid",
+  "baseRefName baseRefOid body}pageInfo{hasNextPage endCursor}}}}",
+].join("");
 export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
   const adapter = Object.freeze({
     readPreservedReviewLane: methods.readPreservedReviewLane,
@@ -37,6 +48,7 @@ export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
     bindAndReviewReady: methods.bindAndReviewReady,
     persistReviewProjection: methods.persistReviewProjection,
     recoverIntegratedAuthority: methods.recoverIntegratedAuthority,
+    readClaimAssociations: methods.readClaimAssociations,
   });
   for (const key of ["readPreservedReviewLane", "readAuthenticatedOwner", "readCloudStatus",
     "claimSuccessor", "bindAndReviewReady", "persistReviewProjection"]) {
@@ -46,6 +58,9 @@ export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
   }
   if (adapter.recoverIntegratedAuthority !== undefined && typeof adapter.recoverIntegratedAuthority !== "function") {
     throw new Error("Controller adapter method recoverIntegratedAuthority must be a function when provided.");
+  }
+  if (adapter.readClaimAssociations !== undefined && typeof adapter.readClaimAssociations !== "function") {
+    throw new Error("Controller adapter method readClaimAssociations must be a function when provided.");
   }
   return adapter;
 }
@@ -62,7 +77,21 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter, linea
     targetRepository: lane.authority.targetRepository,
   });
   const predecessor = classifyPredecessor({ lane, actor, status, request, lineageAdmission, lineageProjectionProof });
-  const integratedReplay = classifyIntegratedReplay({ request, lane, actor, status, predecessor });
+  const derivativeClaimIds = status?.claims?.filter(
+    claim => claim?.predecessorClaimId === lane.authority.claimId,
+  ).map(claim => claim.claimId).sort() || [];
+  const claimAssociations = derivativeClaimIds.length > 0
+    && typeof adapter.readClaimAssociations === "function"
+    ? await adapter.readClaimAssociations({ claimIds: derivativeClaimIds })
+    : null;
+  const integratedReplay = classifyIntegratedReplay({
+    request,
+    lane,
+    actor,
+    status,
+    predecessor,
+    claimAssociations,
+  });
   const successor = integratedReplay.applicable
     ? emptyResumableSuccessor()
     : classifyResumableSuccessor({ request, lane, actor, status, predecessor });
@@ -107,6 +136,27 @@ export async function continueExpiredReviewLaneAuthority(input, { adapter, linea
   if (integratedReplay.claim) {
     if (typeof adapter.recoverIntegratedAuthority !== "function") {
       throw new Error("Integrated-preserved replay requires a recovery adapter method.");
+    }
+    if (integratedReplay.queuedClaimVariant === "claim-only-unprojected") {
+      if (typeof adapter.readClaimAssociations !== "function") {
+        throw new Error("Claim-only integrated replay requires an association inventory adapter.");
+      }
+      const currentAssociations = await adapter.readClaimAssociations({
+        claimIds: [integratedReplay.queuedClaim.claimId],
+      });
+      if (
+        currentAssociations?.frameDigest !== integratedReplay.associationFrameDigest
+        || digestValue({
+          schema: currentAssociations?.schema,
+          writerRegistryDigest: currentAssociations?.writerRegistryDigest,
+          providerInventoryDigest: currentAssociations?.providerInventoryDigest,
+          providerPullRequestCount: currentAssociations?.providerPullRequestCount,
+          providerPageCount: currentAssociations?.providerPageCount,
+          claims: currentAssociations?.claims,
+        }) !== integratedReplay.associationFrameDigest
+      ) {
+        throw new Error("Claim-only integrated replay associations changed after preflight.");
+      }
     }
     const recovered = await adapter.recoverIntegratedAuthority({
       request,
@@ -219,6 +269,7 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
   const gh = ghText || (args => execFileSync("gh", args, subprocess));
   const execute = run || ((command, args) => execFileSync(command, args, subprocess));
   let store = leaseStore;
+  let associationTargetRepository = null;
   function registeredStore(branch) {
     if (!parseDeviceBranch(branch)) throw new Error("Controller branch identity is invalid.");
     const record = assertRegisteredWorktree({
@@ -234,6 +285,55 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       taskAuthorityFile,
     });
     return store;
+  }
+  function readClaimAssociationFrame({ claimIds }) {
+    if (!store) throw new Error("Claim association inventory requires a registered lane store.");
+    const normalizedClaimIds = [...new Set((claimIds || []).map(
+      claimId => requiredDigest(claimId, "association claimId"),
+    ))].sort();
+    if (normalizedClaimIds.length === 0) {
+      throw new Error("Claim association inventory requires at least one claim ID.");
+    }
+    const registry = store.read();
+    const { pulls, pageCount } = readAllProviderPullRequests({
+      targetRepository: requiredText(
+        associationTargetRepository,
+        "target repository",
+      ),
+      gh,
+    });
+    const provider = projectClaimOnlyProviderPulls(pulls);
+    const claims = normalizedClaimIds.map(claimId => Object.freeze({
+      claimId,
+      writerLeaseMatchDigests: Object.entries(registry.leases || {}).flatMap(
+        ([branch, lease]) => lease?.cloudAuthority?.claimId === claimId
+          ? [digestValue({ branch, lease })]
+          : [],
+      ).sort(),
+      pullRequestMarkerMatchDigests: provider.associations(claimId)
+        .map(item => requiredDigest(item.markerDigest, "pull request marker digest"))
+        .sort(),
+    }));
+    const core = Object.freeze({
+      schema: "agentic-cloud-authority-handoff-claim-associations/v1",
+      writerRegistryDigest: digestValue(registry),
+      providerInventoryDigest: digestValue(provider.projected),
+      providerPullRequestCount: pulls.length,
+      providerPageCount: pageCount,
+      claims: Object.freeze(claims),
+    });
+    return Object.freeze({ ...core, frameDigest: digestValue(core) });
+  }
+  function exactAssociationFrame(frame, expectedDigest) {
+    return frame?.frameDigest === expectedDigest
+      && digestValue({
+        schema: frame?.schema,
+        writerRegistryDigest: frame?.writerRegistryDigest,
+        providerInventoryDigest: frame?.providerInventoryDigest,
+        providerPullRequestCount: frame?.providerPullRequestCount,
+        providerPageCount: frame?.providerPageCount,
+        claims: frame?.claims,
+      }) === expectedDigest;
   }
   return createCloudAuthorityHandoffControllerAdapter({
     readPreservedReviewLane({ branch }) {
@@ -263,21 +363,33 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
       const remoteLease = parseWriterLeasePullRequestBody(pullWithAuthor.body);
       const admission = normalizeManifestFromLease(lease.admission);
       const authority = normalizePreservedAuthority(lease.cloudAuthority, admission);
-      const reviewHeadSha = requiredSha(lease.reviewHeadSha, "lease reviewHeadSha");
+      associationTargetRepository = requiredText(
+        authority.targetRepository,
+        "authority targetRepository",
+      );
+      const integratedDeliveryProjection = lease.status === "delivery"
+        || authority.state === "delivery_authorized";
+      const preservedHeadSha = requiredSha(
+        integratedDeliveryProjection ? lease.deliveryHeadSha : lease.reviewHeadSha,
+        integratedDeliveryProjection ? "lease deliveryHeadSha" : "lease reviewHeadSha",
+      );
       const localHeadSha = requiredSha(git(["rev-parse", "HEAD"]).trim(), "local HEAD");
       const remoteHeadSha = requiredSha(git(["rev-parse", remoteRef]).trim(), "remote HEAD");
       const pullRequestHeadSha = requiredSha(pullWithAuthor.headRefOid, "pull request head");
-      const protectedMainRefresh = detectProtectedMainRefresh({
-        reviewedHeadSha: reviewHeadSha,
-        localHeadSha,
-        remoteHeadSha,
-        pullRequestHeadSha,
-        gitText: git,
-      });
+      const protectedMainRefresh = integratedDeliveryProjection
+        ? null
+        : detectProtectedMainRefresh({
+          reviewedHeadSha: preservedHeadSha,
+          localHeadSha,
+          remoteHeadSha,
+          pullRequestHeadSha,
+          gitText: git,
+        });
       return Object.freeze({
         repository: repoRoot,
         branch,
-        headSha: reviewHeadSha,
+        headSha: preservedHeadSha,
+        localHeadSha,
         refreshedHeadSha: protectedMainRefresh ? localHeadSha : null,
         remoteHeadSha,
         clean: git(["status", "--porcelain"]).trim() === "",
@@ -285,6 +397,10 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         lease,
         manifest: admission,
         authority,
+        cloudSubject: Object.freeze({
+          deviceId: pseudonymousIdentifier("device", lease.device),
+          sessionId: pseudonymousIdentifier("session", lease.sessionId),
+        }),
         protectedMainRefresh,
         pullRequest: Object.freeze({
           id: requiredText(pullWithAuthor.id, "pull request node ID"),
@@ -319,6 +435,9 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
         environment,
       });
       return Object.freeze({ ...status, repositoryId: `github-repository:${repositoryNodeId}` });
+    },
+    readClaimAssociations({ claimIds }) {
+      return readClaimAssociationFrame({ claimIds });
     },
     claimSuccessor({ request, lane, predecessor }) {
       if (lane.lease.taskAuthority && !taskAuthorityFile) throw new Error("Task-bound cloud continuation requires its existing capability.");
@@ -388,21 +507,57 @@ export function createRepositoryCloudAuthorityHandoffControllerAdapter({
     },
     recoverIntegratedAuthority({ request, lane, integratedReplay }) {
       if (lane.lease.taskAuthority && !taskAuthorityFile) throw new Error("Task-bound cloud recovery requires its existing capability.");
-      return recoverIntegratedPreservedCloudAuthority({
-        authority: lane.authority,
-        integratedClaim: integratedReplay.claim,
-        queuedSuccessor: integratedReplay.queuedClaim,
-        manifest: lane.manifest,
-        branch: lane.branch,
-        headSha: lane.headSha,
-        focusedEvidenceDigest: lane.authority.focusedEvidenceDigest,
-        ttlSeconds: request.ttlSeconds,
-        deviceId: request.successorDeviceId,
-        sessionId: request.successorSessionId,
-        environment,
-        invoke: invokeRepositoryCloudAction,
-        inspect: invokeRepositoryCloudAction,
-        verify: invokeRepositoryCloudVerifier,
+      const recover = () => {
+        const recovered = recoverIntegratedPreservedCloudAuthority({
+          authority: lane.authority,
+          integratedClaim: integratedReplay.claim,
+          queuedSuccessor: integratedReplay.queuedClaim,
+          queuedSuccessorVariant: integratedReplay.queuedClaimVariant,
+          queuedSuccessorAssociationFrameDigest: integratedReplay.associationFrameDigest,
+          manifest: lane.manifest,
+          branch: lane.branch,
+          headSha: lane.headSha,
+          focusedEvidenceDigest: lane.authority.focusedEvidenceDigest,
+          ttlSeconds: request.ttlSeconds,
+          deviceId: request.successorDeviceId,
+          sessionId: request.successorSessionId,
+          environment,
+          invoke: invokeRepositoryCloudAction,
+          inspect: invokeRepositoryCloudAction,
+          verify: invokeRepositoryCloudVerifier,
+        });
+        if (lane.authority.state === "delivery_authorized") {
+          const verifiedClaims = recovered.verification?.inventory?.claims?.filter(
+            claim => claim?.claimId === lane.authority.claimId,
+          ) || [];
+          if (
+            verifiedClaims.length !== 1
+            || verifiedClaims[0].deviceId !== lane.cloudSubject.deviceId
+            || verifiedClaims[0].sessionId !== lane.cloudSubject.sessionId
+          ) {
+            throw new Error(
+              "Integrated-preserved replay recovery changed the canonical cloud owner.",
+            );
+          }
+        }
+        return recovered;
+      };
+      if (integratedReplay.queuedClaimVariant !== "claim-only-unprojected") {
+        return recover();
+      }
+      return store.withRegistryLock(() => {
+        const fencedAssociations = readClaimAssociationFrame({
+          claimIds: [integratedReplay.queuedClaim.claimId],
+        });
+        if (!exactAssociationFrame(
+          fencedAssociations,
+          integratedReplay.associationFrameDigest,
+        )) {
+          throw new Error(
+            "Claim-only integrated replay associations changed before its serialized cloud CAS.",
+          );
+        }
+        return recover();
       });
     },
     persistReviewProjection({ lane, authority }) {
@@ -491,8 +646,10 @@ function detectProtectedMainRefresh({
   }
 }
 function normalizePreservedAuthority(authority, manifest) {
-  if (!authority || authority.state !== "review_ready") {
-    throw new Error("Controller requires an expired review-ready cloud authority.");
+  if (!authority || !["review_ready", "delivery_authorized"].includes(authority.state)) {
+    throw new Error(
+      "Controller requires an expired review-ready or exact delivery-authorized cloud authority.",
+    );
   }
   if (requiredDigest(authority.writeSetDigest, "authority writeSetDigest") !== manifest.writeSetDigest) {
     throw new Error("Authority write-set digest drifted from its admitted manifest.");
@@ -540,6 +697,75 @@ function pullRequestNumber(url) {
   if (!match) throw new Error(`Pull request URL ${url} has no numeric identifier.`);
   return Number(match[1]);
 }
+
+function readAllProviderPullRequests({ targetRepository, gh }) {
+  const repositoryParts = requiredText(targetRepository, "target repository").split("/");
+  if (repositoryParts.length !== 2 || repositoryParts.some(value => !value)) {
+    throw new Error("Claim association pagination requires an owner/repository identity.");
+  }
+  const [owner, name] = repositoryParts;
+  const pulls = [];
+  const seenNodeIds = new Set();
+  const seenNumbers = new Set();
+  const seenCursors = new Set();
+  let after = null;
+  let pageCount = 0;
+  while (true) {
+    pageCount += 1;
+    if (pageCount > MAX_PULL_REQUEST_ASSOCIATION_PAGES) {
+      throw new Error("Claim association pagination exceeded its bounded page ceiling.");
+    }
+    const argumentsList = [
+      "api", "graphql",
+      "-f", `query=${PULL_REQUEST_ASSOCIATION_QUERY}`,
+      "-F", `owner=${owner}`,
+      "-F", `name=${name}`,
+      ...(after ? ["-F", `after=${after}`] : []),
+    ];
+    let envelope;
+    try {
+      envelope = JSON.parse(gh(argumentsList));
+    } catch {
+      throw new Error("Claim association provider pagination returned an invalid JSON envelope.");
+    }
+    const connection = envelope?.data?.repository?.pullRequests;
+    const pageInfo = connection?.pageInfo;
+    if (
+      Array.isArray(envelope?.errors)
+      || !Array.isArray(connection?.nodes)
+      || !pageInfo
+      || typeof pageInfo.hasNextPage !== "boolean"
+      || !(pageInfo.endCursor === null || typeof pageInfo.endCursor === "string")
+    ) {
+      throw new Error("Claim association provider pagination envelope is incomplete.");
+    }
+    for (const pull of connection.nodes) {
+      const number = Number(pull?.number);
+      const nodeId = String(pull?.id || "").trim();
+      if (!Number.isSafeInteger(number) || number <= 0 || !nodeId) {
+        throw new Error("Claim association provider pagination returned a malformed pull request.");
+      }
+      if (seenNumbers.has(number) || seenNodeIds.has(nodeId)) {
+        throw new Error("Claim association provider pagination returned a duplicate pull request.");
+      }
+      seenNumbers.add(number);
+      seenNodeIds.add(nodeId);
+      pulls.push(pull);
+    }
+    if (!pageInfo.hasNextPage) break;
+    const nextCursor = String(pageInfo.endCursor || "").trim();
+    if (!nextCursor || nextCursor === after || seenCursors.has(nextCursor)) {
+      throw new Error("Claim association provider pagination cursor did not advance.");
+    }
+    seenCursors.add(nextCursor);
+    after = nextCursor;
+  }
+  return Object.freeze({
+    pulls: Object.freeze(pulls),
+    pageCount,
+  });
+}
+
 function option(argumentsList, name) {
   const prefix = `--${name}=`;
   const inline = argumentsList.find(value => value.startsWith(prefix));
@@ -568,7 +794,10 @@ async function main() {
     const sessionId = option(argumentsList, "session");
     if (!sessionId) throw new Error("--session is required.");
     const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
-      repository, sessionId, environment: process.env,
+      repository,
+      sessionId,
+      environment: process.env,
+      taskAuthorityFile: option(argumentsList, "task-authority") || null,
     });
     const result = await continueExpiredReviewLaneAuthority({
       transition,

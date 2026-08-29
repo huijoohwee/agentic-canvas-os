@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
+import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { markOperationDerivedCloudVerification } from "./scoped-lane-admission-lib.mjs";
 import { normalizeBoundAuthority, normalizeCurrentClaimInventory, positiveInteger,
   cloudAuthorityFromResult, projectRootState, reconcileCloudAuthorityProjection, requireAuthority, requiredDigest,
@@ -361,6 +362,8 @@ export function recoverIntegratedPreservedCloudAuthority({
   authority,
   integratedClaim,
   queuedSuccessor = null,
+  queuedSuccessorVariant = queuedSuccessor ? "exact-successor" : null,
+  queuedSuccessorAssociationFrameDigest = null,
   manifest,
   branch,
   headSha,
@@ -374,6 +377,17 @@ export function recoverIntegratedPreservedCloudAuthority({
   verify = invokeRepositoryCloudVerifier,
 } = {}) {
   requireAuthority(authority);
+  if (
+    authority.state === "delivery_authorized"
+    && (
+      requiredText(deviceId, "deviceId") !== authority.deviceId
+      || requiredText(sessionId, "sessionId") !== authority.sessionId
+    )
+  ) {
+    throw new Error(
+      "Integrated-preserved replay recovery must retain the historical local owner.",
+    );
+  }
   const resolvedBranch = requiredText(branch, "branch");
   const resolvedHeadSha = requiredSha(headSha, "headSha");
   const resolvedFocusedEvidenceDigest = requiredDigest(
@@ -391,15 +405,22 @@ export function recoverIntegratedPreservedCloudAuthority({
     authority,
     integratedClaim,
     queuedSuccessor,
+    queuedSuccessorVariant,
+    queuedSuccessorAssociationFrameDigest,
     manifest,
     headSha: resolvedHeadSha,
     focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+    branch: resolvedBranch,
+    deviceId,
+    sessionId,
   });
   let currentStatus = initialStatus;
   if (queuedSuccessor) {
     retireIntegratedReplayQueuedSuccessor({
       claim: queuedSuccessor,
       integratedClaim: currentClaim,
+      queuedSuccessorVariant,
+      queuedSuccessorAssociationFrameDigest,
       targetRepository: authority.targetRepository,
       ledgerRepository: authority.ledgerRepository,
       deviceId,
@@ -420,25 +441,29 @@ export function recoverIntegratedPreservedCloudAuthority({
       authority,
       integratedClaim: currentClaim,
       queuedSuccessor: null,
+      queuedSuccessorVariant: null,
+      queuedSuccessorAssociationFrameDigest: null,
       manifest,
       headSha: resolvedHeadSha,
       focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+      branch: resolvedBranch,
+      deviceId,
+      sessionId,
     });
   }
 
   let projectedAuthority;
   if (projectRootState(currentClaim.state) === "parked") {
-    const recoveryEvidenceDigest = digestValue({
-      schema: "agentic-integrated-preserved-recovery-evidence/v1",
+    const recoveryEvidenceDigest = digestValue(integratedPreservedRecoveryEvidence({
       branch: resolvedBranch,
-      claimId: currentClaim.claimId,
-      candidateRevision: currentClaim.integration.candidateRevision,
-      reviewRequestId: currentClaim.integration.reviewRequestId,
-      integrationReceiptDigest: currentClaim.integrationReceiptDigest,
-      operationReceiptDigest: currentClaim.operationReceiptDigest,
-      manifestDigest: requiredDigest(manifest?.manifestDigest, "manifestDigest"),
-      writeSetDigest: requiredDigest(manifest?.writeSetDigest, "writeSetDigest"),
-    });
+      authority: authority.state === "delivery_authorized" ? authority : {
+        claimId: currentClaim.claimId,
+        integration: currentClaim.integration,
+        integrationReceiptDigest: currentClaim.integrationReceiptDigest,
+        operationReceiptDigest: currentClaim.operationReceiptDigest,
+      },
+      manifest,
+    }));
     const recoveredResult = invoke({
       action: "continue",
       ledgerRepository: authority.ledgerRepository,
@@ -482,6 +507,9 @@ export function recoverIntegratedPreservedCloudAuthority({
       manifest,
       headSha: resolvedHeadSha,
       focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+      branch: resolvedBranch,
+      deviceId,
+      sessionId,
     });
     requiredDigest(
       recoveredResult.receipt?.receiptDigest,
@@ -529,6 +557,8 @@ export function recoverIntegratedPreservedCloudAuthority({
     manifest,
     headSha: resolvedHeadSha,
     focusedEvidenceDigest: resolvedFocusedEvidenceDigest,
+    deviceId,
+    sessionId,
   });
   const overlappingCurrentClaimIds = requireIntegratedReplayConvergence({
     inventory: verified.verification.inventory,
@@ -536,6 +566,7 @@ export function recoverIntegratedPreservedCloudAuthority({
     reference: currentClaim,
     manifest,
   });
+  const deliveryReplay = authority.state === "delivery_authorized";
   const convergenceEvidence = Object.freeze({
     schema: "agentic-integrated-replay-convergence-evidence/v1",
     claimId: verified.authority.claimId,
@@ -560,6 +591,16 @@ export function recoverIntegratedPreservedCloudAuthority({
     ),
     integrationReceiptDigest: verified.authority.integrationReceiptDigest,
     integrationEvidenceDigest: digestValue(verified.authority.integration),
+    ...(deliveryReplay ? {
+      recoveryEvidenceDigest: requiredDigest(
+        currentClaim.recovery?.evidenceDigest,
+        "integrated recovery evidence digest",
+      ),
+      recoveredAt: requiredInstant(
+        currentClaim.recovery?.recoveredAt,
+        "integrated recovery recoveredAt",
+      ),
+    } : {}),
     currentQueuedDerivativeDisposition: "absent-from-verified-inventory",
     overlappingCurrentClaimIds,
     lifecycleAttribution: "not-reconstructed",
@@ -569,6 +610,32 @@ export function recoverIntegratedPreservedCloudAuthority({
     ...verified,
     convergenceEvidence,
     convergenceEvidenceDigest: digestValue(convergenceEvidence),
+  });
+}
+
+export function integratedPreservedRecoveryEvidence({ branch, authority, manifest } = {}) {
+  return Object.freeze({
+    schema: "agentic-integrated-preserved-recovery-evidence/v1",
+    branch: requiredText(branch, "branch"),
+    claimId: requiredDigest(authority?.claimId, "integrated authority claimId"),
+    candidateRevision: requiredSha(
+      authority?.integration?.candidateRevision,
+      "integrated authority candidateRevision",
+    ),
+    reviewRequestId: requiredText(
+      authority?.integration?.reviewRequestId,
+      "integrated authority reviewRequestId",
+    ),
+    integrationReceiptDigest: requiredDigest(
+      authority?.integrationReceiptDigest,
+      "integrated authority integrationReceiptDigest",
+    ),
+    operationReceiptDigest: requiredDigest(
+      authority?.operationReceiptDigest,
+      "integrated authority operationReceiptDigest",
+    ),
+    manifestDigest: requiredDigest(manifest?.manifestDigest, "manifestDigest"),
+    writeSetDigest: requiredDigest(manifest?.writeSetDigest, "writeSetDigest"),
   });
 }
 export function claimLegacyReviewAdmissionCloudAuthority({
@@ -982,9 +1049,14 @@ function requireIntegratedReplayInventory({
   authority,
   integratedClaim,
   queuedSuccessor,
+  queuedSuccessorVariant,
+  queuedSuccessorAssociationFrameDigest,
   manifest,
   headSha,
   focusedEvidenceDigest,
+  branch,
+  deviceId,
+  sessionId,
 }) {
   if (
     statusResult?.schema !== "agentic-cloud-collaboration-result/v1"
@@ -1009,6 +1081,9 @@ function requireIntegratedReplayInventory({
     manifest,
     headSha,
     focusedEvidenceDigest,
+    branch,
+    deviceId,
+    sessionId,
   });
   requireSameIntegratedClaimSnapshot(current, integratedClaim);
 
@@ -1024,6 +1099,8 @@ function requireIntegratedReplayInventory({
       claim: derivatives[0],
       reference: queuedSuccessor,
       integratedClaim: current,
+      variant: queuedSuccessorVariant,
+      associationFrameDigest: queuedSuccessorAssociationFrameDigest,
       manifest,
       headSha,
     });
@@ -1055,6 +1132,9 @@ function requireIntegratedReplayClaim({
   manifest,
   headSha,
   focusedEvidenceDigest,
+  branch,
+  deviceId,
+  sessionId,
 }) {
   const normalizedWriteSet = normalizeWriteSet(claim?.declaredWriteScope);
   const integration = requireIntegratedReplayEvidence(claim?.integration, {
@@ -1088,6 +1168,27 @@ function requireIntegratedReplayClaim({
   requiredDigest(claim?.transitionDigest, "integrated replay transitionDigest");
   requiredDigest(claim?.operationReceiptDigest, "integrated replay operationReceiptDigest");
   requiredInstant(claim?.expiresAt, "integrated replay expiresAt");
+  const deliveryReplay = authority.state === "delivery_authorized";
+  const cloudDeviceId = deliveryReplay
+    ? pseudonymousIdentifier("device", requiredText(deviceId, "deviceId"))
+    : null;
+  const cloudSessionId = deliveryReplay
+    ? pseudonymousIdentifier("session", requiredText(sessionId, "sessionId"))
+    : null;
+  const recoveredDescendant = deliveryReplay
+    && projectRootState(claim?.state) === "delivery_authorized"
+    && transitionCounter > authority.transitionCounter;
+  const exactRecovery = !recoveredDescendant || (
+    claim.recovery
+    && Object.keys(claim.recovery).length === 2
+    && claim.recovery.evidenceDigest === digestValue(integratedPreservedRecoveryEvidence({
+      branch,
+      authority,
+      manifest,
+    }))
+    && requiredInstant(claim.recovery.recoveredAt, "integrated recovery recoveredAt")
+      === claim.recovery.recoveredAt
+  );
   if (
     claimId !== authority.claimId
     || !["delivery_authorized", "parked"].includes(projectRootState(claim?.state))
@@ -1100,6 +1201,9 @@ function requireIntegratedReplayClaim({
     || leaseEpoch !== authority.leaseEpoch
     || transitionCounter < authority.transitionCounter
     || reviewRequestId !== authority.reviewRequestId
+    || (deliveryReplay && claim.deviceId !== cloudDeviceId)
+    || (deliveryReplay && claim.sessionId !== cloudSessionId)
+    || !exactRecovery
   ) {
     throw new Error("Integrated-preserved replay claim drifted from the reviewed authority.");
   }
@@ -1167,6 +1271,36 @@ function requireIntegratedReplayQueuedSuccessor({
   claim,
   reference,
   integratedClaim,
+  variant,
+  associationFrameDigest,
+  manifest,
+  headSha,
+}) {
+  if (variant === "exact-successor") {
+    return requireExactIntegratedReplayQueuedSuccessor({
+      claim,
+      reference,
+      integratedClaim,
+      manifest,
+      headSha,
+    });
+  }
+  if (variant === "claim-only-unprojected") {
+    return requireClaimOnlyIntegratedReplayQueuedDerivative({
+      claim,
+      reference,
+      integratedClaim,
+      manifest,
+      associationFrameDigest,
+    });
+  }
+  throw new Error("Integrated-preserved replay queued successor variant is unsupported.");
+}
+
+function requireExactIntegratedReplayQueuedSuccessor({
+  claim,
+  reference,
+  integratedClaim,
   manifest,
   headSha,
 }) {
@@ -1215,6 +1349,79 @@ function requireIntegratedReplayQueuedSuccessor({
   ) {
     throw new Error("Integrated-preserved replay queued successor drifted from its exact derivative.");
   }
+  return claim;
+}
+
+function requireClaimOnlyIntegratedReplayQueuedDerivative({
+  claim,
+  reference,
+  integratedClaim,
+  manifest,
+  associationFrameDigest,
+}) {
+  const normalizedWriteSet = normalizeWriteSet(claim?.declaredWriteScope);
+  const referenceWriteSet = normalizeWriteSet(reference?.declaredWriteScope);
+  requiredDigest(associationFrameDigest, "queued derivative association frame digest");
+  const snapshotKeys = [
+    "claimId",
+    "entrySchema",
+    "claimIdentitySchema",
+    "state",
+    "writeAuthority",
+    "scopeReserved",
+    "actorId",
+    "deviceId",
+    "sessionId",
+    "repositoryId",
+    "workItemId",
+    "canonicalBaseRevision",
+    "laneRevision",
+    "writeSetDigest",
+    "leaseEpoch",
+    "transitionCounter",
+    "heartbeatCounter",
+    "reviewRequestId",
+    "predecessorClaimId",
+    "expiresAt",
+    "fenceRevision",
+    "transitionDigest",
+    "operationReceiptDigest",
+    "integrationReceiptDigest",
+  ];
+  if (
+    requiredDigest(claim?.claimId, "queued derivative claimId") === integratedClaim.claimId
+    || claim.state !== "waiting-successor"
+    || claim.writeAuthority !== false
+    || claim.scopeReserved !== false
+    || claim.entrySchema !== integratedClaim.entrySchema
+    || claim.claimIdentitySchema !== integratedClaim.claimIdentitySchema
+    || claim.actorId !== integratedClaim.actorId
+    || claim.deviceId !== integratedClaim.deviceId
+    || claim.repositoryId !== integratedClaim.repositoryId
+    || claim.workItemId === integratedClaim.workItemId
+    || claim.predecessorClaimId !== integratedClaim.claimId
+    || claim.canonicalBaseRevision !== integratedClaim.canonicalBaseRevision
+    || claim.laneRevision !== integratedClaim.canonicalBaseRevision
+    || claim.writeSetDigest !== digestValue(normalizedWriteSet)
+    || !writeSetsOverlap(normalizedWriteSet, manifest.declaredWriteSet)
+    || claim.leaseEpoch !== 1
+    || claim.transitionCounter !== 1
+    || claim.heartbeatCounter !== 0
+    || claim.reviewRequestId !== null
+    || claim.integration !== null
+    || claim.integrationReceiptDigest !== null
+    || claim.recovery !== null
+    || claim.retirement
+    || claim.handoff
+    || claim.release
+    || !snapshotKeys.every(key => claim?.[key] === reference?.[key])
+    || JSON.stringify(normalizedWriteSet) !== JSON.stringify(referenceWriteSet)
+  ) {
+    throw new Error(
+      "Integrated-preserved replay claim-only queued derivative drifted from its exact unprojected subject.",
+    );
+  }
+  return claim;
 }
 function requireRecoveredIntegratedReplayClaim({
   claim,
@@ -1223,6 +1430,9 @@ function requireRecoveredIntegratedReplayClaim({
   manifest,
   headSha,
   focusedEvidenceDigest,
+  branch,
+  deviceId,
+  sessionId,
 }) {
   const recovered = requireIntegratedReplayClaim({
     claim,
@@ -1230,6 +1440,9 @@ function requireRecoveredIntegratedReplayClaim({
     manifest,
     headSha,
     focusedEvidenceDigest,
+    branch,
+    deviceId,
+    sessionId,
   });
   const sameSubject = [
     "claimId",
@@ -1263,6 +1476,8 @@ function requireRecoveredIntegratedReplayAuthority({
   manifest,
   headSha,
   focusedEvidenceDigest,
+  deviceId,
+  sessionId,
 }) {
   if (
     recoveredAuthority?.schema !== "agentic-lane-cloud-authority/v1"
@@ -1274,6 +1489,10 @@ function requireRecoveredIntegratedReplayAuthority({
       !== JSON.stringify(normalizeWriteSet(manifest.declaredWriteSet))
     || recoveredAuthority.leaseEpoch !== authority.leaseEpoch
     || recoveredAuthority.reviewRequestId !== authority.reviewRequestId
+    || (authority.state === "delivery_authorized"
+      && recoveredAuthority.deviceId !== deviceId)
+    || (authority.state === "delivery_authorized"
+      && recoveredAuthority.sessionId !== sessionId)
     || recoveredAuthority.state !== "delivery_authorized"
     || recoveredAuthority.focusedEvidenceDigest !== focusedEvidenceDigest
     || recoveredAuthority.operationReceiptDigest !== reference.operationReceiptDigest
@@ -1329,6 +1548,8 @@ function requireIntegratedReplayConvergence({
 function retireIntegratedReplayQueuedSuccessor({
   claim,
   integratedClaim,
+  queuedSuccessorVariant,
+  queuedSuccessorAssociationFrameDigest,
   targetRepository,
   ledgerRepository,
   deviceId,
@@ -1343,6 +1564,20 @@ function retireIntegratedReplayQueuedSuccessor({
     branch: requiredText(branch, "branch"),
     integratedClaimId: requiredDigest(integratedClaim?.claimId, "integrated claimId"),
     queuedSuccessorClaimId: requiredDigest(claim?.claimId, "queued successor claimId"),
+    queuedSuccessorVariant: requiredText(
+      queuedSuccessorVariant,
+      "queued successor variant",
+    ),
+    associationFrameDigest: queuedSuccessorVariant === "claim-only-unprojected"
+      ? requiredDigest(
+        queuedSuccessorAssociationFrameDigest,
+        "queued successor association frame digest",
+      )
+      : null,
+    queuedSuccessorWriteSetDigest: requiredDigest(
+      claim?.writeSetDigest,
+      "queued successor writeSetDigest",
+    ),
     candidateRevision: requiredSha(integratedClaim?.laneRevision, "candidateRevision"),
     integrationReceiptDigest: requiredDigest(
       integratedClaim?.integrationReceiptDigest,

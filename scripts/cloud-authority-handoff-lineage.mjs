@@ -2,6 +2,7 @@ import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collab
 import { scopeExpansionLineageAdmissionMatches } from "./cloud-authority-scope-expansion-lineage-contract.mjs";
 import { scopeExpansionLineageProjectionProofMatches } from "./cloud-authority-scope-expansion-lineage-projection.mjs";
 import { normalizeBoundAuthority, projectRootState } from "./scoped-lane-cloud-reconciliation.mjs";
+import { integratedPreservedRecoveryEvidence } from "./scoped-lane-cloud-authority.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 export const CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA = "agentic-cloud-authority-handoff-controller-result/v1";
 export const CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA = "agentic-cloud-authority-handoff-receipt/v1";
@@ -79,7 +80,14 @@ export function classifyPredecessor({ lane, actor, status, request = null, linea
   }
   return predecessorResult("ready", candidate, candidate, [candidate.claimId]);
 }
-export function classifyIntegratedReplay({ request, lane, actor, status, predecessor }) {
+export function classifyIntegratedReplay({
+  request,
+  lane,
+  actor,
+  status,
+  predecessor,
+  claimAssociations = null,
+}) {
   const empty = integratedReplayResult();
   if (request.transition !== "reclaim" || !completeStatus(status)) return empty;
   const claim = predecessor.candidate;
@@ -95,9 +103,16 @@ export function classifyIntegratedReplay({ request, lane, actor, status, predece
   const derivatives = status.claims.filter(
     candidate => candidate?.predecessorClaimId === lane.authority.claimId,
   );
-  const exactQueued = derivatives.filter(
-    candidate => integratedReplayQueuedClaimMatches({ candidate, claim, lane }),
-  );
+  const queuedMatches = derivatives.map(candidate => ({
+    candidate,
+    ...integratedReplayQueuedClaimMatch({
+      candidate,
+      claim,
+      lane,
+      claimAssociations,
+    }),
+  })).filter(match => match.variant);
+  const exactQueued = queuedMatches.map(match => match.candidate);
   for (const derivative of derivatives) {
     if (!exactQueued.includes(derivative)) drifted.push(derivative?.claimId || "missing-claim-id");
   }
@@ -108,6 +123,12 @@ export function classifyIntegratedReplay({ request, lane, actor, status, predece
     applicable: true,
     claim: drifted.length === 0 && ambiguous.length === 0 ? claim : null,
     queuedClaim: drifted.length === 0 && exactQueued.length === 1 ? exactQueued[0] : null,
+    queuedClaimVariant: drifted.length === 0 && queuedMatches.length === 1
+      ? queuedMatches[0].variant
+      : null,
+    associationFrameDigest: drifted.length === 0 && queuedMatches.length === 1
+      ? queuedMatches[0].associationFrameDigest
+      : null,
     ambiguousClaimIds: ambiguous,
     driftedClaimIds: [...new Set(drifted)].sort(),
   });
@@ -162,23 +183,52 @@ export function validateContinuation({ request, lane, actor, status, predecessor
   const findings = [];
   if (!parseDeviceBranch(lane.branch)) findings.push(finding("invalid-branch-identity"));
   if (!lane.clean) findings.push(finding("dirty-preserved-lane"));
-  if (lane.lease.status !== "review_ready") findings.push(finding("lane-not-review-ready"));
+  const integratedDeliveryReplay = integratedReplay?.applicable === true
+    && (
+      lane.lease.status === "delivery"
+      || lane.authority.state === "delivery_authorized"
+    );
+  if (integratedDeliveryReplay) {
+    if (lane.lease.status !== "delivery") findings.push(finding("lane-not-delivery"));
+    if (
+      request.successorDeviceId !== lane.lease.device
+      || request.successorSessionId !== lane.lease.sessionId
+    ) {
+      findings.push(finding("integrated-delivery-recipient-drift"));
+    }
+  } else if (lane.lease.status !== "review_ready") {
+    findings.push(finding("lane-not-review-ready"));
+  }
   if (lane.pullRequest.state !== "OPEN" || lane.pullRequest.isDraft) {
     findings.push(finding("review-projection-not-ready"));
   }
+  if (integratedDeliveryReplay && lane.pullRequest.autoMergeRequest?.mergeMethod !== "SQUASH") {
+    findings.push(finding("integrated-delivery-auto-merge-not-armed"));
+  }
   if (lane.pullRequest.baseRefName !== "main") findings.push(finding("pull-request-base-drift"));
-  const expectedHead = requiredSha(lane.lease.reviewHeadSha, "lease reviewHeadSha");
+  const expectedHead = requiredSha(
+    integratedDeliveryReplay ? lane.lease.deliveryHeadSha : lane.lease.reviewHeadSha,
+    integratedDeliveryReplay ? "lease deliveryHeadSha" : "lease reviewHeadSha",
+  );
   const exactHead = lane.headSha === expectedHead
+    && (!integratedDeliveryReplay || lane.localHeadSha === expectedHead)
     && lane.remoteHeadSha === expectedHead
     && lane.pullRequest.headRefOid === expectedHead
     && lane.authority.laneRevision === expectedHead;
-  const refreshedHead = lane.headSha === expectedHead
+  const refreshedHead = !integratedDeliveryReplay
+    && lane.headSha === expectedHead
     && lane.authority.laneRevision === expectedHead
     && lane.protectedMainRefresh
     && lane.refreshedHeadSha === lane.remoteHeadSha
     && lane.refreshedHeadSha === lane.pullRequest.headRefOid;
   if (!exactHead && !refreshedHead) findings.push(finding("exact-head-drift"));
-  validateOwnerAndAuthority({ request, lane, actor, findings });
+  validateOwnerAndAuthority({
+    request,
+    lane,
+    actor,
+    integratedReplay,
+    findings,
+  });
   if (!completeStatus(status)) {
     findings.push(finding("cloud-status-unavailable"));
     return findings.sort(compareFindings);
@@ -229,22 +279,119 @@ export function assertResumableSuccessorReplay({ claimResult, resumableSuccessor
 export function assertIntegratedReplayRecovery({ recovered, integratedReplay, lane }) {
   const authority = recovered?.authority;
   const reference = integratedReplay.claim;
+  const deliveryReplay = lane.lease.status === "delivery"
+    || lane.authority.state === "delivery_authorized";
+  if (!deliveryReplay) {
+    if (
+      !authority
+      || authority.schema !== "agentic-lane-cloud-authority/v1"
+      || authority.claimId !== lane.authority.claimId
+      || authority.claimId !== reference.claimId
+      || authority.canonicalBaseSha !== lane.baseSha
+      || authority.laneRevision !== lane.headSha
+      || authority.writeSetDigest !== lane.manifest.writeSetDigest
+      || !sameWriteSet(authority.cloudDeclaredWriteScope, lane.manifest.declaredWriteSet)
+      || authority.leaseEpoch !== lane.authority.leaseEpoch
+      || authority.reviewRequestId !== lane.authority.reviewRequestId
+      || authority.state !== "delivery_authorized"
+      || !DIGEST_PATTERN.test(String(authority.operationReceiptDigest || ""))
+      || authority.integrationReceiptDigest !== reference.integrationReceiptDigest
+      || digestValue(authority.integration) !== digestValue(reference.integration)
+      || !DIGEST_PATTERN.test(String(recovered.convergenceEvidenceDigest || ""))
+    ) {
+      throw new Error(
+        "Integrated-preserved replay did not preserve the exact reviewed integration authority.",
+      );
+    }
+    return;
+  }
+  const recoveryEvidenceDigest = digestValue(integratedPreservedRecoveryEvidence({
+    branch: lane.branch,
+    authority: lane.authority,
+    manifest: lane.manifest,
+  }));
+  const recoveredAt = recovered?.convergenceEvidence?.recoveredAt;
+  const canonicalRecoveredAt = Number.isFinite(Date.parse(recoveredAt))
+    && recoveredAt === new Date(Date.parse(recoveredAt)).toISOString();
+  const expectedConvergenceEvidence = authority ? Object.freeze({
+    schema: "agentic-integrated-replay-convergence-evidence/v1",
+    claimId: authority.claimId,
+    claimDigest: authority.claimDigest,
+    fenceRevision: authority.claimDigest,
+    claimLedgerRevision: authority.claimLedgerRevision,
+    transitionDigest: authority.claimLedgerRevision,
+    transitionCounter: authority.transitionCounter,
+    state: authority.state,
+    expiresAt: authority.expiresAt,
+    branch: lane.branch,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    candidateRevision: authority.laneRevision,
+    manifestDigest: lane.manifest.manifestDigest,
+    writeSetDigest: authority.writeSetDigest,
+    leaseEpoch: authority.leaseEpoch,
+    reviewRequestId: authority.reviewRequestId,
+    focusedEvidenceDigest: authority.focusedEvidenceDigest,
+    currentOperationReceiptDigest: authority.operationReceiptDigest,
+    integrationReceiptDigest: authority.integrationReceiptDigest,
+    integrationEvidenceDigest: digestValue(authority.integration),
+    recoveryEvidenceDigest,
+    recoveredAt,
+    currentQueuedDerivativeDisposition: "absent-from-verified-inventory",
+    overlappingCurrentClaimIds: Object.freeze([]),
+    lifecycleAttribution: "not-reconstructed",
+    observation: "current-state-only",
+  }) : null;
+  const exactCurrentReference = authority && reference && (
+    authority.claimDigest === reference.fenceRevision
+    && authority.claimLedgerRevision === reference.transitionDigest
+    && authority.transitionCounter === reference.transitionCounter
+    && authority.expiresAt === reference.expiresAt
+    && authority.operationReceiptDigest === reference.operationReceiptDigest
+  );
+  const strictRecoveredDescendant = authority && reference
+    && projectRootState(reference.state) === "parked"
+    && DIGEST_PATTERN.test(String(authority.claimDigest || ""))
+    && authority.claimDigest !== reference.fenceRevision
+    && DIGEST_PATTERN.test(String(authority.claimLedgerRevision || ""))
+    && authority.claimLedgerRevision !== reference.transitionDigest
+    && Number.isSafeInteger(authority.transitionCounter)
+    && authority.transitionCounter > reference.transitionCounter
+    && DIGEST_PATTERN.test(String(authority.operationReceiptDigest || ""))
+    && authority.operationReceiptDigest !== reference.operationReceiptDigest
+    && authority.operationReceiptDigest !== authority.integrationReceiptDigest
+    && Number.isFinite(Date.parse(authority.expiresAt))
+    && Date.parse(authority.expiresAt) > Date.parse(reference.expiresAt)
+    && Date.parse(authority.expiresAt) > Date.now();
+  const allowedCurrentProjection = projectRootState(reference?.state) === "delivery_authorized"
+    ? exactCurrentReference
+    : strictRecoveredDescendant;
   if (
     !authority
     || authority.schema !== "agentic-lane-cloud-authority/v1"
     || authority.claimId !== lane.authority.claimId
     || authority.claimId !== reference.claimId
+    || authority.entrySchema !== lane.authority.entrySchema
+    || authority.claimIdentitySchema !== lane.authority.claimIdentitySchema
     || authority.canonicalBaseSha !== lane.baseSha
     || authority.laneRevision !== lane.headSha
     || authority.writeSetDigest !== lane.manifest.writeSetDigest
     || !sameWriteSet(authority.cloudDeclaredWriteScope, lane.manifest.declaredWriteSet)
     || authority.leaseEpoch !== lane.authority.leaseEpoch
     || authority.reviewRequestId !== lane.authority.reviewRequestId
+    || authority.focusedEvidenceDigest !== lane.authority.focusedEvidenceDigest
+    || authority.manifestDigest !== lane.manifest.manifestDigest
+    || authority.deviceId !== lane.lease.device
+    || authority.sessionId !== lane.lease.sessionId
+    || reference.deviceId !== lane.cloudSubject?.deviceId
+    || reference.sessionId !== lane.cloudSubject?.sessionId
     || authority.state !== "delivery_authorized"
-    || !DIGEST_PATTERN.test(String(authority.operationReceiptDigest || ""))
+    || !allowedCurrentProjection
     || authority.integrationReceiptDigest !== reference.integrationReceiptDigest
     || digestValue(authority.integration) !== digestValue(reference.integration)
-    || !DIGEST_PATTERN.test(String(recovered.convergenceEvidenceDigest || ""))
+    || !canonicalRecoveredAt
+    || recovered.convergenceEvidence?.recoveryEvidenceDigest !== recoveryEvidenceDigest
+    || digestValue(recovered.convergenceEvidence) !== digestValue(expectedConvergenceEvidence)
+    || recovered.convergenceEvidenceDigest !== digestValue(expectedConvergenceEvidence)
   ) {
     throw new Error(
       "Integrated-preserved replay did not preserve the exact reviewed integration authority.",
@@ -387,13 +534,39 @@ function integratedReplayClaimMatches({ claim, lane, predecessor }) {
         key => DIGEST_PATTERN.test(String(integration[key] || "")),
       )
       && Number.isFinite(Date.parse(integration.integratedAt))
+      && (!integratedDeliveryProjection(lane)
+        || exactIntegratedDeliveryAuthorityMatchesClaim({ claim, lane })
+        || liveIntegratedDeliveryDescendantMatchesClaim({ claim, lane }))
     );
   } catch {
     return false;
   }
 }
 
-function integratedReplayQueuedClaimMatches({ candidate, claim, lane }) {
+function integratedReplayQueuedClaimMatch({ candidate, claim, lane, claimAssociations }) {
+  if (integratedReplayExactSuccessorMatches({ candidate, claim, lane })) {
+    return Object.freeze({
+      variant: "exact-successor",
+      associationFrameDigest: null,
+    });
+  }
+  const associationFrameDigest = claimOnlyAssociationFrameDigest({
+    claimId: candidate?.claimId,
+    claimAssociations,
+  });
+  if (
+    associationFrameDigest
+    && integratedReplayClaimOnlyDerivativeMatches({ candidate, claim, lane })
+  ) {
+    return Object.freeze({
+      variant: "claim-only-unprojected",
+      associationFrameDigest,
+    });
+  }
+  return Object.freeze({ variant: null, associationFrameDigest: null });
+}
+
+function integratedReplayExactSuccessorMatches({ candidate, claim, lane }) {
   try {
     return Boolean(
       DIGEST_PATTERN.test(String(candidate?.claimId || ""))
@@ -419,16 +592,122 @@ function integratedReplayQueuedClaimMatches({ candidate, claim, lane }) {
   }
 }
 
-function validateOwnerAndAuthority({ request, lane, actor, findings }) {
+function integratedReplayClaimOnlyDerivativeMatches({ candidate, claim, lane }) {
+  try {
+    const declaredWriteScope = normalizeWriteSet(candidate?.declaredWriteScope);
+    return Boolean(
+      lane.lease.status === "delivery"
+      && lane.authority.state === "delivery_authorized"
+      && DIGEST_PATTERN.test(String(candidate?.claimId || ""))
+      && candidate.claimId !== claim.claimId
+      && candidate.state === "waiting-successor"
+      && candidate.writeAuthority === false
+      && candidate.scopeReserved === false
+      && candidate.entrySchema === claim.entrySchema
+      && candidate.claimIdentitySchema === claim.claimIdentitySchema
+      && candidate.actorId === claim.actorId
+      && candidate.deviceId === claim.deviceId
+      && candidate.repositoryId === claim.repositoryId
+      && candidate.workItemId !== claim.workItemId
+      && WORK_ITEM_PATTERN.test(String(candidate.workItemId || ""))
+      && candidate.predecessorClaimId === claim.claimId
+      && candidate.canonicalBaseRevision === lane.baseSha
+      && candidate.laneRevision === lane.baseSha
+      && candidate.writeSetDigest === digestValue(declaredWriteScope)
+      && writeSetsOverlap(declaredWriteScope, lane.manifest.declaredWriteSet)
+      && candidate.leaseEpoch === 1
+      && candidate.transitionCounter === 1
+      && candidate.heartbeatCounter === 0
+      && candidate.reviewRequestId === null
+      && candidate.integration === null
+      && candidate.integrationReceiptDigest === null
+      && candidate.recovery === null
+      && !candidate.retirement
+      && !candidate.handoff
+      && !candidate.release
+      && DIGEST_PATTERN.test(String(candidate.fenceRevision || ""))
+      && DIGEST_PATTERN.test(String(candidate.transitionDigest || ""))
+      && DIGEST_PATTERN.test(String(candidate.operationReceiptDigest || ""))
+      && Number.isFinite(Date.parse(candidate.expiresAt))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function claimOnlyAssociationFrameDigest({ claimId, claimAssociations }) {
+  try {
+    if (
+      claimAssociations?.schema !== "agentic-cloud-authority-handoff-claim-associations/v1"
+      || !Array.isArray(claimAssociations.claims)
+      || claimAssociations.claims.length !== 1
+      || !DIGEST_PATTERN.test(String(claimAssociations.writerRegistryDigest || ""))
+      || !DIGEST_PATTERN.test(String(claimAssociations.providerInventoryDigest || ""))
+      || !Number.isSafeInteger(claimAssociations.providerPullRequestCount)
+      || claimAssociations.providerPullRequestCount < 0
+      || !Number.isSafeInteger(claimAssociations.providerPageCount)
+      || claimAssociations.providerPageCount < 1
+    ) return null;
+    const core = {
+      schema: claimAssociations.schema,
+      writerRegistryDigest: claimAssociations.writerRegistryDigest,
+      providerInventoryDigest: claimAssociations.providerInventoryDigest,
+      providerPullRequestCount: claimAssociations.providerPullRequestCount,
+      providerPageCount: claimAssociations.providerPageCount,
+      claims: claimAssociations.claims,
+    };
+    if (
+      !DIGEST_PATTERN.test(String(claimAssociations.frameDigest || ""))
+      || claimAssociations.frameDigest !== digestValue(core)
+    ) return null;
+    const matches = claimAssociations.claims.filter(item => item?.claimId === claimId);
+    if (matches.length !== 1) return null;
+    const match = matches[0];
+    if (
+      !Array.isArray(match.writerLeaseMatchDigests)
+      || !Array.isArray(match.pullRequestMarkerMatchDigests)
+      || match.writerLeaseMatchDigests.length > 0
+      || match.pullRequestMarkerMatchDigests.length > 0
+    ) return null;
+    return claimAssociations.frameDigest;
+  } catch {
+    return null;
+  }
+}
+
+function validateOwnerAndAuthority({ request, lane, actor, integratedReplay, findings }) {
   if (!lane.remoteLease) findings.push(finding("missing-authoritative-owner-marker"));
-  if (lane.remoteLease && (
-    lane.remoteLease.branch !== lane.lease.branch
-    || lane.remoteLease.baseSha !== lane.lease.baseSha
-    || lane.remoteLease.scope !== lane.lease.scope
-    || lane.remoteLease.reviewHeadSha !== lane.lease.reviewHeadSha
-    || lane.remoteLease.cloudAuthority?.claimId !== lane.authority.claimId
-  )) findings.push(finding("owner-marker-drift"));
-  if (lane.authority.state !== "review_ready") findings.push(finding("legacy-authority-not-review-ready"));
+  const integratedDeliveryReplay = integratedReplay?.applicable === true
+    && (
+      lane.lease.status === "delivery"
+      || lane.authority.state === "delivery_authorized"
+    );
+  const markerDrift = integratedDeliveryReplay
+    ? lane.remoteLease && (
+      lane.remoteLease.status !== "delivery"
+      || lane.remoteLease.branch !== lane.lease.branch
+      || lane.remoteLease.baseSha !== lane.lease.baseSha
+      || lane.remoteLease.scope !== lane.lease.scope
+      || lane.remoteLease.deliveryHeadSha !== lane.lease.deliveryHeadSha
+      || digestValue(lane.remoteLease.cloudAuthority)
+        !== digestValue(lane.lease.cloudAuthority)
+      || digestValue(lane.lease.cloudAuthority) !== digestValue(lane.authority)
+    )
+    : lane.remoteLease && (
+      lane.remoteLease.branch !== lane.lease.branch
+      || lane.remoteLease.baseSha !== lane.lease.baseSha
+      || lane.remoteLease.scope !== lane.lease.scope
+      || lane.remoteLease.reviewHeadSha !== lane.lease.reviewHeadSha
+      || lane.remoteLease.cloudAuthority?.claimId !== lane.authority.claimId
+    );
+  if (markerDrift) findings.push(finding("owner-marker-drift"));
+  if (integratedDeliveryReplay) {
+    if (lane.authority.state !== "delivery_authorized") {
+      findings.push(finding("integrated-authority-not-delivery-authorized"));
+    }
+  } else if (lane.authority.state !== "review_ready") {
+    findings.push(finding("legacy-authority-not-review-ready"));
+  }
   if (Date.parse(lane.authority.expiresAt) > Date.now()) findings.push(finding("legacy-authority-still-live"));
   if (lane.pullRequest.authorLogin !== actor.login) findings.push(finding("authenticated-owner-mismatch"));
   if (
@@ -436,6 +715,142 @@ function validateOwnerAndAuthority({ request, lane, actor, findings }) {
     && request.successorSessionId === lane.lease.sessionId
     && request.successorDeviceId === lane.lease.device
   ) findings.push(finding("handoff-recipient-not-distinct"));
+}
+
+function integratedDeliveryProjection(lane) {
+  return lane?.lease?.status === "delivery"
+    || lane?.authority?.state === "delivery_authorized";
+}
+
+function exactIntegratedDeliveryAuthorityMatchesClaim({ claim, lane }) {
+  const authority = lane.authority;
+  const admission = lane.manifest;
+  const integration = authority?.integration;
+  try {
+    const cloudDeviceId = requiredText(
+      lane.cloudSubject?.deviceId,
+      "cloud subject deviceId",
+    );
+    const cloudSessionId = requiredText(
+      lane.cloudSubject?.sessionId,
+      "cloud subject sessionId",
+    );
+    return Boolean(
+      lane.lease.status === "delivery"
+      && authority.state === "delivery_authorized"
+      && lane.lease.deliveryHeadSha === lane.headSha
+      && lane.localHeadSha === lane.headSha
+      && digestValue(lane.lease.cloudAuthority) === digestValue(authority)
+      && authority.schema === "agentic-lane-cloud-authority/v1"
+      && authority.claimId === claim.claimId
+      && authority.entrySchema === claim.entrySchema
+      && authority.claimIdentitySchema === claim.claimIdentitySchema
+      && authority.canonicalBaseSha === claim.canonicalBaseRevision
+      && authority.laneRevision === claim.laneRevision
+      && authority.writeSetDigest === admission.writeSetDigest
+      && authority.writeSetDigest === claim.writeSetDigest
+      && sameWriteSet(authority.cloudDeclaredWriteScope, admission.declaredWriteSet)
+      && sameWriteSet(claim.declaredWriteScope, admission.declaredWriteSet)
+      && authority.manifestDigest === admission.manifestDigest
+      && authority.deviceId === lane.lease.device
+      && authority.sessionId === lane.lease.sessionId
+      && claim.deviceId === cloudDeviceId
+      && claim.sessionId === cloudSessionId
+      && authority.leaseEpoch === claim.leaseEpoch
+      && authority.reviewRequestId === claim.reviewRequestId
+      && authority.focusedEvidenceDigest === claim.integration?.focusedEvidenceDigest
+      && authority.claimDigest === claim.fenceRevision
+      && authority.claimLedgerRevision === claim.transitionDigest
+      && authority.transitionCounter === claim.transitionCounter
+      && authority.expiresAt === claim.expiresAt
+      && authority.operationReceiptDigest === authority.integrationReceiptDigest
+      && authority.operationReceiptDigest === claim.operationReceiptDigest
+      && authority.integrationReceiptDigest === claim.integrationReceiptDigest
+      && digestValue(integration) === digestValue(claim.integration)
+      && projectRootState(claim.state) === "parked"
+      && claim.writeAuthority === false
+      && claim.scopeReserved === true
+      && integration?.candidateRevision === lane.headSha
+      && integration.reviewRequestId === authority.reviewRequestId
+      && integration.focusedEvidenceDigest === authority.focusedEvidenceDigest
+    );
+  } catch {
+    return false;
+  }
+}
+
+function liveIntegratedDeliveryDescendantMatchesClaim({ claim, lane }) {
+  const authority = lane.authority;
+  const admission = lane.manifest;
+  const integration = authority?.integration;
+  try {
+    const cloudDeviceId = requiredText(
+      lane.cloudSubject?.deviceId,
+      "cloud subject deviceId",
+    );
+    const cloudSessionId = requiredText(
+      lane.cloudSubject?.sessionId,
+      "cloud subject sessionId",
+    );
+    return Boolean(
+      lane.lease.status === "delivery"
+      && authority.state === "delivery_authorized"
+      && lane.lease.deliveryHeadSha === lane.headSha
+      && lane.localHeadSha === lane.headSha
+      && digestValue(lane.lease.cloudAuthority) === digestValue(authority)
+      && authority.schema === "agentic-lane-cloud-authority/v1"
+      && authority.claimId === claim.claimId
+      && authority.entrySchema === claim.entrySchema
+      && authority.claimIdentitySchema === claim.claimIdentitySchema
+      && authority.canonicalBaseSha === claim.canonicalBaseRevision
+      && authority.laneRevision === claim.laneRevision
+      && authority.writeSetDigest === admission.writeSetDigest
+      && authority.writeSetDigest === claim.writeSetDigest
+      && sameWriteSet(authority.cloudDeclaredWriteScope, admission.declaredWriteSet)
+      && sameWriteSet(claim.declaredWriteScope, admission.declaredWriteSet)
+      && authority.manifestDigest === admission.manifestDigest
+      && authority.deviceId === lane.lease.device
+      && authority.sessionId === lane.lease.sessionId
+      && claim.deviceId === cloudDeviceId
+      && claim.sessionId === cloudSessionId
+      && authority.leaseEpoch === claim.leaseEpoch
+      && authority.reviewRequestId === claim.reviewRequestId
+      && authority.focusedEvidenceDigest === claim.integration?.focusedEvidenceDigest
+      && authority.operationReceiptDigest === authority.integrationReceiptDigest
+      && authority.integrationReceiptDigest === claim.integrationReceiptDigest
+      && digestValue(integration) === digestValue(claim.integration)
+      && integration?.candidateRevision === lane.headSha
+      && integration.reviewRequestId === authority.reviewRequestId
+      && integration.focusedEvidenceDigest === authority.focusedEvidenceDigest
+      && projectRootState(claim.state) === "delivery_authorized"
+      && claim.writeAuthority === false
+      && claim.scopeReserved === true
+      && Number.isSafeInteger(claim.transitionCounter)
+      && claim.transitionCounter > authority.transitionCounter
+      && DIGEST_PATTERN.test(String(claim.fenceRevision || ""))
+      && claim.fenceRevision !== authority.claimDigest
+      && DIGEST_PATTERN.test(String(claim.transitionDigest || ""))
+      && claim.transitionDigest !== authority.claimLedgerRevision
+      && DIGEST_PATTERN.test(String(claim.operationReceiptDigest || ""))
+      && claim.operationReceiptDigest !== authority.operationReceiptDigest
+      && claim.operationReceiptDigest !== claim.integrationReceiptDigest
+      && Number.isFinite(Date.parse(claim.expiresAt))
+      && Date.parse(claim.expiresAt) > Date.parse(authority.expiresAt)
+      && Date.parse(claim.expiresAt) > Date.now()
+      && claim.recovery
+      && Object.keys(claim.recovery).length === 2
+      && claim.recovery.evidenceDigest === digestValue(integratedPreservedRecoveryEvidence({
+        branch: lane.branch,
+        authority,
+        manifest: admission,
+      }))
+      && Number.isFinite(Date.parse(claim.recovery.recoveredAt))
+      && claim.recovery.recoveredAt
+        === new Date(Date.parse(claim.recovery.recoveredAt)).toISOString()
+    );
+  } catch {
+    return false;
+  }
 }
 function validatePredecessor({ lane, predecessor, integratedReplay, findings }) {
   if (predecessor.status === "missing") {
@@ -536,6 +951,8 @@ function integratedReplayResult(values = {}) {
     applicable: values.applicable || false,
     claim: values.claim || null,
     queuedClaim: values.queuedClaim || null,
+    queuedClaimVariant: values.queuedClaimVariant || null,
+    associationFrameDigest: values.associationFrameDigest || null,
     ambiguousClaimIds: Object.freeze(values.ambiguousClaimIds || []),
     driftedClaimIds: Object.freeze(values.driftedClaimIds || []),
   });

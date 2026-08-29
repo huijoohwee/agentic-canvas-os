@@ -97,6 +97,68 @@ The preserved lane must remain exact and source-owned:
 If any condition drifts or becomes ambiguous, the controller returns
 `blocked` and performs no mutation.
 
+### Exact Integrated-Delivery Replay
+
+`reclaim` also has one narrow replay branch for an already integrated lane whose
+local and pull-request projections are still in `delivery`. This branch is
+selected only after the live cloud inventory proves the same claim carries the
+immutable integration receipt. It requires an expired local
+`delivery_authorized` authority, exact `deliveryHeadSha` parity across local
+HEAD, remote branch, pull-request head, and the admitted authority, an open
+non-draft pull request with protected SQUASH auto-merge still armed, the exact
+remote owner marker, and the authenticated original owner. The requested
+successor device and session must equal the historical local lease, so this
+replay cannot transfer the integrated claim to another same-actor device or
+session. The ordinary
+`review_ready` validation remains unchanged for every non-delivery replay.
+The cloud subject may be either the exact expired integrated transition joined
+field-for-field to that historical local projection, or the same claim's live
+`delivery_authorized` recovery descendant. The descendant must have a strictly
+higher transition counter, future expiry, new fence, transition, and current
+operation receipt, plus operation-derived recovery evidence; its claim,
+actor/device/session, base, candidate, scope, epoch, review identity,
+integration receipt, and complete integration evidence remain byte-exact. No
+other live-ahead shape is accepted, and the local/marker delivery projection
+remains unchanged as historical input.
+
+The recovery evidence digest is recomputed from the historical delivery
+authority's claim, candidate, review, integration receipt, current operation
+receipt, branch, manifest, and write-set identities. The returned verified
+authority must then reproduce the permitted parked-to-live descendant (or the
+already-live transition exactly on rerun), and its final convergence object and
+digest must reproduce the current fence, transition, counter, expiry,
+operation receipt, immutable integration evidence, recovery digest, and
+canonical recovery time.
+
+The integrated replay may dispose of one direct queued derivative only in one
+of two closed shapes:
+
+- the existing exact same-work-item successor; or
+- one claim-only, unprojected derivative at transition 1 / heartbeat 0 whose
+  non-writing waiting state names the integrated claim as predecessor, uses the
+  same actor, device, and repository, stays at the integrated claim's canonical
+  base, overlaps the admitted path set, and has no writer-lease or pull-request
+  marker association.
+
+The second shape is not a general successor relaxation. It must use a distinct
+work item, remain byte- and provider-unprojected, and pass two identical full
+registry/provider association reads before any cloud effect. Provider inventory
+uses the complete paginated pull-request connection rather than a fixed result
+limit; missing page metadata, repeated cursors or pull requests, or a bounded
+page-ceiling breach fails closed. The final association read is repeated while
+holding the shared writer-registry serialization fence through the exact cloud
+retirement/recovery CAS. A competing repository-owned admission must therefore
+either appear in that sealed registry/provider frame or advance the queued
+claim and lose the exact fence/counter CAS. Multiple direct
+derivatives, any local or provider association, review/integration/recovery
+evidence, heartbeat or transition movement, identity drift, disjoint scope, or
+association drift blocks before mutation. The controller retires the exact
+queued claim as `superseded`, then recovers or renews only the original
+integrated claim. Its successful public receipt is derived from that final
+same-claim authority, not from the ephemeral queued derivative, so a terminal
+rerun is digest-identical after the derivative disappears. It does not edit
+source, refs, local leases, pull-request content, merge state, or task bindings.
+
 ## Transition Model
 
 ### Retain

@@ -69,6 +69,8 @@
     "workspace:legacy-clean-refresh": "node ./scripts/legacy-clean-committed-lane-refresh.mjs",
     "workspace:legacy-clean-bootstrap": "node ./scripts/legacy-clean-committed-lane-bootstrap.mjs",
     "workspace:legacy-clean-bootstrap:check": "node --test __tests__/legacy-clean-committed-lane-bootstrap.test.mjs",
+    "workspace:cloud:bootstrap": "node ./scripts/cloud-workspace.mjs bootstrap --json",
+    "workspace:cloud:check": "node --test __tests__/cloud-workspace.test.mjs",
     "session:start:classify": "node ./scripts/session-start-policy.mjs",
     "collab:test": "node --test __tests__/collab-room.test.mjs",
     "device:complete": "node ./scripts/device-branch.mjs complete",

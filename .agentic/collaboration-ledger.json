@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6148,
-  "headDigest": "4e12b3e01f16186a13e775423d60a6c4b3f56dfb12ee9c82d935baade0212302",
+  "sequence": 6149,
+  "headDigest": "91e7a7ab5fd020f6f9d9abea377b2b156d76daff89dcec5d51f0714dbd513358",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -312536,6 +312536,47 @@
       },
       "claimDigest": "61e20addbb89fac0a510a947e722d20cfa4fdb8b78b4809af9988db664327c85",
       "digest": "4e12b3e01f16186a13e775423d60a6c4b3f56dfb12ee9c82d935baade0212302"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6149,
+      "parentDigest": "4e12b3e01f16186a13e775423d60a6c4b3f56dfb12ee9c82d935baade0212302",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "c357621d52f5dba5759514814a61752014b2fa134b089c843ed987d20988950f",
+      "idempotencyKey": "ef2022f3cab06d500ab153eac6c4ad6605a9cb79f88dcd8a4a5d2565042b2f0c",
+      "requestDigest": "6eff438589dbe11570cdd2282a610d6a2f64e4470388c573df53fbc8718ea97d",
+      "evaluationTime": "2026-08-29T21:11:38.000Z",
+      "claimCore": {
+        "claimId": "c357621d52f5dba5759514814a61752014b2fa134b089c843ed987d20988950f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:a38b46ff7514c0738bc45ca185957aff8eb7ddfba2060771e949e089ae444726",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:9395e50dbcd725ff5098dc3bd0c095474cf94ed24885c0d5112315046da9bf9d",
+        "canonicalBaseRevision": "70368e44af372380127987cf6015d8e933c46abf",
+        "declaredWriteScope": [
+          "path:docs/collaboration-runtime-contract.md",
+          "path:scripts/__tests__/collaboration-contract.test.mjs",
+          "path:scripts/collaboration-contract.mjs",
+          "semantic:generated-worker-types-ci-planner"
+        ],
+        "writeSetDigest": "83e21da8e4f565193eb02e263f25a68a9a40a9cf903d385e76c7290ab791e999",
+        "laneRevision": "70368e44af372380127987cf6015d8e933c46abf",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T22:11:38.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "59377775f6b73510aab6b3f784052950a29e76dae1fa46fa0e5919916a2f663b",
+      "digest": "91e7a7ab5fd020f6f9d9abea377b2b156d76daff89dcec5d51f0714dbd513358"
     }
   ]
 }

@@ -8,7 +8,7 @@ schema: "agentic-integrated-preserved-draft-recovery/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
 runtime_owner: "../scripts/integrated-preserved-draft-recovery.mjs"
-runtime_proof: "../__tests__/integrated-preserved-draft-recovery.test.mjs"
+runtime_proof: "../__tests__/integrated-preserved-draft-recovery.test.mjs; ../__tests__/integrated-preserved-draft-lineage-recovery.test.mjs"
 ---
 
 # Integrated-preserved draft recovery
@@ -36,8 +36,15 @@ node scripts/integrated-preserved-draft-recovery.mjs plan \
 The plan seals the local lease, task-authority binding, original base identity, reviewed head,
 complete matching remote owner marker, pull-request identity, integrated claim, and integration
 receipts. The capability must resolve outside both the target worktree and its Git common directory.
-The plan deliberately
-excludes only the pull request's draft bit and volatile global ledger chronology. This makes an
+An epoch-one claim with a predecessor additionally requires a separately branded, read-only
+scope-expansion lineage proof. That proof validates the append-only ledger, source retirement,
+target genesis, immediate reviewed-to-integrated edge, exact local and remote projections, stale
+writer lease, and terminal non-writer claim. It cannot satisfy lineage-migration admission and
+grants no cloud mutation.
+
+The plan deliberately excludes only the pull request's draft bit and volatile global ledger
+chronology. Stable lineage identity remains sealed while unrelated append-only ledger advancement
+is revalidated on every capture. This makes an
 exact cold replay possible after provider response loss without accepting unrelated drift.
 
 ## Execute

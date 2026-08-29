@@ -1,11 +1,10 @@
 import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
 import { scopeExpansionLineageAdmissionMatches } from "./cloud-authority-scope-expansion-lineage-contract.mjs";
+import { scopeExpansionLineageProjectionProofMatches } from "./cloud-authority-scope-expansion-lineage-projection.mjs";
 import { normalizeBoundAuthority, projectRootState } from "./scoped-lane-cloud-reconciliation.mjs";
 import { parseDeviceBranch } from "./writer-lease-lib.mjs";
-
 export const CLOUD_AUTHORITY_HANDOFF_CONTROLLER_RESULT_SCHEMA = "agentic-cloud-authority-handoff-controller-result/v1";
 export const CLOUD_AUTHORITY_HANDOFF_RECEIPT_SCHEMA = "agentic-cloud-authority-handoff-receipt/v1";
-
 const RESULT_SCHEMA = "agentic-cloud-collaboration-result/v1";
 const ENTRY_SCHEMA = "agentic-cloud-collaboration-entry/v2";
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
@@ -13,7 +12,6 @@ const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 const WORK_ITEM_PATTERN = /^work-item:[0-9a-f]{64}$/u;
 const REPOSITORY_ID_PATTERN = /^github-repository:[A-Za-z0-9_-]+$/u;
 const TRANSITIONS = new Set(["retain", "reclaim", "handoff"]);
-
 export function normalizeContinuationRequest(input = {}) {
   const transition = requiredText(input.transition || input.action || "reclaim", "transition");
   if (!TRANSITIONS.has(transition)) throw new Error(`Unsupported transition ${transition}.`);
@@ -63,7 +61,7 @@ export function buildCloudAuthoritySuccessorClaimRequest({ request, lane, predec
   });
 }
 
-export function classifyPredecessor({ lane, actor, status, request = null, lineageAdmission = null }) {
+export function classifyPredecessor({ lane, actor, status, request = null, lineageAdmission = null, lineageProjectionProof = null }) {
   const unavailable = predecessorResult("unavailable");
   if (!completeStatus(status)) return unavailable;
   const matches = status.claims.filter(claim => claim?.claimId === lane.authority.claimId);
@@ -75,13 +73,12 @@ export function classifyPredecessor({ lane, actor, status, request = null, linea
   const candidate = matches[0];
   if (!predecessorImmutableIdentityMatches({
     claim: candidate, lane, actor, status, request, repositoryId: status.repositoryId,
-    lineageAdmission,
+    lineageAdmission, lineageProjectionProof,
   })) {
     return predecessorResult("mismatched", null, candidate);
   }
   return predecessorResult("ready", candidate, candidate, [candidate.claimId]);
 }
-
 export function classifyIntegratedReplay({ request, lane, actor, status, predecessor }) {
   const empty = integratedReplayResult();
   if (request.transition !== "reclaim" || !completeStatus(status)) return empty;
@@ -158,12 +155,10 @@ export function classifyResumableSuccessor({ request, lane, actor, status, prede
       ambiguousClaimIds: Object.freeze(matches.map(claim => claim.claimId)),
     });
 }
-
 export function emptyResumableSuccessor() {
   return Object.freeze({ claim: null, ambiguousClaimIds: Object.freeze([]) });
 }
-
-export function validateContinuation({ request, lane, actor, status, predecessor, successor, integratedReplay }) {
+export function validateContinuation({ request, lane, actor, status, predecessor, successor, integratedReplay, lineageProjectionProof = null }) {
   const findings = [];
   if (!parseDeviceBranch(lane.branch)) findings.push(finding("invalid-branch-identity"));
   if (!lane.clean) findings.push(finding("dirty-preserved-lane"));
@@ -205,7 +200,13 @@ export function validateContinuation({ request, lane, actor, status, predecessor
     }));
   }
   validateCompetingClaims({ lane, status, successor, integratedReplay, findings });
-  return findings.sort(compareFindings);
+  const exactTerminalProjection = integratedReplay?.applicable
+    && integratedReplay.claim === predecessor?.claim
+    && scopeExpansionLineageProjectionProofMatches({ proof: lineageProjectionProof,
+      claim: integratedReplay.claim, lane, status, repositoryId: status?.repositoryId, request });
+  return (exactTerminalProjection
+    ? findings.filter(item => item.type !== "legacy-authority-still-live")
+    : findings).sort(compareFindings);
 }
 
 export function assertResumableSuccessorReplay({ claimResult, resumableSuccessor, lane, predecessor }) {
@@ -307,15 +308,16 @@ export function buildHandoffReceipt(kind, payload) {
   return Object.freeze({ ...receipt, receiptDigest: digestValue(receipt) });
 }
 
-function predecessorImmutableIdentityMatches({
-  claim, lane, actor, repositoryId, status = null, request = null, lineageAdmission = null,
-}) {
+function predecessorImmutableIdentityMatches({ claim, lane, actor, repositoryId, status = null,
+  request = null, lineageAdmission = null, lineageProjectionProof = null }) {
   const authority = lane.authority;
   const strictLineageValid = claim?.leaseEpoch === 1
     ? claim.predecessorClaimId === null || claim.predecessorClaimId === undefined
     : DIGEST_PATTERN.test(String(claim?.predecessorClaimId || ""));
   const predecessorLineageValid = strictLineageValid || scopeExpansionLineageAdmissionMatches({
     admission: lineageAdmission, claim, lane, status, repositoryId, request,
+  }) || scopeExpansionLineageProjectionProofMatches({
+    proof: lineageProjectionProof, claim, lane, status, repositoryId, request,
   });
   try {
     return Boolean(

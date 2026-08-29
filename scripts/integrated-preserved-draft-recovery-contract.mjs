@@ -65,6 +65,16 @@ export function createIntegratedPreservedDraftRecoveryPlan(source) {
       !== `github-pull-request:${evidence.pullRequestId}`) {
     findings.push("pull-request-node-identity-drift");
   }
+  const lineageFields = [
+    evidence.scopeExpansionLineageIdentityDigest,
+    evidence.scopeExpansionSourceClaimId,
+    evidence.scopeExpansionTargetGenesisEntryDigest,
+    evidence.scopeExpansionSourceRetirementEntryDigest,
+  ];
+  const lineageFieldCount = lineageFields.filter(Boolean).length;
+  if (lineageFieldCount !== 0 && lineageFieldCount !== lineageFields.length) {
+    findings.push("scope-expansion-lineage-proof-incomplete");
+  }
 
   const identity = projectionInvariantIdentity(evidence);
   const core = Object.freeze({
@@ -266,6 +276,22 @@ function normalizeEvidence(source) {
       source.continuationSubjectDigest,
       "continuation subject digest",
     ),
+    scopeExpansionLineageIdentityDigest: optionalDigest(
+      source.scopeExpansionLineageIdentityDigest,
+      "scope-expansion lineage identity digest",
+    ),
+    scopeExpansionSourceClaimId: optionalDigest(
+      source.scopeExpansionSourceClaimId,
+      "scope-expansion source claim ID",
+    ),
+    scopeExpansionTargetGenesisEntryDigest: optionalDigest(
+      source.scopeExpansionTargetGenesisEntryDigest,
+      "scope-expansion target genesis entry digest",
+    ),
+    scopeExpansionSourceRetirementEntryDigest: optionalDigest(
+      source.scopeExpansionSourceRetirementEntryDigest,
+      "scope-expansion source retirement entry digest",
+    ),
     pullRequestId: requiredText(source.pullRequestId, "pull-request ID"),
     pullRequestNumber: positiveInteger(source.pullRequestNumber, "pull-request number"),
     pullRequestUrl: requiredText(source.pullRequestUrl, "pull-request URL"),
@@ -328,6 +354,10 @@ function requiredDigest(value, label) {
   const text = requiredText(value, label);
   if (!DIGEST_PATTERN.test(text)) throw new Error(`${label} must be a digest.`);
   return text;
+}
+
+function optionalDigest(value, label) {
+  return value === null || value === undefined ? null : requiredDigest(value, label);
 }
 
 function requiredBoolean(value, label) {

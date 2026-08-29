@@ -11,7 +11,13 @@ import {
   createCloudAuthorityHandoffControllerAdapter,
   createRepositoryCloudAuthorityHandoffControllerAdapter,
 } from "../scripts/cloud-authority-handoff-controller.mjs";
-import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
+import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import {
+  CURRENT_CLAIM_INVENTORY_SCHEMA,
+  pseudonymousIdentifier,
+} from "../scripts/github-cloud-collaboration-mapping.mjs";
+import { recoverIntegratedPreservedCloudAuthority }
+  from "../scripts/scoped-lane-cloud-authority.mjs";
 import { createTaskAuthorityLeaseBinding, writeTaskAuthorityCapability }
   from "../scripts/task-bound-lane-authority-store.mjs";
 import { renderWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
@@ -35,9 +41,19 @@ const REVIEW_RECEIPT_DIGEST = "8".repeat(64);
 const PROJECTION_RECEIPT_DIGEST = "9".repeat(64);
 const INTEGRATION_RECEIPT_DIGEST = "a".repeat(64);
 const RECOVERY_RECEIPT_DIGEST = "b".repeat(64);
-const CONVERGENCE_EVIDENCE_DIGEST = "f".repeat(64);
 const PREDECESSOR_OPERATION_RECEIPT_DIGEST = "0".repeat(64);
 const SCOPE_WORK_ITEM_ID = pseudonymousIdentifier("work-item", "legacy-authority-evaluator");
+const CLAIM_ONLY_WORK_ITEM_ID = pseudonymousIdentifier(
+  "work-item",
+  "successful-release-recapture-policy",
+);
+const CLAIM_ONLY_CLAIM_ID = "6".repeat(64);
+const CLOUD_DEVICE_ID = pseudonymousIdentifier("device", "legacy-device");
+const CLOUD_SESSION_ID = pseudonymousIdentifier("session", "legacy-session");
+const CLAIM_ONLY_SCOPE = Object.freeze([
+  "path:docs/CANONICAL-LIFECYCLE.md",
+  "semantic:successful-release-recapture-policy",
+]);
 
 function preservedLane(overrides = {}) {
   const lease = {
@@ -269,7 +285,11 @@ function integratedReplayClaim(overrides = {}) {
     entrySchema: "agentic-cloud-collaboration-entry/v2",
     claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
     state: "dormant-preserved",
+    writeAuthority: false,
+    scopeReserved: true,
     actorId: "github-user:1",
+    deviceId: CLOUD_DEVICE_ID,
+    sessionId: CLOUD_SESSION_ID,
     repositoryId: "github-repository:example",
     workItemId: SCOPE_WORK_ITEM_ID,
     canonicalBaseRevision: BASE_SHA,
@@ -284,19 +304,214 @@ function integratedReplayClaim(overrides = {}) {
     expiresAt: "2026-08-03T09:07:22.000Z",
     fenceRevision: "f".repeat(64),
     transitionDigest: "0".repeat(64),
-    operationReceiptDigest: "1".repeat(64),
+    operationReceiptDigest: INTEGRATION_RECEIPT_DIGEST,
     integrationReceiptDigest: INTEGRATION_RECEIPT_DIGEST,
     integration: integratedReplayEvidence(),
     ...overrides,
   };
 }
 
-function integratedReplayAuthority(overrides = {}) {
-  const claim = integratedReplayClaim({
-    state: "integrated-preserved",
-    transitionCounter: 6,
-    expiresAt: "2099-08-03T09:07:22.000Z",
+function integratedRecoveryEvidenceDigest(claim = integratedReplayClaim()) {
+  return digestValue({
+    schema: "agentic-integrated-preserved-recovery-evidence/v1",
+    branch: preservedLane().branch,
+    claimId: claim.claimId,
+    candidateRevision: claim.integration.candidateRevision,
+    reviewRequestId: claim.integration.reviewRequestId,
+    integrationReceiptDigest: claim.integrationReceiptDigest,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    manifestDigest: MANIFEST_DIGEST,
+    writeSetDigest: WRITE_SET_DIGEST,
   });
+}
+
+function recoveredIntegratedReplayClaim(overrides = {}) {
+  const source = integratedReplayClaim();
+  return {
+    ...source,
+    state: "integrated-preserved",
+    transitionCounter: source.transitionCounter + 1,
+    writeAuthority: false,
+    scopeReserved: true,
+    expiresAt: "2099-08-03T09:07:22.000Z",
+    fenceRevision: "2".repeat(64),
+    transitionDigest: "3".repeat(64),
+    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    recovery: {
+      evidenceDigest: integratedRecoveryEvidenceDigest(source),
+      recoveredAt: "2026-08-03T08:30:00.000Z",
+    },
+    ...overrides,
+  };
+}
+
+function claimOnlyQueuedDerivative(overrides = {}) {
+  return {
+    claimId: CLAIM_ONLY_CLAIM_ID,
+    entrySchema: "agentic-cloud-collaboration-entry/v2",
+    claimIdentitySchema: "agentic-cloud-collaboration-entry/v2",
+    state: "waiting-successor",
+    actorId: "github-user:1",
+    deviceId: CLOUD_DEVICE_ID,
+    sessionId: pseudonymousIdentifier(
+      "session",
+      "successful-release-recapture-policy-session",
+    ),
+    repositoryId: "github-repository:example",
+    workItemId: CLAIM_ONLY_WORK_ITEM_ID,
+    canonicalBaseRevision: BASE_SHA,
+    laneRevision: BASE_SHA,
+    declaredWriteScope: CLAIM_ONLY_SCOPE,
+    writeSetDigest: digestValue(CLAIM_ONLY_SCOPE),
+    leaseEpoch: 1,
+    transitionCounter: 1,
+    heartbeatCounter: 0,
+    writeAuthority: false,
+    scopeReserved: false,
+    reviewRequestId: null,
+    predecessorClaimId: PREDECESSOR_CLAIM_ID,
+    expiresAt: "2026-08-03T09:07:22.000Z",
+    fenceRevision: "6".repeat(64),
+    transitionDigest: "7".repeat(64),
+    operationReceiptDigest: "8".repeat(64),
+    integrationReceiptDigest: null,
+    integration: null,
+    recovery: null,
+    retirement: null,
+    handoff: null,
+    release: null,
+    ...overrides,
+  };
+}
+
+function claimAssociationFrame(claimIds = [CLAIM_ONLY_CLAIM_ID], overrides = {}) {
+  const core = {
+    schema: "agentic-cloud-authority-handoff-claim-associations/v1",
+    writerRegistryDigest: "c".repeat(64),
+    providerInventoryDigest: "d".repeat(64),
+    providerPullRequestCount: 0,
+    providerPageCount: 1,
+    claims: claimIds.map(claimId => ({
+      claimId,
+      writerLeaseMatchDigests: [],
+      pullRequestMarkerMatchDigests: [],
+    })),
+    ...overrides,
+  };
+  return Object.freeze({ ...core, frameDigest: digestValue(core) });
+}
+
+function claimAssociationFrameCore(frame) {
+  const { frameDigest: _frameDigest, ...core } = frame;
+  return core;
+}
+
+function cloudStatus(claims, ledgerRevision = BASE_SHA) {
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "status",
+    status: "ready",
+    ledgerRevision,
+    ledgerDigest: "9".repeat(64),
+    claims,
+  };
+}
+
+function cloudMutation(action, claim, ledgerRevision = BASE_SHA) {
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action,
+    status: claim.state,
+    ledgerRevision,
+    claimDigest: claim.fenceRevision,
+    claim,
+    receipt: {
+      receiptDigest: "a".repeat(64),
+      ledgerDigest: "9".repeat(64),
+    },
+  };
+}
+
+function cloudVerification(claim, claims = [claim]) {
+  const evaluationTime = "2026-08-03T08:30:00.000Z";
+  const inventoryCore = {
+    schema: CURRENT_CLAIM_INVENTORY_SCHEMA,
+    ledgerRevision: BASE_SHA,
+    ledgerDigest: "9".repeat(64),
+    evaluationTime,
+    claims: claims.map(value => structuredClone(value))
+      .sort((left, right) => left.claimId.localeCompare(right.claimId)),
+  };
+  const claimInventoryDigest = digestValue(inventoryCore);
+  const receiptCore = {
+    schema: "agentic-cloud-collaboration-github-verification/v1",
+    ok: true,
+    ledgerRevision: BASE_SHA,
+    ledgerDigest: "9".repeat(64),
+    claimId: claim.claimId,
+    claimDigest: claim.fenceRevision,
+    contractReceiptDigest: "b".repeat(64),
+    claimInventoryDigest,
+    evaluationTime,
+    findings: [],
+  };
+  return {
+    schema: "agentic-cloud-collaboration-result/v1",
+    ok: true,
+    action: "verify",
+    status: "ready",
+    ledgerRevision: BASE_SHA,
+    claimDigest: claim.fenceRevision,
+    claim,
+    currentClaimInventory: { ...inventoryCore, claimInventoryDigest },
+    findings: [],
+    receipt: { ...receiptCore, receiptDigest: digestValue(receiptCore) },
+  };
+}
+
+function integratedDeliveryLane(overrides = {}) {
+  const source = preservedLane();
+  const authority = integratedReplayAuthority({
+    expiresAt: "2026-08-03T09:07:22.000Z",
+  });
+  const lease = {
+    ...source.lease,
+    status: "delivery",
+    deliveryHeadSha: REVIEW_SHA,
+    cloudAuthority: authority,
+    expiresAt: authority.expiresAt,
+  };
+  return {
+    ...source,
+    lease,
+    authority,
+    localHeadSha: REVIEW_SHA,
+    cloudSubject: {
+      deviceId: CLOUD_DEVICE_ID,
+      sessionId: CLOUD_SESSION_ID,
+    },
+    pullRequest: {
+      ...source.pullRequest,
+      autoMergeRequest: {
+        mergeMethod: "SQUASH",
+        enabledAt: "2026-08-03T08:01:00.000Z",
+        enabledBy: { login: "owner" },
+      },
+    },
+    remoteLease: {
+      ...source.remoteLease,
+      status: "delivery",
+      deliveryHeadSha: REVIEW_SHA,
+      cloudAuthority: authority,
+    },
+    ...overrides,
+  };
+}
+
+function integratedReplayAuthority(overrides = {}) {
+  const claim = integratedReplayClaim();
   return {
     ...preservedLane().authority,
     claimDigest: claim.fenceRevision,
@@ -307,10 +522,69 @@ function integratedReplayAuthority(overrides = {}) {
     transitionCounter: claim.transitionCounter,
     state: "delivery_authorized",
     expiresAt: claim.expiresAt,
-    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
+    operationReceiptDigest: claim.operationReceiptDigest,
     integrationReceiptDigest: claim.integrationReceiptDigest,
     integration: claim.integration,
+    manifestDigest: MANIFEST_DIGEST,
     ...overrides,
+  };
+}
+
+function integratedAuthorityForClaim(claim) {
+  return integratedReplayAuthority({
+    claimDigest: claim.fenceRevision,
+    claimLedgerRevision: claim.transitionDigest,
+    transitionCounter: claim.transitionCounter,
+    expiresAt: claim.expiresAt,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    integrationReceiptDigest: claim.integrationReceiptDigest,
+    integration: claim.integration,
+  });
+}
+
+function integratedConvergenceEvidence(
+  authority,
+  claim = recoveredIntegratedReplayClaim(),
+) {
+  return Object.freeze({
+    schema: "agentic-integrated-replay-convergence-evidence/v1",
+    claimId: authority.claimId,
+    claimDigest: authority.claimDigest,
+    fenceRevision: authority.claimDigest,
+    claimLedgerRevision: authority.claimLedgerRevision,
+    transitionDigest: authority.claimLedgerRevision,
+    transitionCounter: authority.transitionCounter,
+    state: authority.state,
+    expiresAt: authority.expiresAt,
+    branch: preservedLane().branch,
+    canonicalBaseSha: authority.canonicalBaseSha,
+    candidateRevision: authority.laneRevision,
+    manifestDigest: authority.manifestDigest,
+    writeSetDigest: authority.writeSetDigest,
+    leaseEpoch: authority.leaseEpoch,
+    reviewRequestId: authority.reviewRequestId,
+    focusedEvidenceDigest: authority.focusedEvidenceDigest,
+    currentOperationReceiptDigest: authority.operationReceiptDigest,
+    integrationReceiptDigest: authority.integrationReceiptDigest,
+    integrationEvidenceDigest: digestValue(authority.integration),
+    recoveryEvidenceDigest: claim.recovery.evidenceDigest,
+    recoveredAt: claim.recovery.recoveredAt,
+    currentQueuedDerivativeDisposition: "absent-from-verified-inventory",
+    overlappingCurrentClaimIds: [],
+    lifecycleAttribution: "not-reconstructed",
+    observation: "current-state-only",
+  });
+}
+
+function integratedRecoveryResult(
+  authority = integratedAuthorityForClaim(recoveredIntegratedReplayClaim()),
+  claim = recoveredIntegratedReplayClaim(),
+) {
+  const convergenceEvidence = integratedConvergenceEvidence(authority, claim);
+  return {
+    authority,
+    convergenceEvidence,
+    convergenceEvidenceDigest: digestValue(convergenceEvidence),
   };
 }
 
@@ -370,12 +644,13 @@ function testAdapter(options = {}, calls = []) {
     },
     recoverIntegratedAuthority: input => {
       calls.push("recover");
-      return options.recover?.(input) || {
-        authority: integratedReplayAuthority(),
-        verification: { receiptDigest: REVIEW_RECEIPT_DIGEST },
-        convergenceEvidenceDigest: CONVERGENCE_EVIDENCE_DIGEST,
-      };
+      return options.recover?.(input) || integratedRecoveryResult();
     },
+    readClaimAssociations: options.associations === undefined
+      ? undefined
+      : input => typeof options.associations === "function"
+        ? options.associations(input)
+        : options.associations,
   });
 }
 
@@ -530,20 +805,15 @@ test("a crash after claim resumes the exact observed successor", async () => {
 });
 
 test("integrated replay is stable and derivative or evidence drift never mutates", async () => {
-  const recoveredClaim = integratedReplayClaim({
-    state: "integrated-preserved", transitionCounter: 6,
-    expiresAt: "2099-08-03T09:07:22.000Z",
-    fenceRevision: integratedReplayAuthority().claimDigest,
-    transitionDigest: integratedReplayAuthority().claimLedgerRevision,
-    operationReceiptDigest: RECOVERY_RECEIPT_DIGEST,
-  });
+  const recoveredClaim = recoveredIntegratedReplayClaim();
   let claims = [integratedReplayClaim(), resumableSuccessorClaim()];
   const calls = [];
   const adapter = testAdapter({
+    lane: integratedDeliveryLane(),
     status: () => statusResult(claims),
     recover: () => {
       claims = [recoveredClaim];
-      return { authority: integratedReplayAuthority(), convergenceEvidenceDigest: CONVERGENCE_EVIDENCE_DIGEST };
+      return integratedRecoveryResult(integratedAuthorityForClaim(recoveredClaim));
     },
   }, calls);
   const first = await continueExpiredReviewLaneAuthority(reclaimRequest(), { adapter });
@@ -552,19 +822,477 @@ test("integrated replay is stable and derivative or evidence drift never mutates
   assert.equal(first.predecessorClaimId, first.successorClaimId);
   assert.equal(first.projectionUpdated, false);
   assert.equal(first.resultDigest, replay.resultDigest);
+  const terminalReceipt = first.receipts.find(
+    receipt => receipt.kind === "integrated-authority-converged",
+  );
+  assert.equal(
+    terminalReceipt.payload.currentOperationReceiptDigest,
+    recoveredClaim.operationReceiptDigest,
+  );
+  assert.equal(
+    terminalReceipt.payload.integrationReceiptDigest,
+    recoveredClaim.integrationReceiptDigest,
+  );
   assert.deepEqual(calls, ["recover", "recover"]);
+  const descendantDrifts = [
+    { writeAuthority: true },
+    { scopeReserved: false },
+    { transitionCounter: integratedReplayAuthority().transitionCounter },
+    { fenceRevision: integratedReplayAuthority().claimDigest },
+    { transitionDigest: integratedReplayAuthority().claimLedgerRevision },
+    { operationReceiptDigest: integratedReplayAuthority().operationReceiptDigest },
+    { expiresAt: integratedReplayAuthority().expiresAt },
+    { recovery: null },
+    { recovery: { ...recoveredClaim.recovery, evidenceDigest: "f".repeat(64) } },
+    { recovery: { ...recoveredClaim.recovery, evidenceDigest: "invalid" } },
+    { recovery: { ...recoveredClaim.recovery, recoveredAt: "invalid" } },
+  ];
   for (const status of [
     statusResult([integratedReplayClaim(), resumableSuccessorClaim({ actorId: "github-user:2" })]),
     statusResult([integratedReplayClaim({ integrationReceiptDigest: null })]),
     statusResult([integratedReplayClaim(), resumableSuccessorClaim(), resumableSuccessorClaim({ claimId: "a".repeat(64) })]),
+    ...descendantDrifts.map(drift => statusResult([{ ...recoveredClaim, ...drift }])),
   ]) {
     const blockedCalls = [];
     const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), {
-      adapter: testAdapter({ status }, blockedCalls),
+      adapter: testAdapter({ lane: integratedDeliveryLane(), status }, blockedCalls),
     });
     assert.equal(result.outcome, "blocked");
     assert.deepEqual(blockedCalls, []);
   }
+});
+
+test("expired delivery replay retires one exact unprojected claim-only derivative", async () => {
+  const associationFrame = claimAssociationFrame();
+  const associationReads = [];
+  const calls = [];
+  const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), {
+    adapter: testAdapter({
+      lane: integratedDeliveryLane(),
+      status: statusResult([integratedReplayClaim(), claimOnlyQueuedDerivative()]),
+      associations: ({ claimIds }) => {
+        associationReads.push(claimIds);
+        return associationFrame;
+      },
+      recover: ({ integratedReplay }) => {
+        assert.equal(integratedReplay.queuedClaim.claimId, CLAIM_ONLY_CLAIM_ID);
+        assert.equal(integratedReplay.queuedClaimVariant, "claim-only-unprojected");
+        assert.equal(integratedReplay.associationFrameDigest, associationFrame.frameDigest);
+        return integratedRecoveryResult();
+      },
+    }, calls),
+  });
+
+  assert.equal(result.outcome, "reclaimed-live-replay");
+  assert.equal(result.predecessorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.successorClaimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.projectionUpdated, false);
+  assert.deepEqual(calls, ["recover"]);
+  assert.deepEqual(associationReads, [
+    [CLAIM_ONLY_CLAIM_ID],
+    [CLAIM_ONLY_CLAIM_ID],
+  ]);
+});
+
+test("integrated delivery replay rejects a foreign successor device or session before effects", async () => {
+  const status = statusResult([
+    integratedReplayClaim(),
+    claimOnlyQueuedDerivative(),
+  ]);
+  for (const request of [
+    { ...reclaimRequest(), successorDeviceId: "foreign-device" },
+    { ...reclaimRequest(), successorSessionId: "foreign-session" },
+  ]) {
+    const calls = [];
+    const result = await continueExpiredReviewLaneAuthority(request, {
+      adapter: testAdapter({
+        lane: integratedDeliveryLane(),
+        status,
+        associations: claimAssociationFrame(),
+      }, calls),
+    });
+    assert.equal(result.outcome, "blocked");
+    assert.deepEqual(calls, []);
+  }
+});
+
+test("controller rejects arbitrary recovered authority and unsealed convergence evidence", async () => {
+  const baseline = integratedRecoveryResult();
+  const mismatchedEvidence = {
+    ...baseline.convergenceEvidence,
+    candidateRevision: "9".repeat(40),
+  };
+  const variants = [
+    {
+      ...baseline,
+      authority: { ...baseline.authority, deviceId: "foreign-device" },
+    },
+    {
+      ...baseline,
+      authority: { ...baseline.authority, sessionId: "foreign-session" },
+    },
+    {
+      ...baseline,
+      authority: { ...baseline.authority, manifestDigest: "9".repeat(64) },
+    },
+    {
+      ...baseline,
+      authority: { ...baseline.authority, claimDigest: "8".repeat(64) },
+    },
+    {
+      ...baseline,
+      authority: { ...baseline.authority, operationReceiptDigest: "7".repeat(64) },
+    },
+    {
+      ...baseline,
+      convergenceEvidence: mismatchedEvidence,
+      convergenceEvidenceDigest: digestValue(mismatchedEvidence),
+    },
+    {
+      ...baseline,
+      convergenceEvidenceDigest: "6".repeat(64),
+    },
+  ];
+  for (const recovered of variants) {
+    const calls = [];
+    await assert.rejects(
+      continueExpiredReviewLaneAuthority(reclaimRequest(), {
+        adapter: testAdapter({
+          lane: integratedDeliveryLane(),
+          status: statusResult([integratedReplayClaim()]),
+          recover: () => recovered,
+        }, calls),
+      }),
+      /integrated|convergence|authority/iu,
+    );
+    assert.deepEqual(calls, ["recover"]);
+  }
+});
+
+test("delivery replay preserves ordinary review-ready rules and fails closed on projection drift", async () => {
+  const source = integratedDeliveryLane();
+  const derivative = claimOnlyQueuedDerivative();
+  const frame = claimAssociationFrame();
+  const laneDrifts = [
+    { lane: { ...source, lease: { ...source.lease, status: "review_ready" } }, finding: "lane-not-delivery" },
+    { lane: { ...source, localHeadSha: "9".repeat(40) }, finding: "exact-head-drift" },
+    { lane: { ...source, remoteHeadSha: "9".repeat(40) }, finding: "exact-head-drift" },
+    { lane: { ...source, pullRequest: { ...source.pullRequest, headRefOid: "9".repeat(40) } }, finding: "exact-head-drift" },
+    { lane: { ...source, pullRequest: { ...source.pullRequest, isDraft: true } }, finding: "review-projection-not-ready" },
+    { lane: { ...source, pullRequest: { ...source.pullRequest, autoMergeRequest: null } }, finding: "integrated-delivery-auto-merge-not-armed" },
+    { lane: { ...source, authority: { ...source.authority, state: "review_ready" } }, finding: "integrated-authority-not-delivery-authorized" },
+    { lane: { ...source, authority: { ...source.authority, expiresAt: "2099-08-03T09:07:22.000Z" } }, finding: "legacy-authority-still-live" },
+    { lane: { ...source, remoteLease: { ...source.remoteLease, status: "review_ready" } }, finding: "owner-marker-drift" },
+    { lane: { ...source, lease: { ...source.lease, cloudAuthority: { ...source.authority, claimDigest: "2".repeat(64) } } }, finding: "owner-marker-drift" },
+    { lane: { ...source, remoteLease: { ...source.remoteLease, cloudAuthority: { ...source.authority, claimDigest: "2".repeat(64) } } }, finding: "owner-marker-drift" },
+  ];
+  for (const scenario of laneDrifts) {
+    const calls = [];
+    const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), {
+      adapter: testAdapter({
+        lane: scenario.lane,
+        status: statusResult([integratedReplayClaim(), derivative]),
+        associations: frame,
+      }, calls),
+    });
+    assert.equal(result.outcome, "blocked");
+    assert.equal(result.blockingFindings.some(item => item.type === scenario.finding), true);
+    assert.deepEqual(calls, []);
+  }
+
+  const sourceClaimDrifts = [
+    { fenceRevision: "2".repeat(64) },
+    { transitionDigest: "3".repeat(64) },
+    { transitionCounter: 6 },
+    { expiresAt: "2026-08-03T09:08:22.000Z" },
+    { operationReceiptDigest: "4".repeat(64) },
+    { integrationReceiptDigest: "5".repeat(64) },
+    { integration: { ...integratedReplayEvidence(), namedChecksDigest: "6".repeat(64) } },
+    { deviceId: pseudonymousIdentifier("device", "other-device") },
+    { sessionId: pseudonymousIdentifier("session", "other-session") },
+  ];
+  for (const drift of sourceClaimDrifts) {
+    const calls = [];
+    const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), {
+      adapter: testAdapter({
+        lane: source,
+        status: statusResult([
+          integratedReplayClaim(drift),
+          derivative,
+        ]),
+        associations: frame,
+      }, calls),
+    });
+    assert.equal(result.outcome, "blocked");
+    assert.equal(result.blockingFindings.some(item => item.type === "integrated-replay-drift"), true);
+    assert.deepEqual(calls, []);
+  }
+
+  const authorityDrifts = [
+    { claimDigest: "2".repeat(64) },
+    { claimLedgerRevision: "3".repeat(64) },
+    { transitionCounter: 6 },
+    { expiresAt: "2026-08-03T09:08:22.000Z" },
+    { operationReceiptDigest: "4".repeat(64) },
+    { integrationReceiptDigest: "5".repeat(64) },
+    { integration: { ...integratedReplayEvidence(), namedChecksDigest: "6".repeat(64) } },
+    { manifestDigest: "7".repeat(64) },
+    { writeSetDigest: "8".repeat(64) },
+    { cloudDeclaredWriteScope: ["path:docs/OTHER.md", "semantic:legacy-authority-evaluator"] },
+    { deviceId: "other-device" },
+    { sessionId: "other-session" },
+  ];
+  for (const drift of authorityDrifts) {
+    const authority = { ...source.authority, ...drift };
+    const lane = {
+      ...source,
+      authority,
+      lease: { ...source.lease, cloudAuthority: authority },
+      remoteLease: { ...source.remoteLease, cloudAuthority: authority },
+    };
+    const calls = [];
+    const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), {
+      adapter: testAdapter({
+        lane,
+        status: statusResult([integratedReplayClaim(), derivative]),
+        associations: frame,
+      }, calls),
+    });
+    assert.equal(result.outcome, "blocked");
+    assert.equal(result.blockingFindings.some(item => item.type === "integrated-replay-drift"), true);
+    assert.deepEqual(calls, []);
+  }
+
+  const derivativeDrifts = [
+    { actorId: "github-user:2" },
+    { deviceId: "other-device" },
+    { workItemId: SCOPE_WORK_ITEM_ID },
+    { canonicalBaseRevision: "9".repeat(40) },
+    { laneRevision: REVIEW_SHA },
+    { leaseEpoch: 2 },
+    { transitionCounter: 2 },
+    { heartbeatCounter: 1 },
+    { writeAuthority: true },
+    { scopeReserved: true },
+    { reviewRequestId: "github-pull-request:PR_239" },
+    { integration: integratedReplayEvidence() },
+    { recovery: { mode: "recovery" } },
+  ];
+  for (const drift of derivativeDrifts) {
+    const calls = [];
+    const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), {
+      adapter: testAdapter({
+        lane: source,
+        status: statusResult([integratedReplayClaim(), claimOnlyQueuedDerivative(drift)]),
+        associations: frame,
+      }, calls),
+    });
+    assert.equal(result.outcome, "blocked");
+    assert.equal(result.blockingFindings.some(item => item.type === "integrated-replay-drift"), true);
+    assert.deepEqual(calls, []);
+  }
+
+  for (const associated of [
+    claimAssociationFrame([CLAIM_ONLY_CLAIM_ID], {
+      claims: [{
+        claimId: CLAIM_ONLY_CLAIM_ID,
+        writerLeaseMatchDigests: ["a".repeat(64)],
+        pullRequestMarkerMatchDigests: [],
+      }],
+    }),
+    claimAssociationFrame([CLAIM_ONLY_CLAIM_ID], {
+      claims: [{
+        claimId: CLAIM_ONLY_CLAIM_ID,
+        writerLeaseMatchDigests: [],
+        pullRequestMarkerMatchDigests: ["b".repeat(64)],
+      }],
+    }),
+  ]) {
+    const calls = [];
+    const result = await continueExpiredReviewLaneAuthority(reclaimRequest(), {
+      adapter: testAdapter({
+        lane: source,
+        status: statusResult([integratedReplayClaim(), derivative]),
+        associations: associated,
+      }, calls),
+    });
+    assert.equal(result.outcome, "blocked");
+    assert.equal(result.blockingFindings.some(item => item.type === "integrated-replay-drift"), true);
+    assert.deepEqual(calls, []);
+  }
+});
+
+test("complete claim-only association inventory drift prevents recovery mutation", async () => {
+  const initial = claimAssociationFrame();
+  const changedFrames = [
+    claimAssociationFrame([CLAIM_ONLY_CLAIM_ID], {
+      writerRegistryDigest: "e".repeat(64),
+    }),
+    claimAssociationFrame([CLAIM_ONLY_CLAIM_ID], {
+      providerInventoryDigest: "f".repeat(64),
+    }),
+    claimAssociationFrame([CLAIM_ONLY_CLAIM_ID], {
+      providerPullRequestCount: 1,
+    }),
+    claimAssociationFrame([CLAIM_ONLY_CLAIM_ID], {
+      providerPageCount: 2,
+    }),
+    claimAssociationFrame([CLAIM_ONLY_CLAIM_ID], {
+      claims: [{
+        claimId: CLAIM_ONLY_CLAIM_ID,
+        writerLeaseMatchDigests: ["a".repeat(64)],
+        pullRequestMarkerMatchDigests: [],
+      }],
+    }),
+  ];
+  for (const changed of changedFrames) {
+    let reads = 0;
+    const calls = [];
+    await assert.rejects(
+      continueExpiredReviewLaneAuthority(reclaimRequest(), {
+        adapter: testAdapter({
+          lane: integratedDeliveryLane(),
+          status: statusResult([integratedReplayClaim(), claimOnlyQueuedDerivative()]),
+          associations: () => reads++ === 0 ? initial : changed,
+        }, calls),
+      }),
+      /associations changed after preflight/u,
+    );
+    assert.equal(reads, 2);
+    assert.deepEqual(calls, []);
+  }
+});
+
+test("cloud helper retires the exact claim-only derivative then recovers the same integrated claim", async () => {
+  const frame = claimAssociationFrame();
+  const helperManifest = {
+    ...preservedLane().manifest,
+    writeSetDigest: digestValue(preservedLane().manifest.declaredWriteSet),
+  };
+  const createHarness = (queuedOverrides = {}) => {
+    let integrated = integratedReplayClaim({
+      writeAuthority: false,
+      scopeReserved: true,
+      writeSetDigest: helperManifest.writeSetDigest,
+    });
+    let queued = claimOnlyQueuedDerivative(queuedOverrides);
+    let inspections = 0;
+    const calls = [];
+    return {
+      calls,
+      get integrated() { return integrated; },
+      get queued() { return queued; },
+      inspect() {
+        inspections += 1;
+        return cloudStatus([integrated, ...(queued ? [queued] : [])]);
+      },
+      invoke({ action, request }) {
+        calls.push({ action, request });
+        if (action === "retire" && request.claimId === queued?.claimId) {
+          const retired = { ...queued, state: "retired" };
+          queued = null;
+          return cloudMutation("retire", retired);
+        }
+        if (action === "continue" && request.mode === "recovery"
+          && request.claimId === integrated.claimId) {
+          integrated = {
+            ...integrated,
+            state: "integrated-preserved",
+            writeAuthority: false,
+            scopeReserved: true,
+            transitionCounter: integrated.transitionCounter + 1,
+            fenceRevision: digestValue({ request, kind: "fence" }),
+            transitionDigest: digestValue({ request, kind: "transition" }),
+            operationReceiptDigest: digestValue({ request, kind: "operation" }),
+            expiresAt: "2099-08-03T09:07:22.000Z",
+            recovery: {
+              evidenceDigest: request.recoveryEvidenceDigest,
+              recoveredAt: "2026-08-03T08:30:00.000Z",
+            },
+          };
+          return cloudMutation("continue", integrated);
+        }
+        throw new Error(`unexpected cloud operation ${action}:${request.mode || "none"}`);
+      },
+      verify() {
+        return cloudVerification(integrated);
+      },
+    };
+  };
+  const authorityFor = claim => integratedReplayAuthority({
+    claimDigest: claim.fenceRevision,
+    claimLedgerRevision: claim.transitionDigest,
+    transitionCounter: claim.transitionCounter,
+    expiresAt: claim.expiresAt,
+    operationReceiptDigest: claim.operationReceiptDigest,
+    writeSetDigest: helperManifest.writeSetDigest,
+  });
+  const run = harness => recoverIntegratedPreservedCloudAuthority({
+    authority: authorityFor(harness.integrated),
+    integratedClaim: harness.integrated,
+    queuedSuccessor: harness.queued,
+    queuedSuccessorVariant: "claim-only-unprojected",
+    queuedSuccessorAssociationFrameDigest: frame.frameDigest,
+    manifest: helperManifest,
+    branch: preservedLane().branch,
+    headSha: REVIEW_SHA,
+    focusedEvidenceDigest: PREDECESSOR_FOCUSED_EVIDENCE,
+    deviceId: "legacy-device",
+    sessionId: "legacy-session",
+    invoke: harness.invoke,
+    inspect: harness.inspect,
+    verify: harness.verify,
+  });
+
+  const harness = createHarness();
+  const sourceAuthority = authorityFor(harness.integrated);
+  const result = run(harness);
+  assert.deepEqual(harness.calls.map(call => [call.action, call.request.mode || null]), [
+    ["retire", null],
+    ["continue", "recovery"],
+  ]);
+  const retire = harness.calls[0].request;
+  assert.equal(retire.claimId, CLAIM_ONLY_CLAIM_ID);
+  assert.equal(retire.reason, "superseded");
+  assert.equal(retire.finalRevision, BASE_SHA);
+  assert.equal(result.authority.claimId, PREDECESSOR_CLAIM_ID);
+  assert.equal(result.authority.state, "delivery_authorized");
+  assert.deepEqual(result.verification.inventory.claims.map(claim => claim.claimId), [
+    PREDECESSOR_CLAIM_ID,
+  ]);
+
+  const laneTemplate = integratedDeliveryLane();
+  const controllerLane = {
+    ...laneTemplate,
+    manifest: helperManifest,
+    authority: sourceAuthority,
+    lease: { ...laneTemplate.lease, cloudAuthority: sourceAuthority },
+    remoteLease: { ...laneTemplate.remoteLease, cloudAuthority: sourceAuthority },
+  };
+  const controllerCalls = [];
+  const controllerAdapter = testAdapter({
+    lane: controllerLane,
+    status: () => statusResult([harness.integrated]),
+    recover: () => result,
+  }, controllerCalls);
+  const firstReplay = await continueExpiredReviewLaneAuthority(
+    reclaimRequest(),
+    { adapter: controllerAdapter },
+  );
+  const secondReplay = await continueExpiredReviewLaneAuthority(
+    reclaimRequest(),
+    { adapter: controllerAdapter },
+  );
+  assert.equal(firstReplay.outcome, "reclaimed-live-replay");
+  assert.equal(firstReplay.resultDigest, secondReplay.resultDigest);
+  assert.deepEqual(controllerCalls, ["recover", "recover"]);
+
+  const malformed = createHarness({ heartbeatCounter: 1 });
+  assert.throws(
+    () => run(malformed),
+    /claim-only queued derivative drifted/u,
+  );
+  assert.deepEqual(malformed.calls, []);
 });
 
 test("successor ambiguity, competing drift, and replay identity fail closed", async () => {
@@ -683,4 +1411,184 @@ test("repository reader preserves the provider pull-request node ID", () => {
 
   const lane = adapter.readPreservedReviewLane({ branch: source.branch });
   assert.equal(lane.pullRequest.id, "PR_238");
+});
+
+test("repository adapter seals full-registry and all-PR claim association frames", testContext => {
+  const { lane: bound } = taskBoundPreservedLane(testContext);
+  const { taskAuthority: _taskAuthority, ...unboundLease } = bound.lease;
+  const authority = integratedReplayAuthority({
+    expiresAt: "2026-08-03T09:07:22.000Z",
+  });
+  const lease = {
+    ...unboundLease,
+    status: "delivery",
+    deliveryHeadSha: REVIEW_SHA,
+    heartbeatAt: authority.expiresAt,
+    expiresAt: authority.expiresAt,
+    cloudAuthority: authority,
+  };
+  const sourcePull = {
+    id: "PR_238",
+    number: 238,
+    url: bound.pullRequest.url,
+    state: "OPEN",
+    isDraft: false,
+    mergedAt: null,
+    closedAt: null,
+    autoMergeRequest: { mergeMethod: "SQUASH" },
+    headRefName: bound.branch,
+    headRefOid: REVIEW_SHA,
+    headRepository: { nameWithOwner: "example/repo" },
+    baseRefName: "main",
+    baseRefOid: BASE_SHA,
+    body: renderWriterLeasePullRequestBody(lease),
+    author: { login: "owner" },
+  };
+  let registry = {
+    schema: "agentic-writer-lease-registry/v1",
+    revision: 1,
+    leases: { [bound.branch]: lease },
+  };
+  let providerPulls = [sourcePull];
+  let associationMode = "complete";
+  let unboundedPage = 0;
+  const associationQueries = [];
+  const store = {
+    read(branch) {
+      return branch ? registry.leases[branch] || null : registry;
+    },
+  };
+  const adapter = createRepositoryCloudAuthorityHandoffControllerAdapter({
+    repository: "/repo",
+    sessionId: "legacy-session",
+    resolveRealpath: value => value,
+    leaseStore: store,
+    run: () => {},
+    gitText: args => {
+      const values = {
+        "worktree list --porcelain -z": `worktree /repo\0HEAD ${REVIEW_SHA}\0branch refs/heads/${bound.branch}\0\0`,
+        "rev-parse --show-toplevel": "/repo",
+        "branch --show-current": bound.branch,
+        "rev-parse HEAD": REVIEW_SHA,
+        [`rev-parse refs/remotes/origin/${bound.branch}`]: REVIEW_SHA,
+        "status --porcelain": "",
+      };
+      const key = args.join(" ");
+      if (!(key in values)) throw new Error(`unexpected git command: ${key}`);
+      return values[key];
+    },
+    ghText: args => {
+      if (args[0] !== "api" || args[1] !== "graphql") {
+        return JSON.stringify(sourcePull);
+      }
+      associationQueries.push([...args]);
+      const after = args.find(value => value.startsWith("after="))?.slice(6) || null;
+      const envelope = (nodes, pageInfo) => JSON.stringify({
+        data: { repository: { pullRequests: { nodes, pageInfo } } },
+      });
+      if (associationMode === "malformed") {
+        return JSON.stringify({ data: { repository: { pullRequests: { nodes: [] } } } });
+      }
+      if (associationMode === "cursor-drift") {
+        return envelope(after ? [] : [providerPulls[0]], {
+          hasNextPage: true,
+          endCursor: "cursor-1",
+        });
+      }
+      if (associationMode === "duplicate") {
+        return envelope([providerPulls[0]], {
+          hasNextPage: after === null,
+          endCursor: after === null ? "cursor-1" : null,
+        });
+      }
+      if (associationMode === "unbounded") {
+        unboundedPage += 1;
+        return envelope([], {
+          hasNextPage: true,
+          endCursor: `cursor-${unboundedPage}`,
+        });
+      }
+      return after === null
+        ? envelope([providerPulls[0]], {
+          hasNextPage: true,
+          endCursor: "cursor-1",
+        })
+        : envelope(providerPulls.slice(1), {
+          hasNextPage: false,
+          endCursor: null,
+        });
+    },
+  });
+
+  const lane = adapter.readPreservedReviewLane({ branch: bound.branch });
+  assert.equal(lane.lease.status, "delivery");
+  assert.equal(lane.headSha, REVIEW_SHA);
+  assert.equal(lane.localHeadSha, REVIEW_SHA);
+  assert.deepEqual(lane.cloudSubject, {
+    deviceId: CLOUD_DEVICE_ID,
+    sessionId: CLOUD_SESSION_ID,
+  });
+  const empty = adapter.readClaimAssociations({ claimIds: [CLAIM_ONLY_CLAIM_ID] });
+  const firstTraversal = associationQueries.slice(-2);
+  assert.equal(firstTraversal.length, 2);
+  assert.equal(firstTraversal[0].some(value => value.startsWith("after=")), false);
+  assert.equal(firstTraversal[1].some(value => value === "after=cursor-1"), true);
+  assert.deepEqual(empty.claims, [{
+    claimId: CLAIM_ONLY_CLAIM_ID,
+    writerLeaseMatchDigests: [],
+    pullRequestMarkerMatchDigests: [],
+  }]);
+  assert.match(empty.writerRegistryDigest, /^[0-9a-f]{64}$/u);
+  assert.match(empty.providerInventoryDigest, /^[0-9a-f]{64}$/u);
+  assert.equal(empty.providerPullRequestCount, 1);
+  assert.equal(empty.providerPageCount, 2);
+  assert.equal(empty.frameDigest, digestValue(claimAssociationFrameCore(empty)));
+  assert.deepEqual(
+    adapter.readClaimAssociations({ claimIds: [CLAIM_ONLY_CLAIM_ID] }),
+    empty,
+  );
+
+  const associatedBranch = "agent/legacy-device/claim-only-association";
+  const associatedLease = {
+    ...lease,
+    branch: associatedBranch,
+    cloudAuthority: { ...authority, claimId: CLAIM_ONLY_CLAIM_ID },
+  };
+  registry = {
+    ...registry,
+    revision: 2,
+    leases: { ...registry.leases, [associatedBranch]: associatedLease },
+  };
+  providerPulls = [...providerPulls, {
+    ...sourcePull,
+    id: "PR_239",
+    number: 239,
+    url: "https://github.com/example/repo/pull/239",
+    headRefName: associatedBranch,
+    body: renderWriterLeasePullRequestBody(associatedLease),
+  }];
+  const associated = adapter.readClaimAssociations({ claimIds: [CLAIM_ONLY_CLAIM_ID] });
+  assert.equal(associated.claims[0].writerLeaseMatchDigests.length, 1);
+  assert.equal(associated.claims[0].pullRequestMarkerMatchDigests.length, 1);
+  assert.notEqual(associated.frameDigest, empty.frameDigest);
+  assert.equal(
+    associated.frameDigest,
+    digestValue(claimAssociationFrameCore(associated)),
+  );
+  assert.equal(associated.providerPullRequestCount, 2);
+  assert.equal(associated.providerPageCount, 2);
+
+  for (const [mode, pattern] of [
+    ["malformed", /pagination|pageInfo|envelope/iu],
+    ["cursor-drift", /cursor|pagination/iu],
+    ["duplicate", /duplicate.*pull request|pull request.*duplicate/iu],
+    ["unbounded", /page.*ceiling|bounded.*pagination|pagination.*limit/iu],
+  ]) {
+    associationMode = mode;
+    unboundedPage = 0;
+    assert.throws(
+      () => adapter.readClaimAssociations({ claimIds: [CLAIM_ONLY_CLAIM_ID] }),
+      pattern,
+    );
+  }
 });

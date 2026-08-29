@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5980,
-  "headDigest": "a7c071b5e4894f0332498aa6d9dbb9931205e96d7fb05bbd41abce9e716e4f47",
+  "sequence": 5981,
+  "headDigest": "b3ba014a119057c24ae3f7b94f7dec0911614708605c21b0dd5709d3dd925be8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -303814,6 +303814,46 @@
       },
       "claimDigest": "fee30ebfb06557c906eaba0e78a05d7373fc9b670ae6828321d4e282b204d4a3",
       "digest": "a7c071b5e4894f0332498aa6d9dbb9931205e96d7fb05bbd41abce9e716e4f47"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5981,
+      "parentDigest": "a7c071b5e4894f0332498aa6d9dbb9931205e96d7fb05bbd41abce9e716e4f47",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "c3b6e4feb54d63d3fc59f7a80542805dbaf4ff7e4424676d521cc32fe14d8189",
+      "idempotencyKey": "c9ee91216a597b2b02993dc931dd351501d6f9ae55c71fe08ff78bc1478a6e2c",
+      "requestDigest": "7a684d1814379c102e3cf094f482ef88cd02eb33d049c813c17406585f1027c8",
+      "evaluationTime": "2026-08-29T09:32:27.000Z",
+      "claimCore": {
+        "claimId": "c3b6e4feb54d63d3fc59f7a80542805dbaf4ff7e4424676d521cc32fe14d8189",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:aa16963762a7ae9b1599014615f09f4921aae09a4e3973fe932bc5d80cec7d85",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:fb41bcb4b267f6437aca3b97c8477935e40e203662ef7d4234d5b536b4bc993c",
+        "canonicalBaseRevision": "ec0e21702d8b2c9e110e9591b93909507fee5c08",
+        "declaredWriteScope": [
+          "path:scripts/__tests__/git-guidelines-pages-release-controller.test.mjs",
+          "path:scripts/lib/git-guidelines/pages-release-controller.mjs",
+          "semantic:pages-empty-status-sentinel"
+        ],
+        "writeSetDigest": "6c622751cb94662cc93356c91cb1fcc10ee735a0b39a488b95bc2dfc8be7bd7a",
+        "laneRevision": "77c97c44c2dfd5c44dbb753109b351a22906b27f",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T09:59:52.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABBbhTnQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "17b30b9207c3888a319c3c23e42fde10de9f0da8ad33000d03ee8df079b9bc61",
+      "digest": "b3ba014a119057c24ae3f7b94f7dec0911614708605c21b0dd5709d3dd925be8"
     }
   ]
 }

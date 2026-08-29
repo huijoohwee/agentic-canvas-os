@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6003,
-  "headDigest": "2abe3ae8ee29635e35b34641886fdb3e3166532314a4ec5f78956a79bed10236",
+  "sequence": 6004,
+  "headDigest": "2505d6af108c13f23f6885a0bc8d033af38053c8ad0eead9adb330b638f9991a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -304994,6 +304994,68 @@
       },
       "claimDigest": "6a9b9d19a1c67a983428d4b90ce33c5cda04aa721b3780b03c378a8ec63c1ce1",
       "digest": "2abe3ae8ee29635e35b34641886fdb3e3166532314a4ec5f78956a79bed10236"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6004,
+      "parentDigest": "2abe3ae8ee29635e35b34641886fdb3e3166532314a4ec5f78956a79bed10236",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "13cd8d796a98aab7810661b0cf72d564e57013318d19939ce754cc2f2d0cfbae",
+      "idempotencyKey": "f21f13e29612a3d1761bb077d2d1d052099f0280cc6770e95bc60819b75103a1",
+      "requestDigest": "4bf5cc0208feb7468c2c2b852d18a17a82d1cc087d3e6b983218367e143bd5bf",
+      "evaluationTime": "2026-08-29T11:31:03.000Z",
+      "claimCore": {
+        "claimId": "13cd8d796a98aab7810661b0cf72d564e57013318d19939ce754cc2f2d0cfbae",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:2e01be5643c210768e28ed0141e79c4f0ddf345ff110ea7ec7b1c08718399551",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:656629d88f2215824d4a2bce35e7f20ebe61248a20d38ddb3d4d21fefd11369c",
+        "canonicalBaseRevision": "1d0d4c897e395841ed61708886c563c2a8883fea",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:__tests__/agentic-sdlc-observability-contract.test.mjs",
+          "path:__tests__/agenticgraph-invocation-catalog.test.mjs",
+          "path:__tests__/canvas-embed.test.mjs",
+          "path:agent-api/src/handler.js",
+          "path:docs/AGENTIC-SDLC-RUNTIME.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/MONETIZATION-GROUNDING.md",
+          "path:docs/README.md",
+          "path:src/canvas-embed.js",
+          "path:src/config.js",
+          "semantic:agenticgraph-invocation-catalog"
+        ],
+        "writeSetDigest": "aa94b422482739cf98c10efc595cef98c611b6b58b33c433b2de832ddd701985",
+        "laneRevision": "1399af2f3151ec13bce1dd01a4fd37941a89816b",
+        "leaseEpoch": 2,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-29T12:15:44.000Z",
+        "evidenceDigest": "368a9c0453029ee486f7d9ec5a9c2e1fc81ed5171ba1e09ca7c607a0adcef04d",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBbytpA",
+        "predecessorClaimId": "bc75bc7b0657e1593a489c5627ee07071750b9307ed6125d37cf83e124dc9539",
+        "eligibleSince": "2026-08-29T11:11:02.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-29T11:15:44.000Z",
+        "integration": {
+          "candidateRevision": "1399af2f3151ec13bce1dd01a4fd37941a89816b",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBbytpA",
+          "focusedEvidenceDigest": "368a9c0453029ee486f7d9ec5a9c2e1fc81ed5171ba1e09ca7c607a0adcef04d",
+          "dependencyClosureDigest": "11eaae89a736418c602ec781dbfc0f8aa5f750b8aac78e529a4f92444388a1a9",
+          "namedChecksDigest": "ab44d8bbabab3d60d07eb5b7acbbde7b2184264ec867b578d42f681ac125863c",
+          "handoffEvidenceDigest": "64a1a5322204259eca0145f95891fc7e4b202a2bb84cee5efaf311a081c5b049",
+          "operatorDecisionDigest": "ef07773d1479973ca8858a51cbc716611e1f9b487aad17fca229372577f83939",
+          "integrationIntentDigest": "31bf331c24d6b6de087645d3b5cf1baabe7011c99634d886d5bdd9fb8e3d0c91",
+          "integratedAt": "2026-08-29T11:31:03.000Z"
+        }
+      },
+      "claimDigest": "aebe297befc63a0aba1ec7044ae62f8bc0296dc1ce0f19ad75191e2fdda7064b",
+      "digest": "2505d6af108c13f23f6885a0bc8d033af38053c8ad0eead9adb330b638f9991a"
     }
   ]
 }

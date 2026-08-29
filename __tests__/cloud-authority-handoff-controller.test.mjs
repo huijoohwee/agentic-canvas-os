@@ -1533,6 +1533,10 @@ test("repository adapter seals full-registry and all-PR claim association frames
   assert.equal(firstTraversal.length, 2);
   assert.equal(firstTraversal[0].some(value => value.startsWith("after=")), false);
   assert.equal(firstTraversal[1].some(value => value === "after=cursor-1"), true);
+  const graphqlQuery = firstTraversal[0]
+    .find(value => value.startsWith("query="))?.slice("query=".length);
+  assert.match(graphqlQuery, /\bheadRefOid\s+baseRefName\b/u);
+  assert.doesNotMatch(graphqlQuery, /headRefOidbaseRefName/u);
   assert.deepEqual(empty.claims, [{
     claimId: CLAIM_ONLY_CLAIM_ID,
     writerLeaseMatchDigests: [],

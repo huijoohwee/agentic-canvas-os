@@ -38,7 +38,7 @@ const PULL_REQUEST_ASSOCIATION_QUERY = [
   "{pullRequests(first:100,after:$after)",
   "{nodes{number id state isDraft mergedAt closedAt headRefName headRefOid",
   "baseRefName baseRefOid body}pageInfo{hasNextPage endCursor}}}}",
-].join("");
+].join(" ");
 export function createCloudAuthorityHandoffControllerAdapter(methods = {}) {
   const adapter = Object.freeze({
     readPreservedReviewLane: methods.readPreservedReviewLane,

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5896,
-  "headDigest": "27e7985cdb067ac14505201403e573c2a8fe0d580c95161455332607b28d1afd",
+  "sequence": 5897,
+  "headDigest": "84e278c26ceb4fd048c37126291adf6134c894523668ce90472ff9dbc4ded537",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -299853,6 +299853,49 @@
       },
       "claimDigest": "2589c11957879a9d09770a13f4ebcb84998871a38a32694396f318d94abbcf2d",
       "digest": "27e7985cdb067ac14505201403e573c2a8fe0d580c95161455332607b28d1afd"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5897,
+      "parentDigest": "27e7985cdb067ac14505201403e573c2a8fe0d580c95161455332607b28d1afd",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "8a214bc0e63c530cda76ac598bf1f363bf21ad7a3aa15eca4394e0c96f2d4523",
+      "idempotencyKey": "1efee74d97e35222ad04fb95c2b2128bff9cc93249b32bfcdd722173de25cea1",
+      "requestDigest": "9adbb37e76bfc0e806e8ded92dbec5f90dfbbc2e76347c7bba1ef89eb591395d",
+      "evaluationTime": "2026-08-29T01:50:33.000Z",
+      "claimCore": {
+        "claimId": "8a214bc0e63c530cda76ac598bf1f363bf21ad7a3aa15eca4394e0c96f2d4523",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:54e718b6082890116e8758ea5f54c5d169c17f9d339c72728f567bd0be662ab6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:530955a5a8c7b86025b8dc9983d3ed0920403f5422509687256e9a137c9bd1d2",
+        "canonicalBaseRevision": "8655557a64de88c397dedcf3bd5fd7c855dd574a",
+        "declaredWriteScope": [
+          "path:__tests__/admitted-empty-abandoned-owner-retirement-repository-adapter.test.mjs",
+          "path:__tests__/private-operation-lock.test.mjs",
+          "path:docs/ADMITTED-EMPTY-ABANDONED-OWNER-RETIREMENT.md",
+          "path:scripts/admitted-empty-abandoned-owner-retirement-repository-adapter.mjs",
+          "path:scripts/private-operation-lock.mjs",
+          "semantic:retirement-operation-lock-recovery"
+        ],
+        "writeSetDigest": "3eec72599dab58a0b9bf75b625056818002f2a574d17a6bdbb85f9136ce7fb4f",
+        "laneRevision": "99f8ce758de11f881f575ee8157b0110fe5215e9",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T03:41:01.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBaBh9g",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "6fe1b38cfb7e452b99faaff2121f70e13e76d80e889bf29ee11b1afc0aef8203",
+      "digest": "84e278c26ceb4fd048c37126291adf6134c894523668ce90472ff9dbc4ded537"
     }
   ]
 }

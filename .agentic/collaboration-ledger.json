@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6093,
-  "headDigest": "e840aced09804f2ba3f1c4c423010398757bf697203c4ebb010cd9359a12d59e",
+  "sequence": 6094,
+  "headDigest": "8cb653cd671bcf9388445c90195c268e27040b38400add41abd220e3789f551b",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -309764,6 +309764,56 @@
       },
       "claimDigest": "ec37d920392ed7f511c9f7c2944c2a09b39745aa831cf982bc7033213ea24b33",
       "digest": "e840aced09804f2ba3f1c4c423010398757bf697203c4ebb010cd9359a12d59e"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6094,
+      "parentDigest": "e840aced09804f2ba3f1c4c423010398757bf697203c4ebb010cd9359a12d59e",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "a5c93f38d9f298e550c27a4838fcf041457f720c9e2ef4563895e012112b8c15",
+      "idempotencyKey": "d202480128cbf22712db75ecaee12c9a5785455f4cfa311663aefff29f80ec33",
+      "requestDigest": "d42bab03b851cdc9bd4e9ed2f0553d1bd9c587348d7b33bfbe2401da0ca810d1",
+      "evaluationTime": "2026-08-29T16:13:40.000Z",
+      "claimCore": {
+        "claimId": "a5c93f38d9f298e550c27a4838fcf041457f720c9e2ef4563895e012112b8c15",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:9ca23be23aa6df83749d6f13b3cdfb0e8c4732c893d42eb6cd7a542497598daf",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:a09452328a0e0024a66850e7a8743c469f8277c25e9f3d85717929a3799e902c",
+        "canonicalBaseRevision": "ee7e339bb3ed8f48d80759e817310de8b378c0f7",
+        "declaredWriteScope": [
+          "path:__tests__/expired-published-bind-ahead-clean-descendant-recovery.test.mjs",
+          "path:docs/EXPIRED-PUBLISHED-BIND-AHEAD-CLEAN-DESCENDANT-RECOVERY.md",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery-contract.mjs",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery-controller.mjs",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery-evidence.mjs",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery-repository-adapter.mjs",
+          "path:scripts/expired-published-bind-ahead-clean-descendant-recovery.mjs",
+          "semantic:expired-published-bind-ahead-clean-descendant-re"
+        ],
+        "writeSetDigest": "8e5d4fd9bcd900318bb283b872837a8747d8772edd72ce6f2e9bf7fd563ca8be",
+        "laneRevision": "ee7e339bb3ed8f48d80759e817310de8b378c0f7",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T16:43:40.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "handoffEvidenceDigest": "0dab8da73a8409387c640228b1d5b32d4247dac0df266f4748c965a76bf46c05",
+        "recovery": {
+          "evidenceDigest": "f30b0ea785e836927b4b875aed4427aaf6a15b75e1e831548ffd23d8e7ab0b3a",
+          "recoveredAt": "2026-08-29T16:13:40.000Z"
+        }
+      },
+      "claimDigest": "b013a172d5469d18326f7ecc720bafb0bcb9cd6f1b896e184cee12f582a41931",
+      "digest": "8cb653cd671bcf9388445c90195c268e27040b38400add41abd220e3789f551b"
     }
   ]
 }

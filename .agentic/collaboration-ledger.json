@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6074,
-  "headDigest": "a3aac66b773b63052934fdf83c95f1d03a4ed84855c717acb3a3bec229f88de6",
+  "sequence": 6075,
+  "headDigest": "779ab49ffe000007f2ac0a46e0b309c518b04a2a78cc2de7a424fa6f52517d49",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -308792,6 +308792,54 @@
       },
       "claimDigest": "ad98b40d37e22af01df5dc62adbdf8b9eee19569f932fe367febd9876a2bc87b",
       "digest": "a3aac66b773b63052934fdf83c95f1d03a4ed84855c717acb3a3bec229f88de6"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6075,
+      "parentDigest": "a3aac66b773b63052934fdf83c95f1d03a4ed84855c717acb3a3bec229f88de6",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "251d2e4484da7e8fa9e56fbd9ef7f0894929a84cacbfd98af8a4e15da6a537bd",
+      "idempotencyKey": "01004ac09542aca4c2cf325e40fd065d38714478629d06f7a1669f4c6e07bdfb",
+      "requestDigest": "02e458a5d676e4285ea8c30bfa5fc80c78e73d3697c7750bb9a9d557b0f01284",
+      "evaluationTime": "2026-08-29T15:24:31.000Z",
+      "claimCore": {
+        "claimId": "251d2e4484da7e8fa9e56fbd9ef7f0894929a84cacbfd98af8a4e15da6a537bd",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5fb221c8dd74936f6f17e744744c7b354e2a11e9af42da42620cba8ee30ee505",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:ba4cda5375e713dc975adb86eb585afec1fd2c2077c25a8afde9efdb14b50178",
+        "canonicalBaseRevision": "ad15f4e3badc96feb7b8b8bb50fa66ad30145aee",
+        "declaredWriteScope": [
+          "path:.devcontainer/devcontainer.json",
+          "path:__tests__/cloud-workspace.test.mjs",
+          "path:docs/CLOUD-WORKSPACE.md",
+          "path:docs/FACTS.md",
+          "path:docs/MANAGED-IMPLEMENTATION-RUNS.md",
+          "path:docs/START-WORKFLOW.md",
+          "path:docs/WORKSPACE-PARALLELISM.md",
+          "path:package.json",
+          "path:scripts/cloud-workspace.mjs",
+          "path:todo/2026-08/hybrid-cloud-workspaces.md",
+          "semantic:hybrid-cloud-workspaces"
+        ],
+        "writeSetDigest": "64a51cbc327e5a8e8dacd4b8da0698b99e83e88a7fcc7e8783f92a36ef955be6",
+        "laneRevision": "e1d14b26bb4eece75fac8482a93e51163e86ea81",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-30T15:24:31.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBcsovA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "773367497a8042c2c4613468c448584dbd0a138432db90f6fbcaaab027ca43fe",
+      "digest": "779ab49ffe000007f2ac0a46e0b309c518b04a2a78cc2de7a424fa6f52517d49"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5885,
-  "headDigest": "924755b531ab3d45b216bf3d9adf23bc71e5cf3aa53f702140f3dd308dee8469",
+  "sequence": 5886,
+  "headDigest": "7660a3ddc831d2c2457e9f867106b803ba835ec758a88eee4faa557124084f7e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -299314,6 +299314,48 @@
       },
       "claimDigest": "4368ed53c65fc0a6aca1058253fda10ec2002310b5b701823d7b3d64b228a4a5",
       "digest": "924755b531ab3d45b216bf3d9adf23bc71e5cf3aa53f702140f3dd308dee8469"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5886,
+      "parentDigest": "924755b531ab3d45b216bf3d9adf23bc71e5cf3aa53f702140f3dd308dee8469",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "58dd1dd94b4ebb4c25725e3473c740944231d005cc8ced9dbabfe1be05a0f5f1",
+      "idempotencyKey": "2f42375908f66b81a523188cf0199d16cc3f969a49a6aa044cbd9a3ee2fea7b8",
+      "requestDigest": "5fb88fb49befcea089ae7564d0cdc607d317bb98b5319863aa67c86036682a8d",
+      "evaluationTime": "2026-08-29T00:57:16.000Z",
+      "claimCore": {
+        "claimId": "58dd1dd94b4ebb4c25725e3473c740944231d005cc8ced9dbabfe1be05a0f5f1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:d2f8f58a6834ffcb7106657a309a384e20095a796e300ae163d3ec09c474f4b6",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:ea686ee48af399601d5fabd9909934dddd187f14e02f6e23dae62db164361f80",
+        "canonicalBaseRevision": "1f7b529d42b0f0cff2c7cd749842fdfe51755bed",
+        "declaredWriteScope": [
+          "path:scripts/__tests__/production-forward-heal-baseline.test.mjs",
+          "path:scripts/lib/production-forward-heal-command.mjs",
+          "path:scripts/lib/production-forward-heal-evidence.mjs",
+          "path:scripts/verify-production-release-transports.mjs",
+          "semantic:production-forward-heal-convergence"
+        ],
+        "writeSetDigest": "6dcfd8d63e73d83e70fa103e60e5cd4a1d887bf953b1adcba4c8af5162091001",
+        "laneRevision": "1f7b529d42b0f0cff2c7cd749842fdfe51755bed",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T01:27:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "08c9b5ff3dc731c4bd435930f0652801d60dd48850a263bc10599cca37c8da36",
+      "digest": "7660a3ddc831d2c2457e9f867106b803ba835ec758a88eee4faa557124084f7e"
     }
   ]
 }

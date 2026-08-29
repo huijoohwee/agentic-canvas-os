@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5993,
-  "headDigest": "f36b74594b66c0b1ddaa1d94d25ae933c77bbd7d0dc9bce43d1c172b51df8ec1",
+  "sequence": 5994,
+  "headDigest": "a49c71fb4ae76887c2bccd2f88b0d8cb95e8bb145d780d332733e9524436c7c5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -304480,6 +304480,56 @@
       },
       "claimDigest": "62313ec23796a4cff58638b52b8557352e5cefdf17980fe34a9246062c93f0ec",
       "digest": "f36b74594b66c0b1ddaa1d94d25ae933c77bbd7d0dc9bce43d1c172b51df8ec1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5994,
+      "parentDigest": "f36b74594b66c0b1ddaa1d94d25ae933c77bbd7d0dc9bce43d1c172b51df8ec1",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "bc75bc7b0657e1593a489c5627ee07071750b9307ed6125d37cf83e124dc9539",
+      "idempotencyKey": "da2a92265a1cd6e5d451e8d16480cdd7d7b83556e24bc4709c56dc3c7b4fac39",
+      "requestDigest": "5b4e52ba6217a7db3c7d083df188721b6b0081b7e0502d2ac888a7a9b6266c69",
+      "evaluationTime": "2026-08-29T10:52:05.000Z",
+      "claimCore": {
+        "claimId": "bc75bc7b0657e1593a489c5627ee07071750b9307ed6125d37cf83e124dc9539",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:2e01be5643c210768e28ed0141e79c4f0ddf345ff110ea7ec7b1c08718399551",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:656629d88f2215824d4a2bce35e7f20ebe61248a20d38ddb3d4d21fefd11369c",
+        "canonicalBaseRevision": "1d0d4c897e395841ed61708886c563c2a8883fea",
+        "declaredWriteScope": [
+          "path:README.md",
+          "path:__tests__/agentic-sdlc-observability-contract.test.mjs",
+          "path:__tests__/agenticgraph-invocation-catalog.test.mjs",
+          "path:__tests__/canvas-embed.test.mjs",
+          "path:agent-api/src/handler.js",
+          "path:docs/AGENTIC-SDLC-RUNTIME.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/MONETIZATION-GROUNDING.md",
+          "path:docs/README.md",
+          "path:src/canvas-embed.js",
+          "path:src/config.js",
+          "semantic:agenticgraph-invocation-catalog"
+        ],
+        "writeSetDigest": "aa94b422482739cf98c10efc595cef98c611b6b58b33c433b2de832ddd701985",
+        "laneRevision": "1d0d4c897e395841ed61708886c563c2a8883fea",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-29T11:22:05.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "285a257d66f80c241a839aac57a8af3855a029164e8ac19a588079c23c593aa9",
+      "digest": "a49c71fb4ae76887c2bccd2f88b0d8cb95e8bb145d780d332733e9524436c7c5"
     }
   ]
 }

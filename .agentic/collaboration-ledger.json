@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6183,
-  "headDigest": "a4f98aab880ecd6b779b3eab06e1f589365f0c22c605a7ae535a554707690d60",
+  "sequence": 6184,
+  "headDigest": "098eef80fd048741106f0efe11990ae4718f13fe1808608acb2e3f3989b37b16",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -314178,6 +314178,47 @@
       },
       "claimDigest": "175572322c25b5ca0188a627a9a21a9bad67d5707fa77456192f8ca97e02e1b6",
       "digest": "a4f98aab880ecd6b779b3eab06e1f589365f0c22c605a7ae535a554707690d60"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6184,
+      "parentDigest": "a4f98aab880ecd6b779b3eab06e1f589365f0c22c605a7ae535a554707690d60",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "7f5f380ca7eb5c120239f38b49c05082c8811fe0f6579d29f6a48f459e244237",
+      "idempotencyKey": "d7829e72ad9eeb95ae4c6188c53612ea9380de83eb80da66f11e464337fcb756",
+      "requestDigest": "376009ba95e6f3aabccad79293266805379021ff24e264f9d70d5788965ff2de",
+      "evaluationTime": "2026-08-29T23:45:24.000Z",
+      "claimCore": {
+        "claimId": "7f5f380ca7eb5c120239f38b49c05082c8811fe0f6579d29f6a48f459e244237",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:84ee9e75f074619f54c7cb0aaf2b50942efaaf37bc9abee5caa0c7b63edff089",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:c38620fd2205dd865901d96b5ff9970c370cd6dd58e9e253b564e831bfb7e7b1",
+        "canonicalBaseRevision": "468c9921d21d9a20d2fcccc800137745dea5ec88",
+        "declaredWriteScope": [
+          "path:docs/collaboration-runtime-contract.md",
+          "path:scripts/__tests__/collaboration-contract.test.mjs",
+          "path:scripts/run-affected-ci.mjs",
+          "semantic:protected-refresh-dispatch-base-inventory"
+        ],
+        "writeSetDigest": "9d956c81eec23fc93ee4f9c3878677f82e4fa1b6e53b432f7c062f110d0c4c19",
+        "laneRevision": "9b7b7194e7ce6cdf740eb060ca844e8c7b101d5f",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-30T00:05:07.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBeMlYg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "92e3d0409c1248b4b86141efbf558b242d560c9bd09a25babf0729cb534f74e3",
+      "digest": "098eef80fd048741106f0efe11990ae4718f13fe1808608acb2e3f3989b37b16"
     }
   ]
 }

@@ -45,7 +45,10 @@ does not create a second recovery protocol.
 If the first execution completes the cloud-side integrated replay but loses its final local result,
 the same plan path accepts only the exact matching `integrated-preserved` claim. That post-success
 replay does not wait for expiry or create another successor; it recovers the already-recorded
-integrated authority and returns its bound receipt.
+integrated authority and returns its bound receipt. An epoch-one claim with a predecessor rebuilds
+the branded, read-only scope-expansion lineage proof from the fresh post-projection lane, owner,
+cloud status, and append-only ledger before the shared handoff classifier runs. The proof is bound
+to that exact reclaim request and cannot satisfy migration admission or authorize a new claim.
 
 The handoff controller returns a receipt-shaped result with the successor identity flattened as
 `successorClaimId`. The recovery result binds that public field directly; it does not depend on the

@@ -3,9 +3,8 @@ import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  canonicalJson, digestValue, validateLedger, writeSetsOverlap,
-} from "./cloud-collaboration-primitives.mjs";
+import { canonicalJson, digestValue, validateLedger, writeSetsOverlap }
+  from "./cloud-collaboration-primitives.mjs";
 import { invokeRepositoryCloudAction } from "./scoped-lane-cloud-authority.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
 import {
@@ -14,9 +13,8 @@ import {
 } from "./claim-only-partial-start-retirement-store.mjs";
 import { projectClaimOnlyProviderPulls }
   from "./claim-only-partial-start-retirement-controller.mjs";
-import {
-  buildMixedIdentityPairRetirementEvidence,
-} from "./claim-only-mixed-identity-pair-retirement-evidence.mjs";
+import { buildMixedIdentityPairRetirementEvidence }
+  from "./claim-only-mixed-identity-pair-retirement-evidence.mjs";
 import {
   mixedIdentityPairEffectReceiptDigest,
   mixedIdentityPairRetirementOperationKey,
@@ -28,30 +26,21 @@ import {
 } from "./claim-only-mixed-identity-pair-retirement-store.mjs";
 const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RUNTIME_FILES = Object.freeze([
-  "scripts/claim-only-mixed-identity-pair-retirement-evidence.mjs",
-  "scripts/claim-only-mixed-identity-pair-retirement-contract.mjs",
-  "scripts/claim-only-mixed-identity-pair-retirement-controller.mjs",
-  "scripts/claim-only-mixed-identity-pair-retirement-repository-adapter.mjs",
-  "scripts/claim-only-mixed-identity-pair-retirement-store.mjs",
-  "scripts/claim-only-mixed-identity-pair-retirement.mjs",
-]);
+  "evidence", "contract", "controller", "repository-adapter", "store", "",
+].map(name => `scripts/claim-only-mixed-identity-pair-retirement${name ? `-${name}` : ""}.mjs`));
 const DIGEST = /^[0-9a-f]{64}$/u;
-export function createRepositoryMixedIdentityPairRetirementAdapter(
-  options = {}, dependencies = {},
-) {
+export function createRepositoryMixedIdentityPairRetirementAdapter(options = {}, dependencies = {}) {
   const repository = realpathSync(path.resolve(text(options.repository, "repository")));
   const controllerRoot = realpathSync(path.resolve(options.controllerRoot || CONTROLLER_ROOT));
   if (controllerRoot !== realpathSync(CONTROLLER_ROOT)) {
     invalid("installed controller root");
   }
   const targetRepository = repositoryName(options.targetRepository);
-  const ledgerRepository = repositoryName(
-    options.ledgerRepository || "huijoohwee/agentic-canvas-os",
-  );
+  const ledgerRepository = repositoryName(options.ledgerRepository
+    || "huijoohwee/agentic-canvas-os");
   const sourceClaimId = digest(options.sourceClaimId, "source claim ID");
-  const waitingSuccessorClaimId = digest(
-    options.waitingSuccessorClaimId, "waiting-successor claim ID",
-  );
+  const waitingSuccessorClaimId = digest(options.waitingSuccessorClaimId,
+    "waiting-successor claim ID");
   if (sourceClaimId === waitingSuccessorClaimId) invalid("distinct claim IDs");
   const environment = dependencies.environment || process.env;
   const now = dependencies.now || (() => new Date());
@@ -302,7 +291,7 @@ export function createRepositoryMixedIdentityPairRetirementAdapter(
     if (role === "waiting" && current.sourceMatches.length === 1) {
       assertSourcePreserved(context.plan, current);
     } else {
-      assertTerminalBase(context.plan, current);
+      assertTerminalFrame(context, current);
       requireWaitingTerminal(context.plan, current);
     }
     const result = immediateResult || confirmedResults.get(context.operationKey) || null;
@@ -363,7 +352,7 @@ export function createRepositoryMixedIdentityPairRetirementAdapter(
     if (role === "waiting" && current.sourceMatches.length === 1) {
       assertSourcePreserved(context.plan, current);
     } else {
-      assertTerminalBase(context.plan, current);
+      assertTerminalFrame(context, current);
       requireWaitingTerminal(context.plan, current);
     }
     const outcome = validateMixedIdentityPairRetirementTerminal({
@@ -389,12 +378,8 @@ export function createRepositoryMixedIdentityPairRetirementAdapter(
     assertEffectJoin(journal.state.receipts["source-retired"], source.values);
     return Object.freeze({
       effectReceiptDigest: mixedIdentityPairEffectReceiptDigest(journal.state.receipts),
-      terminalRelevantDigest: digestValue({
-        sourceTerminalEntryDigest: current.sourceEntries.at(-1).digest,
-        waitingTerminalEntryDigest: current.waitingEntries.at(-1).digest,
-        associations: current.associations,
-        controller: current.controller,
-      }),
+      terminalRelevantDigest: mixedIdentityPairTerminalRelevantDigest(plan, current,
+        mixedIdentityPairEffectReceiptDigest(journal.state.receipts)),
       disjointMovementDigest: digestValue(current.disjointMovement),
       disjointMovementClassification: "keep",
     });
@@ -411,9 +396,17 @@ export function createRepositoryMixedIdentityPairRetirementAdapter(
     retireSource: context => retire(context, "source"),
     verifyTerminal,
   });
-  function isAncestor(base, head) {
-    try { git(["merge-base", "--is-ancestor", base, head]); return true; } catch { return false; }
+  function isAncestor(base, head, kind) { try { git(["merge-base", "--is-ancestor", base, head],
+    kind === "controller" ? controllerRoot : repository); return true; } catch { return false; } }
+  function assertTerminalFrame(context, current) {
+    if (!isMixedIdentityPairTerminalDescendantReplay(context.journal))
+      return assertTerminalBase(context.plan, current);
+    return assertMixedIdentityPairTerminalDescendant({ plan: context.plan, frame: current,
+      isAncestor, pathsUnchanged });
   }
+  function pathsUnchanged(base, head, paths) { try {
+    gitRaw(["diff", "--quiet", "--no-ext-diff", base, head, "--", ...paths]); return true;
+  } catch { return false; } }
 }
 export async function convergeRetirementAtFreshLedger({
   readFrame, classify, invoke, maximumAttempts = 3,
@@ -433,7 +426,35 @@ export async function convergeRetirementAtFreshLedger({
   if (lastError) throw lastError;
   throw new Error("Cloud retirement did not converge at a fresh ledger head.");
 }
-
+export function isMixedIdentityPairTerminalDescendantReplay(journal) { return ["source-retired", "complete"].includes(journal?.state?.phase); }
+export function assertMixedIdentityPairTerminalDescendant({ plan, frame, isAncestor,
+  pathsUnchanged }) {
+  const plannedController = plan.evidence.controller, controller = frame.controller;
+  const plannedCanonical = plan.evidence.canonical, canonical = frame.canonical;
+  const paths = plan.evidence.scopeComparison.union.filter(item => item.startsWith("path:"))
+    .map(item => item.slice(5));
+  assertAssociations(frame.associations);
+  if (canonicalJson(frame.repository) !== canonicalJson(plan.evidence.repository)
+    || frame.sourceMatches.length || frame.waitingMatches.length
+    || controller.repository !== plannedController.repository || controller.branch !== "main"
+    || !controller.clean || !controller.protected || controller.headSha !== controller.originMainSha
+    || controller.headSha !== controller.remoteMainSha || !canonical.sourceBaseContained
+    || !canonical.waitingSuccessorBaseContained) invalid("terminal protected descendant");
+  if (!isAncestor(plannedController.headSha, controller.headSha, "controller")
+    || !isAncestor(plannedCanonical.mainSha, canonical.mainSha, "canonical")) invalid("terminal ancestry");
+  if (plan.evidence.repository.targetRepository === plan.evidence.repository.ledgerRepository
+    && canonical.mainSha !== controller.headSha) invalid("terminal canonical parity");
+  if ((!paths.length && canonical.mainSha !== plannedCanonical.mainSha)
+    || (paths.length && !pathsUnchanged(plannedCanonical.mainSha, canonical.mainSha, paths))) {
+    invalid("terminal affected path drift");
+  }
+}
+export function mixedIdentityPairTerminalRelevantDigest(plan, frame, effectReceiptDigest) { return digestValue({
+    planDigest: plan.planDigest, repository: plan.evidence.repository,
+    controller: plan.evidence.controller, canonical: plan.evidence.canonical,
+    sourceTerminalEntryDigest: frame.sourceEntries.at(-1).digest,
+    waitingTerminalEntryDigest: frame.waitingEntries.at(-1).digest,
+    associations: frame.associations, effectReceiptDigest }); }
 function assertInitialFrame(plan, frame) {
   assertStableBase(plan, frame);
   assertCurrentClaim(plan.evidence.source, frame.sourceMatches[0], frame.sourceEntries[0], "source");
@@ -447,7 +468,6 @@ function assertInitialFrame(plan, frame) {
       !== canonicalJson([plan.waitingSuccessorClaimId])
     || frame.overlap.higherPriorityWaitingClaimIds.length) invalid("initial relevant overlap");
 }
-
 function assertSourceReadyFrame(plan, frame) {
   assertStableBase(plan, frame);
   requireWaitingTerminal(plan, frame);
@@ -459,14 +479,12 @@ function assertSourceReadyFrame(plan, frame) {
       !== canonicalJson([plan.sourceClaimId])
     || frame.overlap.waitingClaimIds.length) invalid("source-ready relevant overlap");
 }
-
 function assertSourcePreserved(plan, frame) {
   assertStableBase(plan, frame);
   if (frame.sourceMatches.length !== 1) invalid("preserved source cardinality");
   assertCurrentClaim(plan.evidence.source, frame.sourceMatches[0], frame.sourceEntries[0], "source");
   assertAssociations(frame.associations);
 }
-
 function assertTerminalBase(plan, frame) {
   assertStableBase(plan, frame);
   assertAssociations(frame.associations);
@@ -474,7 +492,6 @@ function assertTerminalBase(plan, frame) {
     invalid("terminal pair cardinality");
   }
 }
-
 function requireWaitingTerminal(plan, frame) {
   if (frame.waitingMatches.length !== 0) invalid("waiting successor still current");
   validateMixedIdentityPairRetirementTerminal({
@@ -485,7 +502,6 @@ function requireWaitingTerminal(plan, frame) {
     entry: frame.waitingEntries.at(-1),
   });
 }
-
 function assertStableBase(plan, frame) {
   if (canonicalJson(frame.repository) !== canonicalJson(plan.evidence.repository)
     || canonicalJson(frame.controller) !== canonicalJson(plan.evidence.controller)
@@ -493,20 +509,17 @@ function assertStableBase(plan, frame) {
     invalid("repository/controller/canonical drift");
   }
 }
-
 function assertCurrentClaim(expected, actual, genesis, label) {
   if (!actual || canonicalJson(projectClaimOnlyClaim(actual, genesis)) !== canonicalJson(expected)) {
     invalid(`${label} fence or identity drift`);
   }
 }
-
 function assertAssociations(value) {
   if (Object.values(value).some(subject =>
     Object.values(subject).some(matches => matches.length !== 0))) {
     invalid("claim-bound association drift");
   }
 }
-
 function relevantFrameDigest(plan, frame, phase) {
   return digestValue({
     phase,
@@ -519,7 +532,6 @@ function relevantFrameDigest(plan, frame, phase) {
     overlap: frame.overlap,
   });
 }
-
 function identityComparison(source, waiting) {
   const fields = ["workItemId", "deviceId", "sessionId", "writeSetDigest",
     "declaredWriteScope"];
@@ -536,7 +548,6 @@ function identityComparison(source, waiting) {
     comparisonDigest: digestValue({ equalFields, differentFields }),
   };
 }
-
 function scopeComparison(source, waiting) {
   const sourceSet = source.declaredWriteScope;
   const waitingSet = waiting.declaredWriteScope;
@@ -553,7 +564,6 @@ function scopeComparison(source, waiting) {
     [`${name}Digest`, digestValue(values)]));
   return { ...core, ...digests, comparisonDigest: digestValue({ core, digests }) };
 }
-
 function effectContext(plan, journal, phase) {
   return { plan, journal, phase, operationKey: mixedIdentityPairRetirementOperationKey(plan, phase) };
 }
@@ -578,16 +588,12 @@ function compareWaiting(left, right) {
 }
 function firstSha(value) {
   const result = String(value).trim().split(/\s+/u)[0];
-  if (!/^[0-9a-f]{40}$/u.test(result)) invalid("remote main");
-  return result;
+  if (!/^[0-9a-f]{40}$/u.test(result)) invalid("remote main"); return result;
 }
 function repositoryName(value) {
   const result = text(value, "repository");
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) invalid("repository");
-  return result;
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) invalid("repository"); return result;
 }
-function text(value, label) { if (typeof value !== "string" || !value.trim()) invalid(label);
-  return value.trim(); }
-function digest(value, label) { if (!DIGEST.test(String(value || ""))) invalid(label);
-  return value; }
+function text(value, label) { if (typeof value !== "string" || !value.trim()) invalid(label); return value.trim(); }
+function digest(value, label) { if (!DIGEST.test(String(value || ""))) invalid(label); return value; }
 function invalid(label) { throw new Error(`Mixed-identity pair repository ${label} is invalid.`); }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 5985,
-  "headDigest": "fdb0d76acc11e3de04b4d0ddd4d4bdfd28ae451067d61e84327f9e94b21ca75c",
+  "sequence": 5986,
+  "headDigest": "e06ae3b67451bd9c69d24a6b2902d78bc18121fcd0e2864b1274b7175f441a59",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -304046,6 +304046,65 @@
       },
       "claimDigest": "a6a98c814ec3d1fda075f343b7accce08b3f14eddfa86fa161d8867b80ee7bcd",
       "digest": "fdb0d76acc11e3de04b4d0ddd4d4bdfd28ae451067d61e84327f9e94b21ca75c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 5986,
+      "parentDigest": "fdb0d76acc11e3de04b4d0ddd4d4bdfd28ae451067d61e84327f9e94b21ca75c",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0f4b8ae8a34c8df5620a2504b49ddbf4f21f1647908743d4a9d3ac7fe5120a6e",
+      "idempotencyKey": "e6567bcf958ae9a48eaa49e35a22a61f17b859fa6f352e7259c947692709b656",
+      "requestDigest": "1df00d730190f47c886e714d3eafa8dcfaf93afcc76c087727fbd0798c0c5020",
+      "evaluationTime": "2026-08-29T10:16:43.000Z",
+      "claimCore": {
+        "claimId": "0f4b8ae8a34c8df5620a2504b49ddbf4f21f1647908743d4a9d3ac7fe5120a6e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8d29e5bd25a843abce30bf0fd7c82e724ebcd2b246ffaf83166231d22b45b867",
+        "sessionId": "session:e4aa7448c860d14020985ced684408458b6919f4aa125e7a0a1022651f6f0b06",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0202a36216b48f5ba181cf1c7d724e46f9b9a52aeb1005bc7b8b1ba7ff0ca2e0",
+        "canonicalBaseRevision": "8655557a64de88c397dedcf3bd5fd7c855dd574a",
+        "declaredWriteScope": [
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-cli.test.mjs",
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-contract.test.mjs",
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-controller.test.mjs",
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-evidence.test.mjs",
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-repository-adapter.test.mjs",
+          "path:docs/PROVIDER-ONLY-MERGED-CLAIM-PAIR-RECONCILIATION.md",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-contract.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-controller.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-evidence.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-repository-adapter.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation.mjs",
+          "semantic:provider-only-merged-claim-pair-reconciliation"
+        ],
+        "writeSetDigest": "046bb90069fe7ea4f91a705045bf9f1fef17f02a5ff6e3f2b53670a889c3b47b",
+        "laneRevision": "8655557a64de88c397dedcf3bd5fd7c855dd574a",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-30T01:26:21.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "retirement": {
+          "reason": "superseded",
+          "finalRevision": "8655557a64de88c397dedcf3bd5fd7c855dd574a",
+          "reviewRequestId": null,
+          "bytesDigest": "fbd95d22b554f2d640fee5eaf09d16783c0a9057e46bb1c0e8218b239b3c6953",
+          "namedChecksDigest": "a5f953c921c29c8c9e039da150dcfbb3d5355be82dac1736a1af93f7990bc555",
+          "handoffEvidenceDigest": "ba6ba00271ff7f5b5e7af8ffd5e9b4f54c3cee60655e47fe9a2eccbdfed0be58",
+          "integrationReceiptDigest": null,
+          "retiredAt": "2026-08-29T10:16:43.000Z"
+        }
+      },
+      "claimDigest": "47ba431321f0107a21730d63c81db5397ed82157a88fc36d0cce3ef066d02e79",
+      "digest": "e06ae3b67451bd9c69d24a6b2902d78bc18121fcd0e2864b1274b7175f441a59"
     }
   ]
 }

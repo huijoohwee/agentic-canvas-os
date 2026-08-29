@@ -21,6 +21,7 @@ import { inspectIntegratedDeliveryTerminal } from "./integrated-delivery-termina
 import {
   buildMergedIntegratedPreservedLostAuthorityEvidence,
   OPERATION,
+  projectMergedIntegratedPreservedLostAuthorityStableEvidence,
 } from "./merged-integrated-preserved-lost-task-authority-recovery-contract.mjs";
 import { assertOnlyTaskAuthorityChanged } from "./orphaned-task-authority-recovery-evidence.mjs";
 import { verifyProtectedMainRefreshChain } from "./protected-main-refresh-lib.mjs";
@@ -290,7 +291,8 @@ export function createMergedIntegratedPreservedLostAuthorityRecoveryRepositoryAd
       sourceBinding: plan.evidence.sourceBinding,
       sourceLeaseDigest: plan.evidence.sourceLeaseDigest,
     });
-    if (preserved.evidenceDigest !== plan.evidence.evidenceDigest) {
+    if (digestValue(projectMergedIntegratedPreservedLostAuthorityStableEvidence(preserved))
+      !== digestValue(projectMergedIntegratedPreservedLostAuthorityStableEvidence(plan.evidence))) {
       throw new Error("Recovery terminal evidence drifted outside task authority.");
     }
     const core = {

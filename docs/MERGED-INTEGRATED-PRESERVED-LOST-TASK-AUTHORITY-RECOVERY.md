@@ -40,4 +40,9 @@ worktree cleanup.
 The controller forbids source or index changes, commits, refs, PR edits, cloud
 mutations, merges, cleanup, deployment, and runtime actions. It accepts a
 response-loss replay only when the local registry already contains the exact
-plan-derived handoff binding and every non-authority evidence field is stable.
+plan-derived handoff binding and every task-bound evidence field is stable.
+
+Global append-only ledger heads remain in the plan as audit evidence, but a
+later disjoint ledger append does not invalidate this handoff. The controller
+still fails closed when the target worktree, source binding, merged subject,
+delivery lineage, claim fence, or transition counter changes.

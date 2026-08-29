@@ -9,6 +9,7 @@ import {
   createMergedIntegratedPreservedLostAuthorityJournal,
   normalizeMergedIntegratedPreservedLostAuthorityJournal,
   normalizeMergedIntegratedPreservedLostAuthorityPlan,
+  projectMergedIntegratedPreservedLostAuthorityStableEvidence,
 } from "./merged-integrated-preserved-lost-task-authority-recovery-contract.mjs";
 
 export function createMergedIntegratedPreservedLostAuthorityRecoveryController({ adapter } = {}) {
@@ -105,8 +106,9 @@ export function createMergedIntegratedPreservedLostAuthorityRecoveryController({
 async function assertPlanCurrent(adapter, plan) {
   const first = await adapter.captureSource();
   const second = await adapter.captureSource();
-  if (first?.evidenceDigest !== plan.evidence.evidenceDigest
-    || second?.evidenceDigest !== plan.evidence.evidenceDigest) {
+  const expected = digestValue(projectMergedIntegratedPreservedLostAuthorityStableEvidence(plan.evidence));
+  if (digestValue(projectMergedIntegratedPreservedLostAuthorityStableEvidence(first)) !== expected
+    || digestValue(projectMergedIntegratedPreservedLostAuthorityStableEvidence(second)) !== expected) {
     throw new Error("Recovery evidence drifted from the authorized plan.");
   }
 }

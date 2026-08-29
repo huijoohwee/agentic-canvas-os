@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6081,
-  "headDigest": "d0c892b74bc1b203d8e2d802e8afe93d8fe8944eac3f23d3e78618c51b900eb0",
+  "sequence": 6082,
+  "headDigest": "fe61a7ffc0b3e16b96c7ef3886d633879c52ba6f203d1b456914f8ba8a5b40c5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -309131,6 +309131,60 @@
       },
       "claimDigest": "5e5a8d4d85fbd5efd433e6a4806e0fbcd3e9411f0e445fd55f36f10cada7d84d",
       "digest": "d0c892b74bc1b203d8e2d802e8afe93d8fe8944eac3f23d3e78618c51b900eb0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6082,
+      "parentDigest": "d0c892b74bc1b203d8e2d802e8afe93d8fe8944eac3f23d3e78618c51b900eb0",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "017ab2f34d2eae1f8af337108077884aae183444e9bb9a969d8893dffcac7cf3",
+      "idempotencyKey": "c47e9e400db8737f81f1a1c6d54ce16f6f992d48ba3f3ce19256cf4a388edbd6",
+      "requestDigest": "0637461863bac41926b63eef15da113abc0a287ceb55462d46468f34f0ed9244",
+      "evaluationTime": "2026-08-29T15:41:16.000Z",
+      "claimCore": {
+        "claimId": "017ab2f34d2eae1f8af337108077884aae183444e9bb9a969d8893dffcac7cf3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:a88b7512fe7b5b9f2e1660dbefc028de0d2ed1ce1f1922c7d9abae69f49bd7b6",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b037836a3e92555063378f4666fcb5f5ab7ebbd77407f223b42d499a6bc2ecab",
+        "canonicalBaseRevision": "ad15f4e3badc96feb7b8b8bb50fa66ad30145aee",
+        "declaredWriteScope": [
+          "path:__tests__/merged-integrated-preserved-lost-task-authority-recovery.test.mjs",
+          "path:docs/MERGED-INTEGRATED-PRESERVED-LOST-TASK-AUTHORITY-RECOVERY.md",
+          "path:scripts/merged-integrated-preserved-lost-task-authority-recovery-contract.mjs",
+          "path:scripts/merged-integrated-preserved-lost-task-authority-recovery-controller.mjs",
+          "path:scripts/merged-integrated-preserved-lost-task-authority-recovery-repository-adapter.mjs",
+          "semantic:merged-authority-recovery-ledger-stability"
+        ],
+        "writeSetDigest": "1c86eadc265240da3c26116af7fb82799d391c3826fbe7e5df1f356e896a74ee",
+        "laneRevision": "a1669b95b2099814ac1a4254670a731276bd140e",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-29T15:55:30.000Z",
+        "evidenceDigest": "3e7d386a269cd64a3621aa444f82eca66e38c013c1edf61d715e6fa11858fb5c",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBcusQw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "a1669b95b2099814ac1a4254670a731276bd140e",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBcusQw",
+          "focusedEvidenceDigest": "3e7d386a269cd64a3621aa444f82eca66e38c013c1edf61d715e6fa11858fb5c",
+          "dependencyClosureDigest": "69320a1f062005f5868041dcfaaa5ee6fd26808886c5da009d5195e385d56004",
+          "namedChecksDigest": "9d2f839cbe330225a9a17a9cdc8c1bf931fcaa65a34684c099156c6da2dfc5c3",
+          "handoffEvidenceDigest": "8f7c7eadacbd0c740bd6100a9d3773544a8f73418368ace9c6cd5b984f84851a",
+          "operatorDecisionDigest": "cf3aba29325e387a563ed836664623e3fe69c8cf8b01d8dfd64c09b561bb972c",
+          "integrationIntentDigest": "a2def736c6249b3f9334e179e410fb208dc10204117b274d264abcab00a0e6d9",
+          "integratedAt": "2026-08-29T15:41:16.000Z"
+        }
+      },
+      "claimDigest": "08d1f0806bde309eebbbaca61d50e4f0a3520e5fd0fd4497f8ec4cbcc920e9fe",
+      "digest": "fe61a7ffc0b3e16b96c7ef3886d633879c52ba6f203d1b456914f8ba8a5b40c5"
     }
   ]
 }

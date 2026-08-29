@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6056,
-  "headDigest": "19d3866dd4362784a3a3bb758ab031645130e038731915bbd49b370f056b441c",
+  "sequence": 6057,
+  "headDigest": "678321b18b2a03b27061a971c3382519b83277273c9ac2fdc31fd1e665cd6d49",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -307820,6 +307820,47 @@
       },
       "claimDigest": "0504844c051fdc549cbbedac68e257124b2e4d46d2a7284a13880c50d409b587",
       "digest": "19d3866dd4362784a3a3bb758ab031645130e038731915bbd49b370f056b441c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6057,
+      "parentDigest": "19d3866dd4362784a3a3bb758ab031645130e038731915bbd49b370f056b441c",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "fed83c8d49b15061e5ee72894c74224706c2b02b069cb2596954a1d135f6c1a5",
+      "idempotencyKey": "74e3d8e71d74e4fa1a4cd6bf5a351ed91425e17529349afa106adfda80c19254",
+      "requestDigest": "595b4e97e6072d02dde92c9ada7361f35bf39cc08583b63118735f853fd3d7ac",
+      "evaluationTime": "2026-08-29T14:49:38.000Z",
+      "claimCore": {
+        "claimId": "fed83c8d49b15061e5ee72894c74224706c2b02b069cb2596954a1d135f6c1a5",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:5fb221c8dd74936f6f17e744744c7b354e2a11e9af42da42620cba8ee30ee505",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0198d3b810bc551c9a9b74805e4d7f0c01f9c7cbcba9424bce2c168476368939",
+        "canonicalBaseRevision": "08a3a0c55d0298782dc9c6241d2d534c97b8e629",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-mixed-identity-pair-retirement.test.mjs",
+          "path:scripts/claim-only-mixed-identity-pair-retirement-repository-adapter.mjs",
+          "path:todo/2026-08/pair-terminal-descendant-replay.md",
+          "semantic:pair-terminal-descendant-replay"
+        ],
+        "writeSetDigest": "039153963315c0825addb98282b870ff6778479fc2e6a1906fbea94688a1ec27",
+        "laneRevision": "2c7be00c2a1a478b343e2ddc84a0d37b3ca3c30b",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-30T14:22:35.000Z",
+        "evidenceDigest": "a17f8ca2dcce07436be802693eb64436c0f8e30480e4bd6a0ccbcc5f9a88db8b",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBcjCsg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "5a797b755197946d9c4d977264325c3996fb8c59153a4f917efcf7c6b0a4bc3c",
+      "digest": "678321b18b2a03b27061a971c3382519b83277273c9ac2fdc31fd1e665cd6d49"
     }
   ]
 }

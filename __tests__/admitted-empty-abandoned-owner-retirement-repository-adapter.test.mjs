@@ -160,7 +160,7 @@ test("PR-bound retirement preserves Git projections and replays terminally", asy
     url: "https://example.test/pull/7", state: pullClosed ? "CLOSED" : "OPEN",
     isDraft: true, mergedAt: null, closedAt: pullClosed ? "2026-08-23T11:00:00.000Z" : null,
     headRefName: branch, headRefOid: head, baseRefName: "main",
-    baseRefOid: retired ? controllerHead : base });
+    baseRefOid: base });
   const leaseStore = { read: () => lease,
     assertTaskAuthority: () => { authorityCalls += 1; return lease; },
     withRegistryLock: action => action({ leases: { [branch]: lease } }),

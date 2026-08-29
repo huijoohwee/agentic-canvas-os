@@ -157,7 +157,7 @@ export function createRepositoryAdapter(options = {}, dependencies = {}) {
         || remoteHead(git, controllerRoot, "main") !== controller.headSha
         || git(controllerRoot, ["rev-parse", `${plan.controller.headSha}^{tree}`]) !== plan.controller.treeSha)
         throw new Error("Retirement continuation is not on exact live protected main."); }
-    const pull = pullProjection(); assertPullIdentity(plan.subject.pullRequest, pull, { protectedBaseSha: descendant ? controller.headSha : null });
+    const pull = pullProjection(); assertPullIdentity(plan.subject.pullRequest, pull);
     const authored = authoredProjection();
     const sourceWasProtectedMain = plan.authoredLane.path === controllerRoot && plan.authoredLane.branch === "main"
       && plan.authoredLane.headSha === plan.controller.headSha && plan.authoredLane.treeSha === plan.controller.treeSha;
@@ -509,9 +509,9 @@ function resumeAuthoredRecovery({ sourcePlan, authored, controller, plan, resume
     authoredLaneTreeSha: authored.treeSha };
 }
 
-function assertPullIdentity(expected, actual, { protectedBaseSha = null } = {}) { for (const key of ["number", "nodeId", "url", "isDraft", "mergedAt",
+function assertPullIdentity(expected, actual) { for (const key of ["number", "nodeId", "url", "isDraft", "mergedAt",
   "headBranch", "headSha", "baseBranch"]) if (actual[key] !== expected[key]) throw new Error("Pull request identity drifted.");
-  if (actual.baseSha !== (protectedBaseSha || expected.baseSha)) throw new Error("Pull request identity drifted."); }
+  if (actual.baseSha !== expected.baseSha) throw new Error("Pull request identity drifted."); }
 function isReleasedLease(lease, plan) { const receipt = lease?.admittedEmptyAbandonedOwnerRetirement;
   const receiptCore = receipt && { ...receipt }, releasedCore = lease && { ...lease };
   if (receiptCore) delete receiptCore.receiptDigest;

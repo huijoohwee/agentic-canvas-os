@@ -126,6 +126,24 @@ test("independent response loss after either effect is adopted and replay is eff
   }
 });
 
+test("terminal join hashes each sealed effect before hashing the pair", async () => {
+  const runtime = mockRuntime();
+  const controller = createMixedIdentityPairRetirementController({ adapter: runtime.adapter });
+  const plan = await controller.plan();
+  await controller.run({ planDigest: plan.planDigest, authorization: plan.exactAuthorization });
+  const receipts = runtime.journal.state.receipts;
+  const values = value => {
+    const result = { ...value }; delete result.phase; delete result.receiptDigest; return result;
+  };
+  const rawPairDigest = digestValue({
+    waitingSuccessor: values(receipts["waiting-successor-retired"]),
+    source: values(receipts["source-retired"]),
+  });
+  assert.notEqual(rawPairDigest, mixedIdentityPairEffectReceiptDigest(receipts));
+  assert.equal(receipts.verified.effectReceiptDigest,
+    mixedIdentityPairEffectReceiptDigest(receipts));
+});
+
 test("retries an unrelated ledger CAS advance with a fresh head", async () => {
   let reads = 0, invokes = 0;
   const result = await convergeRetirementAtFreshLedger({

@@ -18,6 +18,7 @@ import {
   buildMixedIdentityPairRetirementEvidence,
 } from "./claim-only-mixed-identity-pair-retirement-evidence.mjs";
 import {
+  mixedIdentityPairEffectReceiptDigest,
   mixedIdentityPairRetirementOperationKey,
 } from "./claim-only-mixed-identity-pair-retirement-contract.mjs";
 import {
@@ -387,10 +388,7 @@ export function createRepositoryMixedIdentityPairRetirementAdapter(
     assertEffectJoin(journal.state.receipts["waiting-successor-retired"], waiting.values);
     assertEffectJoin(journal.state.receipts["source-retired"], source.values);
     return Object.freeze({
-      effectReceiptDigest: digestValue({
-        waitingSuccessor: effectReceiptValues(journal.state.receipts["waiting-successor-retired"]),
-        source: effectReceiptValues(journal.state.receipts["source-retired"]),
-      }),
+      effectReceiptDigest: mixedIdentityPairEffectReceiptDigest(journal.state.receipts),
       terminalRelevantDigest: digestValue({
         sourceTerminalEntryDigest: current.sourceEntries.at(-1).digest,
         waitingTerminalEntryDigest: current.waitingEntries.at(-1).digest,
@@ -563,9 +561,6 @@ export function projectMixedIdentityPairRepositoryEvidence(value, ledgerReposito
   return Object.freeze({ targetRepository: value.targetRepository, ledgerRepository,
     providerRepositoryId: value.providerRepositoryId, topLevelDigest: value.topLevelDigest,
     gitCommonDirectoryDigest: value.gitCommonDirectoryDigest, originUrlDigest: value.originUrlDigest });
-}
-function effectReceiptValues(value) {
-  const result = { ...value }; delete result.phase; delete result.receiptDigest; return result;
 }
 function assertEffectJoin(sealed, fresh) {
   for (const name of ["operationKey", "claimId", "requestDigest", "operationReceiptDigest",

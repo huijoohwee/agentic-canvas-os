@@ -18,15 +18,13 @@ if ! printf '%s\n' "$worktrees" | grep -F -x -- "$root" >/dev/null; then
   exit 1
 fi
 
-branch="$(git branch --show-current)"
-writer_lease_guard="$root/scripts/writer-lease-guard.mjs"
-case "$branch" in
-  agent/*)
-    if [ -f "$writer_lease_guard" ]; then
-      node "$writer_lease_guard"
-    fi
-    ;;
-esac
+# The writer-lease authority gate lives in pre-push, not here. A commit reaches
+# only this run's own lane, so lapsed or drifted authority must never block it:
+# recording proceeds, the lane carries unreconciled commits, and reconciliation
+# happens at renewal. Publication is where shared authority is proven. Gating here
+# protected no shared state and left `--no-verify` as the only way to keep hours of
+# verified authoring. Owner of the rule: the Recording Versus Publishing contract in
+# huijoohwee.github.io/guidelines/agentic-sdlc-cloud-collaboration.md.
 
 # Prove workspace lane isolation before the commit is recorded. Committing is never
 # destructive, so this checks ownership collisions only and never blocks on another

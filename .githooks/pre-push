@@ -1,9 +1,27 @@
 #!/bin/sh
 # Refuse forced updates and remote ref deletions that would discard commits another
 # session may depend on. Fast-forward pushes pass untouched.
+#
+# This hook also owns the writer-lease authority gate, because pushing is the first
+# operation in this repository with a shared blast radius. Committing reaches only
+# the run's own lane and is therefore gated by nothing: a gate that discards
+# recorded work to protect state that work never touched is fail-destructive, and
+# it leaves `--no-verify` as the only way to keep hours of verified authoring.
+# Owner of the rule: huijoohwee.github.io/guidelines/agentic-sdlc-cloud-collaboration.md
 set -eu
 
 root="$(git rev-parse --show-toplevel)"
+branch="$(git branch --show-current)"
+writer_lease_guard="$root/scripts/writer-lease-guard.mjs"
+
+case "$branch" in
+  agent/*)
+    if [ -f "$writer_lease_guard" ]; then
+      node "$writer_lease_guard"
+    fi
+    ;;
+esac
+
 guard="$root/scripts/workspace-guard-hook.mjs"
 
 [ -f "$guard" ] || exit 0

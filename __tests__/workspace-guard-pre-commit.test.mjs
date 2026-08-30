@@ -6,6 +6,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const PRE_COMMIT_HOOK = path.resolve(".githooks/pre-commit");
+const PRE_PUSH_HOOK = path.resolve(".githooks/pre-push");
 
 function createFakeGit(binDir) {
   const script = `#!/bin/sh
@@ -48,7 +49,7 @@ exit 0
   fs.writeFileSync(target, script, { mode: 0o755 });
 }
 
-function runHook({ branch, createWriterLeaseGuard }) {
+function runHook({ branch, createWriterLeaseGuard, hook = PRE_COMMIT_HOOK }) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workspace-hook-pre-commit-"));
   const binDir = path.join(root, "bin");
   const scriptsDir = path.join(root, "scripts");
@@ -60,7 +61,7 @@ function runHook({ branch, createWriterLeaseGuard }) {
   if (createWriterLeaseGuard) {
     fs.writeFileSync(path.join(scriptsDir, "writer-lease-guard.mjs"), "export {};\n");
   }
-  const result = spawnSync(PRE_COMMIT_HOOK, [], {
+  const result = spawnSync(hook, [], {
     env: {
       ...process.env,
       PATH: `${binDir}:${process.env.PATH || ""}`,
@@ -85,12 +86,55 @@ test("shared pre-commit skips repo-specific writer guard when the script is abse
   assert.deepEqual(result.nodeCalls, []);
 });
 
-test("shared pre-commit runs the writer lease guard when the repository provides it", () => {
+// The writer-lease authority gate belongs to pre-push. A commit reaches only the
+// run's own lane, so gating it on shared authority protects nothing shared while
+// risking every authored byte not yet recorded.
+test("shared pre-commit never gates a local commit on shared writer authority", () => {
   const result = runHook({
     branch: "agent/macos/release-closure-parity",
     createWriterLeaseGuard: true,
   });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.nodeCalls.length, 1);
-  assert.match(result.nodeCalls[0], /writer-lease-guard\.mjs$/);
+  assert.equal(
+    result.nodeCalls.some((call) => /writer-lease-guard\.mjs$/.test(call)),
+    false,
+    "recording must not assert publication authority",
+  );
+});
+
+test("shared pre-push runs the writer lease guard on an agent branch", () => {
+  const result = runHook({
+    branch: "agent/macos/release-closure-parity",
+    createWriterLeaseGuard: true,
+    hook: PRE_PUSH_HOOK,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.nodeCalls[0], /writer-lease-guard\.mjs$/,
+    "pushing is the first shared mutation, so it carries the gate");
+});
+
+test("shared pre-push leaves a non-agent branch to the workspace guard alone", () => {
+  const result = runHook({
+    branch: "main",
+    createWriterLeaseGuard: true,
+    hook: PRE_PUSH_HOOK,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(
+    result.nodeCalls.some((call) => /writer-lease-guard\.mjs$/.test(call)),
+    false,
+  );
+});
+
+test("shared pre-push skips the writer guard when the repository omits it", () => {
+  const result = runHook({
+    branch: "agent/macos/release-closure-parity",
+    createWriterLeaseGuard: false,
+    hook: PRE_PUSH_HOOK,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(
+    result.nodeCalls.some((call) => /writer-lease-guard\.mjs$/.test(call)),
+    false,
+  );
 });

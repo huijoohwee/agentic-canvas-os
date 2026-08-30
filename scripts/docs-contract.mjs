@@ -20,6 +20,7 @@ import { validateUrlIngestContractDocuments } from "./url-ingest-contract.mjs";
 import { validatePlanningContextRecordContract } from "./planning-context-record-contract.mjs";
 import { validateDictionaryCatalogContract } from "./dictionary-catalog-contract.mjs";
 import { validateKanbanProjection } from "./kanban-projection.mjs";
+import { evaluateCorpus, evaluateRatchet } from "./frontmatter-runtime-contract.mjs";
 
 export const MAX_DOCS_ARTIFACT_BYTES = 500_000;
 // The always-on harness header is loaded every session, so it carries a much
@@ -140,6 +141,7 @@ export async function runDocsContract({
   failures.push(...validateUrlIngestContractDocuments(documents));
   failures.push(...validateDictionaryCatalogContract(documents));
   failures.push(...validateKanbanProjection(documents, { repository: repositoryRoot }));
+  failures.push(...await validateFrontmatterRuntimeRatchet({ documents, repositoryRoot }));
   failures.push(...validatePlanningContextRecordContract({ repository: repositoryRoot }).failures);
 
   if (failures.length > 0) throw new Error(failures.join("\n"));
@@ -149,6 +151,26 @@ export async function runDocsContract({
     projectionCount,
     artifactCount: artifacts.length,
   });
+}
+
+// Frontmatter tiers are owned by the guidelines module
+// agentic-sdlc-yaml-frontmatter-runtime-guidelines.md. Only top-level docs are
+// evaluated; workspace-seed projections carry their own marker contract.
+async function validateFrontmatterRuntimeRatchet({ documents, repositoryRoot }) {
+  const artifacts = [...documents]
+    .filter(([relativePath]) => !relativePath.includes("/"))
+    .map(([relativePath, text]) => ({ relativePath, text }));
+  let baseline = [];
+  try {
+    const raw = await readFile(
+      path.join(repositoryRoot, "scripts", "frontmatter-runtime.baseline.json"),
+      "utf8",
+    );
+    baseline = JSON.parse(raw).nonConformant ?? [];
+  } catch {
+    return ["scripts/frontmatter-runtime.baseline.json: absent; record it with --write"];
+  }
+  return evaluateRatchet({ report: evaluateCorpus(artifacts), baseline });
 }
 
 async function collectDirectory(absoluteDirectory, relativeDirectory, artifacts) {

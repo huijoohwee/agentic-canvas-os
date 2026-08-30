@@ -49,7 +49,13 @@ export function heartbeat({
   requireSession(sessionId);
   requireRepositorySafety({ invocationPath, repo, gitText });
   const branch = gitText(["branch", "--show-current"]).trim();
-  let current = leaseStore.verify({ sessionId, branch });
+  // Renewal must not assert the liveness it exists to restore. Expiry is the
+  // condition this command repairs, so asserting it here made a routine lapse
+  // permanent: the lease could not be renewed because it needed renewing. Every
+  // ownership check still binds -- session, branch, epoch mutability, task
+  // authority, worktree, remote fence, and draft pull request -- and the store's
+  // own heartbeat already reads with allowExpired for the same reason.
+  let current = leaseStore.verify({ sessionId, branch, allowExpired: true });
   assertLeaseWorktree(current, repo);
   let observedRemoteSha = null;
   if (!repairPullRequestProjection) {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6252,
-  "headDigest": "67e9ef23512c357cbb68beec7c8090d51d4f4b69808fe447e654a4f51f9900dc",
+  "sequence": 6253,
+  "headDigest": "4920f1157b717216c544644485d5a2ebeb306347d35da85994432e274042d666",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -317688,6 +317688,48 @@
       },
       "claimDigest": "dc5a89f724c50c1caecd403fc4da12d5a396902dfb0c3f32c07381ee3ff79a87",
       "digest": "67e9ef23512c357cbb68beec7c8090d51d4f4b69808fe447e654a4f51f9900dc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6253,
+      "parentDigest": "67e9ef23512c357cbb68beec7c8090d51d4f4b69808fe447e654a4f51f9900dc",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "b9e095f33222c96d1295671700009e30b30d1239bf378fa883fca2eaf33303aa",
+      "idempotencyKey": "32af93d0cc234e9c946b14b707ac3c8c22434eae08a66cd12fc2661459d82fa3",
+      "requestDigest": "6c44eabdaf21f7167d396cd57b30b86be16a9a9c87ed7186c63bdad98ed08f9d",
+      "evaluationTime": "2026-08-30T05:03:49.000Z",
+      "claimCore": {
+        "claimId": "b9e095f33222c96d1295671700009e30b30d1239bf378fa883fca2eaf33303aa",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b17411d95b55332ceb6bbbd95df731cbca56ea7d3c22db386d3dc451a180eed9",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:0b13ae806872d84092ae8298c9372da26756e3ce0e44264c2cc28ed70dd63658",
+        "canonicalBaseRevision": "ececd1d1421269ddd980daf16e78ead23be2e0eb",
+        "declaredWriteScope": [
+          "path:cloudflare/pages/agenticgraph-agent-ready-shared.mjs",
+          "path:docs/documents/agenticgraph-api-document.md",
+          "path:docs/documents/agenticgraph-cross-repo-publish-topology.md",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "semantic:storage-custom-domain-origin-cutover"
+        ],
+        "writeSetDigest": "5422767a60b2b2fbf54960345029f1a71a493e0ff9bb9cb9f9b30734943c1ada",
+        "laneRevision": "ececd1d1421269ddd980daf16e78ead23be2e0eb",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T06:03:49.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "58a619ce3bf0858bf2820b1f9999ac66629b060c2fee6da3d8142f1597300a7e",
+      "digest": "4920f1157b717216c544644485d5a2ebeb306347d35da85994432e274042d666"
     }
   ]
 }

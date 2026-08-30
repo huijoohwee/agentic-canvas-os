@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6237,
-  "headDigest": "f556dd9b4e1a89fc012fd4cac8847425854049392a570e46b5a2e5f46bab14ed",
+  "sequence": 6238,
+  "headDigest": "ee652bdf91f0e3c8cc8ba4a05eaad1b00848ca6f545643bbc4af9c25dd91d538",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -316882,6 +316882,66 @@
       },
       "claimDigest": "0b7e62c4fd50e934fb273b240931b1e4983bb1ea1e2a28ca16e1b7410c751438",
       "digest": "f556dd9b4e1a89fc012fd4cac8847425854049392a570e46b5a2e5f46bab14ed"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6238,
+      "parentDigest": "f556dd9b4e1a89fc012fd4cac8847425854049392a570e46b5a2e5f46bab14ed",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e0f319a4f288e93d6e4cdb5537080fbc35a28f1cd1d0083502aab3ee24ac4bf1",
+      "idempotencyKey": "20e56b52ab6974ced21e9d46cf06026600469e15945ee4cd074f73cdfd1d6db7",
+      "requestDigest": "088513b3bfd234e79c8d61890d56769f02e9615d9624f700f025030f1ad652aa",
+      "evaluationTime": "2026-08-30T03:57:20.000Z",
+      "claimCore": {
+        "claimId": "e0f319a4f288e93d6e4cdb5537080fbc35a28f1cd1d0083502aab3ee24ac4bf1",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:fcb289687d0d6b24f96a60314c25ff39d89fac0f74b68ff717eba607fe284667",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:78e270530ea56965b5637e463f6d7762b5cb5504ef1c53ac864e054823517042",
+        "canonicalBaseRevision": "15cfb2e6ad447f6384abba8270ffcce434a7bb60",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-controller.test.mjs",
+          "path:__tests__/canonical-untracked-relocation-registry.test.mjs",
+          "path:__tests__/device-heartbeat-scope-expansion-fence.test.mjs",
+          "path:__tests__/writer-lease-active-intent-recovery.test.mjs",
+          "path:__tests__/writer-lease-registry-cas.test.mjs",
+          "path:docs/ACTIVE-DIRTY-SCOPE-EXPANSION.md",
+          "path:docs/CANONICAL-UNTRACKED-RELOCATION.md",
+          "path:docs/TASK-BOUND-LANE-AUTHORITY.md",
+          "path:scripts/active-dirty-scope-expansion.mjs",
+          "path:scripts/canonical-untracked-relocation-registry.mjs",
+          "path:scripts/canonical-untracked-relocation-repository-adapter.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-branch-ownership-lib.mjs",
+          "path:scripts/device-branch.mjs",
+          "path:scripts/device-heartbeat-lib.mjs",
+          "path:scripts/expired-committed-heartbeat-cloud-authority.mjs",
+          "path:scripts/same-claim-cloud-authority-recovery.mjs",
+          "path:scripts/writer-lease-active-intent-recovery.mjs",
+          "path:scripts/writer-lease-lib.mjs",
+          "path:scripts/writer-lease-registry-cas.mjs",
+          "path:scripts/writer-lease-registry-heartbeat-intents.mjs",
+          "path:scripts/writer-lease-registry-intents.mjs",
+          "semantic:canonical-relocation-intent-owner"
+        ],
+        "writeSetDigest": "75f935f88d57e0ee4be77322ed47ce45c47f27f6f65abb266406f943faa9adf5",
+        "laneRevision": "4192c94764273b47c03b815ad53dbdb5273df184",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-30T11:57:20.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "21760fa88e52bda8f91716889537bfcac8e6807b37eb3908aa9a8bc660b6cbe7",
+        "eligibleSince": "2026-08-30T03:57:20.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "99b958031152aac74c017f361cda6dc54ff9efee2ba4381ddb151f12a6e5fd68",
+      "digest": "ee652bdf91f0e3c8cc8ba4a05eaad1b00848ca6f545643bbc4af9c25dd91d538"
     }
   ]
 }

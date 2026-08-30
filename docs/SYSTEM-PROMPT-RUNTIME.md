@@ -14,8 +14,7 @@ evaluator: npm run check
 proof: RUNTIME-PROOF.md
 principles: [zero-infra/FOSS, mobile-first, edge/offline MVP, universal, modular, adaptive]
 priorities: [pain>solution>min-change>first dollar, safe>fast, honor scope, flag ambiguity]
-constraints: [SSOT, SRP, acyclic, race-safe, fix upstream, remove replaced, shim=interface-only]
-scope: solo-dev
+constraints: [SSOT, SRP, acyclic, race-safe, fix upstream, remove replaced, shim=interface-only, no-blind-retry]
 escalate: decision-only
 behavior: {auto-fix: [review, CI], docs: [diff, check, risk]}
 workflows:

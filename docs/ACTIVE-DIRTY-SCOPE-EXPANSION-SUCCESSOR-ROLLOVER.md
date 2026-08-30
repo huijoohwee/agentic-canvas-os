@@ -145,8 +145,10 @@ creating a separate external `0600` authorization sidecar. Only then does it res
 replacement controller with the original replacement plan and its already-journaled authorization.
 Replay validates the sidecar-to-plan join and the journal's immutable promoted prefix, while allowing
 the journal to have advanced monotonically through bind, local CAS, marker projection, verification,
-or completion. Continuation never authorizes source edits, a new claim, Git changes, integration,
-deployment, or cleanup.
+or completion. Response-loss reconciliation joins the exact canonical
+`agentic-collaboration-continuation-receipt/v1`; verb-derived receipt-schema aliases are rejected.
+Continuation never authorizes source edits, a new claim, Git changes, integration, deployment, or
+cleanup.
 
 ## External-file and output boundary
 

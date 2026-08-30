@@ -7,6 +7,12 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { canonicalJson, digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+const CLAIM_ONLY_OPERATION_RECEIPT_SCHEMAS = Object.freeze({
+  claim: "agentic-collaboration-claim-receipt/v1",
+  continue: "agentic-collaboration-continuation-receipt/v1",
+  integrate: "agentic-collaboration-integration-receipt/v1",
+  retire: "agentic-collaboration-retirement-receipt/v1",
+});
 export function claimOnlyOperationKeyFromDigest(operation, planDigest, phase) {
   return digestValue({
     schema: "agentic-claim-only-operation-key/v1",
@@ -63,8 +69,10 @@ export function claimOnlyRetirementRequestDigest(plan, claim, phase) {
   });
 }
 export function claimOnlyOperationReceiptForEntry(entry, status) {
+  const schema = CLAIM_ONLY_OPERATION_RECEIPT_SCHEMAS[entry.action];
+  if (!schema) throw new Error("Claim-only operation receipt action is invalid.");
   const core = {
-    schema: `agentic-collaboration-${entry.action === "retire" ? "retirement" : entry.action}-receipt/v1`,
+    schema,
     operation: entry.action,
     status,
     repositoryId: entry.repositoryId,

@@ -426,6 +426,50 @@ test("bound C3 response-loss reconciliation joins the stored genesis receipt, no
   assert.throws(() => validateSuccessorRolloverReplacementClaimLineage({ plan, cloud, candidate, journal: forged }), /replacement claim operation join/u);
 });
 
+test("bound C3 response-loss reconciliation uses the canonical continuation receipt", () => {
+  const actor = { actorId: "actor", deviceId: "device", sessionId: "session" };
+  const repository = { repositoryId: "github-repository:1", canonicalRevision: MAIN };
+  const evaluationTime = "2026-08-30T00:01:00.000Z";
+  const claimed = applyCloudTransition({ ledger: createEmptyLedger("github-repository:ledger"),
+    action: "claim", actor, repository, evaluationTime: "2026-08-30T00:00:00.000Z",
+    request: { workItemId: "commerce", canonicalBaseRevision: MAIN,
+      declaredWriteScope: CORRECTED, laneRevision: FENCE, leaseEpoch: 1,
+      expiresAt: "2099-08-30T00:00:00.000Z", expectedLedgerDigest: null,
+      idempotencyKey: "claim:commerce" } });
+  const continued = applyCloudTransition({ ledger: claimed.ledger, action: "continue",
+    actor, repository, evaluationTime,
+    request: { claimId: claimed.claim.claimId,
+      expectedFenceRevision: claimed.claim.fenceRevision,
+      expectedTransitionCounter: claimed.claim.transitionCounter,
+      expectedLedgerDigest: claimed.ledger.headDigest, mode: "projection",
+      laneRevision: FENCE, reviewRequestId: "github-pull-request:PR_808",
+      idempotencyKey: "continue:commerce" } });
+  const entry = continued.ledger.entries.at(-1);
+  const receipt = claimOnlyOperationReceiptForEntry(entry, "current");
+  const current = listCurrentClaims(continued.ledger, evaluationTime,
+    { repositoryId: repository.repositoryId })[0];
+  assert.equal(receipt.schema, "agentic-collaboration-continuation-receipt/v1");
+  assert.equal(receipt.operation, "continue");
+  assert.equal(receipt.receiptDigest, current.operationReceiptDigest);
+  const claimReceipt = claimOnlyOperationReceiptForEntry(claimed.ledger.entries.at(-1), "current");
+  assert.equal(claimReceipt.schema, "agentic-collaboration-claim-receipt/v1");
+  assert.equal(claimReceipt.receiptDigest, claimed.claim.operationReceiptDigest);
+  const integrationReceipt = claimOnlyOperationReceiptForEntry({ ...entry, action: "integrate" }, "integrated-preserved");
+  assert.equal(integrationReceipt.schema, "agentic-collaboration-integration-receipt/v1");
+  assert.equal(integrationReceipt.operation, "integrate");
+  const retirementEntry = { ...entry, action: "retire" };
+  const retirementReceipt = claimOnlyOperationReceiptForEntry(retirementEntry, "retired");
+  const retirementCore = { schema: "agentic-collaboration-retirement-receipt/v1",
+    operation: "retire", status: "retired", repositoryId: retirementEntry.repositoryId,
+    claimId: retirementEntry.claimId, claimDigest: retirementEntry.claimDigest,
+    fenceRevision: retirementEntry.claimDigest, ledgerRevision: retirementEntry.digest,
+    ledgerSequence: retirementEntry.sequence, idempotencyKey: retirementEntry.idempotencyKey,
+    requestDigest: retirementEntry.requestDigest, evaluationTime: retirementEntry.evaluationTime };
+  assert.equal(retirementReceipt.receiptDigest, digestValue(retirementCore));
+  assert.throws(() => claimOnlyOperationReceiptForEntry({ ...entry, action: "unknown" }, "current"),
+    /operation receipt action is invalid/u);
+});
+
 function replacementPlan() {
   const identityCore = { repositoryId: "github-repository:1", actorId: "actor", deviceId: "device", sessionId: "source-session", workItemId: "commerce" };
   const sourceClaimIdentity = { ...identityCore, identityDigest: digestValue(identityCore) };

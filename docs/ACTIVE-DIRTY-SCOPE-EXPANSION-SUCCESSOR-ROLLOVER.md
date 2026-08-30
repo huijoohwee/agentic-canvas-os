@@ -10,8 +10,8 @@ status: "focused-tested"
 authority: "separately planned and exactly authorized retirement, replacement, and promoted-successor continuation"
 runtime_scope: "retire one stale C2 waiter, replace it at current main, or continue the exact promoted C3 after a disjoint protected-controller repair"
 runtime_claim: "coordination and owner-projection recovery only; authoring, commit, integration, cleanup, deployment, and Production remain separately gated"
-runtime_owner: "../scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-controller.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover.mjs"
-runtime_proof: "../__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-continuation-contract.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs"
+runtime_owner: "../scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-controller.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover.mjs; ../scripts/claim-only-partial-start-retirement-store.mjs"
+runtime_proof: "../__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-continuation-contract.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-bind-evidence.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs"
 ---
 <!-- Responsibility: Document sealed recovery and continuation from an obsolete scope-expansion successor. -->
 
@@ -125,9 +125,18 @@ task-authority binding, and pull-request marker before returning the same sealed
 ## Promoted-successor continuation
 
 `plan-continuation` is available only for an interrupted Phase B whose journal is durably
-`replacement-promoted`. It does not create or promote another claim. It seals the unchanged owner,
-the exact C3 claim, the still-open draft review request at its historical base, and a clean protected
-controller revision that is a strict, write-set-disjoint descendant of C3's canonical base. The
+`replacement-promoted`. It does not create or promote another claim. Continuation frame and plan v2
+distinguish an unchanged `promoted-unbound` C3 from a `bound-response-ahead` C3 whose cloud bind
+succeeded but whose response never reached the journal. The bound mode is admissible only when C3's
+complete claim-scoped history is exactly its sealed genesis claim followed by one canonical
+`agentic-collaboration-continuation-receipt/v1` projection bind. That receipt must join the genesis
+digest and counter, exact replacement-bound operation key and request digest, immutable owner, base,
+lane, write set, epoch, and expiry, and the original review request. A heartbeat, promotion, repeated
+projection, counter jump, foreign review, or any other suffix fails closed.
+
+Both modes seal the unchanged owner, exact C3 claim, still-open draft review request at its historical
+base, and a clean protected controller revision that is a strict, write-set-disjoint descendant of
+C3's canonical base. The
 historical-base proof permits only the existing claim-bound `continue` projection after the adapter
 re-resolves that exact open draft pull request, branch, head, historical base, and review identity; it
 does not weaken generic provider mutation mapping or authorize another review, branch, head, or base.
@@ -145,8 +154,15 @@ creating a separate external `0600` authorization sidecar. Only then does it res
 replacement controller with the original replacement plan and its already-journaled authorization.
 Replay validates the sidecar-to-plan join and the journal's immutable promoted prefix, while allowing
 the journal to have advanced monotonically through bind, local CAS, marker projection, verification,
-or completion. Response-loss reconciliation joins the exact canonical
-`agentic-collaboration-continuation-receipt/v1`; verb-derived receipt-schema aliases are rejected.
+or completion. A v1 plan or prior sidecar cannot authorize v2: every bound-response-ahead replan needs
+a fresh plan, exact authorization, and exclusively created sidecar. Its allowed cloud action is only
+`reconcile-exact-bound-replacement`; `replacement-bind` is explicitly forbidden, so neither effect
+authorization nor a second bind may occur. Response-loss reconciliation joins the exact canonical
+continuation receipt; verb-derived receipt-schema aliases are rejected.
+
+The protected controller dependency closure includes the bind-evidence validator and
+`claim-only-partial-start-retirement-store.mjs`, which constructs the canonical operation receipt.
+Changing either dependency changes the repaired-controller digest and requires another fresh plan.
 Continuation never authorizes source edits, a new claim, Git changes, integration, deployment, or
 cleanup.
 

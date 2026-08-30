@@ -15,15 +15,18 @@ import {
   validateSuccessorRolloverLocalReceipt,
   validateSuccessorRolloverPullRequestFence,
   validateSuccessorRolloverPullRequestReceipt,
-  validateSuccessorRolloverReplacementClaimLineage,
 } from "../scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs";
 import {
+  advanceSuccessorRolloverReplacement,
   advanceSuccessorRolloverRetirement,
+  beginSuccessorRolloverReplacement,
   buildSuccessorRolloverReplacementPlan,
   buildSuccessorRolloverRetirementPlan,
   createSuccessorRolloverJournal,
   successorRolloverOperationKey,
 } from "../scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs";
+import { classifySuccessorRolloverBindEvidence }
+  from "../scripts/active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs";
 import { claimOnlyOperationReceiptForEntry } from "../scripts/claim-only-partial-start-retirement-store.mjs";
 import { applyCloudTransition, createEmptyLedger, listCurrentClaims }
   from "../scripts/cloud-collaboration-contract.mjs";
@@ -309,6 +312,111 @@ test("local response-loss adoption rejects any tampered tombstone digest", () =>
   }
 });
 
+test("local-CAS response-loss adoption rejects a later same-claim transition", async t => {
+  const fixture = repositoryFixture(t), plan = replacementPlan(), identity = plan.sourceClaimIdentity;
+  const actor = { actorId: identity.actorId, deviceId: identity.deviceId,
+    sessionId: identity.sessionId };
+  const repository = { repositoryId: identity.repositoryId, canonicalRevision: MAIN };
+  const claimed = applyCloudTransition({ ledger: createEmptyLedger("github-repository:ledger"),
+    action: "claim", actor, repository, evaluationTime: "2026-08-30T00:00:00.000Z",
+    request: { workItemId: identity.workItemId, canonicalBaseRevision: MAIN,
+      declaredWriteScope: plan.target.declaredWriteSet, laneRevision: FENCE, leaseEpoch: 1,
+      predecessorClaimId: null, canonicalDescendantProof: null,
+      expiresAt: "2099-08-30T01:00:00.000Z", expectedLedgerDigest: null,
+      idempotencyKey: successorRolloverOperationKey(plan, "replacement-claimed") } });
+  const publicClaim = projectPublicClaim(claimed.claim);
+  const storedClaim = { claimId: publicClaim.claimId, claimDigest: publicClaim.fenceRevision,
+    ledgerRevision: sha("4"), claimLedgerRevision: publicClaim.transitionDigest,
+    transitionCounter: publicClaim.transitionCounter, state: publicClaim.state,
+    predecessorClaimId: null, canonicalBaseSha: MAIN, laneRevision: FENCE,
+    writeSetDigest: publicClaim.writeSetDigest, leaseEpoch: 1, expiresAt: publicClaim.expiresAt };
+  const retirementPlan = plan.retirementPlanSnapshot, observation = retirementPlan.observation;
+  let journal = createSuccessorRolloverJournal(retirementPlan, retirementPlan.exactAuthorization);
+  journal = advanceSuccessorRolloverRetirement(journal, { schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement/v1",
+    staleSuccessorClaimId: observation.staleSuccessorClaimId,
+    priorClaimDigest: observation.staleSuccessorClaimDigest, retiredClaimDigest: digest("d"),
+    retirementTransitionDigest: digest("e"), transitionCounter: 2, state: "retired",
+    reason: "successor-rollover", receiptDigest: digest("f") });
+  journal = beginSuccessorRolloverReplacement(journal, plan, plan.exactAuthorization);
+  journal = advanceSuccessorRolloverReplacement(journal, "replacement-claimed",
+    { claim: storedClaim, receiptDigest: claimed.receipt.receiptDigest });
+  journal = advanceSuccessorRolloverReplacement(journal, "replacement-promoted",
+    { claim: storedClaim, promoted: false, receiptDigest: claimed.receipt.receiptDigest });
+  const sourceJournal = journal;
+  const bindRequest = (prior, idempotencyKey) => applyCloudTransition({ ledger: prior.ledger,
+    action: "continue", actor, repository, evaluationTime: "2026-08-30T00:01:00.000Z",
+    request: { claimId: prior.claim.claimId, expectedFenceRevision: prior.claim.fenceRevision,
+      expectedTransitionCounter: prior.claim.transitionCounter,
+      expectedLedgerDigest: prior.ledger.headDigest, mode: "projection", laneRevision: FENCE,
+      reviewRequestId: plan.sourceReviewRequestId, idempotencyKey } });
+  const continued = bindRequest(claimed, successorRolloverOperationKey(plan, "replacement-bound"));
+  const evidence = classifySuccessorRolloverBindEvidence({ plan, journal: sourceJournal,
+    ledger: continued.ledger, candidate: projectPublicClaim(continued.claim) });
+  const boundClaim = evidence.boundReplacement.claim;
+  journal = advanceSuccessorRolloverReplacement(journal, "replacement-bound", {
+    authority: { claimId: boundClaim.claimId, claimDigest: boundClaim.claimDigest,
+      claimLedgerRevision: boundClaim.claimLedgerRevision,
+      transitionCounter: boundClaim.transitionCounter, canonicalBaseSha: MAIN,
+      laneRevision: FENCE, writeSetDigest: plan.target.writeSetDigest,
+      manifestDigest: plan.target.manifestDigest, leaseEpoch: 1,
+      reviewRequestId: plan.sourceReviewRequestId, expiresAt: boundClaim.expiresAt,
+      authorityDigest: digest("9") }, receiptDigest: continued.receipt.receiptDigest });
+  const taskAuthority = { schema: "agentic-task-authority-binding/v1",
+    authoritySubjectId: "urn:agentic-task:ecf23ead30c2e7eec477e154cdf127f2b6c623831c001952d0e1b280bb68e223",
+    proofAdapterId: "urn:agentic-proof:ed25519-file:v1", generation: 1,
+    publicKey: "MCowBQYDK2VwAyEAJrlc5A3roTL0OYnt/jrI1728OCMSpWD/lq/aKfx+aJE=",
+    publicKeyDigest: "aeb38ccccd3cf43765aebbae57f7c74614dd3f0c96e675afbe670c844d302cb2",
+    laneBindingDigest: "38b8a14c8f96a31247e800bb30a68255c6ff4eb7cf73a752c456303f966c069a",
+    bindingMode: "claim", boundAt: "2026-08-20T04:38:06.377Z", transitionPlanDigest: null,
+    priorBindingDigest: null, bindingDigest: "d45a2d7bc19788768393c82100518b30cecf0829bd78e95856558faecedf767b" };
+  const cloudAuthority = { claimId: boundClaim.claimId,
+    claimDigest: boundClaim.claimDigest, claimLedgerRevision: boundClaim.claimLedgerRevision };
+  const lease = { schema: "agentic-writer-lease/v2", status: "active", epoch: 1,
+    sessionId: "source-session", device: "device", scope: "commerce", branch: BRANCH,
+    baseSha: sha("b"), fenceSha: FENCE, worktreePath: fixture.repository,
+    pullRequestUrl: "https://github.com/example/example/pull/809",
+    heartbeatAt: "2026-08-30T00:00:00.000Z", expiresAt: continued.claim.expiresAt,
+    cloudAuthority, taskAuthority };
+  const localCore = { schema: "agentic-active-dirty-scope-expansion-successor-rollover-local-receipt/v1",
+    status: "local-cas", planDigest: plan.planDigest,
+    sourceIntentDigest: plan.observation.sourceIntentDigest,
+    sourceLeaseDigest: plan.observation.sourceLeaseDigest, sourceClaimId: plan.sourceClaimId,
+    retiredStaleSuccessorClaimId: plan.retiredStaleSuccessorClaimId,
+    replacementClaimId: continued.claim.claimId,
+    replacementAuthorityDigest: digestValue(cloudAuthority),
+    sourcePullRequestMarkerDigest: plan.observation.pullRequestMarkerDigest,
+    leaseDigest: writerLeaseDigest(lease), taskAuthorityBindingDigest: taskAuthority.bindingDigest };
+  const replacementIntentDigest = digestValue(localCore);
+  const tombstone = { ...localCore, replacementIntentDigest,
+    receiptDigest: digestValue({ ...localCore, replacementIntentDigest }) };
+  const registry = { schema: "agentic-writer-lease-registry/v2", revision: 2,
+    leases: { [BRANCH]: lease }, scopeExpansionSuccessorRolloverReceipts: { [BRANCH]: tombstone } };
+  const leaseStore = { statePath: fixture.registryPath, read: () => lease,
+    readRegistry: () => registry, withRegistryLock: action => action(registry) };
+  const body = updateWriterLeasePullRequestBody("preserved", lease);
+  const git = args => { if (args.join(" ") === "rev-parse --git-common-dir") return fixture.common;
+    if (args.join(" ") === "branch --show-current") return BRANCH;
+    if (args.join(" ") === "rev-parse HEAD") return FENCE;
+    if (args[0] === "ls-remote") return `${FENCE}\trefs/heads/${BRANCH}`; return ""; };
+  let live = continued;
+  const adapter = createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapter({
+    ...fixture.options, continuationPlan: { continuationDisposition: "bound-response-ahead",
+      sourceJournalSnapshot: sourceJournal,
+      continuationFrameSnapshot: { boundReplacement: evidence.boundReplacement } } }, {
+    ...fixture.dependencies, leaseStore, git, normalizeContinuationPlan: value => value,
+    readPullRequest: () => ({ url: lease.pullRequestUrl, number: 809, id: "PR_809",
+      state: "OPEN", isDraft: true, isCrossRepository: false, headRefName: BRANCH,
+      headRefOid: FENCE, baseRefName: "main", body }),
+    cloudStatus: () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
+      claims: [projectPublicClaim(live.claim)], sequence: live.ledger.sequence,
+      ledgerRevision: sha("5"), ledgerDigest: live.ledger.headDigest }),
+    readLedger: () => live.ledger });
+  const context = { plan, journal, phase: "local-cas" };
+  assert.equal((await adapter.reconcilePhase(context)).receiptDigest, tombstone.receiptDigest);
+  live = bindRequest(continued, "post-local-cas-transition");
+  await assert.rejects(adapter.reconcilePhase(context), /replacement claim ledger cardinality/u);
+});
+
 test("authorizeEffect revalidates and passes the configured capability without reading it in the adapter", t => {
   const fixture = repositoryFixture(t), capability = path.join(fixture.stateDirectory, "task.cap");
   writeFileSync(capability, "opaque-authority-bytes", { mode: 0o600 }); chmodSync(capability, 0o600);
@@ -382,29 +490,9 @@ test("PR response-loss adoption recomputes its durable receipt digest", () => {
   }
 });
 
-test("bound C3 response-loss reconciliation joins the stored genesis receipt, not the latest bind receipt", () => {
+test("successor candidate helpers preserve bound, owner, and stale identities", () => {
   const plan = replacementPlan();
-  const operationKey = successorRolloverOperationKey(plan, "replacement-claimed");
-  const claimCore = { actorId: "actor", deviceId: "device", sessionId: "source-session", workItemId: "commerce", state: "current",
-    canonicalBaseRevision: plan.targetCanonicalBaseSha, declaredWriteScope: plan.target.declaredWriteSet,
-    writeSetDigest: plan.target.writeSetDigest, laneRevision: plan.sourceFenceSha, leaseEpoch: plan.targetCloudLeaseEpoch,
-    predecessorClaimId: null, expiresAt: "2099-08-30T01:00:00.000Z", transitionCounter: 1 };
-  const intent = { repositoryId: "github-repository:1", actorId: claimCore.actorId, deviceId: claimCore.deviceId,
-    sessionId: claimCore.sessionId, workItemId: claimCore.workItemId, canonicalBaseRevision: claimCore.canonicalBaseRevision,
-    declaredWriteScope: claimCore.declaredWriteScope, writeSetDigest: claimCore.writeSetDigest, laneRevision: claimCore.laneRevision,
-    leaseEpoch: claimCore.leaseEpoch, predecessorClaimId: null, canonicalDescendantProof: null, expiresAt: claimCore.expiresAt, claimId: C3 };
-  const genesis = { action: "claim", repositoryId: intent.repositoryId, claimId: C3, claimDigest: digest("4"), digest: digest("5"), sequence: 90,
-    evaluationTime: "2026-08-30T00:00:00.000Z", idempotencyKey: digestValue(operationKey),
-    requestDigest: digestValue({ action: "claim", intent }), claimCore };
-  const claimReceipt = claimOnlyOperationReceiptForEntry(genesis, "current").receiptDigest;
-  const storedClaim = { claimId: C3, claimDigest: genesis.claimDigest, ledgerRevision: sha("3"), claimLedgerRevision: genesis.digest,
-    transitionCounter: 1, state: "current", predecessorClaimId: null, canonicalBaseSha: plan.targetCanonicalBaseSha,
-    laneRevision: plan.sourceFenceSha, writeSetDigest: plan.target.writeSetDigest, leaseEpoch: plan.targetCloudLeaseEpoch,
-    expiresAt: claimCore.expiresAt };
-  const journal = { replacement: { phases: { "replacement-claimed": { values: { claim: storedClaim, receiptDigest: claimReceipt } } } } };
-  const candidate = { claimId: C3, state: "current", reviewRequestId: plan.sourceReviewRequestId, operationReceiptDigest: digest("9") };
-  const cloud = { ledger: { entries: [genesis, { action: "continue", claimId: C3, claimCore: { ...claimCore, reviewRequestId: plan.sourceReviewRequestId } }] } };
-  assert.equal(validateSuccessorRolloverReplacementClaimLineage({ plan, cloud, candidate, journal }), genesis);
+  const candidate = { claimId: C3, state: "current", reviewRequestId: plan.sourceReviewRequestId };
   assert.equal(isSuccessorRolloverRawBoundCandidate(candidate, plan.sourceReviewRequestId), true);
   assert.equal(isSuccessorRolloverRawBoundCandidate({ ...candidate, state: "active" }, plan.sourceReviewRequestId), false);
   assert.equal(matchesSuccessorRolloverSourceClaimIdentity({ ...candidate, ...plan.sourceClaimIdentity }, plan.sourceClaimIdentity), true);
@@ -416,14 +504,6 @@ test("bound C3 response-loss reconciliation joins the stored genesis receipt, no
   assert.equal(isSuccessorRolloverStaleCandidate(stale, stalePlan, stale.fenceRevision, plan.sourceClaimIdentity), true);
   assert.equal(isSuccessorRolloverStaleCandidate({ ...stale, deviceId: "foreign-device" }, stalePlan,
     stale.fenceRevision, plan.sourceClaimIdentity), false);
-  const foreignCore = { ...claimCore, actorId: "foreign-actor" }, foreignIntent = { ...intent, actorId: foreignCore.actorId };
-  const foreignGenesis = { ...genesis, claimCore: foreignCore, requestDigest: digestValue({ action: "claim", intent: foreignIntent }) };
-  const foreignReceipt = claimOnlyOperationReceiptForEntry(foreignGenesis, "current").receiptDigest;
-  const foreignJournal = { replacement: { phases: { "replacement-claimed": { values: { claim: storedClaim, receiptDigest: foreignReceipt } } } } };
-  assert.throws(() => validateSuccessorRolloverReplacementClaimLineage({ plan,
-    cloud: { ledger: { entries: [foreignGenesis, cloud.ledger.entries[1]] } }, candidate, journal: foreignJournal }), /replacement claim operation join/u);
-  const forged = { replacement: { phases: { "replacement-claimed": { values: { claim: storedClaim, receiptDigest: digest("8") } } } } };
-  assert.throws(() => validateSuccessorRolloverReplacementClaimLineage({ plan, cloud, candidate, journal: forged }), /replacement claim operation join/u);
 });
 
 test("bound C3 response-loss reconciliation uses the canonical continuation receipt", () => {

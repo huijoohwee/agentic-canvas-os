@@ -12,7 +12,7 @@ import {
 
 export const CONTINUATION_OPERATION =
   "active-dirty-scope-expansion-successor-rollover-continue";
-export const CONTINUATION_PLAN_SCHEMA = `agentic-${CONTINUATION_OPERATION}-plan/v1`;
+export const CONTINUATION_PLAN_SCHEMA = `agentic-${CONTINUATION_OPERATION}-plan/v2`;
 export const CONTINUATION_AUTHORIZATION_SCHEMA =
   `agentic-${CONTINUATION_OPERATION}-authorization/v1`;
 
@@ -33,6 +33,20 @@ export function buildSuccessorRolloverContinuationPlan({
   });
   const operator = text(operatorSessionId, "operator session");
   if (operator !== originalPlan.operatorSessionId) invalid("operator continuity");
+  const boundResponseAhead = sealedFrame.continuationDisposition === "bound-response-ahead";
+  const allowedEffects = [
+    boundResponseAhead ? "reconcile-exact-bound-replacement" : "bind-exact-promoted-replacement",
+    "atomic-local-lease-intent-supersession",
+    "exact-pull-request-marker-replacement",
+    "private-external-journal",
+    "private-continuation-authorization-sidecar",
+    "response-loss-reconciliation",
+  ];
+  const forbiddenEffects = [
+    "source-change", "replacement-claim", "replacement-promotion", "git-ref-change",
+    "commit", "push", "merge", "deployment", "cleanup",
+    ...(boundResponseAhead ? ["replacement-bind"] : []),
+  ];
   const core = {
     schema: CONTINUATION_PLAN_SCHEMA,
     operation: CONTINUATION_OPERATION,
@@ -43,23 +57,14 @@ export function buildSuccessorRolloverContinuationPlan({
     sourceJournalSnapshot: sourceJournal,
     sourceReplacementIntentDigest: sourceJournal.replacement.intentDigest,
     promotedPrefixDigest: promotedPrefixDigest(sourceJournal),
+    continuationDisposition: sealedFrame.continuationDisposition,
     continuationFrameDigest: sealedFrame.frameDigest,
     continuationFrameSnapshot: sealedFrame,
     historicalBindProof: sealedFrame.historicalBindProof,
     protectedControllerAdvance: sealedFrame.protectedControllerAdvance,
     repairedControllerDigest: sealedFrame.repairedControllerDigest,
-    allowedEffects: [
-      "bind-exact-promoted-replacement",
-      "atomic-local-lease-intent-supersession",
-      "exact-pull-request-marker-replacement",
-      "private-external-journal",
-      "private-continuation-authorization-sidecar",
-      "response-loss-reconciliation",
-    ],
-    forbiddenEffects: [
-      "source-change", "replacement-claim", "replacement-promotion", "git-ref-change",
-      "commit", "push", "merge", "deployment", "cleanup",
-    ],
+    allowedEffects,
+    forbiddenEffects,
   };
   const planDigest = digestValue(core);
   return deepFreeze({

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6266,
-  "headDigest": "4073c05caf40633c3903c3684790b1afb3d6da16a1396211c3c879451adc11ba",
+  "sequence": 6267,
+  "headDigest": "230bbf03fd0a83384c28876b3e6ff3cc61e366ee817ca4f69f7a599dd7bc5b3f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -318416,6 +318416,74 @@
       },
       "claimDigest": "09d56b57f0cb4b4a3f8c789b33ac40fbfcbd811553b0cb82b6135aca6c8fee42",
       "digest": "4073c05caf40633c3903c3684790b1afb3d6da16a1396211c3c879451adc11ba"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6267,
+      "parentDigest": "4073c05caf40633c3903c3684790b1afb3d6da16a1396211c3c879451adc11ba",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDONN5Qzg",
+      "claimId": "bca1f4053b9b91a7c1e67b7030b15b60737ba566ae04a3db106093a8a8ecd4ba",
+      "idempotencyKey": "4283e121ce6da465addd92dd46b301122a4fcce7acde5d3d1d55abeb9e0b4940",
+      "requestDigest": "3d4c2e6bb50d5da30b63b5500d07e4b7dc187425c52d1bcc77be44739d81b611",
+      "evaluationTime": "2026-08-30T05:50:19.000Z",
+      "claimCore": {
+        "claimId": "bca1f4053b9b91a7c1e67b7030b15b60737ba566ae04a3db106093a8a8ecd4ba",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:8c022bd6d2030b1d7731eee5b6aaee1500b51d26972c6bae6d5b00c6ac52336e",
+        "repositoryId": "github-repository:R_kgDONN5Qzg",
+        "workItemId": "work-item:e9d0f351e566063fcdbbf4fe2f88cc11f837c7efa5a2e111393b02feeeb23f3b",
+        "canonicalBaseRevision": "12884a1fc526e3366f6b858240fda1892b7c4fa3",
+        "declaredWriteScope": [
+          "path:content/gamexr/.well-known/runtime-readiness.json",
+          "path:content/gamexr/assets/GLTFLoader-DgvSWouF.js",
+          "path:content/gamexr/assets/index-BXHGyDmD.css",
+          "path:content/gamexr/assets/index-BnUHHnsn.js",
+          "path:content/gamexr/assets/index-l8aq5JYa.js",
+          "path:content/gamexr/assets/three-animation-B5LeBG1o.js",
+          "path:content/gamexr/assets/three-assets-GM0YnDur.js",
+          "path:content/gamexr/assets/three-core-1qkaC_lC.js",
+          "path:content/gamexr/assets/three-renderer-9B9Ug37H.js",
+          "path:content/gamexr/icons/gamexr.svg",
+          "path:content/gamexr/index.html",
+          "path:content/gamexr/llms.txt",
+          "path:content/gamexr/manifest.webmanifest",
+          "path:content/gamexr/precache-manifest.json",
+          "path:content/gamexr/release-manifest.json",
+          "path:content/gamexr/schemas/apple-spatial-input.schema.json",
+          "path:content/gamexr/schemas/default-scene.json",
+          "path:content/gamexr/schemas/gamexr.scene.schema.json",
+          "path:content/gamexr/sw.js",
+          "semantic:gamexr-mirror-718298de"
+        ],
+        "writeSetDigest": "10ce6fbbfa5b9f87ae8a81d7754ef31676f57de196aaa2f46bec0b052a2a1d9e",
+        "laneRevision": "807f5a668e9bf4b5944067b180bfa856edd309cb",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-30T06:31:16.000Z",
+        "evidenceDigest": "cceb7bf11cf1122e8a3121bdd29f3225285ee630e94d8b41352fff065a81fb04",
+        "reviewRequestId": "github-pull-request:PR_kwDONN5Qzs8AAAABBfCTXw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "807f5a668e9bf4b5944067b180bfa856edd309cb",
+          "reviewRequestId": "github-pull-request:PR_kwDONN5Qzs8AAAABBfCTXw",
+          "focusedEvidenceDigest": "cceb7bf11cf1122e8a3121bdd29f3225285ee630e94d8b41352fff065a81fb04",
+          "dependencyClosureDigest": "594ac044db96e6ebd387231e331fb2dc4d0ef2063e3e761a9a6c7fe1da83bc75",
+          "namedChecksDigest": "3504f43d83e2569ef5a86a1bd7add78e687df7ec50eebc5911483c14887fcfec",
+          "handoffEvidenceDigest": "ccf8cfd30669b2130e399154a6a71958350bfcb0bc3fb8a8463a0f9896faf9b8",
+          "operatorDecisionDigest": "b07256663cf7124cb85b7a586dfb5a173b1281aa7f873e5898afa144f313261c",
+          "integrationIntentDigest": "fe03ee771d60e6f43afee581f04f4fa5d9d1be543f931001731e08534c99254e",
+          "integratedAt": "2026-08-30T05:50:19.000Z"
+        }
+      },
+      "claimDigest": "dc30d314c851bfb724528410fd488e330bd309e8a9ee551a567921b1984e707f",
+      "digest": "230bbf03fd0a83384c28876b3e6ff3cc61e366ee817ca4f69f7a599dd7bc5b3f"
     }
   ]
 }

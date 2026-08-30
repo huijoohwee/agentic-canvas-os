@@ -22,13 +22,16 @@ import {
   authorizeReanchor,
   buildReanchorPlan,
   normalizeReanchorPlan,
+  resolveReanchorWorkItem,
 } from "../scripts/active-owned-dirt-current-base-reanchor-contract.mjs";
 import { captureActiveOwnedDirtEvidence }
   from "../scripts/active-owned-dirt-recovery-evidence.mjs";
 import { createActiveOwnedDirtCurrentBaseReanchorController }
   from "../scripts/active-owned-dirt-current-base-reanchor-controller.mjs";
 import {
+  buildReanchorWaitingClaimRequest,
   createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter,
+  isExactReanchorSuccessor,
   updateReanchorPullRequestBodyConditionally,
 }
   from "../scripts/active-owned-dirt-current-base-reanchor-repository-adapter.mjs";
@@ -114,6 +117,110 @@ test("planning rejects a historical successor epoch that task continuation canno
     evidence: evidenceFixture({ historicalClaims: [historical] }),
   }), /target cloud epoch derivation/u);
 });
+
+test("work-item identity accepts scope-derived and exact canonical branch-derived legacy forms",
+  () => {
+    const normative = evidenceFixture();
+    assert.deepEqual(resolveReanchorWorkItem({
+      claim: normative.sourceClaim,
+      lease: normative.lease,
+    }), {
+      kind: "scope-derived",
+      preimage: normative.lease.scope,
+      workItemId: normative.sourceClaim.workItemId,
+    });
+
+    const legacy = evidenceFixture({
+      device: "katrinas-macbook-pro.local",
+      scope: "canonical-squash-recovery-terminalizer",
+    });
+    legacy.sourceClaim.workItemId = pseudonymousIdentifier(
+      "work-item",
+      legacy.lease.branch,
+    );
+    legacy.targetEpochProof.workItemId = legacy.sourceClaim.workItemId;
+    const proofCore = { ...legacy.targetEpochProof };
+    delete proofCore.proofDigest;
+    legacy.targetEpochProof.proofDigest = digestValue(proofCore);
+    resealEvidence(legacy);
+    assert.deepEqual(resolveReanchorWorkItem({
+      claim: legacy.sourceClaim,
+      lease: legacy.lease,
+    }), {
+      kind: "canonical-branch-derived-legacy",
+      preimage: legacy.lease.branch,
+      workItemId: legacy.sourceClaim.workItemId,
+    });
+    const plan = buildReanchorPlan({ evidence: legacy });
+    assert.equal(plan.evidence.sourceClaim.workItemId, legacy.sourceClaim.workItemId);
+    assert.equal(plan.evidence.targetEpochProof.workItemId, legacy.sourceClaim.workItemId);
+    const legacyRequest = buildReanchorWaitingClaimRequest({
+      plan,
+      lease: legacy.lease,
+      operationKey: "legacy-successor",
+    });
+    assert.equal(legacyRequest.workItemId, legacy.lease.branch);
+    assert.equal(
+      pseudonymousIdentifier("work-item", legacyRequest.workItemId),
+      legacy.sourceClaim.workItemId,
+    );
+    const successor = {
+      ...legacy.sourceClaim,
+      claimId: hex("legacy-successor"),
+      predecessorClaimId: plan.sourceClaimId,
+      canonicalBaseRevision: plan.targetCanonicalBaseSha,
+      laneRevision: plan.targetLaneRevision,
+      leaseEpoch: plan.targetCloudLeaseEpoch,
+      state: "waiting-successor",
+      writeAuthority: false,
+      scopeReserved: false,
+    };
+    assert.equal(isExactReanchorSuccessor(
+      plan,
+      new Set(["waiting-successor"]),
+      successor,
+    ), true);
+    assert.equal(isExactReanchorSuccessor(
+      plan,
+      new Set(["waiting-successor"]),
+      {
+        ...successor,
+        workItemId: pseudonymousIdentifier("work-item", legacy.lease.scope),
+      },
+    ), false);
+    const normativePlan = buildReanchorPlan({ evidence: normative });
+    assert.equal(buildReanchorWaitingClaimRequest({
+      plan: normativePlan,
+      lease: normative.lease,
+      operationKey: "normative-successor",
+    }).workItemId, normative.lease.scope);
+    for (const input of [
+      {},
+      { claim: {}, lease: {} },
+      { claim: { workItemId: pseudonymousIdentifier("work-item", "undefined") }, lease: {} },
+      { claim: { workItemId: "" }, lease: { scope: "scope" } },
+    ]) {
+      assert.throws(() => resolveReanchorWorkItem(input), /source work-item identity/u);
+    }
+
+    for (const [label, lease, workItemPreimage] of [
+      ["arbitrary alias", normative.lease, "unrelated-alias"],
+      ["wrong device", { ...normative.lease, branch: `agent/other/${normative.lease.scope}` },
+        `agent/other/${normative.lease.scope}`],
+      ["wrong scope", { ...normative.lease, branch: `agent/${normative.lease.device}/other` },
+        `agent/${normative.lease.device}/other`],
+      ["noncanonical branch", { ...normative.lease, branch: "legacy/device/scope" },
+        "legacy/device/scope"],
+    ]) {
+      assert.throws(() => resolveReanchorWorkItem({
+        claim: {
+          ...normative.sourceClaim,
+          workItemId: pseudonymousIdentifier("work-item", workItemPreimage),
+        },
+        lease,
+      }), /source work-item identity/u, label);
+    }
+  });
 
 test("target projection preserves exact untracked owned bytes", () => {
   const evidence = evidenceFixture();
@@ -540,6 +647,8 @@ function evidenceFixture({
   declaredPath = "reserved/nested",
   protectedChangedPaths = ["upstream.txt"],
   historicalClaims = [],
+  device = "device",
+  scope = "active-owned-dirt-current-base-reanchor",
 } = {}) {
   const sourceBaseSha = objectId("source-base");
   const sourceFenceSha = objectId("source-fence");
@@ -603,10 +712,10 @@ function evidenceFixture({
     schema: "agentic-writer-lease/v2",
     status: "active",
     epoch: 320,
-    branch: "agent/device/active-owned-dirt-current-base-reanchor",
+    branch: `agent/${device}/${scope}`,
     sessionId: "source-session",
-    device: "device",
-    scope: "active-owned-dirt-current-base-reanchor",
+    device,
+    scope,
     worktreePath: "/preserved/dirty-worktree",
     baseSha: sourceBaseSha,
     fenceSha: sourceFenceSha,
@@ -614,7 +723,7 @@ function evidenceFixture({
     pullRequestUrl,
     admission: {
       status: "admitted",
-      semanticScope: "active-owned-dirt-current-base-reanchor",
+      semanticScope: scope,
       declaredWriteSet,
       writeSetDigest,
       manifestDigest: hex("manifest"),

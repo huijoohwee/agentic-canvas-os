@@ -84,6 +84,7 @@ import {
   normalizeReanchorIntent,
   normalizeReanchorPlan,
   operationKey as reanchorOperationKey,
+  resolveReanchorWorkItem,
 } from "./active-owned-dirt-current-base-reanchor-contract.mjs";
 
 const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -94,6 +95,43 @@ const SHA = /^[0-9a-f]{40,64}$/u;
 const DIGEST = /^[0-9a-f]{64}$/u;
 const PULL_REQUEST_BODY_LIMIT = 65_536;
 const TARGET_MARKER_GROWTH_RESERVE = 16_384;
+
+export function buildReanchorWaitingClaimRequest({ plan, lease, operationKey } = {}) {
+  const workItem = resolveReanchorWorkItem({
+    claim: plan?.evidence?.sourceClaim,
+    lease,
+  });
+  return Object.freeze({
+    targetRepository: lease.cloudAuthority.targetRepository,
+    workItemId: workItem.preimage,
+    canonicalBaseSha: plan.targetCanonicalBaseSha,
+    headSha: plan.targetLaneRevision,
+    declaredWriteSet: plan.targetDeclaredWriteSet,
+    predecessorClaimId: plan.sourceClaimId,
+    leaseEpoch: plan.targetCloudLeaseEpoch,
+    ttlSeconds: plan.ttlSeconds,
+    deviceId: lease.device,
+    sessionId: lease.sessionId,
+    idempotencyKey: operationKey,
+    actorId: githubActorId(plan.evidence.sourceClaim.actorId),
+  });
+}
+
+export function isExactReanchorSuccessor(plan, states, item) {
+  const source = plan.evidence.sourceClaim;
+  return Boolean(states.has(item?.state)
+    && item.predecessorClaimId === plan.sourceClaimId
+    && item.actorId === source.actorId && item.repositoryId === source.repositoryId
+    && item.workItemId === source.workItemId
+    && item.deviceId === source.deviceId
+    && item.sessionId === source.sessionId
+    && item.canonicalBaseRevision === plan.targetCanonicalBaseSha
+    && item.laneRevision === plan.targetLaneRevision
+    && item.writeSetDigest === plan.targetWriteSetDigest
+    && canonicalJson(normalizeWriteSet(item.declaredWriteScope))
+      === canonicalJson(plan.targetDeclaredWriteSet)
+    && item.leaseEpoch === plan.targetCloudLeaseEpoch);
+}
 
 export function createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter(
   options = {},
@@ -260,6 +298,7 @@ export function createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter(
     const matches = cloud.claims.filter(item => item?.claimId === lease.cloudAuthority.claimId);
     if (matches.length !== 1) invalid("unique source cloud claim");
     const claim = matches[0];
+    resolveReanchorWorkItem({ claim, lease });
     if (!new Set(["active", "current"]).has(claim.state) || claim.writeAuthority !== true
       || claim.fenceRevision !== lease.cloudAuthority.claimDigest
       || claim.transitionCounter !== lease.cloudAuthority.transitionCounter
@@ -267,7 +306,6 @@ export function createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter(
       || claim.laneRevision !== lease.fenceSha
       || claim.deviceId !== pseudonymousIdentifier("device", lease.device)
       || claim.sessionId !== pseudonymousIdentifier("session", lease.sessionId)
-      || claim.workItemId !== pseudonymousIdentifier("work-item", lease.scope)
       || !/^github-user:\d+$/u.test(String(claim.actorId || ""))
       || canonicalJson(normalizeWriteSet(claim.declaredWriteScope))
         !== canonicalJson(lease.admission.declaredWriteSet)
@@ -878,19 +916,7 @@ export function createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter(
   }
 
   function isExactSuccessor(plan, states, item) {
-    const source = plan.evidence.sourceClaim;
-    return Boolean(states.has(item?.state)
-      && item.predecessorClaimId === plan.sourceClaimId
-      && item.actorId === source.actorId && item.repositoryId === source.repositoryId
-      && item.workItemId === source.workItemId
-      && item.deviceId === source.deviceId
-      && item.sessionId === source.sessionId
-      && item.canonicalBaseRevision === plan.targetCanonicalBaseSha
-      && item.laneRevision === plan.targetLaneRevision
-      && item.writeSetDigest === plan.targetWriteSetDigest
-      && canonicalJson(normalizeWriteSet(item.declaredWriteScope))
-        === canonicalJson(plan.targetDeclaredWriteSet)
-      && item.leaseEpoch === plan.targetCloudLeaseEpoch);
+    return isExactReanchorSuccessor(plan, states, item);
   }
 
   function successor(plan, states, cloud = status(plan.evidence.lease)) {
@@ -952,20 +978,7 @@ export function createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter(
   }
 
   function waitingClaimRequest({ plan, lease, operationKey }) {
-    return Object.freeze({
-      targetRepository: lease.cloudAuthority.targetRepository,
-      workItemId: lease.scope,
-      canonicalBaseSha: plan.targetCanonicalBaseSha,
-      headSha: plan.targetLaneRevision,
-      declaredWriteSet: plan.targetDeclaredWriteSet,
-      predecessorClaimId: plan.sourceClaimId,
-      leaseEpoch: plan.targetCloudLeaseEpoch,
-      ttlSeconds: plan.ttlSeconds,
-      deviceId: lease.device,
-      sessionId: lease.sessionId,
-      idempotencyKey: operationKey,
-      actorId: githubActorId(plan.evidence.sourceClaim.actorId),
-    });
+    return buildReanchorWaitingClaimRequest({ plan, lease, operationKey });
   }
 
   function claimWaitingSuccessor({ plan, operationKey }) {

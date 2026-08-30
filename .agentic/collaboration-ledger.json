@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6464,
-  "headDigest": "97a63e653ad5a8fa44977718e1a1d7c7a0b0eb001f4a5357a7fc5bf0a1baf1b4",
+  "sequence": 6465,
+  "headDigest": "b8e61a3a93d56c49a50752e651d99623e74f22ce90be37cb8e92aa494268bda9",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -328485,6 +328485,61 @@
       },
       "claimDigest": "7e635ca7112fb0c4ad100668db2bb4ea7af0dc20c28d0092a0ac62283e7f7c96",
       "digest": "97a63e653ad5a8fa44977718e1a1d7c7a0b0eb001f4a5357a7fc5bf0a1baf1b4"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6465,
+      "parentDigest": "97a63e653ad5a8fa44977718e1a1d7c7a0b0eb001f4a5357a7fc5bf0a1baf1b4",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "791f4e2dafc6fe1df0e056f59cba28e4ec4281bd598161c04e57ffa372491de2",
+      "idempotencyKey": "c5961d400dc190668f00f549ca8f7a4b4905acbafdff4bad9c3b1c1c022d976d",
+      "requestDigest": "c1da30a233dfda0a8446eac083655bce283ece77d15790917c337280d1482ff1",
+      "evaluationTime": "2026-08-30T22:15:43.000Z",
+      "claimCore": {
+        "claimId": "791f4e2dafc6fe1df0e056f59cba28e4ec4281bd598161c04e57ffa372491de2",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:d4b8f2263d95a7b4a896c7afcda7bb455ff0ed88dd3108484cd9c167f1c61aa9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f7587d1da20e83997a6dc398551cb727999a2b5470f3039593f079879578c063",
+        "canonicalBaseRevision": "ab6ef4ab22f8828ed37e51bc7a880befccb3cf77",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-waiting-bridge-reconciliation.test.mjs",
+          "path:docs/CLAIM-ONLY-WAITING-BRIDGE-RECONCILIATION.md",
+          "path:scripts/claim-only-waiting-bridge-reconciliation-contract.mjs",
+          "path:scripts/claim-only-waiting-bridge-reconciliation-controller.mjs",
+          "path:scripts/claim-only-waiting-bridge-reconciliation-repository-adapter.mjs",
+          "path:scripts/claim-only-waiting-bridge-reconciliation.mjs",
+          "semantic:claim-only-waiting-bridge-reconciliation"
+        ],
+        "writeSetDigest": "8e85f7c920e8c2b1eb816f280360481da66d2cf42c869ef0ff967f120a4b2856",
+        "laneRevision": "31cd04d4658e562edb3b590b428ed45c1c845c97",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 1,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-30T23:52:03.000Z",
+        "evidenceDigest": "b58df2fba3d12352266a88322e0cda7ed1142171bddcc09b0b8e411b855d6716",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBh8hIw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "31cd04d4658e562edb3b590b428ed45c1c845c97",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBh8hIw",
+          "focusedEvidenceDigest": "b58df2fba3d12352266a88322e0cda7ed1142171bddcc09b0b8e411b855d6716",
+          "dependencyClosureDigest": "178bc5b852074bb1ae4da46842837d2ef1cc0d34ba30ff7796a45b1cbfbb98f4",
+          "namedChecksDigest": "78eee583447d59427b47a97160d52e2d05c86f3cc406bb1dafbc85ee3458ee26",
+          "handoffEvidenceDigest": "a061f27a22f595d658b0d4b2a54967b9dc8fd1cac9e34949c9980f7b97e72241",
+          "operatorDecisionDigest": "10c92d2bec6125537b63b1cc22666234db70aabdd670a02ad2100326e40a0e97",
+          "integrationIntentDigest": "dae4d167a34b72d811746ce9d2181bdfa1aa8affcc4f71d5a08079105fcd2dad",
+          "integratedAt": "2026-08-30T22:15:43.000Z"
+        }
+      },
+      "claimDigest": "016c0734b4f78a659a6bacd07c885f500b225cc19dba6973c1821514e0e55d13",
+      "digest": "b8e61a3a93d56c49a50752e651d99623e74f22ce90be37cb8e92aa494268bda9"
     }
   ]
 }

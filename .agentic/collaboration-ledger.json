@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6221,
-  "headDigest": "c24884f338d5be4113026ff5dce81ec50a6ef57a26d0d659ccb5b3e327304253",
+  "sequence": 6222,
+  "headDigest": "86d708e90ae4a01dd847fd8858eaaff62e2f6de22ec0172b736af50c998b29ac",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -315979,6 +315979,47 @@
       },
       "claimDigest": "605cbdaa9e60f3e891901b978b0452e2f47898435e108e8fd0a8e106e1113ab9",
       "digest": "c24884f338d5be4113026ff5dce81ec50a6ef57a26d0d659ccb5b3e327304253"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6222,
+      "parentDigest": "c24884f338d5be4113026ff5dce81ec50a6ef57a26d0d659ccb5b3e327304253",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "130b4cae95d10f4c632e5b4c869e389bfea81da4ec3743d5aca72b9c09a60045",
+      "idempotencyKey": "f24bc7f53a7e07efeed5b47f601268c90714c50a6fd68b8f5b09fe9a845af250",
+      "requestDigest": "48bb80bc2611a9b356abc3fe4ba6ff6510fe00658fce2c7b4628db297abdc870",
+      "evaluationTime": "2026-08-30T02:53:20.000Z",
+      "claimCore": {
+        "claimId": "130b4cae95d10f4c632e5b4c869e389bfea81da4ec3743d5aca72b9c09a60045",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:32f0791d847dcd32ba25cc158961cc6100856212afa99ce1c07211eb40cbb477",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:3015580555f7e8093e786110c941aab37751e2c64b0790fb734e59ad1b0f4839",
+        "canonicalBaseRevision": "4d33fbc40d8a6b363975e1385cc1d56f8b17372d",
+        "declaredWriteScope": [
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:guidelines/agentic-sdlc-integration-order.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:diff-first-worktree-guideline"
+        ],
+        "writeSetDigest": "d227a37e1eb81059808ec0275e6221c23e6191b63be7769ebf5da6a222d8d688",
+        "laneRevision": "b7afe1c800b4ed4dbb223a1265bc65deb774050f",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-30T08:37:12.000Z",
+        "evidenceDigest": "2b266ea545fc1324b5e052ae9df2735894a1ef5bd16158c0d57dc16d798c4126",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABBephhQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "af799aa0d177bb0caaa24bd6514677de789b29b70e35596e250d2f83a94721dc",
+      "digest": "86d708e90ae4a01dd847fd8858eaaff62e2f6de22ec0172b736af50c998b29ac"
     }
   ]
 }

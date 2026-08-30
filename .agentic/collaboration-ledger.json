@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6434,
-  "headDigest": "ddc1bd54f9ed7d976ee40a6a32b4636e47072a1b296f782be0558eca8b885926",
+  "sequence": 6435,
+  "headDigest": "35ab11d3ea70f299c65f088c9550769d738bbb6c8b7f10eed1f5fc7c28eb70eb",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -327037,6 +327037,48 @@
       },
       "claimDigest": "78d021f562da1e17bbab612b925fa519c78380fa04b52e0e75337a277d67481d",
       "digest": "ddc1bd54f9ed7d976ee40a6a32b4636e47072a1b296f782be0558eca8b885926"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6435,
+      "parentDigest": "ddc1bd54f9ed7d976ee40a6a32b4636e47072a1b296f782be0558eca8b885926",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "80ee1583aae211bc0d70bfb3135f60b39131c61386d592be819c71d4d087f4e4",
+      "idempotencyKey": "4c2e86848ca9ef039eaf2a20f3621043b68df43ef7682da08b1ebcc50b7ab80c",
+      "requestDigest": "d150450ef18260fa8ec3aa1d52a19ee87d73a6ce32b889f16ef6e99b7df6bf3e",
+      "evaluationTime": "2026-08-30T19:12:58.000Z",
+      "claimCore": {
+        "claimId": "80ee1583aae211bc0d70bfb3135f60b39131c61386d592be819c71d4d087f4e4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4ea4c0e43d9d419d22b20040c85887f5c5cc10e1dd06e9fd8ef86aa78cca0ae4",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:fd988c2ace9a3b8ba0f6650611eba7b665088bc1832d98b9a3a537d27cb466f6",
+        "canonicalBaseRevision": "beab09739c62eb3fdd1bafa84ea15f9df192a778",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-current-base-reanchor-github.test.mjs",
+          "path:docs/GITHUB-COOPERATIVE-PULL-BODY-PROJECTION.md",
+          "path:scripts/active-owned-dirt-current-base-reanchor-github.mjs",
+          "path:scripts/github-cooperative-pull-body-projection.mjs",
+          "semantic:github-cooperative-pull-body-projection"
+        ],
+        "writeSetDigest": "d6403f4392509137d19ac11ae02c1e4bcc996ddb5ba07594cf46d72fc189aedd",
+        "laneRevision": "7de53c257fa20427d261b4702db038f3de7e789c",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T20:52:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBhax3A",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "d4a236442fa06bb0b42a5188104872e9591971745ccdcf2a51135b9c73bf548e",
+      "digest": "35ab11d3ea70f299c65f088c9550769d738bbb6c8b7f10eed1f5fc7c28eb70eb"
     }
   ]
 }

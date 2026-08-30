@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6359,
-  "headDigest": "0979b5d04f08027b688f49605043fe063c0de7994e676a93c114d43c94ec34e8",
+  "sequence": 6360,
+  "headDigest": "e4126cf1fd74f70a26c7dfd6b6ed1f65706dbb29306313831f139ed58b51d72e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -323216,6 +323216,73 @@
       },
       "claimDigest": "880442c2f03638830bf6038471554057e5ddcac07505dad56d3d33fcbbadc1a4",
       "digest": "0979b5d04f08027b688f49605043fe063c0de7994e676a93c114d43c94ec34e8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6360,
+      "parentDigest": "0979b5d04f08027b688f49605043fe063c0de7994e676a93c114d43c94ec34e8",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b282aa37ce1cf5556be7b63a04bff4ccff2dd7f37dad15a88530ae8522739735",
+      "idempotencyKey": "cf76fc37d923506adff3e66230efeadef05c7b8d7407a6f59e0e60d8be7d5354",
+      "requestDigest": "6c636f5aa709eba9e59145d3428b0847a5ac0f3371a4570893722e2243bdea7f",
+      "evaluationTime": "2026-08-30T11:23:12.000Z",
+      "claimCore": {
+        "claimId": "b282aa37ce1cf5556be7b63a04bff4ccff2dd7f37dad15a88530ae8522739735",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:1d60d0ffadf81dc81a5e02d97fd89126ef657f1fdf62ac538d29a50dd95be8f4",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e93b27ee0e976bebda76f307a3a79251e15eaa844531b453fc8b2dcd2ca73bc7",
+        "canonicalBaseRevision": "7d2cbd7a1d3a5f487561f0351c4aad7c74a4ecc2",
+        "declaredWriteScope": [
+          "path:__tests__/authored-line-budget.test.mjs",
+          "path:__tests__/dictionary-catalog-contract.test.mjs",
+          "path:__tests__/goal-completion-runtime.test.mjs",
+          "path:__tests__/kanban-projection.test.mjs",
+          "path:docs/DICTIONARY-BINDING.md",
+          "path:docs/DICTIONARY-COMMAND.md",
+          "path:docs/DICTIONARY-SEMANTIC.md",
+          "path:docs/GOAL-COMPLETION-RUNTIME.md",
+          "path:docs/MCP-GATEWAY.md",
+          "path:docs/README.md",
+          "path:docs/SYSTEM-PROMPT-RUNTIME.md",
+          "path:docs/TODO.md",
+          "path:docs/VALIDATION-RUNBOOK.md",
+          "path:docs/kanban.md",
+          "path:llms.txt",
+          "path:package.json",
+          "path:scripts/authored-line-budget.baseline.json",
+          "path:scripts/authored-line-budget.mjs",
+          "path:scripts/dictionary-catalog-contract.mjs",
+          "path:scripts/docs-contract.mjs",
+          "path:scripts/goal-completion-runtime-contract.mjs",
+          "path:scripts/goal-completion-runtime.mjs",
+          "path:scripts/invocation-resolve.mjs",
+          "path:scripts/kanban-projection.mjs",
+          "path:scripts/native-skill-harness-invocation-register.mjs",
+          "semantic:harness-goal-completion-runtime"
+        ],
+        "writeSetDigest": "67476a943003eed3be490582311d09dbcbe3a4e95a8e11d13e16f3086a946b8a",
+        "laneRevision": "7d2cbd7a1d3a5f487561f0351c4aad7c74a4ecc2",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-30T11:53:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "90133edb09110117b6d990dfa030702d22bb0e64e114f55b0bf59c735b518750",
+          "recoveredAt": "2026-08-30T10:59:50.000Z"
+        }
+      },
+      "claimDigest": "53079e3e616873d216a824d96d60822005df530b02c1028b635aaf4ef38cf93c",
+      "digest": "e4126cf1fd74f70a26c7dfd6b6ed1f65706dbb29306313831f139ed58b51d72e"
     }
   ]
 }

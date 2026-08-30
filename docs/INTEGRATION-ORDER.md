@@ -14,12 +14,12 @@ runtime_claim: "deterministic model-free contract; reading or checking this docu
 runtime_proof: "RUNTIME-PROOF.md"
 runtime_readiness_policy: "fail-closed"
 runtime_readiness_finding: "runtime-readiness-unproven"
-guideline_source_version: "1.14.0"
+guideline_source_version: "1.23.0"
 guideline_module_version: "1.0.0"
-guideline_source_revision: "8a2e5e0711f7193535b9aac2aee285e0ee705111"
-guideline_source_tree: "63c13dcfb3ce01aa60213f4f6fa214bfa0e76778"
-guideline_source_digest: "ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd"
-git_companion_digest: "c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5"
+guideline_source_revision: "76903aba2a8f8a4e693dd51de580707affb3dfdc"
+guideline_source_tree: "609ef617362d4949ede63e56f92c955ebc28ce91"
+guideline_source_digest: "1b0e040a3600ca3f8d92517bf42d55830e6192c0acff91fbe3a489d1d392eedd"
+git_companion_digest: "7de6a1130f033bbe8fd263b5fc29b9160c96cbdf25723309996058f3de74b516"
 ---
 
 # Dependency-Ordered Integration Contract
@@ -196,11 +196,11 @@ changing the core:
 | Release frontier | A sealed input to `RELEASE-WORKFLOW.md`; still subject to candidate review and authenticated release authorization. |
 
 The canonical source unit is JH `huijoohwee.github.io` revision
-`8a2e5e0711f7193535b9aac2aee285e0ee705111`, tree
-`63c13dcfb3ce01aa60213f4f6fa214bfa0e76778`, guideline digest
-`ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd`,
+`76903aba2a8f8a4e693dd51de580707affb3dfdc`, tree
+`609ef617362d4949ede63e56f92c955ebc28ce91`, guideline digest
+`1b0e040a3600ca3f8d92517bf42d55830e6192c0acff91fbe3a489d1d392eedd`,
 and git-companion digest
-`c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5`.
+`7de6a1130f033bbe8fd263b5fc29b9160c96cbdf25723309996058f3de74b516`.
 Its immutable unit is the predecessor of the ACOS runtime and registration
 unit: `JH guideline/checker -> ACOS coordination/runtime/registration`. Source
 drift blocks the consumer before mutation.
@@ -211,6 +211,35 @@ through `continue(claim)`; protected delivery maps to `integrate(candidate)`;
 terminal cleanup becomes eligible only after `retire(claim)` and independent
 protected convergence proof. No wrapper creates another root operation or
 derives absent operator authority.
+
+### Delta-Only Worktree Convergence
+
+The reference adapter pins the freshly fetched `origin/main`, seals the
+immutable actual delta from the writer fence to the reviewed source, and
+materializes only that delta in the owned lane. It never copies or replaces a
+whole workspace, whole tree, or all files. Tree identity is an integrity check,
+not an integration payload.
+
+Changed-path admission uses canonical no-rename evidence: a rename is a source
+deletion plus a destination addition, so both paths must be admitted. The
+structural and binary delta digests bind the staged tree before commit and the
+exact one-parent commit afterward. The older
+`agentic-integration-commit/v1` replay record may retain its rename-folded path
+projection only as a compatibility shim after canonical admission and sealing;
+it never widens authority.
+
+A clean precommitted lane is replayable only when it is one exact commit whose
+sole parent is the writer fence and its canonical paths exactly equal the
+external change manifest. Local protected-main refresh starts at that sealed
+commit, accepts only recomputable two-parent refresh merges whose trees equal
+their pinned parent merge, and rejects any intervening authored commit.
+
+After protected integration, canonical live sync pins the actual fetched
+`origin/main` revision. It accepts a newer canonical revision when the task
+merge revision is its proven ancestor, records both revisions, fast-forwards to
+the pinned actual revision, and uses that actual revision for runtime and
+cleanup evidence. A later disjoint merge therefore does not create a brittle
+exact-parity blocker.
 
 For multiple units, create the plan before integration. Integrate successful
 dependency waves first, fetch the protected revision after every advancement,

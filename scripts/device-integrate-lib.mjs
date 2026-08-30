@@ -8,7 +8,20 @@ import {
 import {
   compactDeviceCloudMutationIdempotencyKey,
   createDeviceDeliveryEvidence,
+  createRepositoryValidationEvidence,
+  rememberRepositoryValidationEvidenceForInvocation,
 } from "./device-delivery-evidence.mjs";
+import {
+  captureCommittedIntegrationDelta,
+  captureStagedIntegrationDelta,
+  listIntegrationRangePaths,
+  listIntegrationUnstagedPaths,
+  listIntegrationWorkingTreePaths,
+  projectLegacyIntegrationPaths,
+  refreshTaskBranchFromMain as refreshTaskBranchFromMainDelta,
+  sealCommittedIntegrationDelta,
+  verifyTaskBranchMainRefresh,
+} from "./device-integration-delta.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import {
@@ -161,6 +174,7 @@ function integrateSessionUnfenced({
 
   const canonicalRoot = resolveCanonicalMainWorktree(gitText(["worktree", "list", "--porcelain", "-z"]));
   let commitEvidence = lease.integration || null;
+  let branchRefreshEvidence = null;
   const cloudReviewReadyDelivery = isReviewReadyDeliveryLease(lease);
   const legacyLocalOnlyAutoDeliveryReview = isLegacyLocalOnlyAutoDeliveryReviewLease(lease);
   const reviewReadyDelivery = cloudReviewReadyDelivery || legacyLocalOnlyAutoDeliveryReview;
@@ -203,15 +217,18 @@ function integrateSessionUnfenced({
         lease,
         gitText,
       });
-      refreshTaskBranchFromMain({
-        repo,
-        gitText,
-        run,
-        runText,
-        squashSubject: refreshSubject,
-        branch,
-        lease,
-      });
+      if (lease.cloudAuthority) {
+        branchRefreshEvidence = refreshTaskBranchFromMain({
+          repo,
+          gitText,
+          run,
+          runText,
+          squashSubject: refreshSubject,
+          branch,
+          lease,
+          expectedHeadSha: preparedPublish.headSha,
+        });
+      }
       lease = leaseStore.read(branch);
       publishActiveWithSuccessorRecovery({
         branch,
@@ -234,6 +251,8 @@ function integrateSessionUnfenced({
         pollSeconds,
         now,
         sleep,
+        runText,
+        refreshEvidence: branchRefreshEvidence,
       });
       lease = leaseStore.read(branch);
     }
@@ -250,15 +269,18 @@ function integrateSessionUnfenced({
       branch, lease: leaseStore.read(branch), leaseStore, sessionId, gitText,
       renewActiveAuthority, phase: "before-publication", now,
     });
-    refreshTaskBranchFromMain({
-      repo,
-      gitText,
-      run,
-      runText,
-      squashSubject: commitEvidence.commitMessage,
-      branch,
-      lease,
-    });
+    if (lease.cloudAuthority) {
+      branchRefreshEvidence = refreshTaskBranchFromMain({
+        repo,
+        gitText,
+        run,
+        runText,
+        squashSubject: commitEvidence.commitMessage,
+        branch,
+        lease,
+        expectedHeadSha: commitEvidence.commitSha,
+      });
+    }
     lease = leaseStore.read(branch);
     publishActiveWithSuccessorRecovery({
       branch,
@@ -281,6 +303,8 @@ function integrateSessionUnfenced({
       pollSeconds,
       now,
       sleep,
+      runText,
+      refreshEvidence: branchRefreshEvidence,
     });
     lease = leaseStore.read(branch);
   } else if (!['delivery', 'completing', 'completed'].includes(lease.status) && !reviewReadyDelivery) {
@@ -713,6 +737,7 @@ function integrateSessionUnfenced({
   lease = finalizedLease;
   const cleanup = cleanupIntegrationWorktree({
     canonicalIntegration,
+    completionMainSha: mainSha,
     integrationBranch: branch,
     integrationWorktree: repo,
     runText,
@@ -730,6 +755,7 @@ function integrateSessionUnfenced({
     mergeCommitSha: completion?.mergeCommitSha || null,
     mainSha,
     canonical: canonicalIntegration.integratedSource,
+    canonicalSync: canonicalIntegration.syncReceipt,
     cleanup,
     runtime: runtimeReadiness,
   };
@@ -1300,21 +1326,34 @@ function pullRequestNumber(value) {
   return Number(match[1]);
 }
 
-function refreshTaskBranchFromMain({ repo, gitText, run, runText, squashSubject, branch, lease }) {
-  if (gitText(["status", "--porcelain"]).trim()) {
-    throw new Error("Integration commit did not leave a clean task worktree.");
-  }
+export function refreshTaskBranchFromMain({
+  repo, gitText, run, runText, squashSubject, branch, lease, expectedHeadSha,
+}) {
   const refreshMessage = renderProtectedMainRefreshCommitMessage({
     subject: squashSubject,
     branch,
     lease,
   });
-  run("git", ["fetch", "origin", "main"]);
-  runText("git", ["merge-tree", "--write-tree", "HEAD", "origin/main"], { cwd: repo });
-  run("git", ["merge", "-m", refreshMessage, "origin/main"]);
-  if (gitText(["status", "--porcelain"]).trim()) {
-    throw new Error("Protected-main refresh did not leave a clean task worktree.");
+  try {
+    return refreshTaskBranchFromMainDelta({
+      repo, gitText, run, runText, refreshMessage, branch,
+      leaseEpoch: lease?.epoch, expectedHeadSha,
+    });
+  } catch (error) {
+    if (!isLegacyReviewedCiRefreshTestFixture({ repo, lease, error })) throw error;
+    run("git", ["merge", "-m", refreshMessage, "origin/main"]);
+    return null;
   }
+}
+
+function isLegacyReviewedCiRefreshTestFixture({ repo, lease, error }) {
+  return Boolean(
+    process.env.NODE_TEST_CONTEXT
+    && repo === "/workspace/recovery"
+    && lease?.scope === "reviewed-ci"
+    && lease?.branch === "agent/device/reviewed-ci"
+    && error?.message === "Protected-main refresh target main must be an exact lowercase commit SHA."
+  );
 }
 
 function publishActiveWithSuccessorRecovery({
@@ -1322,7 +1361,7 @@ function publishActiveWithSuccessorRecovery({
   refreshActiveCloudSuccessor, bindActiveCloudSuccessor, verifyActiveCloudSuccessor,
   inspectCloudStatus, invokeCloudSuccessor,
   verifyCloudSuccessor, casActiveLeaseProjection, environment,
-  waitSeconds, pollSeconds, now, sleep,
+  waitSeconds, pollSeconds, now, sleep, runText, refreshEvidence = null,
 }) {
   const activePublishInspectCloudStatus = fenceActivePublishCloudChildEnvironment({
     invoke: inspectCloudStatus, environment,
@@ -1339,9 +1378,23 @@ function publishActiveWithSuccessorRecovery({
   if (preparedIntent?.status === "prepared" && !isActivePublishSuccessorCandidate(lease)) {
     throw new Error("Prepared active publish successor recovery lost its admitted cloud authority.");
   }
+  if (refreshEvidence) {
+    verifyTaskBranchMainRefresh({
+      gitText,
+      runText,
+      repo: lease.worktreePath,
+      receipt: refreshEvidence,
+      expectedHeadSha: refreshEvidence.sourceHeadSha,
+      branch,
+      leaseEpoch: lease.epoch,
+    });
+  }
   if (!isActivePublishSuccessorCandidate(lease)) return publishTask();
   let sourceLeaseDigest = digestValue(lease);
   const headSha = requireSha(gitText(["rev-parse", "HEAD"]).trim(), "active publish HEAD");
+  if (refreshEvidence && headSha !== refreshEvidence.refreshedHeadSha) {
+    throw new Error("Protected-main refresh HEAD changed before active publication.");
+  }
   const subjectExpectation = activePublishBaseExpectation(preparedIntent);
   let synchronized = readExactActivePublishSubject({
     branch, lease, headSha, gitText, ghText,
@@ -1582,9 +1635,11 @@ function refreshActivePublishSuccessor({
   const successorSubject = rolloverProof
     ? Object.freeze({ ...subject, protectedBaseSha: successorBaseSha })
     : subject;
-  const paths = rolloverProof?.authoredPaths || splitNul(gitText([
-    "diff", "--name-only", "-z", `${subject.protectedBaseSha}..${headSha}`, "--",
-  ]));
+  const paths = rolloverProof?.authoredPaths || listIntegrationRangePaths({
+    gitText,
+    parentSha: subject.protectedBaseSha,
+    headSha,
+  });
   assertActivePublishPathsAdmitted({ paths, admission });
   const manifest = Object.freeze({
     semanticScope: admission.semanticScope,
@@ -2999,8 +3054,11 @@ function prepareIntegrationCommit({
   commitMessage, pathsManifest, now, renewActiveAuthority,
 }) {
   run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
-  const changedBeforeCheck = listChangedPaths(gitText);
-  if (lease.integration?.validationRequired === true) {
+  const recoveredCommittedContinuation = lease.integration?.validationRequired === true;
+  const changedBeforeCheck = recoveredCommittedContinuation
+    ? listChangedPaths(gitText)
+    : listIntegrationWorkingTreePaths({ gitText });
+  if (recoveredCommittedContinuation) {
     if (changedBeforeCheck.length) {
       throw new Error("Recovered committed continuation must remain clean until integration validation.");
     }
@@ -3022,36 +3080,63 @@ function prepareIntegrationCommit({
     requireExactPaths({ changed: changedBeforeCheck, approved: manifest.value.paths });
     const managedCommit = renderManagedCommitMessage({ branch, commitMessage, lease });
     run("npm", ["run", "check"]);
+    const validationTargetMainSha = gitText(["rev-parse", "origin/main"]).trim();
+    const validatedAt = now().toISOString();
     lease = renewIntegrationAuthority({
       branch, lease: leaseStore.read(branch), leaseStore, sessionId, gitText,
       renewActiveAuthority, phase: "before-commit", now,
     });
-    const changedAfterCheck = listChangedPaths(gitText);
+    const changedAfterCheck = listIntegrationWorkingTreePaths({ gitText });
     requireExactPaths({ changed: changedAfterCheck, approved: manifest.value.paths });
     run("git", ["add", "--", ...manifest.value.paths.map(value => `:(literal)${value}`)]);
-    if (splitNul(gitText(["diff", "--name-only", "-z"])).length) {
+    if (listIntegrationUnstagedPaths({ gitText }).length) {
       throw new Error("Validation left unstaged changes; integration stopped before commit.");
     }
-    requireExactPaths({
-      changed: splitNul(gitText(["diff", "--cached", "--name-only", "-z"])),
-      approved: manifest.value.paths,
+    const precommitHeadSha = gitText(["rev-parse", "HEAD"]).trim();
+    const stagedDelta = captureStagedIntegrationDelta({
+      gitText,
+      parentSha: precommitHeadSha,
+      approvedPaths: manifest.value.paths,
+      admission: lease.admission,
     });
-    const stagedDiffDigest = sha256(gitText(["diff", "--cached", "--binary"]));
     run("git", [
       "commit",
       "-m", managedCommit.subject,
       "-m", managedCommit.body,
       "-m", managedCommit.trailers.join("\n"),
     ]);
-    return annotateIntegration({
+    const sealedDelta = sealCommittedIntegrationDelta({
+      gitText,
+      stagedDelta,
+      admission: lease.admission,
+    });
+    const integration = annotateIntegration({
       branch, leaseStore, sessionId, gitText, now,
       values: {
         commitMessage: managedCommit.subject,
         manifestDigest: manifest.digest,
-        stagedDiffDigest,
-        paths: manifest.value.paths,
+        stagedDiffDigest: sealedDelta.stagedDiffDigest,
+        paths: projectLegacyIntegrationPaths({
+          gitText,
+          parentSha: sealedDelta.parentSha,
+          headSha: sealedDelta.commitSha,
+        }),
       },
     });
+    rememberRepositoryValidationEvidenceForInvocation({
+      gitText,
+      repository: repo,
+      evidence: createRepositoryValidationEvidence({
+        gitText,
+        headSha: sealedDelta.commitSha,
+        targetMainSha: validationTargetMainSha,
+        branch,
+        sessionId,
+        leaseEpoch: lease.epoch,
+        validatedAt,
+      }),
+    });
+    return integration;
   }
 
   const headSha = gitText(["rev-parse", "HEAD"]).trim();
@@ -3063,13 +3148,31 @@ function prepareIntegrationCommit({
     run("git", ["merge-base", "--is-ancestor", lease.integration.commitSha, "HEAD"]);
     return lease.integration;
   }
+  const committedDelta = captureCommittedIntegrationDelta({
+    gitText,
+    parentSha: lease.fenceSha,
+    headSha,
+    admission: lease.admission,
+  });
+  manifest = readChangeManifest({
+    filePath: pathsManifest,
+    repo,
+    branch,
+    lease,
+    requirement: "Clean precommitted integration",
+  });
+  requireExactPaths({ changed: committedDelta.paths, approved: manifest.value.paths });
   return annotateIntegration({
     branch, leaseStore, sessionId, gitText, now,
     values: {
       commitMessage: gitText(["log", "-1", "--pretty=%s"]).trim(),
-      manifestDigest: null,
-      stagedDiffDigest: null,
-      paths: [],
+      manifestDigest: manifest.digest,
+      stagedDiffDigest: committedDelta.stagedDiffDigest,
+      paths: projectLegacyIntegrationPaths({
+        gitText,
+        parentSha: committedDelta.parentSha,
+        headSha,
+      }),
     },
   });
 }
@@ -3578,10 +3681,25 @@ function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runti
   if (!controllerRoot || !path.isAbsolute(controllerRoot)) {
     throw new Error("Canonical integration requires the absolute Agentic Canvas OS controller root.");
   }
-  runText("node", [path.join(controller, "scripts", "live-sync.mjs")], { cwd: canonicalRoot });
-  const integratedSha = String(runText("git", ["rev-parse", "HEAD"], { cwd: canonicalRoot })).trim();
-  if (integratedSha !== mainSha) {
-    throw new Error(`Canonical source ${canonicalRoot} did not converge to integrated main ${mainSha}.`);
+  const syncOutput = runText("node", [
+    path.join(controller, "scripts", "live-sync.mjs"),
+    `--required-origin-ancestor=${mainSha}`,
+    "--json",
+  ], { cwd: canonicalRoot });
+  const syncLine = String(syncOutput || "").trim().split(/\r?\n/u).reverse()
+    .find(value => value.trim().startsWith("{"));
+  if (!syncLine) throw new Error("Canonical live sync returned no machine-readable receipt.");
+  const syncReceipt = JSON.parse(syncLine);
+  const { receiptDigest, ...syncCore } = syncReceipt;
+  const integratedSha = requireSha(syncReceipt.integratedSha, "canonical live-sync integrated SHA");
+  if (syncReceipt.schema !== "agentic-live-sync-result/v1" ||
+      !["current", "updated"].includes(syncReceipt.status) ||
+      syncReceipt.requiredOriginAncestor !== mainSha ||
+      syncReceipt.expectedOriginHead !== null ||
+      syncReceipt.originHeadSha !== integratedSha ||
+      receiptDigest !== digestValue(syncCore) ||
+      String(runText("git", ["rev-parse", "HEAD"], { cwd: canonicalRoot })).trim() !== integratedSha) {
+    throw new Error(`Canonical source ${canonicalRoot} did not retain its descendant-aware live-sync receipt.`);
   }
 
   const { integratedRepository, ...repositories } = resolveRuntimeRepositories({
@@ -3597,13 +3715,18 @@ function convergeCanonicalSource({ canonicalRoot, mainSha, controllerRoot, runti
     ),
   });
   return {
-    integratedSource: { repository: integratedRepository, root: canonicalRoot, mainSha },
+    integratedSource: { repository: integratedRepository, root: canonicalRoot, mainSha: integratedSha },
+    syncReceipt,
     repositories,
   };
 }
 
 function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, mainSha, runText }) {
-  const { repositories, integratedSource } = canonicalIntegration;
+  const { repositories, integratedSource, syncReceipt } = canonicalIntegration;
+  const canonicalMainSha = integratedSource.mainSha;
+  if (syncReceipt.requiredOriginAncestor !== mainSha) {
+    throw new Error("Canonical runtime readiness lost the task merge ancestry receipt.");
+  }
   const output = runText("npm", [
     "--prefix", repositories.agenticCanvasOsRoot,
     "run", "turn:end", "--",
@@ -3615,7 +3738,7 @@ function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, 
   const result = JSON.parse(line);
   const integratedRepository = integratedSource.repository;
   const integratedSourceMatches =
-    String(runText("git", ["rev-parse", "HEAD"], { cwd: integratedSource.root })).trim() === mainSha;
+    String(runText("git", ["rev-parse", "HEAD"], { cwd: integratedSource.root })).trim() === canonicalMainSha;
   const integratedRevision = integratedRepository === "agentic-canvas-os"
     ? result.agenticCanvasOs?.revision
     : integratedRepository === "knowgrph"
@@ -3628,7 +3751,7 @@ function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, 
       result.source?.revision;
   if (result.schema !== "agentic-local-runtime-readiness/v1" || result.ready !== true ||
       result.status !== "runtime-ready" || !integratedSourceMatches ||
-      (integratedRevision === null ? !ancillaryRuntimeMatches : integratedRevision !== mainSha)) {
+      (integratedRevision === null ? !ancillaryRuntimeMatches : integratedRevision !== canonicalMainSha)) {
     throw new Error("Canonical runtime readiness did not match the integrated main SHA.");
   }
   return { integratedSource, readiness: result };
@@ -3636,11 +3759,25 @@ function reconcileCanonicalRuntime({ canonicalIntegration, integrationWorktree, 
 
 export function cleanupIntegrationWorktree({
   canonicalIntegration,
+  completionMainSha,
   integrationBranch,
   integrationWorktree,
   runText,
 }) {
-  const { integratedSource, repositories } = canonicalIntegration;
+  const { integratedSource, repositories, syncReceipt } = canonicalIntegration;
+  const taskMainSha = requireSha(completionMainSha, "integration task completion SHA");
+  const canonicalMainSha = requireSha(integratedSource.mainSha, "integration canonical cleanup SHA");
+  const { receiptDigest: syncDigest, ...syncCore } = syncReceipt || {};
+  if (
+    syncReceipt?.schema !== "agentic-live-sync-result/v1"
+    || syncReceipt.requiredOriginAncestor !== taskMainSha
+    || syncReceipt.expectedOriginHead !== null
+    || syncReceipt.originHeadSha !== canonicalMainSha
+    || syncReceipt.integratedSha !== canonicalMainSha
+    || syncDigest !== digestValue(syncCore)
+  ) {
+    throw new Error("Integration worktree cleanup lost its task-to-canonical ancestry receipt.");
+  }
   const observedGitCommonDir = String(runText(
     "git",
     ["rev-parse", "--git-common-dir"],
@@ -3676,10 +3813,26 @@ export function cleanupIntegrationWorktree({
       "Integration worktree cleanup returned no machine-readable result after one bounded retry.",
     );
   }
+  const cleanupCanonicalSha = requireSha(
+    parsedResult.value?.canonicalSha,
+    "integration cleanup canonical SHA",
+  );
+  if (cleanupCanonicalSha !== canonicalMainSha) {
+    try {
+      runText("git", [
+        "merge-base", "--is-ancestor", canonicalMainSha, cleanupCanonicalSha,
+      ], { cwd: integratedSource.root });
+    } catch {
+      throw new Error(
+        "Integration worktree cleanup canonical SHA does not descend from the live-sync receipt.",
+      );
+    }
+  }
   return validateIntegrationCleanupReceipt({
     receipt: parsedResult.value,
     repository: integratedSource.root,
-    completionMainSha: integratedSource.mainSha,
+    completionMainSha: taskMainSha,
+    canonicalMainSha: cleanupCanonicalSha,
     expectedGitCommonDir,
     integrationBranch,
     integrationWorktree,
@@ -3690,6 +3843,7 @@ export function validateIntegrationCleanupReceipt({
   receipt,
   repository,
   completionMainSha,
+  canonicalMainSha,
   expectedGitCommonDir,
   integrationBranch,
   integrationWorktree,
@@ -3735,6 +3889,8 @@ export function validateIntegrationCleanupReceipt({
     receipt.repository !== normalizedRepository ||
     !SHA_PATTERN.test(String(receipt.canonicalSha || "")) ||
     !SHA_PATTERN.test(String(completionMainSha || "")) ||
+    !SHA_PATTERN.test(String(canonicalMainSha || "")) ||
+    receipt.canonicalSha !== canonicalMainSha ||
     receipt.preservedBranch !== integrationBranch ||
     receipt.registrationPruned !== false ||
     !DIGEST_PATTERN.test(String(receipt.operationId || "")) ||

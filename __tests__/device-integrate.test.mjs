@@ -29,6 +29,8 @@ import {
   createTaskAuthorityBinding,
   createTaskAuthorityCapability,
 } from "../scripts/task-bound-lane-authority-contract.mjs";
+import { reusableRepositoryValidationEvidence }
+  from "../scripts/device-delivery-evidence.mjs";
 import { casWriterLeaseProjection } from "../scripts/writer-lease-registry-cas.mjs";
 import {
   createWriterLeaseStore,
@@ -92,11 +94,25 @@ const deliveryEvidence = Object.freeze({
 const reviewRequestId = "github-pull-request:PR_42";
 const focusedEvidenceDigest = "6".repeat(64);
 
+function liveSyncReceipt(requiredMainSha = mainSha, integratedSha = requiredMainSha) {
+  const core = {
+    schema: "agentic-live-sync-result/v1",
+    status: "current",
+    expectedOriginHead: null,
+    requiredOriginAncestor: requiredMainSha,
+    beforeSha: integratedSha,
+    originHeadSha: integratedSha,
+    integratedSha,
+  };
+  return JSON.stringify({ ...core, receiptDigest: digestValue(core) });
+}
+
 function cleanupReceipt({
   worktreePath,
   repository = path.join(worktreePath, "canonical", "agentic-canvas-os"),
   gitCommonDir = path.join(repository, ".git"),
   canonicalSha = mainSha,
+  completionMainSha = canonicalSha,
   status = "cleaned",
   kind,
   managedDisposition,
@@ -124,8 +140,8 @@ function cleanupReceipt({
       pathPresentBefore: cleaned,
       registeredAfter: false,
       pathExistsAfter: false,
-      head: cleaned ? canonicalSha : null,
-      completionMainSha: canonicalSha,
+      head: cleaned ? completionMainSha : null,
+      completionMainSha,
       state: cleaned ? "cleanup-ready" : "already-cleaned",
     },
     removedWorktree: cleaned ? worktreePath : null,
@@ -144,7 +160,7 @@ function cleanupReceipt({
     repository,
     gitCommonDir,
     targetPath: worktreePath,
-    completionMainSha: canonicalSha,
+    completionMainSha,
     preservedBranch: branch,
     managedContainer: receipt.managedContainer,
     sharedContainer: receipt.sharedContainer,
@@ -483,12 +499,14 @@ test("cleanup validation accepts safe retained containers and preserves the type
     kind: "managed",
     managedDisposition: "retained-nonempty",
     sharedDisposition: "not-attempted",
-    receiptOverrides: { canonicalSha: "8".repeat(40) },
+    canonicalSha: "8".repeat(40),
+    completionMainSha: mainSha,
   });
   assert.strictEqual(validateIntegrationCleanupReceipt({
     receipt,
     repository,
     completionMainSha: mainSha,
+    canonicalMainSha: receipt.canonicalSha,
     expectedGitCommonDir: receipt.gitCommonDir,
     integrationBranch: branch,
     integrationWorktree: worktreePath,
@@ -503,6 +521,7 @@ test("cleanup validation accepts safe retained containers and preserves the type
     receipt: replay,
     repository,
     completionMainSha: mainSha,
+    canonicalMainSha: replay.canonicalSha,
     expectedGitCommonDir: replay.gitCommonDir,
     integrationBranch: branch,
     integrationWorktree: replay.target.path,
@@ -519,6 +538,7 @@ test("cleanup validation accepts safe retained containers and preserves the type
     receipt: identityDrift,
     repository,
     completionMainSha: mainSha,
+    canonicalMainSha: identityDrift.canonicalSha,
     expectedGitCommonDir: identityDrift.gitCommonDir,
     integrationBranch: branch,
     integrationWorktree: worktreePath,
@@ -533,6 +553,7 @@ test("cleanup validation rejects legacy, inexact, pruned, and unsafe receipts", 
     receipt,
     repository,
     completionMainSha: mainSha,
+    canonicalMainSha: valid.canonicalSha,
     expectedGitCommonDir: valid.gitCommonDir,
     integrationBranch: branch,
     integrationWorktree: worktreePath,
@@ -606,8 +627,10 @@ test("cleanup child retries one absent response and accepts the same-command rep
   const result = cleanupIntegrationWorktree({
     canonicalIntegration: {
       integratedSource: { root: repository, mainSha },
+      syncReceipt: JSON.parse(liveSyncReceipt(mainSha)),
       repositories: { agenticCanvasOsRoot: repository },
     },
+    completionMainSha: mainSha,
     integrationBranch: branch,
     integrationWorktree: worktreePath,
     runText: (command, args, options) => {
@@ -635,8 +658,10 @@ test("cleanup child does not retry a parseable invalid receipt", () => {
   assert.throws(() => cleanupIntegrationWorktree({
     canonicalIntegration: {
       integratedSource: { root: repository, mainSha },
+      syncReceipt: JSON.parse(liveSyncReceipt(mainSha)),
       repositories: { agenticCanvasOsRoot: repository },
     },
+    completionMainSha: mainSha,
     integrationBranch: branch,
     integrationWorktree: worktreePath,
     runText: (command, args) => {
@@ -655,8 +680,10 @@ test("cleanup child reports two unparseable responses after one bounded retry", 
   assert.throws(() => cleanupIntegrationWorktree({
     canonicalIntegration: {
       integratedSource: { root: repository, mainSha },
+      syncReceipt: JSON.parse(liveSyncReceipt(mainSha)),
       repositories: { agenticCanvasOsRoot: repository },
     },
+    completionMainSha: mainSha,
     integrationBranch: branch,
     integrationWorktree: worktreePath,
     runText: (command, args) => {
@@ -668,8 +695,10 @@ test("cleanup child reports two unparseable responses after one bounded retry", 
   assert.equal(nodeCalls, 2);
 });
 
-test("ancillary source-only completion needs no Knowgrph checkout", () => {
+test("ancillary later-descendant completion cleans by task SHA without a Knowgrph checkout", () => {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-ancillary-source-only-"));
+  const laterMainSha = "9".repeat(40);
+  const cleanupMainSha = "8".repeat(40);
   const canonicalAncillaryRoot = path.join(repo, "canonical", "huijoohwee.github.io");
   const canonicalAgenticRoot = path.join(repo, "controller", "agentic-canvas-os");
   mkdirSync(canonicalAncillaryRoot, { recursive: true });
@@ -687,7 +716,8 @@ test("ancillary source-only completion needs no Knowgrph checkout", () => {
   const cleanup = cleanupReceipt({
     repository: canonicalAncillaryRoot,
     worktreePath: repo,
-    status: "already-cleaned",
+    canonicalSha: cleanupMainSha,
+    completionMainSha: mainSha,
   });
   const commands = [];
   try {
@@ -709,12 +739,15 @@ test("ancillary source-only completion needs no Knowgrph checkout", () => {
       runText: (command, args, options = {}) => {
         commands.push({ command, args, options });
         if (command === "node" && args[0].endsWith("live-sync.mjs") &&
-            options.cwd === canonicalAncillaryRoot) return "";
+            options.cwd === canonicalAncillaryRoot) return liveSyncReceipt(mainSha, laterMainSha);
         if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
           return ".git\n";
         }
         if (command === "git" && args.join(" ") === "rev-parse HEAD" &&
-            options.cwd === canonicalAncillaryRoot) return `${mainSha}\n`;
+            options.cwd === canonicalAncillaryRoot) return `${laterMainSha}\n`;
+        if (command === "git" && args.join(" ") ===
+            `merge-base --is-ancestor ${laterMainSha} ${cleanupMainSha}` &&
+            options.cwd === canonicalAncillaryRoot) return "";
         if (command === "git" && args.join(" ") === "remote get-url origin" &&
             options.cwd === canonicalAncillaryRoot) {
           return "https://github.com/huijoohwee/huijoohwee.github.io.git\n";
@@ -735,8 +768,12 @@ test("ancillary source-only completion needs no Knowgrph checkout", () => {
     });
 
     assert.equal(result.status, "integrated");
+    assert.equal(result.mainSha, mainSha);
+    assert.equal(result.canonical.mainSha, laterMainSha);
     assert.equal(result.canonical.repository, "huijoohwee.github.io");
     assert.deepEqual(result.cleanup, cleanup);
+    assert.equal(result.cleanup.target.head, mainSha);
+    assert.equal(result.cleanup.canonicalSha, cleanupMainSha);
     assert.equal(commands.some(({ command }) => command === "npm"), false);
   } finally {
     rmSync(repo, { recursive: true, force: true });
@@ -770,8 +807,24 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
   writeFileSync(path.join(canonicalAgenticRoot, "package.json"), JSON.stringify({ name: "agentic-canvas-os" }));
   writeFileSync(path.join(canonicalKnowgrphRoot, "package.json"), JSON.stringify({ name: "knowgrph" }));
   writeFileSync(manifestPath, JSON.stringify({ schema: CHANGE_MANIFEST_SCHEMA, branch, baseSha, paths }));
+  const admittedManifest = normalizeDeclaredWriteScopeManifest({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: "runtime-integration",
+    paths,
+  }, { expectedScope: "runtime-integration" });
+  const admission = {
+    schema: "agentic-lane-admission-lease/v1",
+    status: "admitted",
+    semanticScope: admittedManifest.semanticScope,
+    declaredWriteSet: admittedManifest.declaredWriteSet,
+  };
+  const rawDelta = "fixture raw staged delta";
+  const binaryDelta = "fixture staged diff";
+  const targetMainTreeSha = "2".repeat(40);
+  const packageJsonBlobSha = "3".repeat(40);
+  const packageLockBlobSha = "4".repeat(40);
   let head = fenceSha;
-  let lease = createLease({ repo, status: "active" });
+  let lease = createLease({ repo, status: "active", admission });
   const commands = [];
   const runtimeCommands = [];
   const gitText = args => {
@@ -780,14 +833,41 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
     if (key === "worktree list --porcelain -z") {
       return canonicalWorktree(repo, "isolated-acos-canonical");
     }
-    if (key === "diff --name-only -z HEAD --") return `${paths.join("\0")}\0`;
+    if (key === "diff --name-only --no-renames -z HEAD --") return `${paths.join("\0")}\0`;
     if (key === "ls-files --others --exclude-standard -z") return "";
-    if (key === "diff --name-only -z") return "";
-    if (key === "diff --cached --name-only -z") return `${paths.join("\0")}\0`;
-    if (key === "diff --cached --binary") return "fixture staged diff";
+    if (key === "diff --name-only --no-renames -z --") return "";
+    if (key === `diff --cached --name-only --no-renames -z ${fenceSha} --`) {
+      return `${paths.join("\0")}\0`;
+    }
+    if (key === `diff --cached --raw --no-abbrev --no-renames -z ${fenceSha} --`) {
+      return rawDelta;
+    }
+    if (key === `diff --cached --binary ${fenceSha} --`) return binaryDelta;
+    if (key === `diff --name-only --no-renames -z ${fenceSha} ${commitSha} --`) {
+      return `${paths.join("\0")}\0`;
+    }
+    if (key === `diff --name-only -z ${fenceSha} ${commitSha} --`) {
+      return `${paths.join("\0")}\0`;
+    }
+    if (key === `diff --raw --no-abbrev --no-renames -z ${fenceSha} ${commitSha} --`) {
+      return rawDelta;
+    }
+    if (key === `diff --binary ${fenceSha} ${commitSha} --`) return binaryDelta;
     if (key === "status --porcelain") return "";
+    if (key === "status --porcelain --untracked-files=all") return "";
     if (key === "rev-parse HEAD") return head;
     if (key === "rev-parse HEAD^{tree}") return treeSha;
+    if (key === "write-tree") return treeSha;
+    if (key === `rev-list --parents -n 1 ${commitSha}`) return `${commitSha} ${fenceSha}`;
+    if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+    if (key === "rev-parse origin/main") return baseSha;
+    if (key === `rev-parse ${baseSha}^{tree}`) return targetMainTreeSha;
+    if (key === `rev-parse ${commitSha}:package.json`) return packageJsonBlobSha;
+    if (key === `rev-parse ${commitSha}:package-lock.json`) return packageLockBlobSha;
+    if (key === `merge-base ${commitSha} ${baseSha}`) return baseSha;
+    if (key === `diff --name-only --no-renames -z ${baseSha}..${commitSha} --`) {
+      return `${paths.join("\0")}\0`;
+    }
     throw new Error(`unexpected git command: ${key}`);
   };
   const leaseStore = {
@@ -822,6 +902,7 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
         if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
           return ".git\n";
         }
+        if (command === "git" && args[0] === "merge-tree") return `${treeSha}\n`;
         if (command === "git") return `${mainSha}\n`;
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({
@@ -829,7 +910,9 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
             worktreePath: repo,
           }));
         }
-        if (command === "node") return "";
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
+        }
         return JSON.stringify({
           schema: "agentic-local-runtime-readiness/v1",
           ready: true,
@@ -840,6 +923,16 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
       },
       controllerRoot: repo,
       publishTask: () => {
+        const validationEvidence = reusableRepositoryValidationEvidence({
+          repository: repo,
+          gitText,
+          branch,
+          sessionId: "session-a",
+          leaseEpoch: 1,
+          canonicalBaseSha: baseSha,
+        });
+        assert.equal(validationEvidence.headSha, commitSha);
+        assert.equal(validationEvidence.targetMainSha, baseSha);
         lease = { ...lease, status: "delivery", deliveryHeadSha: commitSha };
       },
       completeTask: () => {
@@ -866,39 +959,33 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
       "-m Agentic-Task: runtime-integration\nAgentic-Scope: runtime-integration\n" +
       "Agentic-Lease-Epoch: 1\nAgentic-Mechanism: Agentic Canvas OS protected integration"));
     assert.ok(commands.some(call => call.join(" ") === "npm run check"));
-    assert.ok(commands.some(call => call.join(" ") === "git fetch origin main"));
-    assert.ok(commands.some(call => call.join(" ") ===
-      `git merge -m ${refreshMergeMessage(managedCommitSubject)} origin/main`));
+    assert.equal(commands.some(call => call.join(" ") === "git fetch origin main"), false);
+    assert.equal(commands.some(call => call[0] === "git" && call[1] === "merge"), false);
     assert.equal(result.runtime.integratedSource.mainSha, mainSha);
     assert.equal(result.runtime.integratedSource.repository, "agentic-canvas-os");
     assert.equal(result.runtime.readiness.source.revision, knowgrphSha);
-    assert.deepEqual(runtimeCommands[0], {
-      command: "git",
-      args: ["merge-tree", "--write-tree", "HEAD", "origin/main"],
-      options: { cwd: repo },
-    });
-    assert.equal(runtimeCommands[1].command, "node");
-    assert.equal(runtimeCommands[1].options.cwd, canonicalAgenticRoot);
-    assert.deepEqual(runtimeCommands[2], {
+    assert.equal(runtimeCommands[0].command, "node");
+    assert.equal(runtimeCommands[0].options.cwd, canonicalAgenticRoot);
+    assert.deepEqual(runtimeCommands[1], {
       command: "git",
       args: ["rev-parse", "HEAD"],
       options: { cwd: canonicalAgenticRoot },
     });
-    assert.equal(runtimeCommands[3].command, "npm");
-    assert.ok(runtimeCommands[3].args.includes(`--repository=${canonicalKnowgrphRoot}`));
-    assert.equal(runtimeCommands[3].options.cwd, canonicalAgenticRoot);
+    assert.equal(runtimeCommands[2].command, "npm");
+    assert.ok(runtimeCommands[2].args.includes(`--repository=${canonicalKnowgrphRoot}`));
+    assert.equal(runtimeCommands[2].options.cwd, canonicalAgenticRoot);
+    assert.deepEqual(runtimeCommands[3], {
+      command: "git",
+      args: ["rev-parse", "HEAD"],
+      options: { cwd: canonicalAgenticRoot },
+    });
     assert.deepEqual(runtimeCommands[4], {
-      command: "git",
-      args: ["rev-parse", "HEAD"],
-      options: { cwd: canonicalAgenticRoot },
-    });
-    assert.deepEqual(runtimeCommands[5], {
       command: "git",
       args: ["rev-parse", "--git-common-dir"],
       options: { cwd: canonicalAgenticRoot },
     });
-    assert.equal(runtimeCommands[6].command, "node");
-    assert.ok(runtimeCommands[6].args.includes(`--worktree=${repo}`));
+    assert.equal(runtimeCommands[5].command, "node");
+    assert.ok(runtimeCommands[5].args.includes(`--worktree=${repo}`));
     assert.deepEqual(result.cleanup, cleanupReceipt({
       repository: canonicalAgenticRoot,
       worktreePath: repo,
@@ -907,6 +994,117 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
     rmSync(repo, { recursive: true, force: true });
     rmSync(manifestPath, { force: true });
   }
+});
+
+test("clean precommitted integration records its exact replayable manifest-bound delta", t => {
+  const repo = "/tmp/agentic-clean-precommitted-integration";
+  const paths = ["docs/runtime.md", "scripts/runtime.mjs"];
+  const admittedManifest = normalizeDeclaredWriteScopeManifest({
+    schema: "agentic-declared-write-scope/v1",
+    semanticScope: "runtime-integration",
+    paths,
+  }, { expectedScope: "runtime-integration" });
+  const admission = {
+    schema: "agentic-lane-admission-lease/v1",
+    status: "admitted",
+    semanticScope: admittedManifest.semanticScope,
+    declaredWriteSet: admittedManifest.declaredWriteSet,
+  };
+  const binaryDelta = "clean precommitted binary delta";
+  const rawDelta = "clean precommitted raw delta";
+  const manifestPath = path.join(os.tmpdir(), `agentic-clean-precommitted-${process.pid}.json`);
+  const manifestBytes = JSON.stringify({
+    schema: CHANGE_MANIFEST_SCHEMA,
+    branch,
+    baseSha,
+    paths,
+  });
+  writeFileSync(manifestPath, manifestBytes);
+  t.after(() => rmSync(manifestPath, { force: true }));
+  let lease = createLease({ repo, status: "active", admission });
+  const gitText = args => {
+    const key = args.join(" ");
+    if (key === "branch --show-current") return branch;
+    if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
+    if (key === "diff --name-only --no-renames -z HEAD --") return "";
+    if (key === "ls-files --others --exclude-standard -z") return "";
+    if (key === "rev-parse HEAD") return commitSha;
+    if (key === `rev-list --parents -n 1 ${commitSha}`) return `${commitSha} ${fenceSha}`;
+    if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+    if (key === "rev-parse HEAD^{tree}") return treeSha;
+    if (key === `diff --name-only --no-renames -z ${fenceSha} ${commitSha} --`) {
+      return `${paths.join("\0")}\0`;
+    }
+    if (key === `diff --name-only -z ${fenceSha} ${commitSha} --`) {
+      return `${paths.join("\0")}\0`;
+    }
+    if (key === `diff --raw --no-abbrev --no-renames -z ${fenceSha} ${commitSha} --`) {
+      return rawDelta;
+    }
+    if (key === `diff --binary ${fenceSha} ${commitSha} --`) return binaryDelta;
+    if (key === "status --porcelain --untracked-files=all") return "";
+    if (key === "log -1 --pretty=%s") {
+      return "fix(runtime-integration): preserve committed delta";
+    }
+    if (key === "status --porcelain") return "";
+    if (key === "rev-parse origin/main") return fenceSha;
+    if (key === `merge-base ${commitSha} ${fenceSha}`) return fenceSha;
+    if (key === `diff --name-only --no-renames -z ${fenceSha}..${commitSha} --`) {
+      return `${paths.join("\0")}\0`;
+    }
+    throw new Error(`unexpected git command: ${key}`);
+  };
+  const leaseStore = {
+    read: requested => requested ? lease : { leases: { [branch]: lease } },
+    annotate: ({ values }) => (lease = { ...lease, ...values }),
+  };
+
+  assert.throws(() => integrateSession({
+    invocationPath: repo,
+    repo,
+    gitText,
+    ghText: () => { throw new Error("clean precommitted integration must stop before GitHub"); },
+    leaseStore,
+    sessionId: "session-a",
+    run: () => {},
+    runText: (command, args) => {
+      if (command === "git" && args[0] === "merge-tree") return treeSha;
+      throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
+    },
+    publishTask: () => {
+      assert.equal(reusableRepositoryValidationEvidence({
+        repository: repo,
+        gitText,
+        branch,
+        sessionId: "session-a",
+        leaseEpoch: 1,
+        canonicalBaseSha: fenceSha,
+      }), null);
+      assert.deepEqual(lease.integration.paths, paths);
+      assert.equal(
+        lease.integration.manifestDigest,
+        createHash("sha256").update(manifestBytes).digest("hex"),
+      );
+      assert.equal(
+        lease.integration.stagedDiffDigest,
+        createHash("sha256").update(binaryDelta).digest("hex"),
+      );
+      throw new Error("stop after clean precommitted delta capture");
+    },
+    completeTask: () => { throw new Error("clean precommitted integration must not complete"); },
+    runtime: "none",
+    pathsManifest: manifestPath,
+    waitSeconds: 1,
+    pollSeconds: 0.1,
+    log: () => {},
+  }), /stop after clean precommitted delta capture/u);
+
+  assert.deepEqual(lease.integration.paths, paths);
+  assert.match(lease.integration.manifestDigest, /^[0-9a-f]{64}$/u);
+  assert.equal(
+    lease.integration.stagedDiffDigest,
+    createHash("sha256").update(binaryDelta).digest("hex"),
+  );
 });
 
 test("managed integration commit attribution is bound to the leased branch scope", () => {
@@ -1020,7 +1218,7 @@ test("invalid managed integration subjects fail before validation or staging", (
         const key = args.join(" ");
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
-        if (key === "diff --name-only -z HEAD --") return "package.json\0";
+        if (key === "diff --name-only --no-renames -z HEAD --") return "package.json\0";
         if (key === "ls-files --others --exclude-standard -z") return "";
         throw new Error(`unexpected git command: ${key}`);
       },
@@ -1066,14 +1264,15 @@ test("integration rejects dirty paths outside the explicit manifest before valid
         const key = args.join(" ");
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
-        if (key === "diff --name-only -z HEAD --") return "package.json\0scripts/unapproved.mjs\0";
+        if (key === "diff --name-only --no-renames -z HEAD --") {
+          return "package.json\0scripts/unapproved.mjs\0";
+        }
         if (key === "ls-files --others --exclude-standard -z") return "";
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => "",
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
-        annotate: ({ values }) => (lease = { ...lease, ...values }),
       },
       sessionId: "session-a",
       run: (command, args) => commands.push([command, ...args]),
@@ -1221,6 +1420,9 @@ test("delivery aggregates sequential tree-equivalent refreshes before completion
           return ".git\n";
         }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
+        }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
@@ -1347,9 +1549,16 @@ test("a protected-main merge preserves the approved authored commit evidence", (
         const key = args.join(" ");
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
-        if (key === "diff --name-only -z HEAD --" || key === "ls-files --others --exclude-standard -z" ||
+        if (key === "diff --name-only --no-renames -z HEAD --" ||
+            key === "ls-files --others --exclude-standard -z" ||
             key === "status --porcelain") return "";
         if (key === "rev-parse HEAD") return refreshedHeadSha;
+        if (key === "rev-parse origin/main") return baseSha;
+        if (key === `rev-parse ${refreshedHeadSha}^{tree}`) return treeSha;
+        if (key === `merge-base ${refreshedHeadSha} ${baseSha}`) return baseSha;
+        if (key === `diff --name-only --no-renames -z ${baseSha}..${refreshedHeadSha} --`) {
+          return "scripts/device-integrate-lib.mjs\0";
+        }
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: () => JSON.stringify({
@@ -1361,14 +1570,19 @@ test("a protected-main merge preserves the approved authored commit evidence", (
       }),
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
+        annotate: ({ values }) => (lease = { ...lease, ...values }),
       },
       sessionId: "session-a",
       run: (command, args) => commands.push([command, ...args]),
       runText: (command, args) => {
+        if (command === "git" && args[0] === "merge-tree") return `${treeSha}\n`;
         if (command === "git" && args.join(" ") === "rev-parse --git-common-dir") {
           return ".git\n";
         }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
+        }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
@@ -1497,6 +1711,9 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
           return ".git\n";
         }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
+        }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
@@ -1743,12 +1960,24 @@ test("active integration delegates its only entrypoint fence to nested publish",
         const key = args.join(" ");
         if (key === "branch --show-current") return branch;
         if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
-        if (key === "diff --name-only -z HEAD --" || key === "ls-files --others --exclude-standard -z"
+        if (key === "diff --name-only --no-renames -z HEAD --" ||
+          key === "ls-files --others --exclude-standard -z"
           || key === "status --porcelain") return "";
         if (key === "rev-parse HEAD") return commitSha;
+        if (key === "rev-parse origin/main") return baseSha;
+        if (key === `rev-parse ${commitSha}^{tree}`) return treeSha;
+        if (key === `merge-base ${commitSha} ${baseSha}`) return baseSha;
+        if (key === `diff --name-only --no-renames -z ${baseSha}..${commitSha} --`) {
+          return "scripts/runtime.mjs\0";
+        }
         throw new Error(`unexpected git command: ${key}`);
       },
-      run: () => {}, runText: () => "", publishTask: () => {
+      run: () => {},
+      runText: (command, args) => {
+        if (command === "git" && args[0] === "merge-tree") return treeSha;
+        throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
+      },
+      publishTask: () => {
         assert.equal(leaseStore.readRegistry().reviewedLaneEntrypointFences?.[branch], undefined);
         throw new Error("nested publish owns the fence");
       },
@@ -1833,6 +2062,24 @@ test("active integration accepts the exact cloud fallback manifest projection", 
       fixture.lease.cloudAuthority.manifestDigest,
       fixture.sourceAdmission.manifestDigest,
     );
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("active successor admission sees both sides of a rename and rejects an unadmitted source", () => {
+  const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-active-rename-scope-"));
+  const fixture = createActiveSuccessorFixture({
+    repo,
+    durableCas: true,
+    ordinaryAuthoredPaths: ["scripts/legacy-runtime.mjs", "scripts/runtime.mjs"],
+  });
+  try {
+    assert.throws(() => fixture.integrate({
+      publishTask: () => { throw new Error("rename bypass reached publication"); },
+    }), /paths changed from the admitted write-set evidence/u);
+    assert.ok(fixture.calls.git.some(command => command ===
+      `diff --name-only --no-renames -z ${mainSha}..${"2".repeat(40)} --`));
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -2226,7 +2473,8 @@ test("active integration rolls a source-only prepared intent across a disjoint p
     assert.equal(fixture.calls.cas.length, 3);
     assert.deepEqual(fixture.calls.run.slice(runCalls), [
       "git fetch origin main",
-      `git merge -m ${refreshMergeMessage(protectedSquashSubject, 2)} origin/main`,
+      `git merge --no-ff -m ${refreshMergeMessage(protectedSquashSubject, 2)} ` +
+        fixture.rolloverBaseSha,
     ]);
     const rolloverSuccessorCalls = fixture.calls.successor.filter(call =>
       call.canonicalBaseSha === fixture.rolloverBaseSha);
@@ -2589,7 +2837,8 @@ test("active integration finalizes an exact historical successor before ordinary
     assert.equal(fixture.lease.fenceSha, fixture.descendantHeadSha);
     assert.ok(fixture.calls.run.includes("git fetch origin main"));
     assert.ok(fixture.calls.run.includes(
-      `git merge -m ${refreshMergeMessage(protectedSquashSubject, 2)} origin/main`,
+      `git merge --no-ff -m ${refreshMergeMessage(protectedSquashSubject, 2)} ` +
+        fixture.descendantBaseSha,
     ));
   } finally {
     rmSync(repo, { recursive: true, force: true });
@@ -3198,7 +3447,8 @@ test("active integration fetches an absent exact protected-base object without u
     assert.deepEqual(fixture.calls.run.slice(runCalls), [
       `git fetch --no-tags --no-write-fetch-head origin ${fixture.rolloverBaseSha}`,
       "git fetch origin main",
-      `git merge -m ${refreshMergeMessage(protectedSquashSubject, 2)} origin/main`,
+      `git merge --no-ff -m ${refreshMergeMessage(protectedSquashSubject, 2)} ` +
+        fixture.rolloverBaseSha,
     ]);
     assert.equal(fixture.lease.baseSha, fixture.rolloverBaseSha);
     assert.equal(fixture.lease.fenceSha, fixture.rolloverHeadSha);
@@ -3750,6 +4000,9 @@ test("review-ready delivery reclaims a dormant preserved review authority before
           return ".git\n";
         }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
+        }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
@@ -4011,6 +4264,9 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
           return ".git\n";
         }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
+        }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
@@ -4976,10 +5232,12 @@ test("authorized and legacy local-only auto-delivery complete only through canon
           return ".git\n";
         }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
+        }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
-        if (command === "node") return "";
         runtimeProven = true;
         return JSON.stringify({
           schema: "agentic-local-runtime-readiness/v1",
@@ -5093,6 +5351,9 @@ function runAuthorizedAncillaryAutoDelivery({ postRuntimeMainSha = mainSha } = {
         }
         if (command === "git" && args.join(" ") === "remote get-url origin") {
           return "https://github.com/huijoohwee/huijoohwee.github.io.git\n";
+        }
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
         }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({
@@ -5420,6 +5681,9 @@ function runProtectedRefreshScenario({
           return ".git\n";
         }
         if (command === "git" && args[0] === "rev-parse") return `${mainSha}\n`;
+        if (command === "node" && args[0].endsWith("live-sync.mjs")) {
+          return liveSyncReceipt();
+        }
         if (command === "node" && args[0].endsWith("worktree-lifecycle.mjs")) {
           return JSON.stringify(cleanupReceipt({ worktreePath: repo }));
         }
@@ -5807,6 +6071,7 @@ function createActiveSuccessorFixture({
   authorityManifestProjection = "canonical",
   preparedBaseRollover = null,
   normalizedSourceAuthorityOwner = false,
+  ordinaryAuthoredPaths = ["scripts/runtime.mjs"],
 }) {
   const successorHeadSha = "2".repeat(40);
   const successorClaimId = "c".repeat(64);
@@ -6295,6 +6560,10 @@ function createActiveSuccessorFixture({
   let lease = leaseStore?.read(branch) || sourceLease;
   let pullRequestBody = updateWriterLeasePullRequestBody("", sourceLease);
   let headSha = commitSha;
+  let headProtectedBaseSha = baseSha;
+  let pendingRefreshParentSha = null;
+  let pendingRefreshProtectedSha = null;
+  const refreshHistory = new Map();
   let activeRound = 1;
   let canonicalHeadSha = mainSha;
   let refreshHeadSha = successorHeadSha;
@@ -6450,9 +6719,28 @@ function createActiveSuccessorFixture({
           calls.git.push(key);
           if (key === "branch --show-current") return branch;
           if (key === "worktree list --porcelain -z") return canonicalWorktree(repo);
-          if (key === "diff --name-only -z HEAD --" ||
+          if (key === "diff --name-only --no-renames -z HEAD --" ||
               key === "ls-files --others --exclude-standard -z" || key === "status --porcelain") return "";
           if (key === "rev-parse HEAD") return headSha;
+          if (key === "rev-parse origin/main") return canonicalHeadSha;
+          if (key === `rev-parse ${headSha}^{tree}`) return treeSha;
+          if (key.startsWith("rev-parse ") && key.endsWith("^{tree}") &&
+              refreshHistory.has(key.slice("rev-parse ".length, -"^{tree}".length))) return treeSha;
+          if (key === `merge-base ${headSha} ${canonicalHeadSha}`) {
+            return headProtectedBaseSha === canonicalHeadSha
+              ? canonicalHeadSha
+              : headProtectedBaseSha;
+          }
+          if (key.startsWith("rev-list --parents -n 1 ")) {
+            const requestedHeadSha = key.split(" ").at(-1);
+            const parents = refreshHistory.get(requestedHeadSha);
+            if (parents) {
+              return `${requestedHeadSha} ${parents.firstParentSha} ${parents.protectedParentSha}`;
+            }
+          }
+          if (key === `diff --name-only --no-renames -z ${canonicalHeadSha}..${headSha} --`) {
+            return `${ordinaryAuthoredPaths.join("\0")}\0`;
+          }
           if (key === `diff --name-only -z ${canonicalHeadSha}..${refreshHeadSha} --`) {
             return "scripts/runtime.mjs\0";
           }
@@ -6493,6 +6781,12 @@ function createActiveSuccessorFixture({
             if (ancestorReads++ >= ancestorPasses) throw new Error("not an ancestor");
             return "";
           }
+          if (key === `merge-base --is-ancestor ${canonicalHeadSha} ${canonicalHeadSha}`) return "";
+          if (pendingRefreshProtectedSha &&
+              key === `merge-base --is-ancestor ${pendingRefreshProtectedSha} ${canonicalHeadSha}`) return "";
+          if (key.startsWith("merge-base --is-ancestor ") && key.endsWith(` ${canonicalHeadSha}`) &&
+              [...refreshHistory.values()].some(value =>
+                key === `merge-base --is-ancestor ${value.protectedParentSha} ${canonicalHeadSha}`)) return "";
           if (key === `merge-base --is-ancestor ${baseSha} ${canonicalHeadSha}`) return "";
           if (key === `ls-remote --heads origin refs/heads/main refs/heads/${branch}`) {
             return `${canonicalHeadSha}\trefs/heads/main\n${remoteHeadSha}\trefs/heads/${branch}\n`;
@@ -6534,12 +6828,34 @@ function createActiveSuccessorFixture({
               pullRequestBaseSha = intermediateBaseSha;
             }
           }
-          if (key === `git merge -m ${refreshMergeMessage(
-            protectedSquashSubject,
-            lease.cloudAuthority.leaseEpoch,
-          )} origin/main`) headSha = refreshHeadSha;
+          if (command === "git" && args[0] === "merge" && args[1] === "--no-ff" &&
+              args.at(-1) === canonicalHeadSha) {
+            pendingRefreshParentSha = headSha;
+            pendingRefreshProtectedSha = canonicalHeadSha;
+            headSha = refreshHeadSha;
+            refreshHistory.set(headSha, {
+              firstParentSha: pendingRefreshParentSha,
+              protectedParentSha: pendingRefreshProtectedSha,
+            });
+            headProtectedBaseSha = canonicalHeadSha;
+          }
         },
-        runText: () => "",
+        runText: (command, args, options) => {
+          if (command === "git" && args[0] === "merge-tree") {
+            assert.deepEqual(args.slice(0, 3), ["merge-tree", "--write-tree", "--no-messages"]);
+            assert.ok([headSha, pendingRefreshParentSha,
+              ...[...refreshHistory.values()].map(value => value.firstParentSha)].includes(args[3]));
+            assert.ok([canonicalHeadSha, pendingRefreshProtectedSha,
+              ...[...refreshHistory.values()].map(value => value.protectedParentSha)].includes(args[4]));
+            assert.deepEqual(options, { cwd: repo });
+            if (!pendingRefreshParentSha) {
+              pendingRefreshParentSha = headSha;
+              pendingRefreshProtectedSha = canonicalHeadSha;
+            }
+            return treeSha;
+          }
+          throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
+        },
         publishTask,
         completeTask: () => { throw new Error("successor fixture must stop during publish"); },
         ...(providerEpochDemand || providerLedgerDrift ? {} : { refreshActiveCloudSuccessor: input => {

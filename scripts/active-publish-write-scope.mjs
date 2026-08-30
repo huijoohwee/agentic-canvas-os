@@ -1,13 +1,25 @@
 import { normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
 
 export function assertActivePublishPathsAdmitted({ paths, admission } = {}) {
+  return assertPathsAdmitted({
+    paths,
+    admission,
+    subject: "Active publish successor",
+  });
+}
+
+export function assertPathsAdmitted({
+  paths,
+  admission,
+  subject = "Changed-path operation",
+} = {}) {
   if (admission?.schema !== "agentic-lane-admission-lease/v1" ||
       admission.status !== "admitted" || !Array.isArray(admission.declaredWriteSet)) {
-    throw new Error("Active publish successor requires admitted write-set evidence.");
+    throw new Error(`${subject} requires admitted write-set evidence.`);
   }
   const semantic = `semantic:${admission.semanticScope}`;
   if (!admission.declaredWriteSet.includes(semantic)) {
-    throw new Error("Active publish successor semantic scope changed from admission.");
+    throw new Error(`${subject} semantic scope changed from admission.`);
   }
   const normalized = normalizeDeclaredWriteScopeManifest({
     schema: "agentic-declared-write-scope/v1",
@@ -22,7 +34,7 @@ export function assertActivePublishPathsAdmitted({ paths, admission } = {}) {
   ));
   if (outside.length > 0) {
     throw new Error(
-      `Active publish successor paths changed from the admitted write-set evidence: ${outside.join(", ")}.`,
+      `${subject} paths changed from the admitted write-set evidence: ${outside.join(", ")}.`,
     );
   }
   return Object.freeze({

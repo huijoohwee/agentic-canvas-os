@@ -160,6 +160,18 @@ a fresh plan, exact authorization, and exclusively created sidecar. Its allowed 
 authorization nor a second bind may occur. Response-loss reconciliation joins the exact canonical
 continuation receipt; verb-derived receipt-schema aliases are rejected.
 
+Terminal verification treats the collaboration ledger head as ambient concurrent state, not part of
+the durable claim-local subject. It accepts a freshly verified global ledger revision and digest only
+after every other cloud-authority field remains byte-exact, then supplies that transient projection to
+the ordinary operation-derived admission verifier. The stored lease is never rewritten for global
+head churn, and claim, transition, receipt, owner, review, expiry, write-set, fence, and overlap checks
+remain fail-closed.
+
+Without continuation, terminal verification accepts only the original plan's controller digest; with
+continuation, it accepts only that continuation plan's exact `repairedControllerDigest`. A controller
+change therefore invalidates both direct replacement replay and every prior continuation sidecar, and
+requires a freshly planned and exactly authorized continuation.
+
 The protected controller dependency closure includes the bind-evidence validator and
 `claim-only-partial-start-retirement-store.mjs`, which constructs the canonical operation receipt.
 Changing either dependency changes the repaired-controller digest and requires another fresh plan.

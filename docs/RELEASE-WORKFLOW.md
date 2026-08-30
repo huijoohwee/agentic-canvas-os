@@ -238,6 +238,16 @@ Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instruction
 
 Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another worktree or device is writing the same branch or semantic scope.
 
+Preflight is one pass, not a sequence of refusals. Report every missing, malformed, or unresolvable required input together, each named with the exact command that supplies it, and derive every machine-derivable operand rather than requesting it. `AUTONOMOUS-GOAL-PURSUIT.md` owns that interaction economy; it relaxes no gate in this document.
+
+Validate every locally knowable delivery constraint here, before the first publish attempt, so a local rule fails locally instead of at the remote boundary: commit subject bounds, review-request template conformance, declared scope-token equality, and changed-path containment within the admitted write scope. Discovering one of these only at publication wastes a round trip and a volatile binding.
+
+Read the ledger digest, canonical frontier, and lease expiry immediately before the transition that consumes them, never at plan time. A concurrent writer moves all three, and a compare-and-swap loss with an unchanged conflict set is re-derived within the declared retry bound rather than escalated.
+
+Attempt the declared environment-only bootstrap once, bounded, before emitting any failing verdict; a fresh worktree missing its installed dependencies is transport, and reporting its symptom as a product regression both misstates the result and poisons the outcome record. Record every blocked attempt with its typed reason as an outcome so a repeated mechanical blocker changes ordering instead of recurring.
+
+Escalate only an unresolved semantic decision. The exact-candidate human authorization in the protected Production environment, and every irreversible or credential-bearing effect, remain operator decisions and are unchanged by this economy; transport, identity derivation, field discovery, and idempotent retry never become prompts.
+
 ### 2. Reconcile
 
 Classify dirty paths as requested work, valid concurrent work, generated output, stale or duplicate residue, or unresolved ownership. Preserve valid work. Remove confirmed residue at its source. Forbid destructive reset, force checkout, force-push, silent indefinite stash, broad untracked deletion, and unrelated change absorption.

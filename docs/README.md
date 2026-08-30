@@ -53,6 +53,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 |---|---|---|
 | `SYSTEM-PROMPT-RUNTIME.md` | Always-on harness header | Under 1000 bytes of scope, principles, priorities, constraints, workflow routes, and decision framework; loaded every session and enforced by `docs:check`. |
 | `GOAL-COMPLETION-RUNTIME.md` | Adaptive non-blocking advance decision | Outcome-weighted dispatch order over the coordination scheduler, blocker locality to dependents, fail-closed gates, and one digest-bound advance receipt; owns no readiness, dispatch, or authority. |
+| `AUTONOMOUS-GOAL-PURSUIT.md` | Operator-interaction economy | One-shot input completeness, internal operand derivation, earliest-point validation, late binding, environment-before-verdict, and decision-only escalation; relaxes no ownership, fence, approval, or deploy gate. |
 | `PROJECT-RULES.md` | Repository-wide engineering rules | Neutral code hygiene, validation, and session-end behavior shared across devices and tools. |
 | `SOUL.md` | Durable identity layer | Agent identity, voice, prompt slot 1 contract, personality overlay boundary, and hardcoded-default replacement rules. |
 | `FACTS.md` | Shared truth layer | Stable facts, precedence, direct `/`, `#`, and `@` definitions, deploy boundary truth, context-file and context-reference facts, tool/toolset facts, Tool Gateway and Tool Search facts, MoA facts, learning-loop facts, stateful orchestration facts, and long-horizon SuperAgent facts. |

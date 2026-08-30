@@ -149,8 +149,8 @@ Apply these rules before accepting or editing a task:
 - Neutralize defects at the root source or upstream owner. Do not stack local patches, aliases, compatibility remaps, backfills, or downstream masks.
 - Remove confirmed legacy, stale, duplicate, conflicting, and hardcoded behavior completely, including fixtures and tests that preserve obsolete behavior. Do not delete unexplained or concurrently owned work.
 - Avoid churn, frozen copies, duplicate state, repeated calculation, recomputation, re-rendering, and unbounded retries or loops. Compute once at the owning boundary, cache only with explicit invalidation, and stop on a typed condition.
-- Use semantic HTML elements instead of generic containers when a native element expresses the role.
-- Keep media and icon wrappers visible to selection tooling. Do not hide selectable visual structure as `aria-hidden` decoration; retain an accessible name and interaction contract at the owning semantic element.
+- Use semantic HTML elements instead of generic containers when a native element expresses the role, and keep media and icon wrappers visible to selection tooling: do not hide selectable visual structure as `aria-hidden` decoration, and retain an accessible name and interaction contract at the owning semantic element.
+- Pursue the goal autonomously within these rules. `AUTONOMOUS-GOAL-PURSUIT.md` owns one-shot input completeness, internal operand derivation, earliest-point validation, late binding of volatile identity, environment-only remediation before a verdict, and decision-only escalation; it relaxes no ownership, fence, approval, or deploy gate in this document.
 
 ## Start Declaration
 

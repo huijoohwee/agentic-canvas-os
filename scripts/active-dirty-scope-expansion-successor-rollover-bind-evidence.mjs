@@ -20,6 +20,7 @@ const CLAIM_FRAME_SCHEMA =
 const BOUND_FRAME_SCHEMA =
   "agentic-active-dirty-scope-expansion-successor-rollover-bound-frame/v1";
 const ENTRY_SCHEMA = "agentic-cloud-collaboration-entry/v2";
+const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
 
 export function classifySuccessorRolloverBindEvidence({
   plan: planValue,
@@ -95,6 +96,37 @@ export function requireSuccessorRolloverSealedBindEvidence({
     invalid("sealed bound replacement");
   }
   return evidence;
+}
+
+export function projectSuccessorRolloverTerminalVerifiedLease({
+  lease,
+  verifiedAuthority,
+} = {}) {
+  const claimLocal = value => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      invalid("terminal claim-local authority");
+    }
+    const { ledgerRevision: _revision, ledgerDigest: _digest, ...subject } = value;
+    return subject;
+  };
+  if (canonicalJson(claimLocal(lease?.cloudAuthority))
+    !== canonicalJson(claimLocal(verifiedAuthority))) {
+    invalid("terminal claim-local authority");
+  }
+  return Object.freeze({ ...lease, cloudAuthority: verifiedAuthority });
+}
+
+export function assertSuccessorRolloverTerminalControllerIdentity({
+  continuationPlan,
+  currentControllerDigest,
+  originalControllerDigest,
+} = {}) {
+  const expected = continuationPlan
+    ? continuationPlan.repairedControllerDigest
+    : originalControllerDigest;
+  if (!DIGEST_PATTERN.test(String(expected || ""))
+    || currentControllerDigest !== expected) invalid("terminal controller identity");
+  return currentControllerDigest;
 }
 
 function requirePromotedJournal(journal, plan) {

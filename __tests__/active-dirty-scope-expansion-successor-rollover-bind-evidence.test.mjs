@@ -21,7 +21,9 @@ import {
   SUCCESSOR_ROLLOVER_BOUND_RESPONSE_AHEAD,
   SUCCESSOR_ROLLOVER_PROMOTED_UNBOUND,
   assertSuccessorRolloverBindMutationAllowed,
+  assertSuccessorRolloverTerminalControllerIdentity,
   classifySuccessorRolloverBindEvidence,
+  projectSuccessorRolloverTerminalVerifiedLease,
   requireSuccessorRolloverSealedBindEvidence,
 } from "../scripts/active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs";
 
@@ -157,6 +159,96 @@ test("post-bind phase guards reject a same-claim transition before local or PR m
       candidate: projectPublicClaim(interposed.claim),
     }), /invalid replacement claim ledger cardinality/u, phase);
   }
+});
+
+test("terminal verification adopts only a fresh global ledger head", () => {
+  const authority = {
+    schema: "agentic-lane-cloud-authority/v1",
+    claimId: digest("1"),
+    claimDigest: digest("2"),
+    claimLedgerRevision: digest("3"),
+    operationReceiptDigest: digest("4"),
+    transitionCounter: 2,
+    state: "active",
+    reviewRequestId: "github-pull-request:PR_808",
+    expiresAt: "2099-08-30T01:00:00.000Z",
+    writeSetDigest: digest("5"),
+    cloudDeclaredWriteScope: TARGET,
+    canonicalBaseSha: C3_BASE,
+    laneRevision: SOURCE_FENCE,
+    deviceId: "source-device",
+    sessionId: "source-session",
+    ledgerRevision: sha("1"),
+    ledgerDigest: digest("6"),
+  };
+  const lease = Object.freeze({ schema: "agentic-writer-lease/v2",
+    cloudAuthority: Object.freeze(authority) });
+  const verifiedAuthority = Object.freeze({ ...authority,
+    ledgerRevision: sha("2"), ledgerDigest: digest("7") });
+  const projected = projectSuccessorRolloverTerminalVerifiedLease({
+    lease, verifiedAuthority,
+  });
+  assert.notEqual(projected, lease);
+  assert.equal(projected.cloudAuthority, verifiedAuthority);
+  assert.equal(lease.cloudAuthority.ledgerRevision, sha("1"));
+  assert.equal(lease.cloudAuthority.ledgerDigest, digest("6"));
+
+  for (const [key, value] of [
+    ["claimDigest", digest("8")],
+    ["claimLedgerRevision", digest("9")],
+    ["operationReceiptDigest", digest("a")],
+    ["transitionCounter", 3],
+    ["state", "review_ready"],
+    ["reviewRequestId", "github-pull-request:foreign"],
+    ["expiresAt", "2099-08-30T02:00:00.000Z"],
+    ["writeSetDigest", digest("b")],
+    ["cloudDeclaredWriteScope", [...TARGET, "path:foreign.mjs"]],
+    ["canonicalBaseSha", sha("d")],
+    ["laneRevision", sha("e")],
+    ["deviceId", "foreign-device"],
+    ["sessionId", "foreign-session"],
+    ["claimId", digest("c")],
+  ]) {
+    assert.throws(() => projectSuccessorRolloverTerminalVerifiedLease({
+      lease,
+      verifiedAuthority: { ...verifiedAuthority, [key]: value },
+    }), /invalid terminal claim-local authority/u, key);
+  }
+  assert.throws(() => projectSuccessorRolloverTerminalVerifiedLease({
+    lease,
+    verifiedAuthority: { ...verifiedAuthority, unexpected: true },
+  }), /invalid terminal claim-local authority/u);
+});
+
+test("terminal controller identity stays bound to its authorized controller", () => {
+  const original = digest("1"), repaired = digest("2");
+  assert.equal(assertSuccessorRolloverTerminalControllerIdentity({
+    continuationPlan: null,
+    currentControllerDigest: original,
+    originalControllerDigest: original,
+  }), original);
+  assert.equal(assertSuccessorRolloverTerminalControllerIdentity({
+    continuationPlan: { repairedControllerDigest: repaired },
+    currentControllerDigest: repaired,
+    originalControllerDigest: original,
+  }), repaired);
+  assert.throws(() => assertSuccessorRolloverTerminalControllerIdentity({
+    continuationPlan: null,
+    currentControllerDigest: repaired,
+    originalControllerDigest: original,
+  }), /invalid terminal controller identity/u);
+  assert.throws(() => assertSuccessorRolloverTerminalControllerIdentity({
+    continuationPlan: { repairedControllerDigest: original },
+    currentControllerDigest: repaired,
+    originalControllerDigest: original,
+  }), /invalid terminal controller identity/u);
+  assert.throws(() => assertSuccessorRolloverTerminalControllerIdentity({
+    continuationPlan: {},
+    currentControllerDigest: original,
+    originalControllerDigest: original,
+  }), /invalid terminal controller identity/u);
+  assert.throws(() => assertSuccessorRolloverTerminalControllerIdentity({}),
+    /invalid terminal controller identity/u);
 });
 
 function prepared() {

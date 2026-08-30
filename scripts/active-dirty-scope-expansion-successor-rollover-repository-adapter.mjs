@@ -20,7 +20,7 @@ import { claimOnlyOperationReceiptForEntry } from "./claim-only-partial-start-re
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { normalizeSuccessorRolloverContinuationPlan } from "./active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs";
 import { buildSuccessorRolloverContinuationFrame, captureSuccessorRolloverProtectedControllerAdvance } from "./active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs";
-import { assertSuccessorRolloverBindMutationAllowed, classifySuccessorRolloverBindEvidence, requireSuccessorRolloverSealedBindEvidence } from "./active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs";
+import { assertSuccessorRolloverBindMutationAllowed, assertSuccessorRolloverTerminalControllerIdentity, classifySuccessorRolloverBindEvidence, projectSuccessorRolloverTerminalVerifiedLease, requireSuccessorRolloverSealedBindEvidence } from "./active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs";
 import { requireProtectedMainEquivalent } from "./device-branch-ownership-lib.mjs";
 const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const OPERATION = "active-dirty-scope-expansion-successor-rollover";
@@ -316,7 +316,8 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
     const marker = reconcilePullRequest(plan);
     if (!local || !marker || source.dirtDigest !== plan.observation.sourceDirtDigest) { invalid("terminal local, PR, or dirt projection");
     }
-    requireCurrentContinuationBound(plan, source.lease); validateProjectedLease(source.lease, manifest(plan));
+    assertSuccessorRolloverTerminalControllerIdentity({ continuationPlan, currentControllerDigest: continuationPlan ? controllerContentDigest() : controllerDigest(), originalControllerDigest: plan.observation.controllerDigest }); requireCurrentContinuationBound(plan, source.lease); const checked = prepareProjectedVerification(source.lease.cloudAuthority, manifest(plan));
+    validateProjectedLease(projectSuccessorRolloverTerminalVerifiedLease({ lease: source.lease, verifiedAuthority: checked.authority }), manifest(plan), checked);
     const core = { leaseDigest: source.leaseDigest, replacementIntentDigest: local.replacementIntentDigest,
       cloudAuthorityDigest: digestValue(source.lease.cloudAuthority), taskAuthorityBindingDigest: source.lease.taskAuthority.bindingDigest,
       markerDigest: marker.markerDigest, bodyDigest: marker.bodyDigest, dirtDigest: source.dirtDigest };

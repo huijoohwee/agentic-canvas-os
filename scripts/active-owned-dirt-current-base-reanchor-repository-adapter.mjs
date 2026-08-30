@@ -405,7 +405,7 @@ export function createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter(
       originHead: targetProtectedMain.protectedMainSha,
       gitText: git,
       gitOptional: args => {
-        try { return git(args); } catch { return null; }
+        try { return git(args); } catch { return ""; }
       },
     });
     const reanchor = projectRetiredAbandonedOwnedDirtCurrentBaseReanchor({
@@ -785,7 +785,7 @@ export function createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter(
       originHead: plan.targetCanonicalBaseSha,
       gitText: git,
       gitOptional: args => {
-        try { return git(args); } catch { return null; }
+        try { return git(args); } catch { return ""; }
       },
     });
     if (digestValue(ignored) !== digestValue(plan.evidence.reanchor.ignoredRetention)) {

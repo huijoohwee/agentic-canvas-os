@@ -431,6 +431,11 @@ test("production adapter reanchors an exact untracked executable through remote 
     const secondEvidence = second.captureEvidence();
     assert.equal(secondEvidence.evidenceDigest, firstEvidence.evidenceDigest,
       "process-like adapter instances must capture the same operationAt-bound evidence");
+    assert.deepEqual(firstEvidence.reanchor.ignoredRetention.pathComparison, {
+      caseFold: false,
+      caseFoldStrategy: "none",
+      unicodeNormalization: "NFC",
+    });
     assert.equal(firstEvidence.operationAt, fixture.operationAt);
     assert.equal(firstEvidence.dirt.untrackedPathCount, 1);
     assert.equal(firstEvidence.dirt.entries[0].worktreeMode, "100755");
@@ -895,6 +900,8 @@ function productionAdapterFixture(t) {
   const branch = "agent/device/active-owned-dirt-current-base-reanchor";
   runGit(controller, ["branch", branch, sourceBaseSha]);
   runGit(controller, ["worktree", "add", repository, branch]);
+  runGit(repository, ["config", "core.ignorecase", "false"]);
+  runGit(repository, ["config", "--unset-all", "core.ignorecase"]);
   runGit(repository, ["commit", "--allow-empty", "-m", "empty source fence"]);
   const sourceFenceSha = runGit(repository, ["rev-parse", "HEAD"]);
   runGit(repository, ["push", "-u", "origin", branch]);

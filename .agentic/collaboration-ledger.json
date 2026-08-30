@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6295,
-  "headDigest": "75aca9846f5ae4ac92753145d87d2fce0a5e387c573d6badf5d46a16dbf5bc67",
+  "sequence": 6296,
+  "headDigest": "d903328457303235064b5c2d6a0c1b6b93547e9eb4de3ba56668f4db9a39e16c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -320045,6 +320045,89 @@
       },
       "claimDigest": "1a86cc606668320909137ed544c803b05e0b333b1ce44efa40bc3948be1578dd",
       "digest": "75aca9846f5ae4ac92753145d87d2fce0a5e387c573d6badf5d46a16dbf5bc67"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6296,
+      "parentDigest": "75aca9846f5ae4ac92753145d87d2fce0a5e387c573d6badf5d46a16dbf5bc67",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "336bc1d646ac6836177633fe3d90c14f24fe999bb6309c5647ce765c063be063",
+      "idempotencyKey": "14e8f3c5f26baf1fe7e1680bb08ceb45fd3afd25095aad1d419660d80ba23451",
+      "requestDigest": "4cbccb9eae022229eea212eee14ce18eb0eed4ae467bd24284c9776bbf27c5cc",
+      "evaluationTime": "2026-08-30T07:29:32.000Z",
+      "claimCore": {
+        "claimId": "336bc1d646ac6836177633fe3d90c14f24fe999bb6309c5647ce765c063be063",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b58be04f476406ab37d9131a75cabaf096ff6308d0eeb050b04d76058d611768",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:328d1d4b013d12d54f20cf54e1ba470514fa5c89b5f34c2b2bb3c7ffed7da0e1",
+        "canonicalBaseRevision": "80589fd899cf3d2d1fe0d274276f5300d265ebc9",
+        "declaredWriteScope": [
+          "path:__tests__/pre-bind-mixed-device-planned-owner-retirement.test.mjs",
+          "path:docs/PRE-BIND-MIXED-DEVICE-PLANNED-OWNER-RETIREMENT.md",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-contract.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-controller.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-repository-adapter.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement.mjs",
+          "semantic:pre-bind-mixed-device-owner-retirement"
+        ],
+        "writeSetDigest": "bf28b5647a21bf47b85f7a0bc3be8f18de2f4f30c81ab7cb549f76312d50f72b",
+        "laneRevision": "b072a654f437d5cd97bad6ed91627e6fb8a60009",
+        "leaseEpoch": 2,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-30T07:59:28.000Z",
+        "evidenceDigest": "4959e8b2181eebb4392b890b649e64a4cc31671d07080e2490f05fc921c832a9",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBfH5bw",
+        "predecessorClaimId": "2268a34116b2c7574228d3dc6063de4a1e3d3f5664ca4a7eeab20c80a3205a59",
+        "canonicalDescendantProof": {
+          "schema": "agentic-legacy-review-current-base-disjoint-proof/v1",
+          "sourceBaseSha": "80589fd899cf3d2d1fe0d274276f5300d265ebc9",
+          "targetBaseSha": "54b2176b7c29c356423433fb93d2813fe2590fd5",
+          "protectedMainSha": "54b2176b7c29c356423433fb93d2813fe2590fd5",
+          "canonicalChangedPaths": [
+            "__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs",
+            "__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs",
+            "__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs",
+            "docs/ACTIVE-DIRTY-SCOPE-EXPANSION-SUCCESSOR-ROLLOVER.md",
+            "scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs",
+            "scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs"
+          ],
+          "canonicalChangedPathsDigest": "ce9a006c67de5a797e7f379b0645ba7049f9d387a764ef06e715fcac8fbc5c73",
+          "preservedChangedPaths": [
+            "__tests__/pre-bind-mixed-device-planned-owner-retirement.test.mjs",
+            "docs/PRE-BIND-MIXED-DEVICE-PLANNED-OWNER-RETIREMENT.md",
+            "scripts/pre-bind-mixed-device-planned-owner-retirement-contract.mjs",
+            "scripts/pre-bind-mixed-device-planned-owner-retirement-controller.mjs",
+            "scripts/pre-bind-mixed-device-planned-owner-retirement-repository-adapter.mjs",
+            "scripts/pre-bind-mixed-device-planned-owner-retirement.mjs"
+          ],
+          "preservedChangedPathsDigest": "a22f19e742f140fcdd55a5f5fcde9d19caa36e22943764b9d25e6d462a759175",
+          "ancestry": "source-base-to-current-protected-main",
+          "overlap": "none",
+          "evidenceDigest": "bf9bbe4943f6d462282a41f9b054bc8fe39a937090e6dbbdb03500a1a4e3d958"
+        },
+        "eligibleSince": "2026-08-30T06:54:51.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-30T06:59:28.000Z",
+        "integration": {
+          "candidateRevision": "b072a654f437d5cd97bad6ed91627e6fb8a60009",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBfH5bw",
+          "focusedEvidenceDigest": "4959e8b2181eebb4392b890b649e64a4cc31671d07080e2490f05fc921c832a9",
+          "dependencyClosureDigest": "f972adbe2369a8be04dbfe385f8cba6196b243308bfed6f7040e45d476aa2b6a",
+          "namedChecksDigest": "ad678ed698c31eceaa4baa08ecfbe2b3c3442de8896e8c515a31cb775451130c",
+          "handoffEvidenceDigest": "77112d65099f4206a8e3bff84cfa1c3834578dea42e47dc2d21f4cf528e459db",
+          "operatorDecisionDigest": "40b2a717c56ee087dd5b969d34fff2d093711f24817d18ed8b8d96595c31a49f",
+          "integrationIntentDigest": "c17389a88a15b744455e917592597a4462e95bfc49f9ef52b0a15725facf8cce",
+          "integratedAt": "2026-08-30T07:29:32.000Z"
+        }
+      },
+      "claimDigest": "91bdaf8d2ac72b0a0668fcbc34a6fe12a734adc2cdade112a40daa6c1ee16e89",
+      "digest": "d903328457303235064b5c2d6a0c1b6b93547e9eb4de3ba56668f4db9a39e16c"
     }
   ]
 }

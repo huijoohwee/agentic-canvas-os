@@ -148,7 +148,9 @@
     "sync:workspace:watch": "node ./scripts/workspace-sync.mjs --watch",
     "test": "node --test __tests__/*.test.mjs",
     "web:build": "node web/build.mjs",
-    "cloudflare:dev": "npm run web:build && wrangler dev"
+    "cloudflare:dev": "npm run web:build && wrangler dev",
+    "autonomy-class": "node ./scripts/autonomy-class.mjs",
+    "autonomy-class:check": "node --test __tests__/autonomy-class.test.mjs"
   },
   "devDependencies": {
     "ajv": "8.20.0",

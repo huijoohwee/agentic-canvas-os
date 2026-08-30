@@ -19,13 +19,23 @@ This controller retires one clean coordination-only lane whose cloud claim was i
 The eligible subject is exact and immutable:
 
 - one active local writer lease with `planned` admission;
-- one current or expired cloud `t1` claim at the protected base, before pull-request binding;
+- one current cloud `t1` claim, or its exact provider-time expired
+  `dormant-preserved` projection, at the protected base before pull-request binding;
 - one clean, registered worktree at the configured path;
 - one single-parent fence commit whose parent is the base, whose tree equals the base tree, and whose changed-path set is empty;
 - one open, unmerged draft pull request whose head, base, branch, repository, body marker, and provider node identity match the lease;
 - one exact task capability matching the lease's task-authority binding;
 - one explicit raw claim-owner device alias whose lowercase form is the normalized local owner, whose provider pseudonym is the embedded claim device, and whose normalized-owner pseudonym is different;
 - one raw local session whose provider pseudonym exactly matches the embedded claim session.
+- one explicit raw cloud work-item preimage whose provider pseudonym exactly
+  matches the claim work-item, while the distinct local lease scope hashes to a
+  different work-item identity.
+
+The dormant case is not a generic expired-claim escape hatch. Its ledger source
+must still be the same immutable `current` claim; provider projection alone may
+change to `dormant-preserved`, `writeAuthority=false`, and
+`scopeReserved=true` after expiry. Owner, session, repository, base, lane,
+scope, write-set, claim, pull request, and empty fence topology remain exact.
 
 Missing derivation, unrelated sessions, arbitrary device mismatches, casefold collisions, same-device subjects, and any claim, lease, task, provider, source, tree, ref, worktree, controller, or policy drift block without an effect.
 
@@ -58,13 +68,14 @@ node scripts/pre-bind-mixed-device-planned-owner-retirement.mjs plan \
   --pull-request=123 \
   --claim-id=<64-hex-claim-id> \
   --claim-owner-device=<exact-raw-case-variant> \
+  --claim-work-item=<exact-raw-cloud-work-item> \
   --task-authority=/private/task-capability.json \
   --state-path=/private/retirement-journal.json \
   --controller-root=/absolute/path/to/clean-protected-main \
   --json
 ```
 
-Place the emitted exact authorization line in a private one-line file, then run with the same identity arguments plus `--plan-digest` and `--auth-file`. The raw claim-owner alias is nonsecret but is sealed into the plan; it exists solely to reproduce the already-issued provider subject for retirement.
+Place the emitted exact authorization line in a private one-line file, then run with the same identity arguments plus `--plan-digest` and `--auth-file`. The raw claim-owner alias and raw work-item preimage are nonsecret but sealed into the plan, authorization, durable prepared receipt, terminal evidence, and completion receipt. They exist solely to reproduce the already-issued provider subjects for one-way retirement and establish no authoring equivalence.
 
 ## Proof Boundary
 

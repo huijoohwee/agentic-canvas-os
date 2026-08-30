@@ -39,6 +39,7 @@ export function createPreBindMixedDevicePlannedOwnerRetirementRepositoryAdapter(
   const pullRequestNumber = positive(options.pullRequestNumber, "pull request number");
   const taskAuthorityFile = path.resolve(required(options.taskAuthorityFile, "task authority file"));
   const claimOwnerDevice = required(options.claimOwnerDevice, "raw claim-owner device");
+  const claimWorkItem = required(options.claimWorkItem, "raw claim work item");
   const environment = dependencies.environment || process.env;
   const now = dependencies.now || (() => new Date());
   const execute = dependencies.execute || ((command, args, cwd = repository) => execFileSync(command, args,
@@ -190,7 +191,22 @@ export function createPreBindMixedDevicePlannedOwnerRetirementRepositoryAdapter(
     const entry = frame.source;
     const core = entry.claimCore;
     if (entry.action !== "claim" || entry.claimId !== claimId || entry.claimDigest !== claim.fenceRevision
-      || entry.claimDigest !== lease.cloudAuthority.claimDigest || digestValue(core) !== entry.claimDigest) {
+      || entry.claimDigest !== lease.cloudAuthority.claimDigest || digestValue(core) !== entry.claimDigest
+      || core.state !== "current" || core.retirement != null || core.integration != null
+      || core.recovery != null || claim.claimId !== claimId
+      || claim.entrySchema !== entry.schema || claim.claimIdentitySchema !== entry.schema
+      || claim.actorId !== core.actorId || claim.repositoryId !== core.repositoryId
+      || claim.workItemId !== core.workItemId || claim.deviceId !== core.deviceId
+      || claim.sessionId !== core.sessionId
+      || claim.canonicalBaseRevision !== core.canonicalBaseRevision
+      || claim.laneRevision !== core.laneRevision
+      || canonicalJson(claim.declaredWriteScope) !== canonicalJson(core.declaredWriteScope)
+      || claim.writeSetDigest !== core.writeSetDigest || claim.leaseEpoch !== core.leaseEpoch
+      || claim.transitionCounter !== core.transitionCounter || claim.reviewRequestId !== null
+      || claim.expiresAt !== core.expiresAt || claim.transitionDigest !== entry.digest
+      || !new Set(["current", "dormant-preserved"]).has(claim.state)
+      || claim.scopeReserved !== true
+      || claim.writeAuthority !== (claim.state === "current")) {
       fail("t1 source claim lineage");
     }
     validateEntrySeal(entry);
@@ -201,9 +217,10 @@ export function createPreBindMixedDevicePlannedOwnerRetirementRepositoryAdapter(
       canonicalBaseRevision: core.canonicalBaseRevision, laneRevision: core.laneRevision,
       declaredWriteScope: core.declaredWriteScope, writeSetDigest: core.writeSetDigest,
       leaseEpoch: core.leaseEpoch, transitionCounter: core.transitionCounter,
-      state: claim.state, writeAuthority: claim.writeAuthority, scopeReserved: claim.scopeReserved,
+      state: claim.state, recordedState: "current",
+      writeAuthority: claim.writeAuthority, scopeReserved: claim.scopeReserved,
       reviewRequestId: core.reviewRequestId ?? null, expiresAt: new Date(core.expiresAt).toISOString(),
-      temporalState: Date.parse(core.expiresAt) > Date.parse(observedAt) ? "current" : "expired" };
+      temporalState: claim.state === "current" ? "current" : "expired" };
   }
   function leaseProjection(lease) {
     const authority = lease.cloudAuthority;
@@ -226,16 +243,22 @@ export function createPreBindMixedDevicePlannedOwnerRetirementRepositoryAdapter(
     return { schema: "agentic-pre-bind-mixed-device-planned-owner-retirement-evidence/v1",
       observedAt, repository: repositoryProjection(), controller: controllerProjection(),
       lease: leaseProjection(lease), taskCapability: capabilityProjection(lease),
-      cloudSubject: { rawClaimOwnerDevice: claimOwnerDevice,
+      cloudSubject: { rawClaimOwnerDevice: claimOwnerDevice, rawClaimWorkItem: claimWorkItem,
         derivedClaimDeviceId: pseudonymousIdentifier("device", claimOwnerDevice),
         derivedNormalizedDeviceId: pseudonymousIdentifier("device", lease.device),
         derivedExpectedSessionId: pseudonymousIdentifier("session", lease.sessionId),
+        derivedClaimWorkItemId: pseudonymousIdentifier("work-item", claimWorkItem),
+        derivedLeaseWorkItemId: pseudonymousIdentifier("work-item", lease.scope),
         derivationDigest: digestValue({ deviceId: lease.device,
           normalizedOwner: lease.device.toLowerCase(), rawClaimOwnerDevice: claimOwnerDevice,
           sessionId: lease.sessionId,
           derivedClaimDeviceId: pseudonymousIdentifier("device", claimOwnerDevice),
           derivedNormalizedDeviceId: pseudonymousIdentifier("device", lease.device),
-          derivedExpectedSessionId: pseudonymousIdentifier("session", lease.sessionId) }) },
+          derivedExpectedSessionId: pseudonymousIdentifier("session", lease.sessionId) }),
+        workItemDerivationDigest: digestValue({ rawClaimWorkItem: claimWorkItem,
+          localLeaseScope: lease.scope,
+          derivedClaimWorkItemId: pseudonymousIdentifier("work-item", claimWorkItem),
+          derivedLeaseWorkItemId: pseudonymousIdentifier("work-item", lease.scope) }) },
       claim: claimProjection(frame, lease, observedAt), git: gitProjection(),
       pullRequest: pullProjection(lease), ledger: { repository: ledgerRepository,
         revision: frame.status.ledgerRevision, digest: frame.status.ledgerDigest,
@@ -381,6 +404,7 @@ export function createPreBindMixedDevicePlannedOwnerRetirementRepositoryAdapter(
         sourceLeaseDigest: digestValue(state.current), claimDigest: frame.current.fenceRevision,
         pullRequestNodeId: state.pull.nodeId, git: state.gitState,
         controllerRevision: plan.evidence.controller.revision }),
+        workItemBindingDigest: plan.evidence.cloudSubject.workItemDerivationDigest,
         taskAuthorizationReceiptDigest: authority.receiptDigest };
     },
     authorizeEffect({ plan, phase }) {
@@ -512,6 +536,11 @@ export function createPreBindMixedDevicePlannedOwnerRetirementRepositoryAdapter(
       }
       return { terminalEvidenceDigest: digestValue({ planDigest: plan.planDigest,
         claimTerminalEntryDigest: entry.digest, pullRequestNumber, pullClosedAt: state.pull.closedAt,
+        claimWorkItem: plan.evidence.cloudSubject.rawClaimWorkItem,
+        claimWorkItemId: plan.evidence.claim.workItemId,
+        localLeaseScope: plan.evidence.lease.scope,
+        localWorkItemId: plan.evidence.cloudSubject.derivedLeaseWorkItemId,
+        workItemBindingDigest: plan.evidence.cloudSubject.workItemDerivationDigest,
         releasedLeaseDigest: digestValue(state.current), git: state.gitState,
         taskAuthorizationReceiptDigests: { prepared: journal.state.receipts.prepared.taskAuthorizationReceiptDigest,
           claim: claimAuthority, pullRequest: pullAuthority, owner: ownerAuthority },

@@ -10,7 +10,8 @@ import { applyCloudTransition, createEmptyLedger }
   from "../scripts/cloud-collaboration-contract.mjs";
 import { createTaskAuthorityBinding, createTaskAuthorityCapability }
   from "../scripts/task-bound-lane-authority-contract.mjs";
-import { renderWriterLeasePullRequestBody }
+import { parseWriterLeasePullRequestBody, projectWriterLeasePullRequestMarker,
+  renderWriterLeasePullRequestBody }
   from "../scripts/writer-lease-lib.mjs";
 import { createClaimOnlyPartialStartRetirementStore }
   from "../scripts/claim-only-partial-start-retirement-store.mjs";
@@ -28,6 +29,8 @@ const sha = label => hash(label).slice(0, 40);
 const rawDevice = "Katrinas-MacBook-Pro.local";
 const normalizedDevice = rawDevice.toLowerCase();
 const session = "exact-retirement-session";
+const rawWorkItem = "guideline-exact-canonical-policy";
+const localScope = "exact-canonical-policy";
 
 function evidence({ expired = false } = {}) {
   const base = sha("base"), head = sha("fence"), tree = sha("tree");
@@ -36,22 +39,28 @@ function evidence({ expired = false } = {}) {
   const bindingDigest = hash("binding"), claimId = hash("claim"), claimDigest = hash("claim-digest");
   const writeSetDigest = hash("write-set");
   const lease = { digest: hash("lease"), status: "active", epoch: 7, sessionId: session,
-    device: normalizedDevice, scope: "mixed-owner", normalizedOwner: normalizedDevice,
+    device: normalizedDevice, scope: localScope, normalizedOwner: normalizedDevice,
     branch: "agent/katrinas-macbook-pro.local/mixed-owner", worktreePath: "/tmp/mixed-owner",
     baseSha: base, fenceSha: head, expiresAt: expired ? "2026-08-29T00:00:00.000Z" : "2026-08-31T00:00:00.000Z",
     admissionStatus: "planned", admissionWriteSetDigest: writeSetDigest,
     admissionManifestDigest: hash("manifest"), claimId, cloudDeviceId: claimDevice,
     cloudSessionId: claimSession, cloudClaimDigest: claimDigest, cloudWriteSetDigest: writeSetDigest,
     taskAuthorityBindingDigest: bindingDigest };
-  const cloudSubject = { rawClaimOwnerDevice: rawDevice,
+  const cloudSubject = { rawClaimOwnerDevice: rawDevice, rawClaimWorkItem: rawWorkItem,
     derivedClaimDeviceId: claimDevice,
     derivedNormalizedDeviceId: pseudonymousIdentifier("device", normalizedDevice),
     derivedExpectedSessionId: claimSession,
+    derivedClaimWorkItemId: pseudonymousIdentifier("work-item", rawWorkItem),
+    derivedLeaseWorkItemId: pseudonymousIdentifier("work-item", lease.scope),
     derivationDigest: digestValue({ deviceId: lease.device, normalizedOwner: lease.normalizedOwner,
       rawClaimOwnerDevice: rawDevice, sessionId: lease.sessionId,
       derivedClaimDeviceId: claimDevice,
       derivedNormalizedDeviceId: pseudonymousIdentifier("device", normalizedDevice),
-      derivedExpectedSessionId: claimSession }) };
+      derivedExpectedSessionId: claimSession }),
+    workItemDerivationDigest: digestValue({ rawClaimWorkItem: rawWorkItem,
+      localLeaseScope: lease.scope,
+      derivedClaimWorkItemId: pseudonymousIdentifier("work-item", rawWorkItem),
+      derivedLeaseWorkItemId: pseudonymousIdentifier("work-item", lease.scope) }) };
   return { schema: "agentic-pre-bind-mixed-device-planned-owner-retirement-evidence/v1",
     observedAt: "2026-08-30T00:00:00.000Z",
     repository: { id: "github-repository:R_target", nameWithOwner: "owner/repository", commonDirectoryDigest: hash("common") },
@@ -63,10 +72,11 @@ function evidence({ expired = false } = {}) {
       publicKeyDigest: hash("public-key"), bindingDigest }, cloudSubject,
     claim: { claimId, claimDigest, entryDigest: hash("entry"), actorId: "github-user:7",
       repositoryId: "github-repository:R_target",
-      workItemId: pseudonymousIdentifier("work-item", lease.scope), deviceId: claimDevice, sessionId: claimSession,
+      workItemId: pseudonymousIdentifier("work-item", rawWorkItem), deviceId: claimDevice, sessionId: claimSession,
       canonicalBaseRevision: base, laneRevision: base, declaredWriteScope: ["semantic:mixed-owner"],
-      writeSetDigest, leaseEpoch: 1, transitionCounter: 1, state: "current",
-      writeAuthority: true, scopeReserved: true, reviewRequestId: null,
+      writeSetDigest, leaseEpoch: 1, transitionCounter: 1,
+      state: expired ? "dormant-preserved" : "current", recordedState: "current",
+      writeAuthority: !expired, scopeReserved: true, reviewRequestId: null,
       expiresAt: expired ? "2026-08-29T00:00:00.000Z" : "2026-08-31T00:00:00.000Z",
       temporalState: expired ? "expired" : "current" },
     git: { headSha: head, treeSha: tree, baseSha: base, baseTreeSha: tree,
@@ -86,13 +96,16 @@ function clone(value) { return structuredClone(value); }
 function setAt(value, pathString, replacement) { const result = clone(value), parts = pathString.split(".");
   let cursor = result; for (const part of parts.slice(0, -1)) cursor = cursor[part]; cursor[parts.at(-1)] = replacement; return result; }
 
-test("accepts current and expired exact t1@base mixed-device subjects", () => {
+test("accepts current and exact provider-expired dormant t1@base legacy subjects", () => {
   for (const expired of [false, true]) {
     const plan = buildPlan(evidence({ expired }));
     assert.equal(plan.evidence.claim.temporalState, expired ? "expired" : "current");
     assert.equal(plan.evidence.claim.transitionCounter, 1);
     assert.equal(plan.evidence.claim.laneRevision, plan.evidence.lease.baseSha);
     assert.notEqual(plan.evidence.cloudSubject.derivedNormalizedDeviceId, plan.evidence.claim.deviceId);
+    assert.equal(plan.evidence.cloudSubject.derivedClaimWorkItemId, plan.evidence.claim.workItemId);
+    assert.notEqual(plan.evidence.cloudSubject.derivedLeaseWorkItemId, plan.evidence.claim.workItemId);
+    assert.equal(plan.evidence.claim.state, expired ? "dormant-preserved" : "current");
   }
 });
 
@@ -105,6 +118,8 @@ test("rejects identity, capability, topology, fence, pull, and repository drift"
     ["foreign embedded device", "lease.cloudDeviceId", pseudonymousIdentifier("device", "foreign")],
     ["capability", "taskCapability.bindingDigest", hash("foreign-binding")],
     ["work item", "claim.workItemId", "foreign-work"],
+    ["recorded claim state", "claim.recordedState", "reviewed"],
+    ["dormant authority", "claim.writeAuthority", false],
     ["t2", "claim.transitionCounter", 2],
     ["claim lane", "claim.laneRevision", sha("foreign-lane")],
     ["two parents", "git.parentShas", [sha("base"), sha("peer")]],
@@ -141,6 +156,53 @@ test("raw evidence semantic joins reject unrelated embedded identities", () => {
     assert.throws(() => buildPlan(value), /invalid/u); }
 });
 
+test("rejects arbitrary raw work items and widened dormant projections", () => {
+  const cases = [
+    value => { value.cloudSubject.rawClaimWorkItem = value.lease.scope; },
+    value => { value.cloudSubject.derivedClaimWorkItemId = pseudonymousIdentifier("work-item", "foreign"); },
+    value => { value.cloudSubject.workItemDerivationDigest = hash("forged-work-item"); },
+    value => { value.claim.state = "retired"; },
+    value => { value.claim.state = "dormant-preserved"; value.claim.writeAuthority = true; value.claim.temporalState = "expired"; },
+    value => { value.claim.state = "current"; value.claim.writeAuthority = false; },
+    value => { value.claim.state = "current"; value.claim.writeAuthority = true;
+      value.claim.temporalState = "current"; value.claim.expiresAt = value.observedAt; },
+    value => { value.claim.state = "dormant-preserved"; value.claim.writeAuthority = false;
+      value.claim.temporalState = "expired"; value.claim.expiresAt = "2026-08-31T00:00:00.000Z"; },
+  ];
+  for (const mutate of cases) { const value = evidence({ expired: true }); mutate(value);
+    assert.throws(() => buildPlan(value), /invalid/u); }
+});
+
+test("recomputes every derived cloud subject from its sealed raw preimage", () => {
+  const mutations = [
+    value => { value.cloudSubject.derivedClaimDeviceId = pseudonymousIdentifier("device", "forged.local");
+      value.claim.deviceId = value.cloudSubject.derivedClaimDeviceId;
+      value.lease.cloudDeviceId = value.cloudSubject.derivedClaimDeviceId; },
+    value => { value.cloudSubject.derivedNormalizedDeviceId = pseudonymousIdentifier("device", "forged.local"); },
+    value => { value.cloudSubject.derivedExpectedSessionId = pseudonymousIdentifier("session", "forged");
+      value.claim.sessionId = value.cloudSubject.derivedExpectedSessionId;
+      value.lease.cloudSessionId = value.cloudSubject.derivedExpectedSessionId; },
+    value => { value.cloudSubject.derivedClaimWorkItemId = pseudonymousIdentifier("work-item", "forged");
+      value.claim.workItemId = value.cloudSubject.derivedClaimWorkItemId; },
+    value => { value.cloudSubject.derivedLeaseWorkItemId = pseudonymousIdentifier("work-item", "forged"); },
+  ];
+  for (const mutate of mutations) {
+    const value = evidence();
+    mutate(value);
+    value.cloudSubject.derivationDigest = digestValue({ deviceId: value.lease.device,
+      normalizedOwner: value.lease.normalizedOwner,
+      rawClaimOwnerDevice: value.cloudSubject.rawClaimOwnerDevice, sessionId: value.lease.sessionId,
+      derivedClaimDeviceId: value.cloudSubject.derivedClaimDeviceId,
+      derivedNormalizedDeviceId: value.cloudSubject.derivedNormalizedDeviceId,
+      derivedExpectedSessionId: value.cloudSubject.derivedExpectedSessionId });
+    value.cloudSubject.workItemDerivationDigest = digestValue({
+      rawClaimWorkItem: value.cloudSubject.rawClaimWorkItem, localLeaseScope: value.lease.scope,
+      derivedClaimWorkItemId: value.cloudSubject.derivedClaimWorkItemId,
+      derivedLeaseWorkItemId: value.cloudSubject.derivedLeaseWorkItemId });
+    assert.throws(() => buildPlan(value), /invalid/u);
+  }
+});
+
 function fakeAdapter({ responseLoss = null, ambiguousAfter = null, crashWritePhase = null,
   blockEffect = null, blockMessage = "task capability missing" } = {}) {
   let journal = null, crashUsed = false;
@@ -166,6 +228,7 @@ function fakeAdapter({ responseLoss = null, ambiguousAfter = null, crashWritePha
       return next; },
     observe: ({ observedAt } = {}) => ({ ...evidence(), observedAt: observedAt || evidence().observedAt }),
     prepare: ({ plan }) => ({ relevantEvidenceDigest: digestValue({ planDigest: plan.planDigest }),
+      workItemBindingDigest: plan.evidence.cloudSubject.workItemDerivationDigest,
       taskAuthorizationReceiptDigest: hash("auth-prepared") }),
     authorizeEffect: ({ phase }) => ({ taskAuthorizationReceiptDigest: hash(`auth-${phase}`),
       taskAuthorizationExpectationDigest: hash(`expect-${phase}`) }),
@@ -213,6 +276,7 @@ test("terminal receipt is closed and every identity rejoins its plan and journal
   const adapter = fakeAdapter(); const { receipt } = await planAndRun(adapter);
   for (const mutate of [
     value => { delete value.workItemId; },
+    value => { delete value.claimWorkItem; },
     value => { value.extra = true; },
     value => { value.controllerRevision = "not-a-sha"; },
   ]) { const changed = clone(receipt); mutate(changed); const core = { ...changed }; delete core.receiptDigest;
@@ -305,20 +369,29 @@ test("dead-owner operation lock is atomically recovered", async t => {
   assert.equal(await store.withOperationLock(context, async () => "recovered"), "recovered");
 });
 
-test("CLI requires and transports the exact raw claim-owner alias", async t => {
+test("CLI requires and transports the exact raw claim-owner and work-item inputs", async t => {
   const root = mkdtempSync(path.join(tmpdir(), "mixed-retirement-cli-")); t.after(() => rmSync(root, { recursive: true, force: true }));
   chmodSync(root, 0o700); const capability = path.join(root, "capability.json");
   writeFileSync(capability, "{}\n", { mode: 0o600 });
   let received;
   const result = await cliMain(["plan", "--repository=/tmp/repository", "--subject-worktree=/tmp/worktree",
     "--target-repository=owner/repository", "--branch=agent/device/scope", "--pull-request=176",
-    `--claim-id=${hash("claim")}`, `--claim-owner-device=${rawDevice}`, `--task-authority=${capability}`,
+    `--claim-id=${hash("claim")}`, `--claim-owner-device=${rawDevice}`, `--claim-work-item=${rawWorkItem}`,
+    `--task-authority=${capability}`,
     `--state-path=${path.join(root, "journal.json")}`], {
     createAdapter: options => { received = options; return {}; },
     createController: () => ({ plan: async () => ({ status: "planned" }) }),
     resolveGitCommonDirectory: () => "/tmp/repository/.git",
   });
   assert.equal(result.status, "planned"); assert.equal(received.claimOwnerDevice, rawDevice);
+  assert.equal(received.claimWorkItem, rawWorkItem);
+  await assert.rejects(cliMain(["plan", "--repository=/tmp/repository",
+    "--subject-worktree=/tmp/worktree", "--target-repository=owner/repository",
+    "--branch=agent/device/scope", "--pull-request=176", `--claim-id=${hash("claim")}`,
+    `--claim-owner-device=${rawDevice}`, `--task-authority=${capability}`,
+    `--state-path=${path.join(root, "missing-work-item.json")}`], {
+    resolveGitCommonDirectory: () => "/tmp/repository/.git",
+  }), /claim-work-item/u);
 });
 
 test("CLI rejects private state destinations in every repository root and through symlinks", async t => {
@@ -331,7 +404,8 @@ test("CLI rejects private state destinations in every repository root and throug
   const alias = path.join(outside, "repository-alias"); symlinkSync(repository, alias);
   const base = statePath => ["plan", `--repository=${repository}`, `--subject-worktree=${subject}`,
     "--target-repository=owner/repository", "--branch=agent/device/scope", "--pull-request=176",
-    `--claim-id=${hash("claim")}`, `--claim-owner-device=${rawDevice}`, `--task-authority=${capability}`,
+    `--claim-id=${hash("claim")}`, `--claim-owner-device=${rawDevice}`, `--claim-work-item=${rawWorkItem}`,
+    `--task-authority=${capability}`,
     `--state-path=${statePath}`, `--controller-root=${controller}`];
   const dependencies = { resolveGitCommonDirectory: () => common,
     createAdapter: () => { throw new Error("adapter must not be constructed"); } };
@@ -341,7 +415,7 @@ test("CLI rejects private state destinations in every repository root and throug
   }
 });
 
-test("real repository adapter retires the exact t1@base subject and adopts response loss", async t => {
+test("real adapter retires the exact PR176 legacy work-item dormant subject and adopts response loss", async t => {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), "mixed-retirement-adapter-")));
   t.after(() => rmSync(root, { recursive: true, force: true })); chmodSync(root, 0o700);
   const repository = path.join(root, "repository"), subjectPath = path.join(root, "subject"),
@@ -349,16 +423,16 @@ test("real repository adapter retires the exact t1@base subject and adopts respo
   for (const directory of [repository, subjectPath, common]) mkdirSync(directory, { mode: 0o700 });
   const base = sha("adapter-base"), head = sha("adapter-fence"), tree = sha("adapter-tree");
   const controllerSha = sha("adapter-controller"), controllerTree = sha("adapter-controller-tree");
-  const branch = "agent/katrinas-macbook-pro.local/mixed-owner", scope = "mixed-owner";
+  const branch = "agent/katrinas-macbook-pro.local/exact-canonical-policy", scope = localScope;
   const claimDevice = pseudonymousIdentifier("device", rawDevice), claimSession = pseudonymousIdentifier("session", session);
   const actor = { actorId: "github-user:7", deviceId: claimDevice, sessionId: claimSession };
   const cloudRepository = { repositoryId: "github-repository:R_target", canonicalRevision: base };
-  const declaredWriteScope = ["path:docs/mixed-owner.md", "semantic:mixed-owner"];
+  const declaredWriteScope = ["path:docs/mixed-owner.md", `semantic:${scope}`];
   let cloud = applyCloudTransition({ ledger: createEmptyLedger("owner/controller"), action: "claim",
-    actor, repository: cloudRepository, evaluationTime: "2026-08-30T00:00:00.000Z",
-    request: { workItemId: pseudonymousIdentifier("work-item", scope), canonicalBaseRevision: base,
+    actor, repository: cloudRepository, evaluationTime: "2026-08-28T00:00:00.000Z",
+    request: { workItemId: pseudonymousIdentifier("work-item", rawWorkItem), canonicalBaseRevision: base,
       declaredWriteScope, laneRevision: base, leaseEpoch: 1,
-      expiresAt: "2026-08-31T00:00:00.000Z", expectedLedgerDigest: null,
+      expiresAt: "2026-08-29T00:00:00.000Z", expectedLedgerDigest: null,
       idempotencyKey: "adapter-claim" } });
   const sourceEntry = cloud.ledger.entries.at(-1), claimId = cloud.claim.claimId;
   const capability = createTaskAuthorityCapability({ issuedAt: "2026-08-30T00:00:00.000Z" });
@@ -380,7 +454,7 @@ test("real repository adapter retires the exact t1@base subject and adopts respo
       deviceId: claimDevice, sessionId: claimSession, leaseEpoch: 1, transitionCounter: 1,
       reviewRequestId: null, state: "active", expiresAt: cloud.claim.expiresAt },
     acquiredAt: "2026-08-30T00:00:00.000Z", heartbeatAt: "2026-08-30T00:00:00.000Z",
-    expiresAt: "2026-08-31T00:00:00.000Z" };
+    expiresAt: "2026-08-29T00:00:00.000Z" };
   lease.taskAuthority = createTaskAuthorityBinding({ capability, lease, boundAt: "2026-08-30T00:00:00.000Z" });
   const originalLease = clone(lease); let pull = { number: 176, id: "PR_exact", url: lease.pullRequestUrl,
     state: "OPEN", isDraft: true, mergedAt: null, closedAt: null,
@@ -388,11 +462,16 @@ test("real repository adapter retires the exact t1@base subject and adopts respo
     headRefName: branch, headRefOid: head, headRepository: { nameWithOwner: "owner/repository" },
     baseRefName: "main", baseRefOid: base, body: renderWriterLeasePullRequestBody(lease) };
   let closeCalls = 0, releaseCalls = 0, retireCalls = 0;
+  assert.deepEqual(parseWriterLeasePullRequestBody(pull.body), projectWriterLeasePullRequestMarker(lease));
   const leaseStore = { read: name => name === branch ? lease : null,
     release({ expectedLease, status, timestamp, values }) { assert.deepEqual(lease, expectedLease); releaseCalls += 1;
       lease = { ...lease, status, heartbeatAt: timestamp, expiresAt: timestamp, ...values }; return lease; } };
   const currentClaims = () => cloud.claim?.state === "retired" ? [] : [{
-    ...cloud.claim, fenceRevision: sourceEntry.claimDigest, claimDigest: sourceEntry.claimDigest,
+    ...cloud.claim, state: "dormant-preserved", recordedState: "current",
+    writeAuthority: false, scopeReserved: true,
+    entrySchema: sourceEntry.schema, claimIdentitySchema: sourceEntry.schema,
+    fenceRevision: sourceEntry.claimDigest, claimDigest: sourceEntry.claimDigest,
+    transitionDigest: sourceEntry.digest,
   }];
   const readStatus = () => ({ schema: "agentic-cloud-collaboration-result/v1", ok: true,
     action: "status", status: "ready", ledgerRevision: sha("adapter-ledger"),
@@ -422,7 +501,8 @@ test("real repository adapter retires the exact t1@base subject and adopts respo
   const adapter = createPreBindMixedDevicePlannedOwnerRetirementRepositoryAdapter({ repository,
     subjectWorktree: subjectPath, targetRepository: "owner/repository", ledgerRepository: "owner/controller",
     branch, claimId, pullRequestNumber: 176, taskAuthorityFile: capabilityFile,
-    claimOwnerDevice: rawDevice, statePath: path.join(root, "journal.json") }, {
+    claimOwnerDevice: rawDevice, claimWorkItem: rawWorkItem,
+    statePath: path.join(root, "journal.json") }, {
     git, gitRaw, leaseStore, readRepository: () => ({ id: "R_target", nameWithOwner: "owner/repository" }),
     readControllerProtection: () => ({ protected: true, commit: { sha: controllerSha }, protection: { enabled: true } }),
     readCloud: readStatus, readLedger: () => cloud.ledger, readPull: () => clone(pull),
@@ -437,6 +517,10 @@ test("real repository adapter retires the exact t1@base subject and adopts respo
   const plan = await controller.plan();
   assert.equal(plan.evidence.cloudSubject.derivedClaimDeviceId, claimDevice);
   assert.notEqual(plan.evidence.cloudSubject.derivedNormalizedDeviceId, claimDevice);
+  assert.equal(plan.evidence.cloudSubject.rawClaimWorkItem, rawWorkItem);
+  assert.equal(plan.evidence.claim.state, "dormant-preserved");
+  assert.equal(plan.evidence.claim.recordedState, "current");
+  assert.equal(plan.evidence.claim.writeAuthority, false);
   const receipt = await controller.run({ planDigest: plan.planDigest, authorization: plan.exactAuthorization });
   assert.equal(receipt.status, "complete"); assert.equal(retireCalls, 1); assert.equal(closeCalls, 1); assert.equal(releaseCalls, 1);
   assert.equal(lease.status, "released"); assert.deepEqual(lease.preBindMixedDevicePlannedOwnerRetirement.originalLease, originalLease);

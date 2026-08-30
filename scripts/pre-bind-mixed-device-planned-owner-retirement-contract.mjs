@@ -117,7 +117,10 @@ export function buildReceipt(journal) {
     authorizationDigest: receipts.authorized.authorizationDigest,
     repository: current.plan.evidence.repository.nameWithOwner,
     claimId: current.plan.evidence.claim.claimId,
+    claimWorkItem: current.plan.evidence.cloudSubject.rawClaimWorkItem,
     workItemId: current.plan.evidence.claim.workItemId,
+    localWorkItemId: current.plan.evidence.cloudSubject.derivedLeaseWorkItemId,
+    workItemBindingDigest: current.plan.evidence.cloudSubject.workItemDerivationDigest,
     branch: current.plan.evidence.lease.branch,
     pullRequestNumber: current.plan.evidence.pullRequest.number,
     controllerRevision: current.plan.evidence.controller.revision,
@@ -133,7 +136,8 @@ export function normalizeReceipt(value) {
   object(value, "receipt");
   const core = { ...value }; delete core.receiptDigest;
   const fields = ["schema", "status", "operation", "planDigest", "authorizationDigest",
-    "repository", "claimId", "workItemId", "branch", "pullRequestNumber", "controllerRevision",
+    "repository", "claimId", "claimWorkItem", "workItemId", "localWorkItemId",
+    "workItemBindingDigest", "branch", "pullRequestNumber", "controllerRevision",
     "claimRetirementReceiptDigest", "pullRequestCloseReceiptDigest", "ownerReleaseReceiptDigest",
     "terminalEvidenceDigest", "orderedEffects", "preservation"];
   if (value.schema !== RECEIPT_SCHEMA || value.status !== "complete"
@@ -143,7 +147,9 @@ export function normalizeReceipt(value) {
     || canonicalJson(value.preservation) !== canonicalJson(PRESERVATION)) invalid("receipt");
   digest(value.planDigest, "receipt plan"); digest(value.authorizationDigest, "receipt authorization");
   repo(value.repository, "receipt repository"); digest(value.claimId, "receipt claim");
-  text(value.workItemId, "receipt work item"); text(value.branch, "receipt branch");
+  text(value.claimWorkItem, "receipt raw claim work item");
+  text(value.workItemId, "receipt work item"); text(value.localWorkItemId, "receipt local work item");
+  digest(value.workItemBindingDigest, "receipt work-item binding"); text(value.branch, "receipt branch");
   positive(value.pullRequestNumber, "receipt pull request"); sha(value.controllerRevision, "receipt controller");
   for (const field of ["claimRetirementReceiptDigest", "pullRequestCloseReceiptDigest",
     "ownerReleaseReceiptDigest", "terminalEvidenceDigest"]) digest(value[field], `receipt ${field}`);
@@ -196,16 +202,21 @@ function normalizeEvidence(value) {
   capability.publicKeyDigest = digest(capability.publicKeyDigest, "capability public key");
   capability.bindingDigest = digest(capability.bindingDigest, "capability binding");
   const cloudSubject = exactObject(source.cloudSubject,
-    ["rawClaimOwnerDevice", "derivedClaimDeviceId", "derivedNormalizedDeviceId",
-      "derivedExpectedSessionId", "derivationDigest"]);
+    ["rawClaimOwnerDevice", "rawClaimWorkItem", "derivedClaimDeviceId", "derivedNormalizedDeviceId",
+      "derivedExpectedSessionId", "derivedClaimWorkItemId", "derivedLeaseWorkItemId",
+      "derivationDigest", "workItemDerivationDigest"]);
   cloudSubject.rawClaimOwnerDevice = text(cloudSubject.rawClaimOwnerDevice, "raw claim-owner device");
+  cloudSubject.rawClaimWorkItem = text(cloudSubject.rawClaimWorkItem, "raw claim work item");
   cloudSubject.derivedClaimDeviceId = digestIdentity(cloudSubject.derivedClaimDeviceId, "derived claim device");
   cloudSubject.derivedNormalizedDeviceId = digestIdentity(cloudSubject.derivedNormalizedDeviceId, "derived normalized device");
   cloudSubject.derivedExpectedSessionId = digestIdentity(cloudSubject.derivedExpectedSessionId, "derived session");
+  cloudSubject.derivedClaimWorkItemId = workItemIdentity(cloudSubject.derivedClaimWorkItemId, "derived claim work item");
+  cloudSubject.derivedLeaseWorkItemId = workItemIdentity(cloudSubject.derivedLeaseWorkItemId, "derived lease work item");
   cloudSubject.derivationDigest = digest(cloudSubject.derivationDigest, "cloud subject derivation");
+  cloudSubject.workItemDerivationDigest = digest(cloudSubject.workItemDerivationDigest, "work-item derivation");
   const claim = exactObject(source.claim, ["claimId", "claimDigest", "entryDigest", "actorId", "repositoryId",
     "workItemId", "deviceId", "sessionId", "canonicalBaseRevision", "laneRevision",
-    "declaredWriteScope", "writeSetDigest", "leaseEpoch", "transitionCounter", "state",
+    "declaredWriteScope", "writeSetDigest", "leaseEpoch", "transitionCounter", "state", "recordedState",
     "writeAuthority", "scopeReserved", "reviewRequestId", "expiresAt", "temporalState"]);
   claim.claimId = digest(claim.claimId, "claim ID"); claim.claimDigest = digest(claim.claimDigest, "claim digest");
   claim.entryDigest = digest(claim.entryDigest, "claim entry"); claim.actorId = text(claim.actorId, "claim actor");
@@ -215,8 +226,16 @@ function normalizeEvidence(value) {
   claim.laneRevision = sha(claim.laneRevision, "claim lane"); claim.declaredWriteScope = strings(claim.declaredWriteScope, "claim write scope");
   claim.writeSetDigest = digest(claim.writeSetDigest, "claim write set"); claim.leaseEpoch = exact(claim.leaseEpoch, 1, "claim t1 epoch");
   claim.transitionCounter = exact(claim.transitionCounter, 1, "claim t1 transition");
-  claim.state = exact(claim.state, "current", "claim state");
-  if (claim.writeAuthority !== true || claim.scopeReserved !== true || claim.reviewRequestId !== null) invalid("pre-bind claim state");
+  claim.state = enumeration(claim.state, ["current", "dormant-preserved"], "claim state");
+  claim.recordedState = exact(claim.recordedState, "current", "claim recorded state");
+  const observedMillis = Date.parse(source.observedAt);
+  const expiresMillis = Date.parse(claim.expiresAt);
+  const currentProjection = claim.state === "current" && claim.writeAuthority === true
+    && expiresMillis > observedMillis && claim.temporalState === "current";
+  const expiredProjection = claim.state === "dormant-preserved" && claim.writeAuthority === false
+    && expiresMillis <= observedMillis && claim.temporalState === "expired";
+  if ((!currentProjection && !expiredProjection) || claim.scopeReserved !== true
+    || claim.reviewRequestId !== null) invalid("pre-bind claim state");
   claim.expiresAt = instant(claim.expiresAt, "claim expiry");
   claim.temporalState = enumeration(claim.temporalState, ["current", "expired"], "claim temporal state");
   const git = exactObject(source.git, ["headSha", "treeSha", "baseSha", "baseTreeSha", "parentShas",
@@ -240,14 +259,22 @@ function normalizeEvidence(value) {
   ledger.digest = digest(ledger.digest, "ledger digest"); ledger.sequence = positive(ledger.sequence, "ledger sequence");
   ledger.validatedDigest = digest(ledger.validatedDigest, "validated ledger");
   const observedAt = instant(source.observedAt, "observation instant");
-  if ((Date.parse(claim.expiresAt) > Date.parse(observedAt) ? "current" : "expired") !== claim.temporalState
-    || lease.claimId !== claim.claimId || lease.cloudClaimDigest !== claim.claimDigest
+  if (lease.claimId !== claim.claimId || lease.cloudClaimDigest !== claim.claimDigest
     || lease.cloudDeviceId !== claim.deviceId || lease.cloudSessionId !== claim.sessionId
     || lease.cloudWriteSetDigest !== claim.writeSetDigest
     || lease.admissionWriteSetDigest !== claim.writeSetDigest
-    || pseudonymousIdentifier("work-item", lease.scope) !== claim.workItemId
+    || cloudSubject.rawClaimWorkItem === lease.scope
+    || cloudSubject.derivedClaimWorkItemId
+      !== pseudonymousIdentifier("work-item", cloudSubject.rawClaimWorkItem)
+    || cloudSubject.derivedLeaseWorkItemId !== pseudonymousIdentifier("work-item", lease.scope)
+    || cloudSubject.derivedClaimWorkItemId !== claim.workItemId
+    || cloudSubject.derivedLeaseWorkItemId === claim.workItemId
     || cloudSubject.rawClaimOwnerDevice === lease.normalizedOwner
     || cloudSubject.rawClaimOwnerDevice.toLowerCase() !== lease.normalizedOwner
+    || cloudSubject.derivedClaimDeviceId
+      !== pseudonymousIdentifier("device", cloudSubject.rawClaimOwnerDevice)
+    || cloudSubject.derivedNormalizedDeviceId !== pseudonymousIdentifier("device", lease.normalizedOwner)
+    || cloudSubject.derivedExpectedSessionId !== pseudonymousIdentifier("session", lease.sessionId)
     || cloudSubject.derivedClaimDeviceId !== claim.deviceId
     || cloudSubject.derivedExpectedSessionId !== claim.sessionId
     || cloudSubject.derivedNormalizedDeviceId === claim.deviceId
@@ -256,6 +283,10 @@ function normalizeEvidence(value) {
       sessionId: lease.sessionId, derivedClaimDeviceId: cloudSubject.derivedClaimDeviceId,
       derivedNormalizedDeviceId: cloudSubject.derivedNormalizedDeviceId,
       derivedExpectedSessionId: cloudSubject.derivedExpectedSessionId })
+    || cloudSubject.workItemDerivationDigest !== digestValue({
+      rawClaimWorkItem: cloudSubject.rawClaimWorkItem, localLeaseScope: lease.scope,
+      derivedClaimWorkItemId: cloudSubject.derivedClaimWorkItemId,
+      derivedLeaseWorkItemId: cloudSubject.derivedLeaseWorkItemId })
     || lease.taskAuthorityBindingDigest !== capability.bindingDigest
     || lease.device !== lease.normalizedOwner
     || claim.canonicalBaseRevision !== lease.baseSha || claim.laneRevision !== lease.baseSha
@@ -294,7 +325,8 @@ function normalizePhaseReceipt(value, phase) { object(value, `${phase} receipt`)
   return freeze({ ...core, receiptDigest: value.receiptDigest }); }
 function expectedPhaseKeys(phase) {
   if (phase === "authorized") return ["phase", "authorizationDigest"];
-  if (phase === "prepared") return ["phase", "operationKey", "relevantEvidenceDigest", "taskAuthorizationReceiptDigest"];
+  if (phase === "prepared") return ["phase", "operationKey", "relevantEvidenceDigest",
+    "workItemBindingDigest", "taskAuthorizationReceiptDigest"];
   if (phase.endsWith("-intent")) return ["phase", "operationKey", "effectOperationKey", "priorJournalDigest",
     "taskAuthorizationReceiptDigest", "taskAuthorizationExpectationDigest"];
   if (phase.endsWith("-attempted")) return ["phase", "operationKey", "intentReceiptDigest",
@@ -344,7 +376,11 @@ function assertReceiptJoins(plan, state) {
     const expected = { planDigest: plan.planDigest,
       authorizationDigest: receipts.authorized.authorizationDigest,
       repository: plan.evidence.repository.nameWithOwner,
-      claimId: plan.evidence.claim.claimId, workItemId: plan.evidence.claim.workItemId,
+      claimId: plan.evidence.claim.claimId,
+      claimWorkItem: plan.evidence.cloudSubject.rawClaimWorkItem,
+      workItemId: plan.evidence.claim.workItemId,
+      localWorkItemId: plan.evidence.cloudSubject.derivedLeaseWorkItemId,
+      workItemBindingDigest: plan.evidence.cloudSubject.workItemDerivationDigest,
       branch: plan.evidence.lease.branch, pullRequestNumber: plan.evidence.pullRequest.number,
       controllerRevision: plan.evidence.controller.revision,
       claimRetirementReceiptDigest: receipts["claim-retired"].receiptDigest,
@@ -365,6 +401,7 @@ function digest(value, label) { if (!DIGEST.test(String(value || ""))) invalid(l
 function repo(value, label) { const result = text(value, label); if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(result)) invalid(label); return result; }
 function subject(value) { const result = text(value, "task subject"); if (!/^urn:agentic-task:[0-9a-f]{64}$/u.test(result)) invalid("task subject"); return result; }
 function digestIdentity(value, label) { const result = text(value, label); if (!/^(device|session):[0-9a-f]{64}$/u.test(result)) invalid(label); return result; }
+function workItemIdentity(value, label) { const result = text(value, label); if (!/^work-item:[0-9a-f]{64}$/u.test(result)) invalid(label); return result; }
 function positive(value, label) { if (!Number.isSafeInteger(value) || value < 1) invalid(label); return value; }
 function instant(value, label) { const result = new Date(value); if (!value || Number.isNaN(result.getTime())) invalid(label); return result.toISOString(); }
 function strings(value, label) { if (!Array.isArray(value) || value.some(item => typeof item !== "string" || !item)) invalid(label); return [...value]; }

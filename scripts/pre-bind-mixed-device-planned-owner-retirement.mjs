@@ -11,7 +11,7 @@ import { createPreBindMixedDevicePlannedOwnerRetirementRepositoryAdapter }
 
 const OPTIONS = new Set(["repository", "subject-worktree", "target-repository",
   "ledger-repository", "controller-root", "branch", "pull-request", "claim-id",
-  "claim-owner-device", "task-authority", "state-path", "plan-digest", "auth-file", "json"]);
+  "claim-owner-device", "claim-work-item", "task-authority", "state-path", "plan-digest", "auth-file", "json"]);
 const INSTALLED_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 export async function main(argumentsList = process.argv.slice(2), dependencies = {}) {
@@ -33,6 +33,7 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
     pullRequestNumber: positive(required(options, "pull-request"), "pull request"),
     claimId: digest(required(options, "claim-id"), "claim ID"),
     claimOwnerDevice: required(options, "claim-owner-device"),
+    claimWorkItem: required(options, "claim-work-item"),
     taskAuthorityFile: privateFile(required(options, "task-authority"), "task authority"),
     statePath: privateDestination(required(options, "state-path"),
       [repository, subjectWorktree, controllerRoot, gitCommonDirectory]),
@@ -95,5 +96,5 @@ function required(options, name) { const value = options.get(name); if (!value) 
 function positive(value, label) { const result = Number(value); if (!Number.isSafeInteger(result) || result < 1) throw new Error(`${label} is invalid.`); return result; }
 function digest(value, label) { if (!/^[0-9a-f]{64}$/u.test(value)) throw new Error(`${label} is invalid.`); return value; }
 function repositoryName(value) { if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(value)) throw new Error("Repository identity is invalid."); return value; }
-function usage() { return "Usage: pre-bind-mixed-device-planned-owner-retirement.mjs plan|run --repository=<canonical> --subject-worktree=<planned-owner> --target-repository=<owner/name> --branch=<agent-branch> --pull-request=<number> --claim-id=<digest> --claim-owner-device=<exact-raw-case-variant> --task-authority=<private-capability> --state-path=<private-journal> [--ledger-repository=<owner/name>] [--controller-root=<protected-main>] [--plan-digest=<digest> --auth-file=<private-text>] [--json]"; }
+function usage() { return "Usage: pre-bind-mixed-device-planned-owner-retirement.mjs plan|run --repository=<canonical> --subject-worktree=<planned-owner> --target-repository=<owner/name> --branch=<agent-branch> --pull-request=<number> --claim-id=<digest> --claim-owner-device=<exact-raw-case-variant> --claim-work-item=<exact-raw-cloud-work-item> --task-authority=<private-capability> --state-path=<private-journal> [--ledger-repository=<owner/name>] [--controller-root=<protected-main>] [--plan-digest=<digest> --auth-file=<private-text>] [--json]"; }
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) process.exitCode = await runCli();

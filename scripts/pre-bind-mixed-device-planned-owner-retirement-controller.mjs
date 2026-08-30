@@ -64,6 +64,8 @@ async function execute(adapter, initial) {
     journal = await advance(adapter, journal, "prepared", {
       operationKey: operationKey(journal.plan, "prepared"),
       relevantEvidenceDigest: requireDigest(prepared.relevantEvidenceDigest, "prepared relevant evidence"),
+      workItemBindingDigest: requireDigest(prepared.workItemBindingDigest,
+        "prepared work-item binding"),
       taskAuthorizationReceiptDigest: requireDigest(prepared.taskAuthorizationReceiptDigest,
         "prepared task authorization"),
     });

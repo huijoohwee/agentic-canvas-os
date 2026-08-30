@@ -498,6 +498,7 @@ function normalizeRetirementEvidence(value) {
   assertChain(evidence);
   assertOriginalTopology(evidence);
   assertAssociations(evidence.associations, evidence.anchor);
+  assertDirectSuccessorTopology(evidence.directSuccessorTopology, evidence);
   assertPeerFrame(evidence.peerFrame, evidence);
   return evidence;
 }
@@ -511,6 +512,7 @@ function normalizePromotionEvidence(value) {
   assertChain(evidence);
   assertOriginalTopology(evidence);
   assertAssociations(evidence.associations, evidence.anchor);
+  assertDirectSuccessorTopology(evidence.directSuccessorTopology, evidence);
   object(evidence.phaseA, "Phase A binding");
   const retirementPlan = normalizeWaitingBridgePlan(evidence.phaseA.plan);
   const retirementResult = normalizeWaitingBridgeResult(
@@ -566,6 +568,8 @@ function normalizePromotionEvidence(value) {
       !== canonicalJson(evidence.associations)
     || canonicalJson(retirementPlan.evidence.preservation)
       !== canonicalJson(evidence.preservation)
+    || canonicalJson(retirementPlan.evidence.directSuccessorTopology)
+      !== canonicalJson(evidence.directSuccessorTopology)
     || canonicalJson(retirementPlan.evidence.bridge) !== canonicalJson(evidence.bridge)
     || canonicalJson(retirementPlan.evidence.successor) !== canonicalJson(evidence.successor)) {
     invalid("Phase A plan/result/entry/effect binding");
@@ -626,6 +630,7 @@ function normalizeSharedEvidence(value, schema) {
   normalizeCloud(evidence.cloud);
   normalizePreservation(evidence.preservation);
   object(evidence.associations, "associations");
+  object(evidence.directSuccessorTopology, "direct-successor topology");
   object(evidence.topology, "topology");
   if (evidence.repository.targetRepository !== evidence.repository.nameWithOwner
     || evidence.repository.targetRepository !== evidence.controller.repository
@@ -698,32 +703,31 @@ function assertOriginalTopology(evidence) {
 
 function assertAssociations(value, anchor) {
   for (const name of ["anchorRegistryMatches", "anchorPullRequestMarkerMatches",
+    "anchorRegistryBranchCollisions", "anchorRegistryPullRequestCollisions",
     "bridgeRegistryMatches", "bridgePullRequestMarkerMatches",
     "successorRegistryMatches", "successorPullRequestMarkerMatches"]) {
     if (!Array.isArray(value[name])) invalid(`association ${name}`);
   }
-  if (value.anchorRegistryMatches.length !== 1
+  if (![0, 1].includes(value.anchorRegistryMatches.length)
     || value.anchorPullRequestMarkerMatches.length !== 1
+    || value.anchorRegistryBranchCollisions.length !== 0
+    || value.anchorRegistryPullRequestCollisions.length !== 0
     || value.bridgeRegistryMatches.length !== 0
     || value.bridgePullRequestMarkerMatches.length !== 0
     || value.successorRegistryMatches.length !== 0
     || value.successorPullRequestMarkerMatches.length !== 0) {
     invalid("exact association matches");
   }
-  const registry = object(value.anchorRegistryMatches[0], "anchor registry association");
   const pull = object(value.anchorPullRequestMarkerMatches[0], "anchor PR association");
-  if (registry.claimId !== anchor.claimId || pull.claimId !== anchor.claimId
-    || registry.cloudClaimDigest !== anchor.claimDigest
-    || pull.markerClaimDigest !== anchor.claimDigest) {
+  if (pull.claimId !== anchor.claimId || pull.markerClaimDigest !== anchor.claimDigest
+    || pull.state !== "OPEN" || pull.markerBranch !== pull.headRefName
+    || pull.headRefOid !== anchor.laneRevision
+    || pull.markerLaneRevision !== anchor.laneRevision
+    || pull.markerFenceSha !== anchor.laneRevision) {
     invalid("anchor association claim identity");
   }
-  digest(registry.claimId, "anchor registry claim");
-  digest(registry.cloudClaimDigest, "anchor registry fence");
   digest(pull.claimId, "anchor PR claim");
   digest(pull.markerClaimDigest, "anchor PR fence");
-  text(registry.branch, "anchor registry branch");
-  digest(registry.leaseDigest, "anchor lease digest");
-  text(registry.pullRequestUrl, "anchor ownership PR URL");
   positive(pull.number, "anchor ownership PR number");
   for (const name of ["nodeId", "state", "headRefName", "baseRefName", "markerBranch"]) {
     text(pull[name], `anchor ownership PR ${name}`);
@@ -731,18 +735,84 @@ function assertAssociations(value, anchor) {
   for (const name of ["bodyDigest", "markerDigest"]) {
     digest(pull[name], `anchor ownership PR ${name}`);
   }
-  if (typeof pull.isDraft !== "boolean") invalid("anchor ownership PR draft flag");
-  const match = /\/pull\/(\d+)(?:\/?$)/u.exec(registry.pullRequestUrl);
-  if (!match || Number(match[1]) !== pull.number || registry.branch !== pull.markerBranch
-    || registry.branch !== pull.headRefName) invalid("anchor registry/ownership-PR join");
+  sha(pull.markerLaneRevision, "anchor ownership PR marker lane revision");
+  sha(pull.markerFenceSha, "anchor ownership PR marker fence");
+  if (pull.isDraft !== true) invalid("anchor ownership PR draft flag");
+  if (value.anchorRegistryMatches.length === 1) {
+    const registry = object(value.anchorRegistryMatches[0], "anchor registry association");
+    if (registry.claimId !== anchor.claimId
+      || registry.cloudClaimDigest !== anchor.claimDigest) {
+      invalid("anchor registry claim identity");
+    }
+    digest(registry.claimId, "anchor registry claim");
+    digest(registry.cloudClaimDigest, "anchor registry fence");
+    text(registry.branch, "anchor registry branch");
+    digest(registry.leaseDigest, "anchor lease digest");
+    text(registry.pullRequestUrl, "anchor ownership PR URL");
+    const match = /\/pull\/(\d+)(?:\/?$)/u.exec(registry.pullRequestUrl);
+    if (!match || Number(match[1]) !== pull.number || registry.branch !== pull.markerBranch
+      || registry.branch !== pull.headRefName) invalid("anchor registry/ownership-PR join");
+  }
+}
+
+function assertDirectSuccessorTopology(value, evidence) {
+  object(value, "direct-successor topology");
+  for (const name of ["bridgeDirectSuccessorClaimIds",
+    "bridgeLiveDirectSuccessorClaimIds", "bridgeTerminalDirectSuccessors"]) {
+    if (!Array.isArray(value[name])) invalid(`direct-successor topology ${name}`);
+  }
+  const live = [...value.bridgeLiveDirectSuccessorClaimIds].sort();
+  live.forEach(claimId => digest(claimId, "live direct-successor claim"));
+  if (canonicalJson(live) !== canonicalJson(value.bridgeLiveDirectSuccessorClaimIds)
+    || new Set(live).size !== live.length
+    || canonicalJson(live) !== canonicalJson([evidence.successor.claimId])) {
+    invalid("sole live direct successor");
+  }
+  const terminalIds = new Set();
+  for (const raw of value.bridgeTerminalDirectSuccessors) {
+    const terminal = object(raw, "terminal direct-successor history");
+    digest(terminal.claimId, "terminal direct-successor claim");
+    if (terminalIds.has(terminal.claimId)
+      || [evidence.anchor.claimId, evidence.bridge.claimId, evidence.successor.claimId]
+        .includes(terminal.claimId)) invalid("terminal direct-successor identity");
+    terminalIds.add(terminal.claimId);
+    if (terminal.lineageCount !== 2 || terminal.predecessorClaimId !== evidence.bridge.claimId
+      || terminal.terminalAction !== "retire" || terminal.terminalState !== "retired"
+      || terminal.terminalTransitionCounter !== 2
+      || terminal.retirementReason !== "superseded") {
+      invalid("terminal direct-successor lifecycle");
+    }
+    for (const name of ["lineageDigest", "genesisEntryDigest", "terminalEntryDigest",
+      "terminalClaimDigest", "registryAssociationDigest",
+      "pullRequestMarkerAssociationDigest"]) {
+      digest(terminal[name], `terminal direct-successor ${name}`);
+    }
+    sha(terminal.finalRevision, "terminal direct-successor final revision");
+    if (terminal.registryAssociationDigest !== digestValue([])
+      || terminal.pullRequestMarkerAssociationDigest !== digestValue([])) {
+      invalid("terminal direct-successor association");
+    }
+  }
+  const direct = [...value.bridgeDirectSuccessorClaimIds].sort();
+  direct.forEach(claimId => digest(claimId, "direct-successor claim"));
+  const terminalOrder = value.bridgeTerminalDirectSuccessors.map(item => item.claimId);
+  if (canonicalJson(direct) !== canonicalJson(value.bridgeDirectSuccessorClaimIds)
+    || canonicalJson([...terminalOrder].sort()) !== canonicalJson(terminalOrder)
+    || new Set(direct).size !== direct.length
+    || canonicalJson(direct) !== canonicalJson([...live, ...terminalIds].sort())) {
+    invalid("complete direct-successor partition");
+  }
 }
 
 function assertPeerFrame(value, evidence) {
   object(value, "peer frame");
   for (const name of ["reservedClaimIds", "waitingClaimIds", "relevantClaimIds",
-    "predecessorConnectedClaimIds", "bridgeDirectSuccessorClaimIds"]) {
+    "predecessorConnectedClaimIds", "bridgeDirectSuccessorClaimIds",
+    "bridgeLiveDirectSuccessorClaimIds", "bridgeTerminalDirectSuccessors"]) {
     if (!Array.isArray(value[name])) invalid(`peer frame ${name}`);
-    value[name].forEach(claimId => digest(claimId, `peer frame ${name}`));
+    if (name !== "bridgeTerminalDirectSuccessors") {
+      value[name].forEach(claimId => digest(claimId, `peer frame ${name}`));
+    }
   }
   const reserved = [...value.reservedClaimIds].sort();
   const waiting = [...value.waitingClaimIds].sort();
@@ -758,8 +828,11 @@ function assertPeerFrame(value, evidence) {
     || canonicalJson(connected) !== canonicalJson([
       evidence.anchor.claimId, evidence.bridge.claimId, evidence.successor.claimId,
     ].sort())
-    || canonicalJson([...value.bridgeDirectSuccessorClaimIds].sort())
-      !== canonicalJson([evidence.successor.claimId])) {
+    || canonicalJson({
+      bridgeDirectSuccessorClaimIds: value.bridgeDirectSuccessorClaimIds,
+      bridgeLiveDirectSuccessorClaimIds: value.bridgeLiveDirectSuccessorClaimIds,
+      bridgeTerminalDirectSuccessors: value.bridgeTerminalDirectSuccessors,
+    }) !== canonicalJson(evidence.directSuccessorTopology)) {
     invalid("unknown same-repository reserved/waiting peer");
   }
 }

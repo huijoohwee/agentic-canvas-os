@@ -14,7 +14,7 @@ import { createClaimOnlyWaitingBridgeReconciliationController,
   from "../scripts/claim-only-waiting-bridge-reconciliation-controller.mjs";
 import {
   buildWaitingBridgePromotionAuthorityOutput, projectWaitingBridgeProviderInventory,
-  readAllWaitingBridgeProviderPullRequests,
+  projectWaitingBridgeDirectSuccessorTopology, readAllWaitingBridgeProviderPullRequests,
 } from "../scripts/claim-only-waiting-bridge-reconciliation-repository-adapter.mjs";
 import { normalizeCloudAuthority } from "../scripts/scoped-lane-admission-lib.mjs";
 import { canonicalJson, digestValue }
@@ -66,6 +66,62 @@ test("retirement seals the exact three-claim bridge topology and separate author
   assert.throws(() => buildBridgeRetirementPlan(mutate(retirementEvidence(), value => {
     value.associations.bridgeRegistryMatches.push({ claimId: BRIDGE });
   })), /association/u);
+  assert.doesNotThrow(() => buildBridgeRetirementPlan(mutate(retirementEvidence(), value => {
+    value.associations.anchorRegistryMatches = [];
+  })), "a unique exact provider marker may preserve an absent local anchor association");
+  assert.throws(() => buildBridgeRetirementPlan(mutate(retirementEvidence(), value => {
+    value.associations.anchorRegistryMatches = [];
+    value.associations.anchorRegistryBranchCollisions.push({ branch: "agent/device/anchor" });
+  })), /association/u);
+  assert.throws(() => buildBridgeRetirementPlan(mutate(retirementEvidence(), value => {
+    value.associations.anchorPullRequestMarkerMatches[0].markerLaneRevision = SHA("b");
+  })), /anchor association/u);
+  assert.throws(() => buildBridgeRetirementPlan(mutate(retirementEvidence(), value => {
+    value.associations.anchorPullRequestMarkerMatches[0].isDraft = false;
+  })), /draft flag/u);
+
+  const historical = mutate(retirementEvidence(), value => {
+    const terminal = terminalDirectSuccessor();
+    value.directSuccessorTopology.bridgeDirectSuccessorClaimIds.push(terminal.claimId);
+    value.directSuccessorTopology.bridgeDirectSuccessorClaimIds.sort();
+    value.directSuccessorTopology.bridgeTerminalDirectSuccessors.push(terminal);
+    value.peerFrame.bridgeDirectSuccessorClaimIds =
+      [...value.directSuccessorTopology.bridgeDirectSuccessorClaimIds];
+    value.peerFrame.bridgeTerminalDirectSuccessors = [terminal];
+  });
+  assert.doesNotThrow(() => buildBridgeRetirementPlan(historical));
+  assert.throws(() => buildBridgeRetirementPlan(mutate(historical, value => {
+    value.directSuccessorTopology.bridgeTerminalDirectSuccessors[0]
+      .terminalTransitionCounter = 3;
+    value.peerFrame.bridgeTerminalDirectSuccessors[0].terminalTransitionCounter = 3;
+  })), /terminal direct-successor lifecycle/u);
+  assert.throws(() => buildBridgeRetirementPlan(mutate(historical, value => {
+    const competitor = D("live-competitor");
+    value.directSuccessorTopology.bridgeDirectSuccessorClaimIds.push(competitor);
+    value.directSuccessorTopology.bridgeDirectSuccessorClaimIds.sort();
+    value.directSuccessorTopology.bridgeLiveDirectSuccessorClaimIds.push(competitor);
+    value.directSuccessorTopology.bridgeLiveDirectSuccessorClaimIds.sort();
+    Object.assign(value.peerFrame, structuredClone(value.directSuccessorTopology));
+  })), /sole live direct successor/u);
+  assert.throws(() => buildBridgeRetirementPlan(mutate(historical, value => {
+    value.directSuccessorTopology.bridgeDirectSuccessorClaimIds.reverse();
+    value.peerFrame.bridgeDirectSuccessorClaimIds.reverse();
+  })), /complete direct-successor partition/u);
+
+  const twoHistorical = mutate(historical, value => {
+    const terminal = terminalDirectSuccessor("historical-second");
+    value.directSuccessorTopology.bridgeDirectSuccessorClaimIds.push(terminal.claimId);
+    value.directSuccessorTopology.bridgeDirectSuccessorClaimIds.sort();
+    value.directSuccessorTopology.bridgeTerminalDirectSuccessors.push(terminal);
+    value.directSuccessorTopology.bridgeTerminalDirectSuccessors.sort((left, right) =>
+      left.claimId.localeCompare(right.claimId));
+    Object.assign(value.peerFrame, structuredClone(value.directSuccessorTopology));
+  });
+  assert.doesNotThrow(() => buildBridgeRetirementPlan(twoHistorical));
+  assert.throws(() => buildBridgeRetirementPlan(mutate(twoHistorical, value => {
+    value.directSuccessorTopology.bridgeTerminalDirectSuccessors.reverse();
+    value.peerFrame.bridgeTerminalDirectSuccessors.reverse();
+  })), /complete direct-successor partition/u);
 });
 
 test("controller runs both intent-before-effect phases and terminal replay is cloud-free", async () => {
@@ -306,6 +362,69 @@ test("provider inventory pagination is complete, unique, advancing, and fail-clo
     pulls: [pull(1, "PR_1", `${marker}\nagentic-writer-lease/v2 malformed`)],
     pageCount: 1, totalCount: 1,
   }), /malformed.*ownership marker|malformed or duplicate/u);
+
+  const unrelatedClaim = D("unrelated-stale-marker");
+  const staleMarker = writerMarker({
+    schema: "agentic-writer-lease/v2", epoch: 1,
+    branch: "agent/device/unrelated", baseSha: SHA("a"), fenceSha: SHA("b"),
+    expiresAt: T4, cloudAuthority: { claimId: unrelatedClaim },
+  });
+  const stale = projectWaitingBridgeProviderInventory({
+    pulls: [pull(3, "PR_3", staleMarker)], pageCount: 1, totalCount: 1,
+  }, { targetClaimIds: [ANCHOR] });
+  assert.equal(stale.projected[0].markerClaimId, unrelatedClaim);
+  assert.equal(stale.projected[0].markerDisposition, "semantic-stale-unrelated");
+  assert.throws(() => projectWaitingBridgeProviderInventory({
+    pulls: [pull(3, "PR_3", staleMarker)], pageCount: 1, totalCount: 1,
+  }, { targetClaimIds: [unrelatedClaim] }), /target or unattributed semantic-stale/u);
+  assert.throws(() => projectWaitingBridgeProviderInventory({
+    pulls: [pull(3, "PR_3", staleMarker)], pageCount: 1, totalCount: 1,
+  }, { targetClaimIds: [BRIDGE, unrelatedClaim] }),
+  /target or unattributed semantic-stale/u,
+  "a ledger-discovered direct sibling remains canonical-strict");
+  assert.throws(() => projectWaitingBridgeProviderInventory({
+    pulls: [pull(3, "PR_3", staleMarker), pull(4, "PR_4", staleMarker)],
+    pageCount: 1, totalCount: 2,
+  }, { targetClaimIds: [ANCHOR] }), /duplicate claim pull-request marker/u);
+});
+
+test("direct-successor topology admits only exact unassociated retired siblings", () => {
+  const selected = claim({
+    claimId: SUCCESSOR, scope: SUCCESSOR_SCOPE, state: "waiting-successor",
+    recordedState: "waiting-successor", writeAuthority: false, scopeReserved: false,
+    predecessorClaimId: BRIDGE, eligibleSince: T2, expiresAt: T3,
+    deviceId: "device:chain", sessionId: "session:successor", sequence: 3,
+  });
+  const retired = claim({
+    claimId: D("historical-direct"), scope: SUCCESSOR_SCOPE, state: "waiting-successor",
+    recordedState: "waiting-successor", writeAuthority: false, scopeReserved: false,
+    predecessorClaimId: BRIDGE, eligibleSince: T1, expiresAt: T2,
+    deviceId: "device:old", sessionId: "session:old", sequence: 1,
+  });
+  const selectedGenesis = rawGenesis(selected);
+  const retiredGenesis = rawGenesis(retired);
+  const retiredTerminal = rawRetirement(retiredGenesis);
+  const input = {
+    ledger: { entries: [retiredGenesis, retiredTerminal, selectedGenesis] },
+    statusClaims: [selected.claim], bridgeClaimId: BRIDGE, successorClaimId: SUCCESSOR,
+  };
+  const topology = projectWaitingBridgeDirectSuccessorTopology(input);
+  assert.deepEqual(topology.bridgeLiveDirectSuccessorClaimIds, [SUCCESSOR]);
+  assert.equal(topology.bridgeTerminalDirectSuccessors.length, 1);
+  assert.equal(topology.bridgeTerminalDirectSuccessors[0].claimId, retired.claim.claimId);
+  assert.throws(() => projectWaitingBridgeDirectSuccessorTopology({
+    ...input,
+    ledger: { entries: [retiredGenesis, mutate(retiredTerminal, value => {
+      value.claimCore.retirement.reason = "abandoned";
+    }), selectedGenesis] },
+  }), /nonterminal direct-successor history/u);
+  assert.throws(() => projectWaitingBridgeDirectSuccessorTopology({
+    ...input, statusClaims: [selected.claim, retired.claim],
+  }), /sole live direct successor/u);
+  assert.throws(() => projectWaitingBridgeDirectSuccessorTopology({
+    ...input,
+    providerAssociations: claimId => claimId === retired.claim.claimId ? [{}] : [],
+  }), /terminal direct-successor association/u);
 });
 
 function harness({ loseRetirementResponse = false } = {}) {
@@ -550,10 +669,12 @@ function retirementEvidence() {
       anchorPullRequestMarkerMatches: [{
         claimId: ANCHOR, markerClaimDigest: anchor.claim.claimDigest,
         number: 808, nodeId: "PR_808", state: "OPEN", isDraft: true,
-        headRefName: "agent/device/anchor", headRefOid: SHA("c"),
+        headRefName: "agent/device/anchor", headRefOid: SHA("a"),
         baseRefName: "main", baseRefOid: SHA("a"), bodyDigest: D("body"),
         markerDigest: D("marker"), markerBranch: "agent/device/anchor",
+        markerLaneRevision: SHA("a"), markerFenceSha: SHA("a"),
       }],
+      anchorRegistryBranchCollisions: [], anchorRegistryPullRequestCollisions: [],
       bridgeRegistryMatches: [], bridgePullRequestMarkerMatches: [],
       successorRegistryMatches: [], successorPullRequestMarkerMatches: [],
     },
@@ -563,11 +684,18 @@ function retirementEvidence() {
       associationDigest: D("associations"),
     },
     topology: { anchorBridge: true, bridgeSuccessor: true, anchorSuccessor: false },
+    directSuccessorTopology: {
+      bridgeDirectSuccessorClaimIds: [SUCCESSOR],
+      bridgeLiveDirectSuccessorClaimIds: [SUCCESSOR],
+      bridgeTerminalDirectSuccessors: [],
+    },
     peerFrame: {
       reservedClaimIds: [ANCHOR], waitingClaimIds: [BRIDGE, SUCCESSOR].sort(),
       relevantClaimIds: [ANCHOR, BRIDGE, SUCCESSOR].sort(),
       predecessorConnectedClaimIds: [ANCHOR, BRIDGE, SUCCESSOR].sort(),
       bridgeDirectSuccessorClaimIds: [SUCCESSOR],
+      bridgeLiveDirectSuccessorClaimIds: [SUCCESSOR],
+      bridgeTerminalDirectSuccessors: [],
     },
   };
 }
@@ -605,6 +733,61 @@ function claim({
       ...common,
     },
   };
+}
+
+function terminalDirectSuccessor(label = "historical-direct") {
+  return {
+    claimId: D(label), lineageCount: 2,
+    lineageDigest: D(`${label}:lineage`),
+    genesisEntryDigest: D(`${label}:genesis`),
+    terminalEntryDigest: D(`${label}:terminal`),
+    terminalClaimDigest: D(`${label}:claim`),
+    predecessorClaimId: BRIDGE, terminalAction: "retire", terminalState: "retired",
+    terminalTransitionCounter: 2, retirementReason: "superseded",
+    finalRevision: SHA("a"), registryAssociationDigest: digestValue([]),
+    pullRequestMarkerAssociationDigest: digestValue([]),
+  };
+}
+
+function rawGenesis(pair) {
+  const source = pair.claim;
+  return {
+    schema: "agentic-cloud-collaboration-entry/v2", action: "claim",
+    sequence: pair.entry.sequence, claimId: source.claimId,
+    claimDigest: source.claimDigest, digest: source.transitionDigest,
+    claimCore: {
+      claimId: source.claimId, actorId: source.actorId, repositoryId: source.repositoryId,
+      workItemId: source.workItemId, deviceId: source.deviceId, sessionId: source.sessionId,
+      canonicalBaseRevision: source.canonicalBaseRevision,
+      laneRevision: source.laneRevision, declaredWriteScope: source.declaredWriteScope,
+      writeSetDigest: source.writeSetDigest, leaseEpoch: source.leaseEpoch,
+      transitionCounter: 1, heartbeatCounter: 0, state: "waiting-successor",
+      expiresAt: source.expiresAt, evidenceDigest: null, reviewRequestId: null,
+      predecessorClaimId: source.predecessorClaimId, eligibleSince: source.eligibleSince,
+      handoff: null, release: null,
+    },
+  };
+}
+
+function rawRetirement(genesis) {
+  const terminal = structuredClone(genesis);
+  terminal.action = "retire";
+  terminal.sequence += 1;
+  terminal.claimDigest = D(`retired:${genesis.claimId}`);
+  terminal.digest = D(`retirement:${genesis.claimId}`);
+  terminal.claimCore.transitionCounter = 2;
+  terminal.claimCore.state = "retired";
+  terminal.claimCore.retirement = {
+    reason: "superseded", finalRevision: genesis.claimCore.laneRevision,
+    reviewRequestId: null, integrationReceiptDigest: null, retiredAt: T4,
+    bytesDigest: D("retirement-bytes"), namedChecksDigest: D("retirement-checks"),
+    handoffEvidenceDigest: D("retirement-handoff"),
+  };
+  return terminal;
+}
+
+function writerMarker(value) {
+  return `<!-- agentic-writer-lease/v2 ${JSON.stringify(value)} -->`;
 }
 
 function pull(number, id, body = "") {

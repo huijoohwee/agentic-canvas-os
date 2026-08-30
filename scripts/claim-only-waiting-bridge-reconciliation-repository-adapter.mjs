@@ -122,7 +122,9 @@ export function readAllWaitingBridgeProviderPullRequests({ targetRepository, gh 
   return Object.freeze({ pulls: Object.freeze(pulls), pageCount, totalCount });
 }
 
-export function projectWaitingBridgeProviderInventory(value) {
+export function projectWaitingBridgeProviderInventory(value, {
+  targetClaimIds = [],
+} = {}) {
   const frame = Array.isArray(value)
     ? { pulls: value, pageCount: value.length ? 1 : 0, totalCount: value.length }
     : value;
@@ -133,24 +135,44 @@ export function projectWaitingBridgeProviderInventory(value) {
   }
   const claimOwners = new Map();
   const markers = new Map();
+  const strictClaimIds = new Set(targetClaimIds.map(claimId =>
+    digest(claimId, "strict provider claim ID")));
   const projected = frame.pulls.map(pull => {
     const body = String(pull.body || "");
     const hasMarkerToken = body.includes(WRITER_LEASE_SCHEMA);
     const rawMarkerTokenCount = (body.match(/agentic-writer-lease\/v2/gu) || []).length;
-    const markerCount = (body.match(
-      /<!--\s*agentic-writer-lease\/v2\s+\{[\s\S]*?\}\s*-->/gu,
-    ) || []).length;
-    let marker = null;
-    try { marker = parseWriterLeasePullRequestBody(body); } catch {
+    const markerMatches = [...body.matchAll(
+      /<!--\s*agentic-writer-lease\/v2\s+(\{[\s\S]*?\})\s*-->/gu,
+    )];
+    const markerCount = markerMatches.length;
+    let canonicalMarker = null;
+    try { canonicalMarker = parseWriterLeasePullRequestBody(body); } catch {
       invalid("malformed pull-request ownership marker");
     }
-    // A canonical marker has one comment discriminator and one payload schema token.
-    if ((hasMarkerToken && (!marker || markerCount !== 1 || rawMarkerTokenCount !== 2))
-      || (!hasMarkerToken && marker !== null)) {
+    if ((hasMarkerToken && (markerCount !== 1 || rawMarkerTokenCount !== 2))
+      || (!hasMarkerToken && canonicalMarker !== null)) {
       invalid("malformed or duplicate pull-request ownership marker");
     }
-    if (marker?.cloudAuthority?.claimId) {
-      const claimId = marker.cloudAuthority.claimId;
+    let rawMarker = null;
+    if (markerCount === 1) {
+      try { rawMarker = JSON.parse(markerMatches[0][1]); } catch {
+        invalid("malformed pull-request ownership marker");
+      }
+      if (!rawMarker || typeof rawMarker !== "object" || Array.isArray(rawMarker)
+        || rawMarker.schema !== WRITER_LEASE_SCHEMA) {
+        invalid("malformed pull-request ownership marker");
+      }
+    }
+    const rawClaimId = rawMarker?.cloudAuthority?.claimId ?? null;
+    if (rawClaimId !== null) digest(rawClaimId, "raw provider marker claim ID");
+    const markerDisposition = canonicalMarker ? "canonical"
+      : rawMarker && rawClaimId !== null && !strictClaimIds.has(rawClaimId)
+        ? "semantic-stale-unrelated" : rawMarker ? invalid(
+          "target or unattributed semantic-stale pull-request ownership marker",
+        ) : null;
+    const marker = canonicalMarker || rawMarker;
+    if (rawClaimId) {
+      const claimId = rawClaimId;
       if (claimOwners.has(claimId)) invalid("duplicate claim pull-request marker");
       claimOwners.set(claimId, pull.number);
       markers.set(pull.number, marker);
@@ -168,6 +190,8 @@ export function projectWaitingBridgeProviderInventory(value) {
       baseRefOid: pull.baseRefOid ?? null,
       bodyDigest: digestValue(body),
       markerDigest: marker ? digestValue(marker) : null,
+      markerClaimId: rawClaimId,
+      markerDisposition,
     });
   }).sort((left, right) => left.number - right.number);
   return Object.freeze({
@@ -191,9 +215,100 @@ export function projectWaitingBridgeProviderInventory(value) {
           bodyDigest: pull.bodyDigest,
           markerDigest: pull.markerDigest,
           markerBranch: marker.branch,
+          markerLaneRevision: marker.cloudAuthority.laneRevision,
+          markerFenceSha: marker.fenceSha,
         })] : [];
       }));
     },
+  });
+}
+
+export function projectWaitingBridgeDirectSuccessorTopology({
+  ledger, statusClaims, bridgeClaimId, successorClaimId,
+  registryAssociations = () => [], providerAssociations = () => [],
+}) {
+  objectLike(ledger, "direct-successor ledger");
+  if (!Array.isArray(ledger.entries) || !Array.isArray(statusClaims)) {
+    invalid("direct-successor inventory");
+  }
+  digest(bridgeClaimId, "direct-successor bridge claim ID");
+  digest(successorClaimId, "direct-successor selected claim ID");
+  const genesis = ledger.entries.filter(entry => entry.action === "claim"
+    && entry.claimCore?.predecessorClaimId === bridgeClaimId);
+  const claimIds = [...new Set(genesis.map(entry => entry.claimId))].sort();
+  if (claimIds.length !== genesis.length) invalid("duplicate direct-successor genesis");
+  const live = [];
+  const terminal = [];
+  for (const claimId of claimIds) {
+    digest(claimId, "direct-successor claim ID");
+    const current = statusClaims.filter(claim => claim.claimId === claimId);
+    if (current.length > 1) invalid("duplicate direct-successor current projection");
+    const lineage = ledger.entries.filter(entry => entry.claimId === claimId);
+    if (current.length === 1) {
+      live.push(claimId);
+      continue;
+    }
+    const first = lineage[0];
+    const last = lineage.at(-1);
+    if (lineage.length !== 2 || first?.action !== "claim"
+      || first?.schema !== ENTRY_SCHEMA || first?.claimId !== claimId
+      || first?.claimCore?.claimId !== claimId
+      || first?.claimCore?.predecessorClaimId !== bridgeClaimId
+      || first?.claimCore?.state !== "waiting-successor"
+      || first?.claimCore?.transitionCounter !== 1
+      || first?.claimCore?.heartbeatCounter !== 0
+      || first?.claimCore?.reviewRequestId !== null
+      || last?.action !== "retire" || last?.claimCore?.state !== "retired"
+      || last?.schema !== ENTRY_SCHEMA
+      || last?.claimId !== claimId || last?.claimCore?.claimId !== claimId
+      || last?.claimCore?.predecessorClaimId !== bridgeClaimId
+      || last?.claimCore?.transitionCounter !== 2
+      || last?.claimCore?.heartbeatCounter !== 0
+      || last?.claimCore?.reviewRequestId !== null
+      || last?.claimCore?.retirement?.reason !== "superseded"
+      || last?.claimCore?.retirement?.finalRevision !== first.claimCore.laneRevision
+      || last?.claimCore?.retirement?.reviewRequestId !== null
+      || last?.claimCore?.retirement?.integrationReceiptDigest !== null
+      || !DIGEST.test(String(last?.claimCore?.retirement?.bytesDigest || ""))
+      || !DIGEST.test(String(last?.claimCore?.retirement?.namedChecksDigest || ""))
+      || !DIGEST.test(String(last?.claimCore?.retirement?.handoffEvidenceDigest || ""))
+      || !Number.isFinite(Date.parse(last?.claimCore?.retirement?.retiredAt))
+      || !sameDirectSuccessorSubject(first.claimCore, last.claimCore)) {
+      invalid("nonterminal direct-successor history");
+    }
+    const registry = registryAssociations(claimId);
+    const pulls = providerAssociations(claimId);
+    if (!Array.isArray(registry) || !Array.isArray(pulls)
+      || registry.length !== 0 || pulls.length !== 0) {
+      invalid("terminal direct-successor association");
+    }
+    terminal.push(Object.freeze({
+      claimId,
+      lineageCount: lineage.length,
+      lineageDigest: digestValue(lineage),
+      genesisEntryDigest: digestValue(first),
+      terminalEntryDigest: digestValue(last),
+      terminalClaimDigest: digest(last.claimDigest,
+        "terminal direct-successor claim digest"),
+      predecessorClaimId: bridgeClaimId,
+      terminalAction: "retire",
+      terminalState: "retired",
+      terminalTransitionCounter: 2,
+      retirementReason: "superseded",
+      finalRevision: first.claimCore.laneRevision,
+      registryAssociationDigest: digestValue(registry),
+      pullRequestMarkerAssociationDigest: digestValue(pulls),
+    }));
+  }
+  const sortedLive = live.sort();
+  if (canonicalJson(sortedLive) !== canonicalJson([successorClaimId])) {
+    invalid("sole live direct successor");
+  }
+  return Object.freeze({
+    bridgeDirectSuccessorClaimIds: Object.freeze(claimIds),
+    bridgeLiveDirectSuccessorClaimIds: Object.freeze(sortedLive),
+    bridgeTerminalDirectSuccessors: Object.freeze(terminal.sort((left, right) =>
+      left.claimId.localeCompare(right.claimId))),
   });
 }
 
@@ -370,28 +485,44 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     return ledger;
   }
 
-  function providerInventory() {
+  function providerInventory(targetClaimIds) {
     const raw = dependencies.readProviderPullRequests
       ? dependencies.readProviderPullRequests({ targetRepository })
       : readAllWaitingBridgeProviderPullRequests({ targetRepository, gh });
-    return projectWaitingBridgeProviderInventory(raw);
+    return projectWaitingBridgeProviderInventory(raw, {
+      targetClaimIds,
+    });
   }
 
-  function preservationFrame() {
+  function preservationFrame(ledger) {
     const registry = leaseStore.readRegistry ? leaseStore.readRegistry() : leaseStore.read();
-    const provider = providerInventory();
-    const registryAssociations = claimId => Object.entries(registry.leases || {})
-      .flatMap(([branch, lease]) => lease?.cloudAuthority?.claimId === claimId
-        ? [Object.freeze({
-          claimId,
-          cloudClaimDigest: lease.cloudAuthority.claimDigest,
-          branch,
-          leaseDigest: digestValue(lease),
-          pullRequestUrl: lease.pullRequestUrl || null,
-        })] : []);
+    const directClaimIds = ledger.entries.filter(entry => entry.action === "claim"
+      && entry.claimCore?.predecessorClaimId === bridgeClaimId).map(entry => entry.claimId);
+    const provider = providerInventory([
+      anchorClaimId, bridgeClaimId, successorClaimId, ...directClaimIds,
+    ]);
+    const registryRecords = Object.entries(registry.leases || {}).map(([branch, lease]) =>
+      Object.freeze({
+        claimId: lease?.cloudAuthority?.claimId || null,
+        cloudClaimDigest: lease?.cloudAuthority?.claimDigest || null,
+        branch,
+        leaseDigest: digestValue(lease),
+        pullRequestUrl: lease?.pullRequestUrl || null,
+      }));
+    const registryAssociations = claimId => registryRecords.filter(
+      record => record.claimId === claimId,
+    );
+    const anchorPulls = provider.associations(anchorClaimId);
+    const anchorPull = anchorPulls.length === 1 ? anchorPulls[0] : null;
+    const anchorPullUrlSuffix = anchorPull ? `/pull/${anchorPull.number}` : null;
     const associations = Object.freeze({
       anchorRegistryMatches: registryAssociations(anchorClaimId),
-      anchorPullRequestMarkerMatches: provider.associations(anchorClaimId),
+      anchorPullRequestMarkerMatches: anchorPulls,
+      anchorRegistryBranchCollisions: anchorPull ? registryRecords.filter(record =>
+        record.claimId !== anchorClaimId && record.branch === anchorPull.markerBranch) : [],
+      anchorRegistryPullRequestCollisions: anchorPull ? registryRecords.filter(record =>
+        record.claimId !== anchorClaimId && String(record.pullRequestUrl || "")
+          .endsWith(anchorPullUrlSuffix)) : [],
       bridgeRegistryMatches: registryAssociations(bridgeClaimId),
       bridgePullRequestMarkerMatches: provider.associations(bridgeClaimId),
       successorRegistryMatches: registryAssociations(successorClaimId),
@@ -405,6 +536,8 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     });
     return Object.freeze({
       associations,
+      registryAssociations,
+      providerAssociations: claimId => provider.associations(claimId),
       preservation: Object.freeze({
         gitRefsDigest: digestValue(gitRaw(["show-ref"])),
         gitWorktreesDigest: digestValue(gitRaw(["worktree", "list", "--porcelain", "-z"])),
@@ -418,7 +551,17 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
   function validateAnchorAssociation(associations) {
     const registry = associations.anchorRegistryMatches;
     const pulls = associations.anchorPullRequestMarkerMatches;
-    if (registry.length !== 1 || pulls.length !== 1) return;
+    if (pulls.length !== 1 || ![0, 1].includes(registry.length)) return;
+    if (pulls[0].state !== "OPEN" || pulls[0].markerBranch !== pulls[0].headRefName) {
+      invalid("anchor exact open ownership-PR marker");
+    }
+    if (registry.length === 0) {
+      if (associations.anchorRegistryBranchCollisions.length !== 0
+        || associations.anchorRegistryPullRequestCollisions.length !== 0) {
+        invalid("provider-only anchor local collision");
+      }
+      return;
+    }
     const match = /\/pull\/(\d+)(?:\/?$)/u.exec(String(registry[0].pullRequestUrl || ""));
     if (!match || Number(match[1]) !== pulls[0].number
       || registry[0].branch !== pulls[0].markerBranch
@@ -441,7 +584,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     const controller = controllerEvidence();
     const status = cloudStatus();
     const ledger = ledgerFor(status);
-    const preservation = preservationFrame();
+    const preservation = preservationFrame(ledger);
     const entriesFor = claimId => ledger.entries.filter(entry => entry.claimId === claimId);
     const matchesFor = claimId => status.claims.filter(claim => claim.claimId === claimId);
     const anchorEntries = entriesFor(anchorClaimId);
@@ -492,6 +635,17 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     catch { return false; }
   }
 
+  function directSuccessorTopology(frame) {
+    return projectWaitingBridgeDirectSuccessorTopology({
+      ledger: frame.ledger,
+      statusClaims: frame.status.claims,
+      bridgeClaimId,
+      successorClaimId,
+      registryAssociations: frame.registryAssociations,
+      providerAssociations: frame.providerAssociations,
+    });
+  }
+
   function peerFrame(frame) {
     const triad = [frame.anchor, frame.bridge, frame.successor];
     const relevant = frame.status.claims.filter(claim => claim.repositoryId === frame.anchor.repositoryId
@@ -503,8 +657,6 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
       claim.repositoryId === frame.anchor.repositoryId
       && (triadIds.has(claim.claimId) || triadIds.has(claim.predecessorClaimId))
     ));
-    const directSuccessors = frame.ledger.entries.filter(entry => entry.action === "claim"
-      && entry.claimCore?.predecessorClaimId === bridgeClaimId).map(entry => entry.claimId);
     return Object.freeze({
       reservedClaimIds: relevant.filter(claim => claim.scopeReserved)
         .map(claim => claim.claimId).sort(),
@@ -512,7 +664,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
         .map(claim => claim.claimId).sort(),
       relevantClaimIds: relevant.map(claim => claim.claimId).sort(),
       predecessorConnectedClaimIds: connected.map(claim => claim.claimId).sort(),
-      bridgeDirectSuccessorClaimIds: [...new Set(directSuccessors)].sort(),
+      ...directSuccessorTopology(frame),
     });
   }
 
@@ -548,6 +700,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
       successorLineageCount: frame.successorEntries.length,
       associations: frame.associations,
       preservation: frame.preservation,
+      directSuccessorTopology: directSuccessorTopology(frame),
       topology: {
         anchorBridge: writeSetsOverlap(frame.anchor.declaredWriteScope,
           frame.bridge.declaredWriteScope),
@@ -644,7 +797,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     const keys = [
       "repository", "controller", "canonical", "anchor", "bridge", "successor",
       "anchorEntry", "bridgeEntry", "successorEntry", "anchorLineageCount",
-      "associations", "preservation", "topology",
+      "associations", "preservation", "directSuccessorTopology", "topology",
     ];
     for (const key of keys) {
       if (canonicalJson(fresh[key]) !== canonicalJson(plan.evidence[key])) {
@@ -1025,6 +1178,18 @@ function digest(value, label) {
 function integer(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) invalid(label);
   return value;
+}
+function objectLike(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) invalid(label);
+  return value;
+}
+function sameDirectSuccessorSubject(left, right) {
+  const immutable = value => {
+    const { transitionCounter: _transition, heartbeatCounter: _heartbeat,
+      state: _state, retirement: _retirement, ...subject } = value || {};
+    return subject;
+  };
+  return canonicalJson(immutable(left)) === canonicalJson(immutable(right));
 }
 function invalid(label) {
   throw new Error(`Waiting-bridge repository ${label} is invalid.`);

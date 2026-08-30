@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6284,
-  "headDigest": "785ca071de760bdc0975c204ba2d8a5268b51434cf48769452ea70f621ecf3ae",
+  "sequence": 6285,
+  "headDigest": "43241e58169aad709308951fe8ca3d2bb3de572f1c2b21f50344335408402b10",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -319370,6 +319370,61 @@
       },
       "claimDigest": "57b8e49949295211c5c2c2f171134ce74d4123d701f3856eb34f3ac96636aa15",
       "digest": "785ca071de760bdc0975c204ba2d8a5268b51434cf48769452ea70f621ecf3ae"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6285,
+      "parentDigest": "785ca071de760bdc0975c204ba2d8a5268b51434cf48769452ea70f621ecf3ae",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2268a34116b2c7574228d3dc6063de4a1e3d3f5664ca4a7eeab20c80a3205a59",
+      "idempotencyKey": "24dec75852425798b192bb18dbb2c6b4fb9cd2272d032001d1ac53121e8e0433",
+      "requestDigest": "e44c3d7fa9a3205a452082a4175c422305133f17fb5c298a7cf0b090166e0743",
+      "evaluationTime": "2026-08-30T06:48:44.000Z",
+      "claimCore": {
+        "claimId": "2268a34116b2c7574228d3dc6063de4a1e3d3f5664ca4a7eeab20c80a3205a59",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b58be04f476406ab37d9131a75cabaf096ff6308d0eeb050b04d76058d611768",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:328d1d4b013d12d54f20cf54e1ba470514fa5c89b5f34c2b2bb3c7ffed7da0e1",
+        "canonicalBaseRevision": "80589fd899cf3d2d1fe0d274276f5300d265ebc9",
+        "declaredWriteScope": [
+          "path:__tests__/pre-bind-mixed-device-planned-owner-retirement.test.mjs",
+          "path:docs/PRE-BIND-MIXED-DEVICE-PLANNED-OWNER-RETIREMENT.md",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-contract.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-controller.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-repository-adapter.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement.mjs",
+          "semantic:pre-bind-mixed-device-owner-retirement"
+        ],
+        "writeSetDigest": "bf28b5647a21bf47b85f7a0bc3be8f18de2f4f30c81ab7cb549f76312d50f72b",
+        "laneRevision": "00cddca6ecd50fc2b7221146bd3bf8016f477d3e",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-30T08:07:10.000Z",
+        "evidenceDigest": "eab9402cc902e603a65df43e5a68e7d41388704bf61f1f7e2c4be9fdcf5a5854",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBfH5bw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "00cddca6ecd50fc2b7221146bd3bf8016f477d3e",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBfH5bw",
+          "focusedEvidenceDigest": "eab9402cc902e603a65df43e5a68e7d41388704bf61f1f7e2c4be9fdcf5a5854",
+          "dependencyClosureDigest": "bb13b28f7a4b042c9a9b430c2bfe1744c38ac946bec1b3c4df149511b0ffa9dc",
+          "namedChecksDigest": "ae0a4b8d00ff82bf96cfdf9224ff8e33bffc05efb00df14fae93e3fc2b6f5cd5",
+          "handoffEvidenceDigest": "23a4d69cf3f0e6bf9596296c2de16312fda00f25ad9cfc2ec3e06d5ed9904fc6",
+          "operatorDecisionDigest": "d596a08db03cc935a7f1f63ae396e2d633ef718ba292fb5d3addb4c6d98a9cf5",
+          "integrationIntentDigest": "06a8687b761313aa75dc5f59619f28ab2597e6a3e4d5b6be749ae25001c34fe7",
+          "integratedAt": "2026-08-30T06:48:44.000Z"
+        }
+      },
+      "claimDigest": "f50f6f85cab1c9f765aaa76093d4248b29f930068fbeac46fe0387847de5e401",
+      "digest": "43241e58169aad709308951fe8ca3d2bb3de572f1c2b21f50344335408402b10"
     }
   ]
 }

@@ -321,6 +321,23 @@ function integrateSessionUnfenced({
       lease,
       ghText,
     });
+    const canonicalSquashHeadline = requireProtectedSquashSubject(
+      gitText([
+        "log", "--first-parent", "--no-merges", "-1", "--format=%s",
+        `${lease.baseSha}..${lease.reviewHeadSha}`,
+      ]).replace(/\r?\n$/u, ""),
+      { label: "Legacy reviewed authored commit subject" },
+    );
+    requireExactCanonicalSquashCommit({
+      ghText,
+      subject: parseProtectedMainRefreshUrl(
+        lease.pullRequestUrl,
+        { requireGitHubDotCom: true },
+      ),
+      mergeCommitSha: pullRequest.mergeCommit.oid,
+      expectedHeadline: canonicalSquashHeadline,
+      expectedBody: renderProtectedSquashCommitBody({ branch, lease }),
+    });
     log(`Legacy local-only pull request merged at ${pullRequest.mergeCommit.oid.slice(0, 12)}.`);
     completion = completeTask();
     lease = leaseStore.read(branch);
@@ -423,6 +440,32 @@ function integrateSessionUnfenced({
         ({ authorized, deliveryEvidence } = authorizeReviewedDelivery(reviewedCloudAuthority));
       } catch (error) {
         if (currentPullRequest?.state === "MERGED") {
+          const mergeCommitSha = currentPullRequest.mergeCommit?.oid;
+          if (!SHA_PATTERN.test(String(mergeCommitSha || ""))) {
+            throw new Error("Protected integration merged replay has no exact merge commit SHA.");
+          }
+          requireExactCanonicalSquashCommit({
+            ghText,
+            subject: parseProtectedMainRefreshUrl(
+              lease.pullRequestUrl,
+              { requireGitHubDotCom: true },
+            ),
+            mergeCommitSha,
+            expectedHeadline: squashSubject,
+            expectedBody: squashBody,
+            ...(protectedMainAuthorizationRefresh ? {
+              expectedBodies: [
+                squashBody,
+                renderProtectedHeadRefreshRearmCommitMessage({
+                  pullRequestNumber: Number(pullRequestNumber(lease.pullRequestUrl)),
+                  deliveredHeadSha: lease.reviewHeadSha,
+                  targetMainSha: finalProtectedRefreshMainSha(
+                    protectedMainAuthorizationRefresh,
+                  ),
+                }),
+              ],
+            } : {}),
+          });
           const terminalVerification = verifyCloudAuthority({
             pullRequestUrl: lease.pullRequestUrl,
             branch,
@@ -486,20 +529,41 @@ function integrateSessionUnfenced({
           "--body", squashBody,
           "--match-head-commit", protectedMergeHeadSha, lease.pullRequestUrl,
         ];
-        try {
-          run("gh", autoMergeArgs);
-        } catch (error) {
-          const replay = readPullRequestForProtectedRefresh({
-            ghText,
-            url: lease.pullRequestUrl,
-          });
-          requireArmedAutoMergeReplay({
-            pullRequest: replay,
-            url: lease.pullRequestUrl,
-            expectedHeadSha: protectedMergeHeadSha,
-            originalError: error,
-          });
-        }
+        const expectedAutoMergeBodies = protectedMainAuthorizationRefresh
+          ? [
+            squashBody,
+            renderProtectedHeadRefreshRearmCommitMessage({
+              pullRequestNumber: Number(pullRequestNumber(lease.pullRequestUrl)),
+              deliveredHeadSha: reviewedDeliveryHeadSha,
+              targetMainSha: finalProtectedRefreshMainSha(
+                protectedMainAuthorizationRefresh,
+              ),
+            }),
+          ]
+          : [squashBody];
+        armExactProtectedAutoMerge({
+          ghText,
+          run,
+          autoMergeArgs,
+          url: lease.pullRequestUrl,
+          branch,
+          expectedBaseSha: acceptedProtectedRefreshBaseSha,
+          expectedHeadSha: protectedMergeHeadSha,
+          expectedReviewRequestId: deliveryCloudAuthority.reviewRequestId,
+          expectedHeadline: squashSubject,
+          expectedBody: squashBody,
+          expectedBodies: expectedAutoMergeBodies,
+          reverifyDeliveryAuthority: () => verifyCloudAuthority({
+            pullRequestUrl: lease.pullRequestUrl,
+            branch,
+            headSha: reviewedDeliveryHeadSha,
+            canonicalBaseSha: deliveryCloudAuthority.canonicalBaseSha || "",
+            cloudAuthority: deliveryCloudAuthority,
+            ...(protectedMainAuthorizationRefresh
+              ? { protectedMainRefresh: protectedMainAuthorizationRefresh }
+              : {}),
+          }),
+        });
       }
     }
     if (!terminalMergedCompletion) {
@@ -689,6 +753,39 @@ function integrateSessionUnfenced({
           });
         }
         : null,
+      });
+      const canonicalSquashHeadline = squashSubject || (
+        commitEvidence?.commitMessage
+          ? requireProtectedSquashSubject(commitEvidence.commitMessage, {
+            label: "Delivered authored commit subject",
+          })
+          : requireProtectedSquashSubject(
+            gitText([
+              "log", "--first-parent", "--no-merges", "-1", "--format=%s",
+              `${deliveryCloudAuthority?.canonicalBaseSha || deliveryVerifiedBaseSha || lease.baseSha}..${deliveryAuthorizedHeadSha}`,
+            ]).replace(/\r?\n$/u, ""),
+            { label: "Delivered authored commit subject" },
+          )
+      );
+      requireExactCanonicalSquashCommit({
+        ghText,
+        subject: parseProtectedMainRefreshUrl(
+          lease.pullRequestUrl,
+          { requireGitHubDotCom: true },
+        ),
+        mergeCommitSha: pullRequest.mergeCommitSha,
+        expectedHeadline: canonicalSquashHeadline,
+        expectedBody: squashBody || renderProtectedSquashCommitBody({ branch, lease }),
+        ...(protectedMainRefresh ? {
+          expectedBodies: [
+            squashBody || renderProtectedSquashCommitBody({ branch, lease }),
+            renderProtectedHeadRefreshRearmCommitMessage({
+            pullRequestNumber: Number(pullRequestNumber(lease.pullRequestUrl)),
+            deliveredHeadSha: deliveryAuthorizedHeadSha,
+            targetMainSha: finalProtectedRefreshMainSha(protectedMainRefresh),
+            }),
+          ],
+        } : {}),
       });
       verifyCloudAuthority({
         pullRequestUrl: lease.pullRequestUrl,
@@ -1065,6 +1162,33 @@ function verifyRetiredMergedDeliveryAfterRecoveryFailure({
       gitText,
       run,
     });
+  const canonicalSquashHeadline = requireProtectedSquashSubject(
+    gitText([
+      "log", "--first-parent", "--no-merges", "-1", "--format=%s",
+      `${authority.canonicalBaseSha}..${headSha}`,
+    ]).replace(/\r?\n$/u, ""),
+    { label: "Recovered delivered authored commit subject" },
+  );
+  requireExactCanonicalSquashCommit({
+    ghText,
+    subject: parseProtectedMainRefreshUrl(
+      lease.pullRequestUrl,
+      { requireGitHubDotCom: true },
+    ),
+    mergeCommitSha: pullRequest.mergeCommitSha,
+    expectedHeadline: canonicalSquashHeadline,
+    expectedBody: renderProtectedSquashCommitBody({ branch, lease }),
+    ...(protectedMainRefresh ? {
+      expectedBodies: [
+        renderProtectedSquashCommitBody({ branch, lease }),
+        renderProtectedHeadRefreshRearmCommitMessage({
+          pullRequestNumber: Number(pullRequestNumber(lease.pullRequestUrl)),
+          deliveredHeadSha: headSha,
+          targetMainSha: finalProtectedRefreshMainSha(protectedMainRefresh),
+        }),
+      ],
+    } : {}),
+  });
   const verification = verifyCloudAuthority({
     pullRequestUrl: lease.pullRequestUrl,
     branch,
@@ -3450,25 +3574,344 @@ function readPullRequestForProtectedRefresh({ ghText, url }) {
   ]));
 }
 
-function requireArmedAutoMergeReplay({
+function readAuthenticatedGitHubActor({ ghText }) {
+  const actor = JSON.parse(ghText(["api", "user"]));
+  if (
+    !actor
+    || typeof actor !== "object"
+    || Array.isArray(actor)
+    || !Number.isSafeInteger(actor.id)
+    || actor.id <= 0
+    || typeof actor.node_id !== "string"
+    || actor.node_id.length === 0
+    || typeof actor.login !== "string"
+    || actor.login.length === 0
+    || typeof actor.type !== "string"
+    || actor.type.length === 0
+  ) {
+    throw new Error("Protected auto-merge requires an exact authenticated GitHub actor identity.");
+  }
+  return Object.freeze({
+    id: actor.id,
+    nodeId: actor.node_id,
+    login: actor.login,
+    type: actor.type,
+  });
+}
+
+function exactAutoMergeRestIdentity({
   pullRequest,
   url,
+  subject,
+  branch,
+  expectedBaseSha,
   expectedHeadSha,
-  originalError,
+  expectedReviewRequestId,
 }) {
-  const exactReplay = pullRequest?.url === url
-    && pullRequest?.state === "OPEN"
-    && pullRequest?.baseRefName === "main"
-    && pullRequest?.headRefOid === expectedHeadSha
-    && pullRequest?.isDraft === false
-    && pullRequest?.isCrossRepository === false
-    && pullRequest?.autoMergeRequest?.mergeMethod === "SQUASH";
-  if (!exactReplay) {
+  return pullRequest?.number === Number(subject.pullRequestNumber)
+    && pullRequest?.html_url === url
+    && `github-pull-request:${pullRequest?.node_id || ""}` === expectedReviewRequestId
+    && pullRequest?.state === "open"
+    && pullRequest?.merged === false
+    && pullRequest?.merged_at === null
+    && pullRequest?.draft === false
+    && pullRequest?.base?.ref === "main"
+    && pullRequest?.base?.sha === expectedBaseSha
+    && pullRequest?.base?.repo?.full_name === subject.repository
+    && pullRequest?.head?.ref === branch
+    && pullRequest?.head?.sha === expectedHeadSha
+    && pullRequest?.head?.repo?.full_name === subject.repository;
+}
+
+function exactMergedAutoMergeRestIdentity({
+  pullRequest,
+  url,
+  subject,
+  branch,
+  expectedBaseSha,
+  expectedHeadSha,
+  authenticatedActor,
+  expectedReviewRequestId,
+}) {
+  return pullRequest?.number === Number(subject.pullRequestNumber)
+    && pullRequest?.html_url === url
+    && `github-pull-request:${pullRequest?.node_id || ""}` === expectedReviewRequestId
+    && pullRequest?.state === "closed"
+    && pullRequest?.merged === true
+    && Number.isFinite(Date.parse(String(pullRequest?.merged_at || "")))
+    && pullRequest?.draft === false
+    && pullRequest?.base?.ref === "main"
+    && pullRequest?.base?.sha === expectedBaseSha
+    && pullRequest?.base?.repo?.full_name === subject.repository
+    && pullRequest?.head?.ref === branch
+    && pullRequest?.head?.sha === expectedHeadSha
+    && pullRequest?.head?.repo?.full_name === subject.repository
+    && SHA_PATTERN.test(String(pullRequest?.merge_commit_sha || ""))
+    && exactAutoMergeActor({
+      enabledBy: pullRequest?.merged_by,
+      authenticatedActor,
+    });
+}
+
+function requireExactCanonicalSquashCommit({
+  ghText,
+  subject,
+  mergeCommitSha,
+  expectedHeadline,
+  expectedBody,
+  expectedBodies = null,
+}) {
+  const commit = JSON.parse(ghText([
+    "api", "--method", "GET",
+    `repos/${subject.repository}/git/commits/${mergeCommitSha}`,
+  ]));
+  const bodies = expectedBodies || [expectedBody];
+  const expectedMessages = new Set(
+    bodies.map(body => `${expectedHeadline}\n\n${body}`),
+  );
+  if (
+    commit?.sha !== mergeCommitSha
+    || !expectedMessages.has(commit?.message)
+  ) {
     throw new Error(
-      `Protected auto-merge failed and no exact armed replay was observed: ${originalError?.message || "command failed"}.`,
+      "Protected integration canonical squash commit changed its exact subject, body, or attribution trailers.",
     );
   }
-  return pullRequest;
+  return commit;
+}
+
+function finalProtectedRefreshMainSha(refresh) {
+  const finalRefresh = refresh?.schema === "agentic-protected-main-refresh-chain/v1"
+    ? refresh.refreshes?.at(-1)
+    : refresh;
+  const mainSha = finalRefresh?.mainParentSha;
+  if (!SHA_PATTERN.test(String(mainSha || ""))) {
+    throw new Error("Protected integration terminal refresh has no exact target main SHA.");
+  }
+  return mainSha;
+}
+
+function exactAutoMergeActor({ enabledBy, authenticatedActor }) {
+  return enabledBy?.id === authenticatedActor.id
+    && enabledBy?.node_id === authenticatedActor.nodeId
+    && enabledBy?.login === authenticatedActor.login
+    && enabledBy?.type === authenticatedActor.type;
+}
+
+function attributableArmedAutoMerge({
+  autoMerge,
+  expectedHeadline,
+  authenticatedActor,
+}) {
+  return autoMerge
+    && typeof autoMerge === "object"
+    && !Array.isArray(autoMerge)
+    && autoMerge.merge_method === "squash"
+    && autoMerge.commit_title === expectedHeadline
+    && exactAutoMergeActor({
+      enabledBy: autoMerge.enabled_by,
+      authenticatedActor,
+    });
+}
+
+function exactArmedAutoMerge({
+  autoMerge,
+  expectedHeadline,
+  expectedBody,
+  expectedBodies = null,
+  authenticatedActor,
+}) {
+  const bodies = expectedBodies || [expectedBody];
+  return attributableArmedAutoMerge({
+    autoMerge,
+    expectedHeadline,
+    authenticatedActor,
+  })
+    && typeof autoMerge.commit_message === "string"
+    && bodies.includes(autoMerge.commit_message);
+}
+
+function disableFreshAttributedAutoMerge({
+  ghText,
+  run,
+  url,
+  subject,
+  branch,
+  expectedBaseSha,
+  expectedHeadSha,
+  expectedReviewRequestId,
+}) {
+  let disableError = null;
+  try {
+    run("gh", [
+      "pr", "merge", subject.pullRequestNumber,
+      "--repo", subject.repository,
+      "--disable-auto",
+    ]);
+  } catch (error) {
+    disableError = error;
+  }
+  const disabled = readProtectedHeadRefreshPullRequest({ subject, ghText });
+  if (
+    !exactAutoMergeRestIdentity({
+      pullRequest: disabled,
+      url,
+      subject,
+      branch,
+      expectedBaseSha,
+      expectedHeadSha,
+      expectedReviewRequestId,
+    })
+    || disabled.auto_merge !== null
+  ) {
+    throw new Error(
+      `Protected auto-merge cancellation was not confirmed on the exact delivery subject${
+        disableError ? ` after the disable command failed: ${disableError.message || "command failed"}` : ""
+      }.`,
+    );
+  }
+}
+
+function armExactProtectedAutoMerge({
+  ghText,
+  run,
+  autoMergeArgs,
+  url,
+  branch,
+  expectedBaseSha,
+  expectedHeadSha,
+  expectedHeadline,
+  expectedBody,
+  expectedBodies = null,
+  expectedReviewRequestId,
+  reverifyDeliveryAuthority,
+}) {
+  const subject = parseProtectedMainRefreshUrl(url, { requireGitHubDotCom: true });
+  const authenticatedActor = readAuthenticatedGitHubActor({ ghText });
+  const preArm = readProtectedHeadRefreshPullRequest({ subject, ghText });
+  if (!exactAutoMergeRestIdentity({
+    pullRequest: preArm,
+    url,
+    subject,
+    branch,
+    expectedBaseSha,
+    expectedHeadSha,
+    expectedReviewRequestId,
+  })) {
+    throw new Error("Protected auto-merge pre-arm evidence drifted from the exact open delivery subject.");
+  }
+  if (preArm.auto_merge !== null) {
+    const preExistingExact = exactArmedAutoMerge({
+      autoMerge: preArm.auto_merge,
+      expectedHeadline,
+      expectedBody,
+      expectedBodies,
+      authenticatedActor,
+    });
+    if (!preExistingExact) {
+      throw new Error(
+        "Protected auto-merge found a non-exact pre-existing request; it was preserved and requires explicit owner reconciliation.",
+      );
+    }
+    reverifyDeliveryAuthority();
+    return preArm;
+  }
+
+  reverifyDeliveryAuthority();
+  let armError = null;
+  try {
+    run("gh", autoMergeArgs);
+  } catch (error) {
+    armError = error;
+  }
+  const postArm = readProtectedHeadRefreshPullRequest({ subject, ghText });
+  const immediateMerged = exactMergedAutoMergeRestIdentity({
+    pullRequest: postArm,
+    url,
+    subject,
+    branch,
+    expectedBaseSha,
+    expectedHeadSha,
+    authenticatedActor,
+    expectedReviewRequestId,
+  });
+  const exactImmediateMergeAuthorization = postArm.auto_merge === null
+    || exactArmedAutoMerge({
+      autoMerge: postArm.auto_merge,
+      expectedHeadline,
+      expectedBody,
+      expectedBodies,
+      authenticatedActor,
+    });
+  if (immediateMerged && exactImmediateMergeAuthorization) {
+    requireExactCanonicalSquashCommit({
+      ghText,
+      subject,
+      mergeCommitSha: postArm.merge_commit_sha,
+      expectedHeadline,
+      expectedBody,
+      expectedBodies,
+    });
+    reverifyDeliveryAuthority();
+    return postArm;
+  }
+  const exactPostArmIdentity = exactAutoMergeRestIdentity({
+    pullRequest: postArm,
+    url,
+    subject,
+    branch,
+    expectedBaseSha,
+    expectedHeadSha,
+    expectedReviewRequestId,
+  });
+  const exactPostArmRequest = exactArmedAutoMerge({
+    autoMerge: postArm.auto_merge,
+    expectedHeadline,
+    expectedBody,
+    expectedBodies,
+    authenticatedActor,
+  });
+  if (!exactPostArmIdentity) {
+    throw new Error(
+      `Protected auto-merge readback drifted from the exact open delivery subject${
+        armError ? ` after the command failed: ${armError.message || "command failed"}` : ""
+      }.`,
+    );
+  }
+  const attributable = attributableArmedAutoMerge({
+    autoMerge: postArm.auto_merge,
+    expectedHeadline,
+    authenticatedActor,
+  });
+  if (!attributable) {
+    throw new Error(
+      `Protected auto-merge did not produce an attributable exact request${
+        armError ? ` after the command failed: ${armError.message || "command failed"}` : ""
+      }.`,
+    );
+  }
+  if (exactPostArmRequest) {
+    reverifyDeliveryAuthority();
+    return postArm;
+  }
+
+  reverifyDeliveryAuthority();
+  disableFreshAttributedAutoMerge({
+    ghText,
+    run,
+    url,
+    subject,
+    branch,
+    expectedBaseSha,
+    expectedHeadSha,
+    expectedReviewRequestId,
+  });
+  const armFailure = armError
+    ? ` The arm command also failed: ${armError.message || "command failed"}.`
+    : "";
+  throw new Error(
+    `Protected auto-merge readback had a null or drifted body; the attributable request was disabled and explicit replay is required.${armFailure}`,
+  );
 }
 
 function requireProtectedMainRefreshDispatch({

@@ -59,6 +59,12 @@ const autoMergeActorDatabaseId = 8_945_812;
 const autoMergeActorNodeId = "MDQ6VXNlcjg5NDU4MTI=";
 const autoMergeActorLogin = "huijoohwee";
 const autoMergeActorType = "User";
+const authenticatedGitHubActor = Object.freeze({
+  id: autoMergeActorDatabaseId,
+  node_id: autoMergeActorNodeId,
+  login: autoMergeActorLogin,
+  type: autoMergeActorType,
+});
 const protectedSquashSubject = "fix: bind exact protected squash subjects";
 const protectedSquashBody = [
   "Integrate the declared runtime-integration change through its protected managed task lane so downstream policy can attribute the change to its writer lease.",
@@ -68,6 +74,15 @@ const protectedSquashBody = [
   "Agentic-Lease-Epoch: 1",
   "Agentic-Mechanism: Agentic Canvas OS protected integration",
 ].join("\n");
+function protectedRefreshAuthorizationBody({ deliveredHeadSha, targetMainSha }) {
+  return [
+    "Protected head refresh authorization",
+    "",
+    "Agentic-Pull-Request: 42",
+    `Agentic-Delivered-Head: ${deliveredHeadSha}`,
+    `Agentic-Target-Main: ${targetMainSha}`,
+  ].join("\n");
+}
 function refreshMergeMessage(subject, epoch = 1) {
   return [
     subject,
@@ -824,7 +839,12 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
   const packageJsonBlobSha = "3".repeat(40);
   const packageLockBlobSha = "4".repeat(40);
   let head = fenceSha;
-  let lease = createLease({ repo, status: "active", admission });
+  let lease = createLease({
+    repo,
+    status: "active",
+    admission,
+    pullRequestUrl: githubPullRequestUrl,
+  });
   const commands = [];
   const runtimeCommands = [];
   const gitText = args => {
@@ -880,13 +900,19 @@ test("dirty integration validates an exact manifest, commits, publishes, complet
       invocationPath: repo,
       repo,
       gitText,
-      ghText: () => JSON.stringify({
-        url: pullRequestUrl,
-        state: "MERGED",
-        baseRefName: "main",
-        headRefOid: commitSha,
-        mergeCommit: { oid: mergeSha },
-      }),
+      ghText: args => args.join(" ") ===
+        `api --method GET repos/example/repo/git/commits/${mergeSha}`
+        ? JSON.stringify({
+          sha: mergeSha,
+          message: `${managedCommitSubject}\n\n${renderProtectedSquashCommitBody({ branch, lease })}`,
+        })
+        : JSON.stringify({
+          url: githubPullRequestUrl,
+          state: "MERGED",
+          baseRefName: "main",
+          headRefOid: commitSha,
+          mergeCommit: { oid: mergeSha },
+        }),
       leaseStore,
       sessionId: "session-a",
       authorizeCloudDelivery: ({ authority }) => ({
@@ -1354,7 +1380,8 @@ test("delivery aggregates sequential tree-equivalent refreshes before completion
     repo,
     status: "delivery",
     deliveryHeadSha: commitSha,
-    integration: { commitSha },
+    integration: { commitSha, commitMessage: protectedSquashSubject },
+    pullRequestUrl: githubPullRequestUrl,
   });
   const commands = [];
   try {
@@ -1392,15 +1419,24 @@ test("delivery aggregates sequential tree-equivalent refreshes before completion
         if (key === "status --porcelain") return "";
         throw new Error(`unexpected git command: ${key}`);
       },
-      ghText: () => JSON.stringify(pullRequestRead++ === 0
-        ? openPullRequest({ headRefOid: firstRefreshedHeadSha })
-        : {
-        url: pullRequestUrl,
-        state: "MERGED",
-        baseRefName: "main",
-        headRefOid: refreshedHeadSha,
-        mergeCommit: { oid: mergeSha },
-      }),
+      ghText: args => {
+        if (args.join(" ") ===
+          `api --method GET repos/example/repo/git/commits/${mergeSha}`) {
+          return JSON.stringify({
+            sha: mergeSha,
+            message: `${protectedSquashSubject}\n\n${renderProtectedSquashCommitBody({ branch, lease })}`,
+          });
+        }
+        return JSON.stringify(pullRequestRead++ === 0
+          ? openPullRequest({ url: githubPullRequestUrl, headRefOid: firstRefreshedHeadSha })
+          : {
+            url: githubPullRequestUrl,
+            state: "MERGED",
+            baseRefName: "main",
+            headRefOid: refreshedHeadSha,
+            mergeCommit: { oid: mergeSha },
+          });
+      },
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
       },
@@ -1539,7 +1575,7 @@ test("a protected-main merge preserves the approved authored commit evidence", (
     stagedDiffDigest: "4".repeat(64),
     paths: ["scripts/device-integrate-lib.mjs"],
   };
-  let lease = createLease({ repo, integration });
+  let lease = createLease({ repo, integration, pullRequestUrl: githubPullRequestUrl });
   const commands = [];
   try {
     const result = integrateSession({
@@ -1561,13 +1597,19 @@ test("a protected-main merge preserves the approved authored commit evidence", (
         }
         throw new Error(`unexpected git command: ${key}`);
       },
-      ghText: () => JSON.stringify({
-        url: pullRequestUrl,
-        state: "MERGED",
-        baseRefName: "main",
-        headRefOid: refreshedHeadSha,
-        mergeCommit: { oid: mergeSha },
-      }),
+      ghText: args => args.join(" ") ===
+        `api --method GET repos/example/repo/git/commits/${mergeSha}`
+        ? JSON.stringify({
+          sha: mergeSha,
+          message: `${protectedSquashSubject}\n\n${renderProtectedSquashCommitBody({ branch, lease })}`,
+        })
+        : JSON.stringify({
+          url: githubPullRequestUrl,
+          state: "MERGED",
+          baseRefName: "main",
+          headRefOid: refreshedHeadSha,
+          mergeCommit: { oid: mergeSha },
+        }),
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
         annotate: ({ values }) => (lease = { ...lease, ...values }),
@@ -1624,6 +1666,7 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
     autoDelivery: false,
     runtimeRequired: false,
     reviewHeadSha: commitSha,
+    pullRequestUrl: githubPullRequestUrl,
   });
   const verifiedHeads = [];
   const commands = [];
@@ -1631,6 +1674,7 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
   let completed = false;
   let commitSubjectRead = false;
   let pullRequestRead = 0;
+  let providerPullRequestRead = 0;
   try {
     const result = integrateSession({
       invocationPath: repo,
@@ -1650,15 +1694,27 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: args => {
+        const key = args.join(" ");
+        if (key === "api user") return JSON.stringify(authenticatedGitHubActor);
+        if (key === "api --method GET repos/example/repo/pulls/42") {
+          providerPullRequestRead += 1;
+          return JSON.stringify(providerPullRequestRead === 1
+            ? protectedRefreshPullRequest({ auto_merge: null })
+            : armedProtectedRefreshPullRequest());
+        }
+        if (key === `api --method GET repos/example/repo/git/commits/${mergeSha}`) {
+          return JSON.stringify({
+            sha: mergeSha,
+            message: `${protectedSquashSubject}\n\n${protectedSquashBody}`,
+          });
+        }
         pullRequestRead += 1;
-        assert.equal(
-          args.join(" "),
-          pullRequestRead === 1
-            ? `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`
-            : `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest`,
-        );
+        assert.ok([
+          `pr view ${githubPullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`,
+          `pr view ${githubPullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest`,
+        ].includes(key));
         return JSON.stringify({
-          url: pullRequestUrl,
+          url: githubPullRequestUrl,
           state: "MERGED",
           baseRefName: "main",
           headRefOid: commitSha,
@@ -1744,9 +1800,9 @@ test("review-ready delivery reuses the exact reviewed head for authorization and
       cloudMutation.request.idempotencyKey.length
         <= CLOUD_COLLABORATION_BOUNDS.textCharacters,
     );
-    assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha]);
+    assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha, commitSha, commitSha]);
     assert.ok(commands.some(call => call.join(" ") ===
-      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --body ${protectedSquashBody} --match-head-commit ${commitSha} ${pullRequestUrl}`));
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --body ${protectedSquashBody} --match-head-commit ${commitSha} ${githubPullRequestUrl}`));
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -3923,6 +3979,7 @@ test("review-ready delivery reclaims a dormant preserved review authority before
     autoDelivery: false,
     runtimeRequired: false,
     reviewHeadSha: commitSha,
+    pullRequestUrl: githubPullRequestUrl,
     cloudAuthority: {
       schema: "agentic-lane-cloud-authority/v1",
       state: "review_ready",
@@ -3941,6 +3998,7 @@ test("review-ready delivery reclaims a dormant preserved review authority before
   const authorizeTransitions = [];
   let reclaimCount = 0;
   let completed = false;
+  let providerPullRequestRead = 0;
   try {
     const result = integrateSession({
       invocationPath: repo,
@@ -3955,13 +4013,29 @@ test("review-ready delivery reclaims a dormant preserved review authority before
         }
         throw new Error(`unexpected git command: ${key}`);
       },
-      ghText: () => JSON.stringify({
-        url: pullRequestUrl,
-        state: "MERGED",
-        baseRefName: "main",
-        headRefOid: commitSha,
-        mergeCommit: { oid: mergeSha },
-      }),
+      ghText: args => {
+        const key = args.join(" ");
+        if (key === "api user") return JSON.stringify(authenticatedGitHubActor);
+        if (key === "api --method GET repos/example/repo/pulls/42") {
+          providerPullRequestRead += 1;
+          return JSON.stringify(providerPullRequestRead === 1
+            ? protectedRefreshPullRequest({ auto_merge: null })
+            : armedProtectedRefreshPullRequest());
+        }
+        if (key === `api --method GET repos/example/repo/git/commits/${mergeSha}`) {
+          return JSON.stringify({
+            sha: mergeSha,
+            message: `${protectedSquashSubject}\n\n${protectedSquashBody}`,
+          });
+        }
+        return JSON.stringify({
+          url: githubPullRequestUrl,
+          state: "MERGED",
+          baseRefName: "main",
+          headRefOid: commitSha,
+          mergeCommit: { oid: mergeSha },
+        });
+      },
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
       },
@@ -4170,6 +4244,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
   const refreshedTreeSha = "4".repeat(40);
   let head = commitSha;
   let pullRequestRead = 0;
+  let providerPullRequestRead = 0;
   const commitSubjectReads = [];
   const verifiedHeads = [];
   const verifiedProtectedRefreshes = [];
@@ -4180,6 +4255,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
     autoDelivery: false,
     runtimeRequired: false,
     reviewHeadSha: commitSha,
+    pullRequestUrl: githubPullRequestUrl,
   });
   let completed = false;
   try {
@@ -4216,20 +4292,39 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
         throw new Error(`unexpected git command: ${key}`);
       },
       ghText: args => {
+        const key = args.join(" ");
+        if (key === "api user") return JSON.stringify(authenticatedGitHubActor);
+        if (key === "api --method GET repos/example/repo/pulls/42") {
+          providerPullRequestRead += 1;
+          const providerPull = providerPullRequestRead === 1
+            ? protectedRefreshPullRequest({ auto_merge: null })
+            : armedProtectedRefreshPullRequest();
+          return JSON.stringify({
+            ...providerPull,
+            base: { ...providerPull.base, sha: refreshedMainSha },
+            head: { ...providerPull.head, sha: refreshedHeadSha },
+          });
+        }
+        if (key === `api --method GET repos/example/repo/git/commits/${mergeSha}`) {
+          return JSON.stringify({
+            sha: mergeSha,
+            message: `${protectedSquashSubject}\n\n${protectedSquashBody}`,
+          });
+        }
         assert.equal(
-          args.join(" "),
+          key,
           pullRequestRead === 0
-            ? `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`
-            : `pr view ${pullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest`,
+            ? `pr view ${githubPullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit`
+            : `pr view ${githubPullRequestUrl} --json state,baseRefName,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest`,
         );
         return JSON.stringify(pullRequestRead++ === 0 ? {
-          url: pullRequestUrl,
+          url: githubPullRequestUrl,
           state: "OPEN",
           baseRefName: "main",
           headRefOid: refreshedHeadSha,
           mergeCommit: null,
         } : {
-          url: pullRequestUrl,
+          url: githubPullRequestUrl,
           state: "MERGED",
           baseRefName: "main",
           headRefOid: refreshedHeadSha,
@@ -4291,8 +4386,11 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
     assert.equal(result.status, "integrated");
     assert.equal(completed, true);
     assert.deepEqual(commitSubjectReads, []);
-    assert.deepEqual(verifiedHeads, [commitSha, commitSha, commitSha, commitSha]);
-    assert.equal(verifiedProtectedRefreshes.length, 4);
+    assert.deepEqual(
+      verifiedHeads,
+      [commitSha, commitSha, commitSha, commitSha, commitSha, commitSha],
+    );
+    assert.equal(verifiedProtectedRefreshes.length, 6);
     assert.deepEqual(result.protectedMainRefresh, {
       schema: "agentic-protected-main-refresh/v1",
       deliveredHeadSha: commitSha,
@@ -4300,7 +4398,7 @@ test("review-ready delivery accepts an exact protected-main refresh while keepin
       mainParentSha: refreshedMainSha,
     });
     assert.ok(commands.some(call => call.join(" ") ===
-      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --body ${protectedSquashBody} --match-head-commit ${refreshedHeadSha} ${pullRequestUrl}`));
+      `gh pr merge --auto --squash --subject ${protectedSquashSubject} --body ${protectedSquashBody} --match-head-commit ${refreshedHeadSha} ${githubPullRequestUrl}`));
     assert.ok(commands.some(call => call.join(" ") === "git fetch origin refs/pull/42/head"));
     assert.ok(commands.some(call => call.join(" ") === "git merge --ff-only FETCH_HEAD"));
   } finally {
@@ -4361,8 +4459,26 @@ test("review-ready merged replay verifies terminal cloud authority before comple
 
   assert.equal(result.status, "integrated");
   assert.ok(events.includes(`verify:${commitSha}`));
+  assert.ok(
+    events.indexOf("read:canonical-squash-commit")
+      < events.indexOf(`verify:${commitSha}`),
+  );
   assert.ok(events.includes("authorize:delivery"));
   assert.equal(events.some(event => event.startsWith("run:gh pr merge")), false);
+});
+
+test("review-ready merged replay rejects rewritten bytes before terminal cloud authority", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    events,
+    initialPullRequest: mergedPullRequest(),
+    terminalMergedReplay: true,
+    canonicalCommitMessage: "fix: rewritten canonical merge",
+    observations: [],
+  }), /canonical squash commit changed its exact subject, body, or attribution trailers/u);
+
+  assert.ok(events.includes("read:canonical-squash-commit"));
+  assert.equal(events.some(event => event.startsWith("verify:")), false);
 });
 
 test("expired delivery merged replay verifies historical retirement after live recovery fails", () => {
@@ -4955,47 +5071,360 @@ test("review-ready delivery fails closed when GitHub rejects the protected refre
   assert.equal(events.filter(event => event.includes("workflow run auto-delivery.yml")).length, 1);
 });
 
-test("review-ready delivery accepts a failed auto-merge command only as an exact armed replay", () => {
+test("review-ready delivery accepts auto-merge response loss only after exact full readback", () => {
   const events = [];
   const result = runProtectedRefreshScenario({
     events,
     failAutoMerge: true,
-    autoMergeReplay: openPullRequest({
-      url: githubPullRequestUrl,
-      autoMergeRequest: { mergeMethod: "SQUASH" },
-    }),
+    autoMergeReadback: armedProtectedRefreshPullRequest(),
     observations: [mergedPullRequest()],
   });
 
   assert.equal(result.status, "integrated");
   assert.equal(events.filter(event => event.startsWith("run:gh pr merge --auto")).length, 1);
-  assert.ok(events.includes("read:replay:OPEN:CLEAN"));
+  assert.ok(events.includes("read:arm-readback:open"));
+  assert.equal(events.some(event => event.includes("--disable-auto")), false);
 });
 
-test("review-ready delivery rejects an auto-merge head race and unarmed replay", () => {
+test("review-ready delivery preserves auto-merge after head drift", () => {
+  const events = [];
   assert.throws(() => runProtectedRefreshScenario({
+    events,
     failAutoMerge: true,
-    autoMergeReplay: openPullRequest({
-      url: githubPullRequestUrl,
-      headRefOid: "2".repeat(40),
-      autoMergeRequest: { mergeMethod: "SQUASH" },
+    autoMergeReadback: armedProtectedRefreshPullRequest({
+      head: {
+        ...protectedRefreshPullRequest().head,
+        sha: "2".repeat(40),
+      },
     }),
     observations: [],
-  }), /no exact armed replay was observed/u);
+  }), /readback drifted from the exact open delivery subject/u);
+  assert.equal(events.some(event => event.includes("--disable-auto")), false);
+});
 
-  for (const autoMergeRequest of [null, { mergeMethod: "MERGE" }]) {
+test("review-ready delivery disables malformed auto-merge readback once and fails closed", () => {
+  for (const [failAutoMerge, commitMessage] of [
+    [false, null],
+    [true, null],
+    [false, "drifted body"],
+  ]) {
     const events = [];
     assert.throws(() => runProtectedRefreshScenario({
       events,
-      failAutoMerge: true,
-      autoMergeReplay: openPullRequest({
-        url: githubPullRequestUrl,
-        autoMergeRequest,
+      failAutoMerge,
+      autoMergeReadback: armedProtectedRefreshPullRequest({
+        auto_merge: {
+          ...armedProtectedRefreshPullRequest().auto_merge,
+          commit_message: commitMessage,
+        },
       }),
       observations: [],
-    }), /no exact armed replay was observed/u);
+    }), /null or drifted body; the attributable request was disabled/u);
+    assert.equal(events.filter(event => event.includes("--disable-auto")).length, 1);
     assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
   }
+});
+
+test("review-ready delivery never disables a foreign auto-merge actor or headline", () => {
+  const cases = [
+    {
+      auto_merge: {
+        ...armedProtectedRefreshPullRequest().auto_merge,
+        enabled_by: {
+          ...armedProtectedRefreshPullRequest().auto_merge.enabled_by,
+          login: "another-user",
+        },
+      },
+    },
+    {
+      auto_merge: {
+        ...armedProtectedRefreshPullRequest().auto_merge,
+        commit_title: "fix: foreign auto-merge request",
+      },
+    },
+  ];
+  for (const autoMergeReadback of cases.map(overrides =>
+    armedProtectedRefreshPullRequest(overrides))) {
+    const events = [];
+    assert.throws(() => runProtectedRefreshScenario({
+      events,
+      autoMergeReadback,
+      observations: [],
+    }), /did not produce an attributable exact request/u);
+    assert.equal(events.some(event => event.includes("--disable-auto")), false);
+  }
+});
+
+test("review-ready delivery preserves auto-merge after base drift", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    events,
+    autoMergeReadback: armedProtectedRefreshPullRequest({
+      base: {
+        ...protectedRefreshPullRequest().base,
+        sha: "2".repeat(40),
+      },
+    }),
+    observations: [],
+  }), /readback drifted from the exact open delivery subject/u);
+  assert.equal(events.some(event => event.includes("--disable-auto")), false);
+});
+
+test("review-ready delivery adopts a lost disable response only after exact null readback", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    events,
+    failDisableAutoMerge: true,
+    autoMergeReadback: armedProtectedRefreshPullRequest({
+      auto_merge: {
+        ...armedProtectedRefreshPullRequest().auto_merge,
+        commit_message: null,
+      },
+    }),
+    observations: [],
+  }), /null or drifted body; the attributable request was disabled/u);
+  assert.equal(events.filter(event => event.includes("--disable-auto")).length, 1);
+  assert.ok(events.includes("read:disable-readback:open"));
+  assert.ok(events.includes("run:gh pr merge 42 --repo example/repo --disable-auto"));
+  assert.equal(events.some(event =>
+    event.includes("--disable-auto") && event.includes("--match-head-commit")), false);
+});
+
+test("review-ready delivery preserves an exact arm when post-arm authority is lost", () => {
+  const events = [];
+  let verificationCount = 0;
+  assert.throws(() => runProtectedRefreshScenario({
+    events,
+    observations: [],
+    onVerify: () => {
+      verificationCount += 1;
+      if (verificationCount === 3) throw new Error("post-arm authority lost");
+    },
+  }), /post-arm authority lost/u);
+  assert.equal(events.some(event => event.includes("--disable-auto")), false);
+  assert.equal(events.some(event => event.includes("workflow run auto-delivery.yml")), false);
+});
+
+test("review-ready delivery adopts only an exact pre-existing auto-merge request", () => {
+  const events = [];
+  const result = runProtectedRefreshScenario({
+    events,
+    preArmPullRequest: armedProtectedRefreshPullRequest(),
+    observations: [mergedPullRequest()],
+  });
+  assert.equal(result.status, "integrated");
+  assert.equal(events.some(event => event.startsWith("run:gh pr merge --auto")), false);
+  assert.equal(events.some(event => event.includes("--disable-auto")), false);
+});
+
+test("review-ready delivery adopts an exact pre-existing protected-refresh authorization", () => {
+  const refreshedHeadSha = "2".repeat(40);
+  const refreshedMainSha = "3".repeat(40);
+  const refreshBody = protectedRefreshAuthorizationBody({
+    deliveredHeadSha: commitSha,
+    targetMainSha: refreshedMainSha,
+  });
+  const events = [];
+  const result = runProtectedRefreshScenario({
+    events,
+    initialPullRequest: openPullRequest({ headRefOid: refreshedHeadSha }),
+    protectedRefresh: {
+      headSha: refreshedHeadSha,
+      mainSha: refreshedMainSha,
+      treeSha: "4".repeat(40),
+    },
+    preArmPullRequest: armedProtectedRefreshPullRequest({
+      base: {
+        ...protectedRefreshPullRequest().base,
+        sha: refreshedMainSha,
+      },
+      head: {
+        ...protectedRefreshPullRequest().head,
+        sha: refreshedHeadSha,
+      },
+      auto_merge: {
+        ...armedProtectedRefreshPullRequest().auto_merge,
+        commit_message: refreshBody,
+      },
+    }),
+    canonicalCommitMessage: `${protectedSquashSubject}\n\n${refreshBody}`,
+    observations: [mergedPullRequest({ headRefOid: refreshedHeadSha })],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(events.some(event => event.startsWith("run:gh pr merge --auto")), false);
+  assert.equal(events.some(event => event.includes("--disable-auto")), false);
+});
+
+test("review-ready delivery preserves a malformed pre-existing request for owner reconciliation", () => {
+  const events = [];
+  assert.throws(() => runProtectedRefreshScenario({
+    events,
+    preArmPullRequest: armedProtectedRefreshPullRequest({
+      auto_merge: {
+        ...armedProtectedRefreshPullRequest().auto_merge,
+        commit_message: null,
+      },
+    }),
+    observations: [],
+  }), /non-exact pre-existing request; it was preserved and requires explicit owner reconciliation/u);
+  assert.equal(events.some(event => event.startsWith("run:gh pr merge --auto")), false);
+  assert.equal(events.some(event => event.includes("--disable-auto")), false);
+});
+
+test("review-ready delivery preserves a pre-existing exact request when authority is lost", () => {
+  const events = [];
+  let verificationCount = 0;
+  assert.throws(() => runProtectedRefreshScenario({
+    events,
+    preArmPullRequest: armedProtectedRefreshPullRequest(),
+    observations: [],
+    onVerify: () => {
+      verificationCount += 1;
+      if (verificationCount === 2) throw new Error("pre-existing authority lost");
+    },
+  }), /pre-existing authority lost/u);
+  assert.equal(events.some(event => event.startsWith("run:gh pr merge --auto")), false);
+  assert.equal(events.some(event => event.includes("--disable-auto")), false);
+});
+
+test("review-ready delivery accepts the immediate merged arm race only with canonical bytes", () => {
+  for (const autoMerge of [null, armedProtectedRefreshPullRequest().auto_merge]) {
+    const events = [];
+    const result = runProtectedRefreshScenario({
+      events,
+      autoMergeReadback: protectedRefreshPullRequest({
+        state: "closed",
+        merged: true,
+        merged_at: "2026-08-30T10:00:00.000Z",
+        merged_by: {
+          id: autoMergeActorDatabaseId,
+          node_id: autoMergeActorNodeId,
+          login: autoMergeActorLogin,
+          type: autoMergeActorType,
+        },
+        merge_commit_sha: mergeSha,
+        auto_merge: autoMerge,
+      }),
+      observations: [mergedPullRequest()],
+    });
+    assert.equal(result.status, "integrated");
+    assert.ok(events.includes("read:canonical-squash-commit"));
+    assert.equal(events.some(event => event.includes("--disable-auto")), false);
+  }
+});
+
+test("review-ready delivery rejects malformed immediate-merge authorization or canonical bytes", () => {
+  const merged = overrides => protectedRefreshPullRequest({
+    state: "closed",
+    merged: true,
+    merged_at: "2026-08-30T10:00:00.000Z",
+    merged_by: {
+      id: autoMergeActorDatabaseId,
+      node_id: autoMergeActorNodeId,
+      login: autoMergeActorLogin,
+      type: autoMergeActorType,
+    },
+    merge_commit_sha: mergeSha,
+    ...overrides,
+  });
+  assert.throws(() => runProtectedRefreshScenario({
+    autoMergeReadback: merged({
+      auto_merge: {
+        ...armedProtectedRefreshPullRequest().auto_merge,
+        commit_message: null,
+      },
+    }),
+    observations: [],
+  }), /readback drifted from the exact open delivery subject/u);
+  assert.throws(() => runProtectedRefreshScenario({
+    autoMergeReadback: merged({ auto_merge: null }),
+    canonicalCommitMessage: "fix: wrong canonical message",
+    observations: [],
+  }), /canonical squash commit changed its exact subject, body, or attribution trailers/u);
+});
+
+test("review-ready delivery rejects rewritten canonical squash subjects, bodies, or trailers", () => {
+  const cases = [
+    `fix: rewritten subject\n\n${protectedSquashBody}`,
+    `${protectedSquashSubject}\n\nrewritten body`,
+    `${protectedSquashSubject}\n\n${protectedSquashBody.replace(
+      "Agentic-Lease-Epoch: 1",
+      "Agentic-Lease-Epoch: 2",
+    )}`,
+  ];
+  for (const canonicalCommitMessage of cases) {
+    assert.throws(() => runProtectedRefreshScenario({
+      canonicalCommitMessage,
+      observations: [mergedPullRequest()],
+    }), /canonical squash commit changed its exact subject, body, or attribution trailers/u);
+  }
+});
+
+test("review-ready delivery accepts the exact final protected-refresh authorization body", () => {
+  const firstRefreshedHeadSha = "2".repeat(40);
+  const firstRefreshedMainSha = "3".repeat(40);
+  const finalRefreshedHeadSha = "5".repeat(40);
+  const finalRefreshedMainSha = "6".repeat(40);
+  const events = [];
+  const result = runProtectedRefreshScenario({
+    events,
+    protectedRefresh: {
+      headSha: finalRefreshedHeadSha,
+      mainSha: finalRefreshedMainSha,
+      treeSha: "7".repeat(40),
+      refreshes: [
+        {
+          previousHeadSha: commitSha,
+          refreshedHeadSha: firstRefreshedHeadSha,
+          mainParentSha: firstRefreshedMainSha,
+          treeSha: "4".repeat(40),
+        },
+        {
+          previousHeadSha: firstRefreshedHeadSha,
+          refreshedHeadSha: finalRefreshedHeadSha,
+          mainParentSha: finalRefreshedMainSha,
+          treeSha: "7".repeat(40),
+        },
+      ],
+    },
+    canonicalCommitMessage: `${protectedSquashSubject}\n\n${protectedRefreshAuthorizationBody({
+      deliveredHeadSha: commitSha,
+      targetMainSha: finalRefreshedMainSha,
+    })}`,
+    observations: [
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      mergedPullRequest({ headRefOid: finalRefreshedHeadSha }),
+    ],
+  });
+
+  assert.equal(result.status, "integrated");
+  assert.equal(result.protectedMainRefresh.refreshCount, 2);
+  assert.equal(result.protectedMainRefresh.refreshes.at(-1).mainParentSha,
+    finalRefreshedMainSha);
+  assert.ok(events.includes("read:canonical-squash-commit"));
+});
+
+test("review-ready delivery rejects a protected-refresh authorization for the wrong target main", () => {
+  const refreshedHeadSha = "2".repeat(40);
+  const refreshedMainSha = "3".repeat(40);
+  assert.throws(() => runProtectedRefreshScenario({
+    protectedRefresh: {
+      headSha: refreshedHeadSha,
+      mainSha: refreshedMainSha,
+      treeSha: "4".repeat(40),
+    },
+    canonicalCommitMessage: `${protectedSquashSubject}\n\n${protectedRefreshAuthorizationBody({
+      deliveredHeadSha: commitSha,
+      targetMainSha: "5".repeat(40),
+    })}`,
+    observations: [
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      openPullRequest({ mergeStateStatus: "BEHIND" }),
+      mergedPullRequest({ headRefOid: refreshedHeadSha }),
+    ],
+  }), /canonical squash commit changed its exact subject, body, or attribution trailers/u);
 });
 
 test("review-ready delivery treats UNKNOWN as a bounded non-mutating poll before verified refresh", () => {
@@ -5173,6 +5602,7 @@ test("authorized and legacy local-only auto-delivery complete only through canon
     autoDelivery: true,
     runtimeRequired: true,
     reviewHeadSha: commitSha,
+    pullRequestUrl: githubPullRequestUrl,
   });
   if (legacyLocalOnly) {
     delete lease.admission;
@@ -5183,6 +5613,7 @@ test("authorized and legacy local-only auto-delivery complete only through canon
   let completedAfterRuntime = false;
   let cloudAuthorizationCalls = 0;
   let cloudVerificationCalls = 0;
+  let providerPullRequestRead = 0;
   try {
     const result = integrateSession({
       invocationPath: repo,
@@ -5197,13 +5628,29 @@ test("authorized and legacy local-only auto-delivery complete only through canon
         }
         throw new Error(`unexpected git command: ${key}`);
       },
-      ghText: () => JSON.stringify({
-        url: pullRequestUrl,
-        state: "MERGED",
-        baseRefName: "main",
-        headRefOid: commitSha,
-        mergeCommit: { oid: mergeSha },
-      }),
+      ghText: args => {
+        const key = args.join(" ");
+        if (key === "api user") return JSON.stringify(authenticatedGitHubActor);
+        if (key === "api --method GET repos/example/repo/pulls/42") {
+          providerPullRequestRead += 1;
+          return JSON.stringify(providerPullRequestRead === 1
+            ? protectedRefreshPullRequest({ auto_merge: null })
+            : armedProtectedRefreshPullRequest());
+        }
+        if (key === `api --method GET repos/example/repo/git/commits/${mergeSha}`) {
+          return JSON.stringify({
+            sha: mergeSha,
+            message: `${protectedSquashSubject}\n\n${renderProtectedSquashCommitBody({ branch, lease })}`,
+          });
+        }
+        return JSON.stringify({
+          url: githubPullRequestUrl,
+          state: "MERGED",
+          baseRefName: "main",
+          headRefOid: commitSha,
+          mergeCommit: { oid: mergeSha },
+        });
+      },
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
         complete: values => {
@@ -5291,9 +5738,11 @@ function runAuthorizedAncillaryAutoDelivery({ postRuntimeMainSha = mainSha } = {
     autoDelivery: true,
     runtimeRequired: true,
     reviewHeadSha: commitSha,
+    pullRequestUrl: githubPullRequestUrl,
   });
   let runtimeProven = false;
   let ancillaryHeadReads = 0;
+  let providerPullRequestRead = 0;
   const commands = [];
   try {
     const result = integrateSession({
@@ -5311,13 +5760,29 @@ function runAuthorizedAncillaryAutoDelivery({ postRuntimeMainSha = mainSha } = {
         }
         throw new Error(`unexpected git command: ${key}`);
       },
-      ghText: () => JSON.stringify({
-        url: pullRequestUrl,
-        state: "MERGED",
-        baseRefName: "main",
-        headRefOid: commitSha,
-        mergeCommit: { oid: mergeSha },
-      }),
+      ghText: args => {
+        const key = args.join(" ");
+        if (key === "api user") return JSON.stringify(authenticatedGitHubActor);
+        if (key === "api --method GET repos/example/repo/pulls/42") {
+          providerPullRequestRead += 1;
+          return JSON.stringify(providerPullRequestRead === 1
+            ? protectedRefreshPullRequest({ auto_merge: null })
+            : armedProtectedRefreshPullRequest());
+        }
+        if (key === `api --method GET repos/example/repo/git/commits/${mergeSha}`) {
+          return JSON.stringify({
+            sha: mergeSha,
+            message: `${protectedSquashSubject}\n\n${renderProtectedSquashCommitBody({ branch, lease })}`,
+          });
+        }
+        return JSON.stringify({
+          url: githubPullRequestUrl,
+          state: "MERGED",
+          baseRefName: "main",
+          headRefOid: commitSha,
+          mergeCommit: { oid: mergeSha },
+        });
+      },
       leaseStore: {
         read: requested => requested ? lease : { leases: { [branch]: lease } },
         complete: values => {
@@ -5466,6 +5931,10 @@ function runProtectedRefreshScenario({
   onRun = null,
   failAutoMerge = false,
   autoMergeReplay = null,
+  preArmPullRequest = null,
+  autoMergeReadback = null,
+  disabledAutoMergeReadback = null,
+  failDisableAutoMerge = false,
   protectedRefresh = null,
   staleDeliveryHeadSha = null,
   initialPullRequest = null,
@@ -5473,6 +5942,7 @@ function runProtectedRefreshScenario({
   livePullRequest = protectedRefreshPullRequest(),
   liveMainRef = protectedRefreshMainRef(),
   initialLocalHeadSha = commitSha,
+  canonicalCommitMessage = null,
 }) {
   const repo = mkdtempSync(path.join(os.tmpdir(), "agentic-integrate-protected-refresh-"));
   const canonicalAgenticRoot = path.join(repo, "canonical", "agentic-canvas-os");
@@ -5517,7 +5987,10 @@ function runProtectedRefreshScenario({
     : reviewedLease;
   let initialPullRequestRead = leaseStatus === "delivery";
   let recoveryPullRequestRead = 0;
-  let autoMergeReplayPending = false;
+  let preArmPullRequestRead = leaseStatus === "delivery";
+  let autoMergeReadbackPending = false;
+  let disabledAutoMergeReadbackPending = false;
+  let lastAutoMergeReadback = null;
   let observationIndex = 0;
   let head = initialLocalHeadSha;
   let clock = 0;
@@ -5574,19 +6047,91 @@ function runProtectedRefreshScenario({
         const key = args.join(" ");
         const recoveryFields =
           "state,baseRefName,baseRefOid,url,headRefOid,mergeCommit,isDraft,isCrossRepository,mergeStateStatus,autoMergeRequest";
+        if (key === "api user") {
+          events.push("read:authenticated-actor");
+          return JSON.stringify(authenticatedGitHubActor);
+        }
+        if (key === "api --method GET repos/example/repo/pulls/42") {
+          const initialRefreshHeadSha = initialPullRequest?.headRefOid !== commitSha
+            ? initialPullRequest?.headRefOid
+            : null;
+          const expectedHeadSha = initialRefreshHeadSha || commitSha;
+          const expectedBaseSha = initialRefreshHeadSha
+            ? protectedRefresh?.mainSha
+            : baseSha;
+          let phase;
+          let pullRequest;
+          if (!preArmPullRequestRead) {
+            preArmPullRequestRead = true;
+            phase = "pre-arm";
+            pullRequest = preArmPullRequest || protectedRefreshPullRequest({
+              auto_merge: null,
+              base: {
+                ...protectedRefreshPullRequest().base,
+                sha: expectedBaseSha,
+              },
+              head: {
+                ...protectedRefreshPullRequest().head,
+                sha: expectedHeadSha,
+              },
+            });
+          } else if (autoMergeReadbackPending) {
+            autoMergeReadbackPending = false;
+            phase = "arm-readback";
+            pullRequest = autoMergeReadback || autoMergeReplay || armedProtectedRefreshPullRequest({
+              base: {
+                ...protectedRefreshPullRequest().base,
+                sha: expectedBaseSha,
+              },
+              head: {
+                ...protectedRefreshPullRequest().head,
+                sha: expectedHeadSha,
+              },
+            });
+            lastAutoMergeReadback = pullRequest;
+          } else if (disabledAutoMergeReadbackPending) {
+            disabledAutoMergeReadbackPending = false;
+            phase = "disable-readback";
+            pullRequest = disabledAutoMergeReadback || protectedRefreshPullRequest({
+              auto_merge: null,
+              base: lastAutoMergeReadback?.base || {
+                ...protectedRefreshPullRequest().base, sha: expectedBaseSha,
+              },
+              head: lastAutoMergeReadback?.head || {
+                ...protectedRefreshPullRequest().head, sha: expectedHeadSha,
+              },
+            });
+          } else {
+            phase = "protected-refresh";
+            pullRequest = livePullRequest;
+          }
+          const boundPullRequest = pullRequest.html_url === githubPullRequestUrl
+            ? { ...pullRequest, html_url: pullUrl }
+            : pullRequest;
+          events.push(
+            phase === "protected-refresh"
+              ? "read:protected-refresh-pull-request"
+              : `read:${phase}:${boundPullRequest.state}`,
+          );
+          return JSON.stringify(boundPullRequest);
+        }
         if (recoveryFixture && key === `pr view ${pullUrl} --json ${recoveryFields}`) {
           const pullRequest = recoveryFixture.pullRequests[recoveryPullRequestRead++];
           if (!pullRequest) throw new Error("expired delivery fixture exhausted PR recovery observations");
           events.push(`read:recovery:${recoveryPullRequestRead}`);
           return JSON.stringify({ ...pullRequest, url: pullUrl });
         }
-        if (key === "api --method GET repos/example/repo/pulls/42") {
-          events.push("read:protected-refresh-pull-request");
-          return JSON.stringify(livePullRequest);
-        }
         if (key === "api --method GET repos/example/repo/git/ref/heads/main") {
           events.push("read:protected-main-ref");
           return JSON.stringify(liveMainRef);
+        }
+        if (key === `api --method GET repos/example/repo/git/commits/${mergeSha}`) {
+          events.push("read:canonical-squash-commit");
+          return JSON.stringify({
+            sha: mergeSha,
+            message: canonicalCommitMessage
+              || `${protectedSquashSubject}\n\n${renderProtectedSquashCommitBody({ branch, lease })}`,
+          });
         }
         const expectedFields = !initialPullRequestRead
           ? "state,baseRefName,url,headRefOid,mergeCommit"
@@ -5602,10 +6147,6 @@ function runProtectedRefreshScenario({
           phase = "initial";
           pullRequest = initialPullRequest
             || openPullRequest({ url: pullUrl, mergeStateStatus: "CLEAN" });
-        } else if (autoMergeReplayPending) {
-          autoMergeReplayPending = false;
-          phase = "replay";
-          pullRequest = autoMergeReplay;
         } else {
           phase = "wait";
           pullRequest = observations[observationIndex++];
@@ -5668,9 +6209,17 @@ function runProtectedRefreshScenario({
       run: (command, args) => {
         events.push(`run:${[command, ...args].join(" ")}`);
         onRun?.({ command, args });
-        if (command === "gh" && args[0] === "pr" && failAutoMerge) {
-          autoMergeReplayPending = true;
-          throw new Error("auto-merge command reported already enabled");
+        if (command === "gh" && args[0] === "pr" && args.includes("--auto")) {
+          autoMergeReadbackPending = true;
+          if (failAutoMerge) {
+            throw new Error("auto-merge command reported already enabled");
+          }
+        }
+        if (command === "gh" && args[0] === "pr" && args.includes("--disable-auto")) {
+          disabledAutoMergeReadbackPending = true;
+          if (failDisableAutoMerge) {
+            throw new Error("auto-merge disable response was lost");
+          }
         }
         if (command === "git" && args.join(" ") === "merge --ff-only FETCH_HEAD") {
           head = protectedRefresh.headSha;
@@ -5917,6 +6466,20 @@ function openPullRequest(overrides = {}) {
   };
 }
 
+function armedPullRequest(overrides = {}) {
+  return openPullRequest({
+    baseRefOid: baseSha,
+    headRefName: branch,
+    autoMergeRequest: {
+      mergeMethod: "SQUASH",
+      commitHeadline: protectedSquashSubject,
+      commitBody: protectedSquashBody,
+      enabledBy: { id: autoMergeActorNodeId, login: autoMergeActorLogin },
+    },
+    ...overrides,
+  });
+}
+
 function mergedPullRequest(overrides = {}) {
   return {
     url: pullRequestUrl,
@@ -5960,9 +6523,20 @@ function protectedRefreshPullRequest(overrides = {}) {
       commit_message: null,
     },
     mergeable_state: "behind",
-    merge_commit_sha: null,
+    // GitHub commonly exposes a synthetic test-merge SHA while the PR is still open.
+    merge_commit_sha: "9".repeat(40),
     ...overrides,
   };
+}
+
+function armedProtectedRefreshPullRequest(overrides = {}) {
+  return protectedRefreshPullRequest({
+    auto_merge: {
+      ...protectedRefreshPullRequest().auto_merge,
+      commit_message: protectedSquashBody,
+    },
+    ...overrides,
+  });
 }
 
 function protectedRefreshMainRef(overrides = {}) {

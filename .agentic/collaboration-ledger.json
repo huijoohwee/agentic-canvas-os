@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6442,
-  "headDigest": "012159cc2d70a5fdaa82ad6419238b10d07f2b92166d7f167704f7b7d0a6a7f8",
+  "sequence": 6443,
+  "headDigest": "f4a1bc7744114bc6a056b85781f5163818aee03126f24b1b2133ca9631bb36d1",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -327413,6 +327413,61 @@
       },
       "claimDigest": "e9d6b4d534bfcae18fa737e87f4681240712ae42ccd1ad6dbc6901f2b73d56d5",
       "digest": "012159cc2d70a5fdaa82ad6419238b10d07f2b92166d7f167704f7b7d0a6a7f8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6443,
+      "parentDigest": "012159cc2d70a5fdaa82ad6419238b10d07f2b92166d7f167704f7b7d0a6a7f8",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "390c05e2d09450494765b39a00d3338b9548a5914807ad91a2fa315babc93f28",
+      "idempotencyKey": "1f6ce4105c872f8bbe7ba9485ef38f7ce8860d9fc26ddf40a57d51fd051122de",
+      "requestDigest": "5c2ffca43fbf35550ca761075ba3d81013964f5cc4ae7094c6f7a7429d8f9166",
+      "evaluationTime": "2026-08-30T20:17:34.000Z",
+      "claimCore": {
+        "claimId": "390c05e2d09450494765b39a00d3338b9548a5914807ad91a2fa315babc93f28",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:2f18083eb69fb81aa6ee75f620c141828167dd6a9938df27b1495908140565b9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c6f8dbc05ebb18cbc43f48135a17d1dc7432692de82727f2b50ba9073ed1811f",
+        "canonicalBaseRevision": "c49dfb670ab3f2863d06098e45c742b68b1b13be",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-current-base-pr-marker-replay.test.mjs",
+          "path:docs/ACTIVE-OWNED-DIRT-CURRENT-BASE-PR-MARKER-REPLAY.md",
+          "path:scripts/active-owned-dirt-current-base-pr-marker-replay-contract.mjs",
+          "path:scripts/active-owned-dirt-current-base-pr-marker-replay-controller.mjs",
+          "path:scripts/active-owned-dirt-current-base-pr-marker-replay-repository-adapter.mjs",
+          "path:scripts/active-owned-dirt-current-base-pr-marker-replay.mjs",
+          "semantic:active-dirt-marker-replay-order"
+        ],
+        "writeSetDigest": "882ad0e121c9d6e00ef97cccd66905146157c6279a8966bcadc84e01899a6045",
+        "laneRevision": "c16dee29507a26cb0c8b2e8e6f9b9d80204e4a57",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-30T21:31:49.000Z",
+        "evidenceDigest": "81c193f6375e4e27bd621e845d10bbd6bd362baef4e864af9383b0af43bf1260",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBhjICg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "c16dee29507a26cb0c8b2e8e6f9b9d80204e4a57",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBhjICg",
+          "focusedEvidenceDigest": "81c193f6375e4e27bd621e845d10bbd6bd362baef4e864af9383b0af43bf1260",
+          "dependencyClosureDigest": "2aca81d0acc47f72113deeed342ff4576ac6c22a0e4201fc24cf0677e1185986",
+          "namedChecksDigest": "d8db98f476026fb8c6b8636c4acb81fd940b6a05e15196802067e00c1618bfde",
+          "handoffEvidenceDigest": "c7c8d639a0849049fa2b22a98c3a634efa0087f40c64fffbf3b20acf8b552e9f",
+          "operatorDecisionDigest": "415085a672ce0356fb2ca35ebb5f8b2f99ff48cdada1b0fd3ebce932062db43b",
+          "integrationIntentDigest": "c1a8667271296de73667017b18a90821faa8ebec8a2d0910bd55bdf72ff568c2",
+          "integratedAt": "2026-08-30T20:17:34.000Z"
+        }
+      },
+      "claimDigest": "057d1caf3d2823f8632d8cf76b5620500180b70e667e04f26cdbd704cb08ad86",
+      "digest": "f4a1bc7744114bc6a056b85781f5163818aee03126f24b1b2133ca9631bb36d1"
     }
   ]
 }

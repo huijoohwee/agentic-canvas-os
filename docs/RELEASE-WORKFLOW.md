@@ -238,22 +238,6 @@ Confirm the startup ledger from `START-WORKFLOW.md`. Read repository instruction
 
 Stop before mutation when ownership is ambiguous, history is non-fast-forward, or another worktree or device is writing the same branch or semantic scope.
 
-Preflight is one pass, not a sequence of refusals. Report every missing, malformed, or unresolvable required input together, each named with the exact command that supplies it, and derive every machine-derivable operand rather than requesting it. `AUTONOMOUS-GOAL-PURSUIT.md` owns that interaction economy; it relaxes no gate in this document.
-
-Validate every locally knowable delivery constraint here, before the first publish attempt, so a local rule fails locally instead of at the remote boundary: commit subject bounds, review-request template conformance, declared scope-token equality, and changed-path containment within the admitted write scope. Discovering one of these only at publication wastes a round trip and a volatile binding.
-
-Read the ledger digest, canonical frontier, and lease expiry immediately before the transition that consumes them, never at plan time. A concurrent writer moves all three, and a compare-and-swap loss with an unchanged conflict set is re-derived within the declared retry bound rather than escalated.
-
-Attempt the declared environment-only bootstrap once, bounded, before emitting any failing verdict; a fresh worktree missing its installed dependencies is transport, and reporting its symptom as a product regression both misstates the result and poisons the outcome record. Record every blocked attempt with its typed reason as an outcome so a repeated mechanical blocker changes ordering instead of recurring.
-
-Escalate only an unresolved semantic decision. The exact-candidate human authorization in the protected Production environment, and every irreversible or credential-bearing effect, remain operator decisions and are unchanged by this economy; transport, identity derivation, field discovery, and idempotent retry never become prompts.
-
-Do not convert a blocked release into a repair chain. Classify each rejection: a moved ledger digest, fence, or canonical frontier is contended and is re-read and retried within the declared bound, while a message naming a required field, an exact expected value, or a rejected value is deterministic and can never succeed unchanged. On a deterministic rejection read the validating source once and take the complete requirement rather than discovering it one rejection at a time.
-
-Correct every wrong value at its owning source. A writer lease, its cloud-authority projection, a pull-request marker, and a lifecycle report are projections of a claim; patching one satisfies only its own gate and invalidates every later gate derived from the same stale claim. When three or more gates fail in sequence and each failure was caused by the previous fix, stop patching, identify the earliest wrong value, and re-derive the chain from the claim that owns it. If that value is fixed at claim time and no transition can change it, retire and re-claim once at the exact current base rather than continuing to reconcile downstream.
-
-Cap shared-state repair at one attempt with its reversal stated in advance, bound the attempt budget across the whole release rather than per command, and stop when either bound is reached. Preserve state, report the earliest wrong value with its owner and the exact residue left in the ledger, refs, and worktrees, and escalate the one decision required. A stalled release that left recoverable residue is a better outcome than a repaired release nobody can audit.
-
 ### 2. Reconcile
 
 Classify dirty paths as requested work, valid concurrent work, generated output, stale or duplicate residue, or unresolved ownership. Preserve valid work. Remove confirmed residue at its source. Forbid destructive reset, force checkout, force-push, silent indefinite stash, broad untracked deletion, and unrelated change absorption.

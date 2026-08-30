@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6413,
-  "headDigest": "ba583e1ad4534928e674bbde3ed440c95fba0c5185d956fdae842d957f8958e8",
+  "sequence": 6414,
+  "headDigest": "a2ae7f1d797ec0cc0f7b15a2dcf461aabb94ecd5eba29da22f4b0bc77f25b95e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -326056,6 +326056,48 @@
       },
       "claimDigest": "2bcced95f8f4a69e2c4c38cc6696ab987cadca6adb9f752169bdeb007276dbdd",
       "digest": "ba583e1ad4534928e674bbde3ed440c95fba0c5185d956fdae842d957f8958e8"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6414,
+      "parentDigest": "ba583e1ad4534928e674bbde3ed440c95fba0c5185d956fdae842d957f8958e8",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "1ecfa6e84c67b91a32ee448e2066495fa7a0d4ca01c1de2e2dbd8a4d6f892936",
+      "idempotencyKey": "919c4674d8578258abeb547a215c70c2c89c8312eed2999e4a1032f281e1633b",
+      "requestDigest": "eb0846c722f187c7d923013e1c947ce8f5359be887a9a52b2f804caec810360f",
+      "evaluationTime": "2026-08-30T17:02:43.000Z",
+      "claimCore": {
+        "claimId": "1ecfa6e84c67b91a32ee448e2066495fa7a0d4ca01c1de2e2dbd8a4d6f892936",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:77c749055ec167ee91fb040efd30d3bd91d57082300dcf582e0559daa3aad00c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:50d680930157e5745b6f42bff079fde62d17c5243c8ce2c4e4b3ff093f64be9d",
+        "canonicalBaseRevision": "fc2a04e8a3f2adfcdd2972446e3ee7aa5f3003ac",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-current-base-reanchor.test.mjs",
+          "path:docs/ACTIVE-OWNED-DIRT-CURRENT-BASE-REANCHOR.md",
+          "path:scripts/active-owned-dirt-current-base-reanchor-contract.mjs",
+          "path:scripts/active-owned-dirt-current-base-reanchor-repository-adapter.mjs",
+          "semantic:active-owned-dirt-reanchor-legacy-work-item"
+        ],
+        "writeSetDigest": "afc375539fc8abcc0c8a0f6878cf10f4e0b04d43373ef8072742da31e7327e7f",
+        "laneRevision": "fc2a04e8a3f2adfcdd2972446e3ee7aa5f3003ac",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T19:02:43.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "8815c5ec05be51d66e8f14f50ace26d1bbf2bbf385a2538db0d1da00b34ac4b2",
+      "digest": "a2ae7f1d797ec0cc0f7b15a2dcf461aabb94ecd5eba29da22f4b0bc77f25b95e"
     }
   ]
 }

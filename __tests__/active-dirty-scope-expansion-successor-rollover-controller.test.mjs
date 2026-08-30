@@ -264,6 +264,96 @@ test("CLI forwards sealed plans and exact tokens and rejects irrelevant options"
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("CLI seals and replays a separately authorized promoted-successor continuation", async () => {
+  const root = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "rollover-continuation-cli-"));
+  try {
+    const repository = path.join(root, "repository"); fs.mkdirSync(repository);
+    const journalFile = path.join(root, "journal.json");
+    const replacementFile = path.join(root, "replacement.json");
+    const continuationFile = path.join(root, "continuation.json");
+    const continuationState = path.join(root, "continuation-state.json");
+    const authority = path.join(root, "authority.json");
+    const manifest = path.join(root, "manifest.json");
+    const oldPlan = { planDigest: digest("a"), exactAuthorization: `authorize replace ${digest("a")}` };
+    const continuationPlan = { planDigest: digest("b"), exactAuthorization: `authorize continue ${digest("b")}`,
+      replacementPlanSnapshot: oldPlan };
+    const authorizationRecord = { planDigest: continuationPlan.planDigest,
+      authorizationDigest: digest("c"), statement: continuationPlan.exactAuthorization };
+    for (const [file, value] of [[replacementFile, oldPlan], [authority, {}]]) {
+      fs.writeFileSync(file, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+    }
+    fs.writeFileSync(manifest, "{}\n");
+    const journal = { status: "replacement-promoted" }, frame = { stable: true };
+    const calls = { builds: 0, frames: 0, journals: 0, replays: 0, runs: [] };
+    const adapter = {
+      readRecoveryJournal: async () => { calls.journals += 1; return journal; },
+      readContinuationFrame: async ({ plan }) => {
+        calls.frames += 1; assert.deepEqual(plan, oldPlan); return frame;
+      },
+    };
+    const controller = { runReplacement: async input => {
+      calls.runs.push(input); return { status: "complete" };
+    } };
+    const dependencies = {
+      createAdapter: options => {
+        if (options.continuationPlan) assert.deepEqual(options.continuationPlan, continuationPlan);
+        return adapter;
+      },
+      createController: () => controller,
+      normalizeContinuationPlan: value => { assert.deepEqual(value, continuationPlan); return value; },
+      buildContinuationPlan: input => {
+        calls.builds += 1;
+        assert.deepEqual(input.replacementPlan, oldPlan);
+        assert.deepEqual(input.journal, journal);
+        assert.deepEqual(input.frame, frame);
+        assert.equal(input.operatorSessionId, OPERATOR);
+        return continuationPlan;
+      },
+      authorizeContinuation: ({ plan, authorization }) => {
+        assert.deepEqual(plan, continuationPlan);
+        if (authorization !== continuationPlan.exactAuthorization) throw new Error("exact authorization");
+        return authorizationRecord;
+      },
+      normalizeContinuationAuthorization: (value, { plan }) => {
+        assert.deepEqual(value, authorizationRecord); assert.deepEqual(plan, continuationPlan);
+        return value;
+      },
+      requireContinuationJournal: input => {
+        calls.replays += 1; assert.deepEqual(input, { plan: continuationPlan, journal });
+      },
+    };
+    const common = [`--repository=${repository}`, `--state-path=${journalFile}`,
+      "--source-session=source", "--pull-request=808", `--operator-session=${OPERATOR}`,
+      `--corrected-manifest=${manifest}`];
+    const planned = await runSuccessorRolloverCli(["plan-continuation", ...common,
+      `--replacement-plan=${replacementFile}`, `--output=${continuationFile}`], dependencies);
+    assert.equal(planned.phase, "continuation");
+    assert.deepEqual(JSON.parse(fs.readFileSync(continuationFile, "utf8")), continuationPlan);
+    assert.equal(fs.statSync(continuationFile).mode & 0o777, 0o600);
+
+    const runArguments = ["run-continuation", ...common, `--plan=${continuationFile}`,
+      `--continuation-state=${continuationState}`, `--task-authority=${authority}`,
+      `--authorization=${continuationPlan.exactAuthorization}`];
+    const ran = await runSuccessorRolloverCli(runArguments, dependencies);
+    assert.equal(ran.phase, "continuation");
+    assert.deepEqual(JSON.parse(fs.readFileSync(continuationState, "utf8")), authorizationRecord);
+    assert.equal(fs.statSync(continuationState).mode & 0o777, 0o600);
+    assert.equal(calls.frames, 2);
+    assert.deepEqual(calls.runs[0], { plan: oldPlan, operatorSessionId: OPERATOR,
+      authorization: oldPlan.exactAuthorization });
+
+    await runSuccessorRolloverCli(runArguments, dependencies);
+    assert.equal(calls.frames, 2, "replay must not require the pre-effect frame");
+    assert.equal(calls.replays, 1);
+    assert.equal(calls.runs.length, 2);
+    const beforeWrongAuthorization = { journals: calls.journals, runs: calls.runs.length };
+    await assert.rejects(runSuccessorRolloverCli(runArguments.map(value =>
+      value.startsWith("--authorization=") ? "--authorization=wrong" : value), dependencies),
+    /exact authorization/u);
+    assert.deepEqual({ journals: calls.journals, runs: calls.runs.length }, beforeWrongAuthorization);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("external journal store provides private atomic CAS and an awaited entrypoint fence", async () => {
   const root = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "successor-rollover-store-"));
   try {

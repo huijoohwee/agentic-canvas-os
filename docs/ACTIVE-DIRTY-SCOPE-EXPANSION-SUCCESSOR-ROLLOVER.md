@@ -7,13 +7,13 @@ lang: "en-US"
 schema: "agentic-active-dirty-scope-expansion-successor-rollover-doc/v2"
 frontmatter_contract: "required"
 status: "focused-tested"
-authority: "two separately planned and exactly authorized repairs for one source-retired expansion with an obsolete waiting successor"
-runtime_scope: "retire one exact stale C2 waiter, then claim and bind one corrected current-main successor without changing authored bytes"
+authority: "separately planned and exactly authorized retirement, replacement, and promoted-successor continuation"
+runtime_scope: "retire one stale C2 waiter, replace it at current main, or continue the exact promoted C3 after a disjoint protected-controller repair"
 runtime_claim: "coordination and owner-projection recovery only; authoring, commit, integration, cleanup, deployment, and Production remain separately gated"
-runtime_owner: "../scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-controller.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover.mjs"
-runtime_proof: "../__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs"
+runtime_owner: "../scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-controller.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs; ../scripts/active-dirty-scope-expansion-successor-rollover.mjs"
+runtime_proof: "../__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-continuation-contract.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs; ../__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs"
 ---
-<!-- Responsibility: Document the two-authority recovery from an obsolete waiting scope-expansion successor. -->
+<!-- Responsibility: Document sealed recovery and continuation from an obsolete scope-expansion successor. -->
 
 # Active-dirty scope-expansion successor rollover
 
@@ -122,6 +122,32 @@ Every effect is classified before and after invocation. A validated response-ahe
 an absent or ambiguous effect remains blocked. Terminal replay re-verifies the live cloud, local CAS,
 task-authority binding, and pull-request marker before returning the same sealed completion receipt.
 
+## Promoted-successor continuation
+
+`plan-continuation` is available only for an interrupted Phase B whose journal is durably
+`replacement-promoted`. It does not create or promote another claim. It seals the unchanged owner,
+the exact C3 claim, the still-open draft review request at its historical base, and a clean protected
+controller revision that is a strict, write-set-disjoint descendant of C3's canonical base. The
+historical-base proof permits only the existing claim-bound `continue` projection after the adapter
+re-resolves that exact open draft pull request, branch, head, historical base, and review identity; it
+does not weaken generic provider mutation mapping or authorize another review, branch, head, or base.
+The repaired-controller identity is a dependency-closure content digest; protected HEAD ancestry is
+proved separately, so a later disjoint main advance is accepted while controller-byte drift is not.
+
+The continuation plan emits a third independently typed statement:
+
+```text
+authorize active-dirty-scope-expansion-successor-rollover-continue <planDigest>
+```
+
+`run-continuation` validates that exact statement and re-captures the complete pre-effect frame before
+creating a separate external `0600` authorization sidecar. Only then does it resume the original
+replacement controller with the original replacement plan and its already-journaled authorization.
+Replay validates the sidecar-to-plan join and the journal's immutable promoted prefix, while allowing
+the journal to have advanced monotonically through bind, local CAS, marker projection, verification,
+or completion. Continuation never authorizes source edits, a new claim, Git changes, integration,
+deployment, or cleanup.
+
 ## External-file and output boundary
 
 Run this controller from its protected checkout. The source repository and controller root must be
@@ -129,8 +155,9 @@ absolute real directories. The journal, sealed plans, task-authority capability,
 manifest must be absolute paths outside both the source and controller worktrees. Symlink traversal
 and path aliasing are rejected.
 
-The journal, task authority, and plan files are owner-held, single-link, regular files at exact mode
-`0600`. A plan output is created exclusively at `0600`; it is never overwritten. The corrected
+The journal, task authority, plan files, and continuation sidecar are owner-held, single-link, regular
+files at exact mode `0600`. A plan or continuation sidecar is created exclusively; it is never
+overwritten. The corrected
 manifest is non-secret and can be `0644`, but it must be one external, regular, non-symlink file.
 All external inputs must use distinct paths. The CLI never reads or prints task-capability bytes;
 public failures redact credentials and local absolute paths.
@@ -196,6 +223,35 @@ node scripts/active-dirty-scope-expansion-successor-rollover.mjs run-replacement
   --json
 ```
 
+If Phase B stopped after promotion because the protected controller could not bind the historical
+review base, first integrate the disjoint controller repair. Then plan and run the continuation:
+
+```sh
+node scripts/active-dirty-scope-expansion-successor-rollover.mjs plan-continuation \
+  --repository=/absolute/path/to/preserved-dirty-worktree \
+  --source-session=<source-session> \
+  --pull-request=<number> \
+  --operator-session=<distinct-operator-session> \
+  --state-path=/absolute/private/recovery-journal.json \
+  --corrected-manifest=/absolute/private/corrected-write-scope.json \
+  --replacement-plan=/absolute/private/replacement-plan.json \
+  --output=/absolute/private/continuation-plan.json \
+  --json
+
+node scripts/active-dirty-scope-expansion-successor-rollover.mjs run-continuation \
+  --repository=/absolute/path/to/preserved-dirty-worktree \
+  --source-session=<source-session> \
+  --pull-request=<number> \
+  --operator-session=<distinct-operator-session> \
+  --state-path=/absolute/private/recovery-journal.json \
+  --corrected-manifest=/absolute/private/corrected-write-scope.json \
+  --plan=/absolute/private/continuation-plan.json \
+  --continuation-state=/absolute/private/continuation-authorization.json \
+  --task-authority=/absolute/private/task-authority.json \
+  --authorization='authorize active-dirty-scope-expansion-successor-rollover-continue <planDigest>' \
+  --json
+```
+
 The same operator session and exact plan are required for each plan/run pair. Any protected-main,
 manifest, claim, intent, lease, marker, authored-dirt, or preservation drift requires a new plan and
 new exact authorization. Phase A retirement itself remains historical fact and is never undone.
@@ -205,6 +261,7 @@ new exact authorization. Phase A retirement itself remains historical fact and i
 ```sh
 node --test \
   __tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs \
+  __tests__/active-dirty-scope-expansion-successor-rollover-continuation-contract.test.mjs \
   __tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs \
   __tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs
 npm run docs:check

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6306,
-  "headDigest": "d751dca190492f0c45cefd96e77479909d7280280aea4468e16c75394acd0fdc",
+  "sequence": 6307,
+  "headDigest": "0353e4ad3234f5566282b6b369fda1fd69c6742b462e727ac152da8c425af87f",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -320682,6 +320682,47 @@
       },
       "claimDigest": "a7faf6c7898e5605ac3b5d5b4e92a99500403a9d3979fd90cabf2be7b3981215",
       "digest": "d751dca190492f0c45cefd96e77479909d7280280aea4468e16c75394acd0fdc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6307,
+      "parentDigest": "d751dca190492f0c45cefd96e77479909d7280280aea4468e16c75394acd0fdc",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "f4f31f53d2739e68c97ead25ba67b44c8b5aaeead0b539a244a969cd6e3f8d34",
+      "idempotencyKey": "fd259c5b00e3df0628904750040b3dec0876b6ab4e4bcc6d1763a64ecf52b690",
+      "requestDigest": "3e6d2f54ac388425fe5207bebf9a6ada46d595b655adfd16bb058f1956b4c613",
+      "evaluationTime": "2026-08-30T08:13:38.000Z",
+      "claimCore": {
+        "claimId": "f4f31f53d2739e68c97ead25ba67b44c8b5aaeead0b539a244a969cd6e3f8d34",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:667356942c082a29e5aac7941b2c6c5abaa94c44d48187302400f6a3668fa0b3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:84992d0136b3d280e3124a3c8592085c959219e583e308409d3a291d55bba47a",
+        "canonicalBaseRevision": "208a946e3f3961bb69e3d890498006b9dadfa228",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs",
+          "path:docs/ACTIVE-DIRTY-SCOPE-EXPANSION-SUCCESSOR-ROLLOVER.md",
+          "path:scripts/claim-only-partial-start-retirement-store.mjs",
+          "semantic:successor-rollover-continuation-receipt-repair"
+        ],
+        "writeSetDigest": "fad4545ab2b6a38c4385eec2f843eba1cf8de6758114f11a0e999c35885a84b9",
+        "laneRevision": "5e4093994b90f0d5c38d0a1e14d2ea6c80a59aab",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T16:11:36.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBfbcqA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "a5cedcdc0f811b2563094d8c7687fda259e83d1389f2a0a05cf6eac804a23320",
+      "digest": "0353e4ad3234f5566282b6b369fda1fd69c6742b462e727ac152da8c425af87f"
     }
   ]
 }

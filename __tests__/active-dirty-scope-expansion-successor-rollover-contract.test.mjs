@@ -34,7 +34,7 @@ function sourceClaimIdentity() { const core = { repositoryId: "github-repository
 
 function retirementObservation(overrides = {}) {
   const core = {
-    schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement-observation/v1",
+    schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement-observation/v2",
     sourceClaimIdentity: sourceClaimIdentity(), controllerDigest: digest("a"),
     protectedMainSha: CURRENT_MAIN, protectedMainTreeSha: sha("d"),
     protectedMainAdvanceDigest: digest("b"),
@@ -53,8 +53,7 @@ function retirementObservation(overrides = {}) {
     staleTargetManifestDigest: digest("9"), staleTargetDeclaredWriteSet: STALE,
     staleExpiresAt: "2099-08-30T00:00:00.000Z", pullRequestNumber: 808,
     pullRequestNodeId: "PR_808", pullRequestMarkerDigest: digest("a"),
-    pullRequestBodyDigest: digest("b"), observedLedgerRevision: sha("e"),
-    observedLedgerDigest: digest("c"), observedLedgerSequence: 88,
+    pullRequestBodyDigest: digest("b"),
     ...overrides,
   };
   delete core.observationDigest;
@@ -75,7 +74,7 @@ function retirementValues(plan, overrides = {}) {
 function replacementObservation(retirementPlan, retirement, overrides = {}) {
   const source = retirementPlan.observation;
   const core = {
-    schema: "agentic-active-dirty-scope-expansion-successor-rollover-replacement-observation/v1",
+    schema: "agentic-active-dirty-scope-expansion-successor-rollover-replacement-observation/v2",
     sourceClaimIdentity: source.sourceClaimIdentity, controllerDigest: digest("1"),
     protectedMainSha: CURRENT_MAIN, protectedMainTreeSha: sha("1"),
     protectedMainAdvanceDigest: digest("1"), protectedMainChangedPaths: ["device-branch-lib.mjs"],
@@ -88,7 +87,6 @@ function replacementObservation(retirementPlan, retirement, overrides = {}) {
     staleRetirementTransitionDigest: retirement.retirementTransitionDigest,
     staleRetirementTransitionCounter: retirement.transitionCounter,
     staleRetirementReceiptDigest: retirement.receiptDigest,
-    observedLedgerRevision: sha("2"), observedLedgerDigest: digest("2"), observedLedgerSequence: 89,
     ...overrides,
   };
   delete core.observationDigest;
@@ -208,6 +206,23 @@ test("rejects a stale C2 that is not the exact waiting C1 successor", () => {
   assert.throws(() => buildSuccessorRolloverRetirementPlan({
     observation: current, operatorSessionId: OPERATOR,
   }), /observation semantics/u);
+});
+
+test("v2 observations exclude the ambient ledger head from authorization", () => {
+  const { retirementPlan, retired, retiredJournal } = prepared();
+  for (const field of ["observedLedgerRevision", "observedLedgerDigest",
+    "observedLedgerSequence"]) {
+    const value = field.endsWith("Sequence") ? 89 : digest("0");
+    const legacy = retirementObservation({ [field]: value });
+    assert.throws(() => buildSuccessorRolloverRetirementPlan({
+      observation: legacy, operatorSessionId: OPERATOR,
+    }), /invalid retirement observation/u);
+    const replacement = replacementObservation(retirementPlan, retired, { [field]: value });
+    assert.throws(() => buildSuccessorRolloverReplacementPlan({
+      observation: replacement, targetManifest: targetManifest(),
+      operatorSessionId: OPERATOR, retirementJournal: retiredJournal,
+    }), /invalid replacement observation/u);
+  }
 });
 
 test("requires C1 superset, stale-C2 subset, dirt coverage, and protected-main disjointness", () => {

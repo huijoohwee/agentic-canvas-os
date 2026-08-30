@@ -25,9 +25,12 @@ import {
   successorRolloverOperationKey,
 } from "../scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs";
 import { claimOnlyOperationReceiptForEntry } from "../scripts/claim-only-partial-start-retirement-store.mjs";
+import { applyCloudTransition, createEmptyLedger, listCurrentClaims }
+  from "../scripts/cloud-collaboration-contract.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { updateWriterLeasePullRequestBody } from "../scripts/writer-lease-lib.mjs";
-import { pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
+import { projectPublicClaim, pseudonymousIdentifier } from "../scripts/github-cloud-collaboration-mapping.mjs";
+import { writerLeaseDigest } from "../scripts/writer-lease-registry-cas.mjs";
 
 const CONTROLLER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BRANCH = "agent/device/commerce", FENCE = "a".repeat(40), MAIN = "c".repeat(40);
@@ -53,6 +56,116 @@ function repositoryFixture(t) {
   return { root, repository, common, stateDirectory, statePath, registryPath, leaseStore, options, dependencies };
 }
 
+function liveChurnFixture(t) {
+  const fixture = repositoryFixture(t), OLD_BASE = sha("b");
+  const owner = { actorId: "github-user:1",
+    deviceId: pseudonymousIdentifier("device", "device"),
+    sessionId: pseudonymousIdentifier("session", "source-session") };
+  const cloudRepository = { repositoryId: "github-repository:1", canonicalRevision: OLD_BASE };
+  const workItemId = pseudonymousIdentifier("work-item", "commerce");
+  const at = "2026-08-30T00:03:00.000Z";
+  function claim(ledger, { actor = owner, work = workItemId, scope, id, time }) {
+    return applyCloudTransition({ ledger, action: "claim", actor, repository: cloudRepository,
+      evaluationTime: time, request: { workItemId: work,
+        canonicalBaseRevision: OLD_BASE, declaredWriteScope: scope,
+        laneRevision: FENCE, leaseEpoch: 1, expiresAt: "2099-01-01T00:00:00.000Z",
+        expectedLedgerDigest: ledger.headDigest, idempotencyKey: id } });
+  }
+  const c1 = claim(createEmptyLedger("github-repository:ledger"), {
+    scope: SOURCE, id: "c1", time: "2026-08-30T00:00:00.000Z" });
+  const c2 = claim(c1.ledger, { scope: STALE, id: "c2",
+    time: "2026-08-30T00:01:00.000Z" });
+  const peer = { actorId: "github-user:2",
+    deviceId: pseudonymousIdentifier("device", "other"),
+    sessionId: pseudonymousIdentifier("session", "other") };
+  const disjoint = claim(c2.ledger, { actor: peer,
+    work: pseudonymousIdentifier("work-item", "other"),
+    scope: ["path:z.mjs", "semantic:other"], id: "other",
+    time: "2026-08-30T00:02:00.000Z" }).ledger;
+
+  const admission = { schema: "agentic-lane-admission-lease/v1", status: "admitted",
+    semanticScope: "commerce", declaredWriteSet: SOURCE,
+    writeSetDigest: digestValue(SOURCE), manifestDigest: digest("1"),
+    planReceiptDigest: digest("2"), admissionReceiptDigest: digest("3"),
+    existingLaneStateDigest: digest("4"), admittedReportDigest: digest("5"),
+    preservationReceiptDigest: digest("6") };
+  const cloudAuthority = { schema: "agentic-lane-cloud-authority/v1",
+    claimId: c1.claim.claimId, claimDigest: c1.claim.fenceRevision,
+    ledgerRepository: "owner/ledger", targetRepository: "owner/repo",
+    ledgerRevision: sha("1"), claimLedgerRevision: c1.claim.ledgerRevision,
+    canonicalBaseSha: OLD_BASE, cloudDeclaredWriteScope: SOURCE,
+    writeSetDigest: admission.writeSetDigest, manifestDigest: admission.manifestDigest,
+    leaseEpoch: 1, state: "current", expiresAt: c1.claim.expiresAt };
+  const lease = { schema: "agentic-writer-lease/v2", status: "active", epoch: 1,
+    sessionId: "source-session", device: "device", scope: "commerce", branch: BRANCH,
+    baseSha: OLD_BASE, fenceSha: FENCE, worktreePath: fixture.repository,
+    pullRequestUrl: "https://github.com/example/example/pull/809",
+    heartbeatAt: "2026-08-30T00:00:00.000Z", expiresAt: "2099-01-01T00:00:00.000Z",
+    admission, cloudAuthority };
+  const dirtDigest = digestValue({ stagedPatch: "staged patch", unstagedPatch: "",
+    changedPaths: ["a.mjs"], untracked: [] });
+  const planCore = { schema: "agentic-active-dirty-scope-expansion-plan/v1",
+    sourceBranch: BRANCH, sourceFenceSha: FENCE, sourceLeaseDigest: writerLeaseDigest(lease),
+    sourceClaimId: c1.claim.claimId, sourceClaimDigest: c1.claim.fenceRevision,
+    sourceClaimTransitionCounter: c1.claim.transitionCounter,
+    sourceReviewRequestId: "github-pull-request:PR_809", sourceWriteSetDigest: admission.writeSetDigest,
+    sourceManifestDigest: admission.manifestDigest, sourceDirtyDigest: dirtDigest,
+    sourceChangedPaths: ["a.mjs"], targetCanonicalBaseSha: OLD_BASE, targetManifestDigest: digest("7"),
+    targetWriteSetDigest: digestValue(STALE), targetDeclaredWriteSet: STALE, targetCloudLeaseEpoch: 1 };
+  const planSnapshot = { ...planCore, planDigest: digestValue(planCore) };
+  const intent = { schema: "agentic-active-dirty-scope-expansion-intent/v1",
+    status: "source-retired", branch: BRANCH, sourceLeaseDigest: writerLeaseDigest(lease),
+    sourceClaimId: c1.claim.claimId, sourceFenceSha: FENCE,
+    targetWriteSetDigest: planCore.targetWriteSetDigest, targetManifestDigest: planCore.targetManifestDigest,
+    planDigest: planSnapshot.planDigest, targetClaimId: c2.claim.claimId,
+    targetClaimDigest: c2.claim.fenceRevision, targetLeaseEpoch: 1,
+    targetCanonicalBaseSha: OLD_BASE, targetReviewRequestId: null, completedReceiptDigest: null,
+    waiting: null, waitingReceiptDigest: null, sourceRetirementReceiptDigest: digest("8"),
+    promoted: null, promotedReceiptDigest: null, boundAuthority: null, boundReceiptDigest: null,
+    localProjection: null, localProjectionReceiptDigest: null, pullRequestProjection: null,
+    pullRequestProjectionReceiptDigest: null, finalReceiptDigest: null, planSnapshot };
+  const registry = { schema: "agentic-writer-lease-registry/v2", revision: 1,
+    leases: { [BRANCH]: lease }, scopeExpansionIntents: { [BRANCH]: intent } };
+  const leaseStore = { statePath: fixture.registryPath, read: () => lease,
+    readRegistry: () => registry, withRegistryLock: action => action(registry) };
+  const body = updateWriterLeasePullRequestBody("preserved", lease);
+  const git = args => { const joined = args.join(" ");
+    if (joined === "rev-parse --git-common-dir") return fixture.common;
+    if (joined === "branch --show-current") return BRANCH;
+    if (joined === "diff --cached --name-only") return "a.mjs";
+    if (joined === "diff --cached --binary") return "staged patch";
+    if (joined === "rev-parse HEAD") return FENCE;
+    if (args[0] === "ls-remote") return `${FENCE}\trefs/heads/${BRANCH}`;
+    return "";
+  };
+  let frames = [], cursor = 0; const ledgerReads = [], observedSequences = [];
+  function frame(revision, ledger, mutateClaims = claims => claims) {
+    const claims = listCurrentClaims(ledger, at, { repositoryId: cloudRepository.repositoryId })
+      .map(projectPublicClaim);
+    return { revision, ledger, status: { schema: "agentic-cloud-collaboration-result/v1",
+      ok: true, claims: mutateClaims(structuredClone(claims)), sequence: ledger.sequence,
+      ledgerRevision: revision, ledgerDigest: ledger.headDigest } };
+  }
+  function setFrames(next) { frames = next; cursor = 0; ledgerReads.length = 0;
+    observedSequences.length = 0; }
+  const adapter = createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapter(
+    fixture.options, { ...fixture.dependencies, leaseStore, git,
+      readPullRequest: () => ({ url: lease.pullRequestUrl, number: 809, id: "PR_809",
+        state: "OPEN", isDraft: true, isCrossRepository: false,
+        headRefName: BRANCH, headRefOid: FENCE, baseRefName: "main", body }),
+      protectedFrame: () => ({ mainSha: MAIN, treeSha: sha("d"),
+        changedPaths: ["device-branch-lib.mjs"], advanceDigest: digest("9") }),
+      controllerDigest: () => digest("a"), repositoryId: () => "1",
+      cloudStatus: () => { const current = frames[cursor++];
+        observedSequences.push(current.status.sequence); return current.status; },
+      readLedger: (_authority, revision) => { ledgerReads.push(revision);
+        return frames.find(value => value.revision === revision).ledger; } });
+  const baseline = frame(sha("1"), c2.ledger), advanced = frame(sha("2"), disjoint);
+  setFrames([baseline, advanced]);
+  return { adapter, baseline, advanced, c2, disjoint, frame, setFrames, claim,
+    owner, peer, cloudRepository, lease, intent, ledgerReads, observedSequences };
+}
+
 test("factory exposes the complete repository surface and keeps an async entrypoint fenced", async t => {
   const fixture = repositoryFixture(t);
   const adapter = createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapter(fixture.options, fixture.dependencies);
@@ -65,6 +178,79 @@ test("factory exposes the complete repository surface and keeps an async entrypo
   await assert.rejects(adapter.withEntrypointFence({ phase: "retirement" }, async () => null), /already fenced/u);
   release(); assert.equal(await first, "settled");
   assert.equal(await adapter.withEntrypointFence({ phase: "verified" }, async () => "reacquired"), "reacquired");
+});
+
+test("paired Phase-A reads admit unrelated validated ledger-head churn", async t => {
+  const fixture = liveChurnFixture(t);
+  const observation = await fixture.adapter.readPhaseAObservation();
+  assert.deepEqual(fixture.ledgerReads, [sha("1"), sha("2")]);
+  assert.deepEqual(fixture.observedSequences, [2, 3]);
+  assert.equal(observation.staleSuccessorClaimId, fixture.c2.claim.claimId);
+  assert.equal(Object.hasOwn(observation, "observedLedgerDigest"), false);
+  assert.equal(buildSuccessorRolloverRetirementPlan({ observation,
+    operatorSessionId: "operator" }).schema.endsWith("/v2"), true);
+});
+
+test("paired Phase-A reads reject a coherent C2 terminal transition", async t => {
+  const fixture = liveChurnFixture(t), ledger = fixture.baseline.ledger;
+  const retired = applyCloudTransition({ ledger, action: "retire", actor: fixture.owner,
+    repository: fixture.cloudRepository, evaluationTime: "2026-08-30T00:02:00.000Z",
+    request: { claimId: fixture.c2.claim.claimId,
+      expectedFenceRevision: fixture.c2.claim.fenceRevision,
+      expectedTransitionCounter: fixture.c2.claim.transitionCounter,
+      expectedLedgerDigest: ledger.headDigest, reason: "superseded", finalRevision: FENCE,
+      reviewRequestId: null, bytesDigest: digest("1"), namedChecksDigest: digest("2"),
+      handoffEvidenceDigest: digest("3"), idempotencyKey: "c2-drift" } });
+  fixture.setFrames([fixture.baseline, fixture.frame(sha("3"), retired.ledger)]);
+  await assert.rejects(fixture.adapter.readPhaseAObservation(),
+    /unique stale successor|stale waiting successor|changed across paired reads/u);
+  assert.deepEqual(fixture.ledgerReads, [sha("1"), sha("3")]);
+  assert.deepEqual(fixture.observedSequences, [2, 3]);
+});
+
+test("paired Phase-B reads admit unrelated validated ledger-head churn", async t => {
+  const fixture = liveChurnFixture(t);
+  fixture.setFrames([fixture.baseline, fixture.baseline]);
+  const observation = await fixture.adapter.readPhaseAObservation();
+  const plan = buildSuccessorRolloverRetirementPlan({ observation, operatorSessionId: "operator" });
+  const operationKey = successorRolloverOperationKey(plan, "stale-successor-retired");
+  const evidence = { schema: "agentic-active-dirty-scope-expansion-successor-rollover-cloud-effect/v1",
+    planDigest: plan.planDigest, phase: "stale-successor-retired",
+    staleSuccessorClaimId: observation.staleSuccessorClaimId };
+  const ledger = fixture.baseline.ledger;
+  const retired = applyCloudTransition({ ledger, action: "retire", actor: fixture.owner,
+    repository: fixture.cloudRepository, evaluationTime: "2026-08-30T00:02:00.000Z",
+    request: { claimId: fixture.c2.claim.claimId,
+      expectedFenceRevision: fixture.c2.claim.fenceRevision,
+      expectedTransitionCounter: fixture.c2.claim.transitionCounter,
+      expectedLedgerDigest: ledger.headDigest, reason: "superseded", finalRevision: FENCE,
+      reviewRequestId: null, bytesDigest: digestValue({ ...evidence, kind: "bytes" }),
+      namedChecksDigest: digestValue({ ...evidence, kind: "checks" }),
+      handoffEvidenceDigest: digestValue({ ...evidence, kind: "handoff" }),
+      idempotencyKey: operationKey } });
+  const terminal = retired.ledger.entries.at(-1);
+  const retirement = { schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement/v1",
+    staleSuccessorClaimId: fixture.c2.claim.claimId,
+    priorClaimDigest: fixture.c2.claim.fenceRevision,
+    retiredClaimDigest: terminal.claimDigest, retirementTransitionDigest: terminal.digest,
+    transitionCounter: terminal.claimCore.transitionCounter, state: "retired",
+    reason: "successor-rollover",
+    receiptDigest: claimOnlyOperationReceiptForEntry(terminal, "retired").receiptDigest };
+  const journal = advanceSuccessorRolloverRetirement(
+    createSuccessorRolloverJournal(plan, plan.exactAuthorization), retirement);
+  await fixture.adapter.writeRecoveryJournal({ expectedJournal: null, nextJournal: journal });
+  const peer = fixture.claim(retired.ledger, { actor: fixture.peer,
+    work: pseudonymousIdentifier("work-item", "phase-b-other"),
+    scope: ["path:phase-b-z.mjs", "semantic:phase-b-other"], id: "phase-b-other",
+    time: "2026-08-30T00:02:30.000Z" });
+  fixture.setFrames([
+    fixture.frame(sha("3"), retired.ledger), fixture.frame(sha("4"), peer.ledger),
+  ]);
+  const replacement = await fixture.adapter.readPhaseBState();
+  assert.deepEqual(fixture.ledgerReads, [sha("3"), sha("4")]);
+  assert.deepEqual(fixture.observedSequences, [3, 4]);
+  assert.equal(replacement.schema.endsWith("/v2"), true);
+  assert.equal(Object.hasOwn(replacement, "observedLedgerDigest"), false);
 });
 
 test("journal, manifest, and task capability remain external and owner-held", t => {
@@ -243,7 +429,7 @@ test("bound C3 response-loss reconciliation joins the stored genesis receipt, no
 function replacementPlan() {
   const identityCore = { repositoryId: "github-repository:1", actorId: "actor", deviceId: "device", sessionId: "source-session", workItemId: "commerce" };
   const sourceClaimIdentity = { ...identityCore, identityDigest: digestValue(identityCore) };
-  const observationCore = { schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement-observation/v1",
+  const observationCore = { schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement-observation/v2",
     sourceClaimIdentity, controllerDigest: digest("a"), protectedMainSha: MAIN, protectedMainTreeSha: sha("d"),
     protectedMainAdvanceDigest: digest("b"), protectedMainChangedPaths: ["device-branch-lib.mjs"], branch: BRANCH,
     sourceSessionId: "source-session", semanticScope: "commerce", sourceFenceSha: FENCE, sourceLeaseDigest: digest("c"), sourceClaimId: C1,
@@ -254,8 +440,7 @@ function replacementPlan() {
     staleSuccessorTransitionDigest: digest("8"), staleSuccessorTransitionCounter: 1, staleSuccessorState: "waiting-successor",
     staleSuccessorPredecessorClaimId: C1, staleTargetCanonicalBaseSha: sha("b"), staleTargetWriteSetDigest: digestValue(STALE),
     staleTargetManifestDigest: digest("9"), staleTargetDeclaredWriteSet: STALE, staleExpiresAt: "2099-08-30T00:00:00.000Z",
-    pullRequestNumber: 809, pullRequestNodeId: "PR_809", pullRequestMarkerDigest: digest("a"), pullRequestBodyDigest: digest("b"),
-    observedLedgerRevision: sha("e"), observedLedgerDigest: digest("c"), observedLedgerSequence: 88 };
+    pullRequestNumber: 809, pullRequestNodeId: "PR_809", pullRequestMarkerDigest: digest("a"), pullRequestBodyDigest: digest("b") };
   const retirementObservation = { ...observationCore, observationDigest: digestValue(observationCore) };
   const retirementPlan = buildSuccessorRolloverRetirementPlan({ observation: retirementObservation, operatorSessionId: "operator" });
   let journal = createSuccessorRolloverJournal(retirementPlan, retirementPlan.exactAuthorization);
@@ -264,14 +449,14 @@ function replacementPlan() {
     transitionCounter: 2, state: "retired", reason: "successor-rollover", receiptDigest: digest("f"),
   };
   journal = advanceSuccessorRolloverRetirement(journal, retirement);
-  const replacementCore = { schema: "agentic-active-dirty-scope-expansion-successor-rollover-replacement-observation/v1",
+  const replacementCore = { schema: "agentic-active-dirty-scope-expansion-successor-rollover-replacement-observation/v2",
     sourceClaimIdentity, controllerDigest: digest("1"), protectedMainSha: MAIN, protectedMainTreeSha: sha("1"),
     protectedMainAdvanceDigest: digest("1"), protectedMainChangedPaths: ["device-branch-lib.mjs"], branch: BRANCH,
     sourceLeaseDigest: observationCore.sourceLeaseDigest, sourceDirtDigest: observationCore.sourceDirtDigest,
     sourceIntentDigest: observationCore.sourceIntentDigest, pullRequestMarkerDigest: observationCore.pullRequestMarkerDigest,
     pullRequestBodyDigest: observationCore.pullRequestBodyDigest, staleSuccessorClaimId: C2, staleRetirementClaimDigest: retirement.retiredClaimDigest,
     staleRetirementTransitionDigest: retirement.retirementTransitionDigest, staleRetirementTransitionCounter: 2,
-    staleRetirementReceiptDigest: retirement.receiptDigest, observedLedgerRevision: sha("2"), observedLedgerDigest: digest("2"), observedLedgerSequence: 89 };
+    staleRetirementReceiptDigest: retirement.receiptDigest };
   const observation = { ...replacementCore, observationDigest: digestValue(replacementCore) };
   const target = { schema: "agentic-declared-write-scope/v1", semanticScope: "commerce", declaredWriteSet: CORRECTED,
     writeSetDigest: digestValue(CORRECTED), manifestDigest: digest("3") };

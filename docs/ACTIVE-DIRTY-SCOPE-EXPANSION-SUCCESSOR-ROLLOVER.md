@@ -4,7 +4,7 @@ graphId: "md:active-dirty-scope-expansion-successor-rollover"
 doc_type: "Recovery Controller Contract"
 date: "2026-08-30"
 lang: "en-US"
-schema: "agentic-active-dirty-scope-expansion-successor-rollover-doc/v1"
+schema: "agentic-active-dirty-scope-expansion-successor-rollover-doc/v2"
 frontmatter_contract: "required"
 status: "focused-tested"
 authority: "two separately planned and exactly authorized repairs for one source-retired expansion with an obsolete waiting successor"
@@ -42,8 +42,10 @@ journal's phase, journal digest, and sealed plan digests, or `unplanned` when no
 Inspection is not live-subject evidence, authority, or a new claim reservation. The corresponding
 planning command performs the fresh repository and cloud observation for each phase.
 
-Planning double-reads its live evidence and fails closed unless the subject stays stable. Among the
-required joins are:
+Planning double-reads its live evidence and fails closed unless the task subject stays stable. Each
+read still validates the complete current ledger and its audit chain. The authorization projection
+excludes only the ambient ledger revision, digest, and sequence, so unrelated disjoint transitions
+cannot invalidate this task's plan. Among the required joins are:
 
 - the source is the registered dirty writer worktree, with its exact session, branch, fence, lease,
   C1 claim, draft pull request, authored dirt, and `source-retired` expansion intent;
@@ -51,14 +53,15 @@ required joins are:
   non-writing, and carries the exact superseded target manifest and write set;
 - current protected `main` is clean, provider-current, and advanced within that stale C2 write set;
 - no unrelated writer lease, review marker, or live cloud claim is adopted as the source; and
-- source bytes, Git state, registry state, pull-request body, cloud ledger, and protected controller
-  are content-bound so drift invalidates execution.
+- source bytes, Git state, registry state, pull-request body, exact C1/C2 lineage, and protected
+  controller are content-bound so task-relevant drift invalidates execution.
 
 ## Phase A: retire the stale waiter
 
 `plan-retirement` seals the current C1/C2 identities, protected-main advance, source dirt, source
-intent, lease, draft marker, cloud-ledger observation, allowed effect, and preservation set. It emits
-the byte-exact statement:
+intent, lease, draft marker, claim-scoped cloud evidence, allowed effect, and preservation set. The
+append-only ledger head remains transport and integrity evidence rather than a global semantic lock.
+The plan emits the byte-exact statement:
 
 ```text
 authorize active-dirty-scope-expansion-successor-rollover-retire <planDigest>

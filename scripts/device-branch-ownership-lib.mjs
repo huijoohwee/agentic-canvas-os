@@ -11,6 +11,12 @@ import {
 } from "./repository-guards.mjs";
 import { updateWriterLeasePullRequestBody } from "./writer-lease-lib.mjs";
 import {
+  PROJECTION_OWN_ADVANCE,
+  classifyObservedHead,
+  isReconcilable,
+  projectionDivergenceError,
+} from "./lane-projection-reconciliation.mjs";
+import {
   readOwnershipPullRequest,
   requireOwnershipPullRequestDraft,
 } from "./device-pull-request-state.mjs";
@@ -61,10 +67,35 @@ export function heartbeat({
   if (!repairPullRequestProjection) {
     const remoteLine = gitOptional(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
     observedRemoteSha = remoteLine.split(/\s+/)[0] || "";
-    if (!current.fenceSha || (
-      observedRemoteSha !== current.fenceSha
-      && observedRemoteSha !== current.integration?.commitSha
-    )) throw remoteFenceStaleError({ branch, lease: current, remoteSha: observedRemoteSha });
+    // Inequality alone never proves a foreign writer. An observed head that
+    // descends from the recorded fence with no competing claim is this lane's own
+    // unrecorded advance, so reconcile the projection instead of refusing; a
+    // non-descendant head or any competing claim still escalates.
+    const classification = classifyObservedHead({
+      recordedSha: current.fenceSha,
+      observedSha: observedRemoteSha,
+      integrationSha: current.integration?.commitSha ?? null,
+      competingClaims: competingLaneClaims({ leaseStore, lease: current, branch }),
+      isDescendant: (ancestor, descendant) => isAncestorRevision({ ancestor, descendant, gitOptional }),
+    });
+    if (!isReconcilable(classification)) {
+      throw projectionDivergenceError({
+        branch,
+        classification,
+        recordedSha: current.fenceSha,
+        observedSha: observedRemoteSha,
+      });
+    }
+    if (classification.state === PROJECTION_OWN_ADVANCE) {
+      current = reconcileLaneRevisionProjection({
+        leaseStore,
+        sessionId,
+        branch,
+        lease: current,
+        observedSha: observedRemoteSha,
+      });
+      log(`[lane-reconcile] ${branch} fence advanced to ${observedRemoteSha} (${classification.reason})`);
+    }
   }
   if (!current.pullRequestUrl || !current.fenceSha) {
     throw new Error("Writer lease is missing its draft pull request or fencing SHA.");
@@ -501,6 +532,46 @@ export function assertPreparedIntegrationRemoteFence({
     manifestDigest: integration.manifestDigest,
     stagedDiffDigest: integration.stagedDiffDigest,
   });
+}
+
+// Ancestry is asked of the repository, never of commit metadata. Read the merge
+// base rather than an exit code so an unknown revision is an empty answer and
+// fails closed instead of reading as success.
+function isAncestorRevision({ ancestor, descendant, gitOptional }) {
+  if (!ancestor || !descendant) return false;
+  const base = String(gitOptional(["merge-base", ancestor, descendant]) || "").trim();
+  return base === ancestor;
+}
+
+// Ownership comes from the ledger. An active lease held by another session on this
+// branch or semantic scope is contention; this lane's own lease never is.
+function competingLaneClaims({ leaseStore, lease, branch }) {
+  let leases = null;
+  try {
+    leases = leaseStore.readRegistry?.()?.leases ?? null;
+  } catch {
+    leases = null;
+  }
+  // A ledger this run cannot read is not evidence of exclusivity.
+  if (!leases) return ["<ledger-unreadable>"];
+  return Object.entries(leases)
+    .filter(([candidateBranch, candidate]) => (
+      candidate
+      && candidate.status === "active"
+      && candidate.sessionId !== lease.sessionId
+      && (candidateBranch === branch || candidate.scope === lease.scope)
+    ))
+    .map(([candidateBranch]) => candidateBranch);
+}
+
+// Advance only the revision projections this reconcile owns, from the observed
+// head, and leave every other field of the claim untouched.
+function reconcileLaneRevisionProjection({ leaseStore, sessionId, branch, lease, observedSha }) {
+  const values = { fenceSha: observedSha };
+  if (lease.cloudAuthority?.laneRevision && lease.cloudAuthority.laneRevision !== observedSha) {
+    values.cloudAuthority = { ...lease.cloudAuthority, laneRevision: observedSha };
+  }
+  return leaseStore.annotate({ sessionId, branch, allowExpired: true, values });
 }
 
 function remoteFenceStaleError({ branch, lease, remoteSha }) {

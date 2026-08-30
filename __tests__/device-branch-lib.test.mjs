@@ -502,7 +502,7 @@ test("start claims a lease and publishes a draft ownership PR before authoring",
   assert.doesNotMatch(logs[0], /chat-a/);
 });
 
-test("heartbeat rejects a session after the remote fencing commit advances", () => {
+test("heartbeat refuses an advance it cannot prove belongs to this lane", () => {
   const branch = "agent/device/runtime-leases";
   let renewed = false;
   const gitText = createGitText({
@@ -511,6 +511,9 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
     "ls-files -u": "",
     "branch --show-current": `${branch}\n`,
   });
+  // Ancestry is unprovable here and the ledger is unreadable through this stub, so
+  // the advance escalates. Inequality no longer decides it, but an unproven
+  // advance still fails closed and never renews.
   assert.throws(() => heartbeat({
     invocationPath: repo,
     repo,
@@ -523,8 +526,83 @@ test("heartbeat rejects a session after the remote fencing commit advances", () 
     sessionId: "chat-a",
     leaseTtlMs: 1_800_000,
     run: () => {},
-  }), /session is stale/);
+  }), /not b{40}: .*(does not descend|competing claim)/);
   assert.equal(renewed, false);
+});
+
+test("heartbeat reconciles the lane's own unrecorded advance instead of refusing", () => {
+  const branch = "agent/device/runtime-leases";
+  const recorded = "b".repeat(40);
+  const observed = "c".repeat(40);
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": `${branch}\n`,
+  });
+  const annotated = [];
+  const lease = {
+    fenceSha: recorded,
+    worktreePath: repo,
+    sessionId: "chat-a",
+    scope: "runtime-leases",
+    status: "active",
+    cloudAuthority: { laneRevision: recorded },
+  };
+  // The remote is a proven descendant and the ledger holds only this lane, so the
+  // projection is this run's own to advance without an Operator decision.
+  assert.throws(() => heartbeat({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: (args) => (args[0] === "merge-base"
+      ? recorded
+      : `${observed}\trefs/heads/${branch}`),
+    leaseStore: {
+      verify: () => lease,
+      readRegistry: () => ({ leases: { [branch]: lease } }),
+      annotate: ({ values }) => {
+        annotated.push(values);
+        return { ...lease, ...values };
+      },
+      heartbeat: () => { throw new Error("reached-renewal"); },
+    },
+    sessionId: "chat-a",
+    leaseTtlMs: 1_800_000,
+    log: () => {},
+    run: () => {},
+  }), /reached-renewal|draft/);
+  assert.equal(annotated.length, 1, "the fence projection is advanced exactly once");
+  assert.equal(annotated[0].fenceSha, observed);
+  assert.equal(annotated[0].cloudAuthority.laneRevision, observed,
+    "every revision projection of the claim moves together");
+});
+
+test("heartbeat treats an unreadable ledger as contention, never as exclusivity", () => {
+  const branch = "agent/device/runtime-leases";
+  const recorded = "b".repeat(40);
+  const gitText = createGitText({
+    "worktree list --porcelain -z": branchWorktree(branch),
+    "diff --name-only --diff-filter=U": "",
+    "ls-files -u": "",
+    "branch --show-current": `${branch}\n`,
+  });
+  assert.throws(() => heartbeat({
+    invocationPath: repo,
+    repo,
+    gitText,
+    gitOptional: (args) => (args[0] === "merge-base"
+      ? recorded
+      : `${"c".repeat(40)}\trefs/heads/${branch}`),
+    leaseStore: {
+      verify: () => ({ fenceSha: recorded, worktreePath: repo, sessionId: "chat-a" }),
+      readRegistry: () => { throw new Error("ledger unavailable"); },
+      heartbeat: () => {},
+    },
+    sessionId: "chat-a",
+    leaseTtlMs: 1_800_000,
+    run: () => {},
+  }), /competing claim/);
 });
 
 test("review recovers an expired planned cloud-bound lane into review-ready authority", () => {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6308,
-  "headDigest": "c6b0127038d6c1af39609ddb77866827ffd09b39d52798ae8f3bdf60126edc72",
+  "sequence": 6309,
+  "headDigest": "2c5e2497045f09f09f2d1c1de5ca9913214f33987dbdaec6b59a01e38eb94df2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -320764,6 +320764,47 @@
       },
       "claimDigest": "2ca5566af7dfd254393d04afe9f6bc4d1ac7b00533f61fb1c989594ba582a4a2",
       "digest": "c6b0127038d6c1af39609ddb77866827ffd09b39d52798ae8f3bdf60126edc72"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6309,
+      "parentDigest": "c6b0127038d6c1af39609ddb77866827ffd09b39d52798ae8f3bdf60126edc72",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOP3NVnQ",
+      "claimId": "d461181865253c4aeb8f03022c8ffe156b5077cae3852f896bf358e7609716f4",
+      "idempotencyKey": "b0ebbd40042546a7ac9231dc8c6de8a1c2d9396c87a557c095770c921f1e1f6b",
+      "requestDigest": "024f1be6621a90e664e15b9e885e179869a5eb963af677b3aefcb7db97ecb0ae",
+      "evaluationTime": "2026-08-30T08:16:22.000Z",
+      "claimCore": {
+        "claimId": "d461181865253c4aeb8f03022c8ffe156b5077cae3852f896bf358e7609716f4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:5e988a902aa9d624fa8396a882b4d4467368ac5b9baf6948b0190abfc8e4082d",
+        "repositoryId": "github-repository:R_kgDOP3NVnQ",
+        "workItemId": "work-item:4bd1a084d317aee634d2ffb9b5da82ed6576fcc2af2fc7b4fab6b24d174ec1a4",
+        "canonicalBaseRevision": "76903aba2a8f8a4e693dd51de580707affb3dfdc",
+        "declaredWriteScope": [
+          "path:guidelines/agentic-sdlc-guidelines.md",
+          "path:guidelines/agentic-sdlc-integration-order.md",
+          "path:scripts/check-agentic-sdlc-guideline.mjs",
+          "semantic:exact-canonical-policy-v2"
+        ],
+        "writeSetDigest": "880cb5798f2736fa7000211b58c40a2b1f220aed7b871502e87922efca3cb8d6",
+        "laneRevision": "7f27a1439359bf4fb6702a105310e34e44b9a2c8",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-30T08:55:45.000Z",
+        "evidenceDigest": "466b858b4cb5e0752e3bc3eb21f1ff36a0934724c419cc7b2ae9b31e791be9f2",
+        "reviewRequestId": "github-pull-request:PR_kwDOP3NVnc8AAAABBfZyKg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "1a37ff10fb0b88ba26505e096fa6ff63fea0421941df3fff4d84c6f99c029494",
+      "digest": "2c5e2497045f09f09f2d1c1de5ca9913214f33987dbdaec6b59a01e38eb94df2"
     }
   ]
 }

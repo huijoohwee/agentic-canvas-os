@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6253,
-  "headDigest": "4920f1157b717216c544644485d5a2ebeb306347d35da85994432e274042d666",
+  "sequence": 6254,
+  "headDigest": "4dc16487b76e6a78d88d5e61e802ebb9768c98b7099cb9f8219d042a4a24b254",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -317730,6 +317730,48 @@
       },
       "claimDigest": "58a619ce3bf0858bf2820b1f9999ac66629b060c2fee6da3d8142f1597300a7e",
       "digest": "4920f1157b717216c544644485d5a2ebeb306347d35da85994432e274042d666"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6254,
+      "parentDigest": "4920f1157b717216c544644485d5a2ebeb306347d35da85994432e274042d666",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "b9e095f33222c96d1295671700009e30b30d1239bf378fa883fca2eaf33303aa",
+      "idempotencyKey": "ea3f36d2bb1ec494bb3bfa0a06c67e9a8c22cfac240342039c6e5885a5ae4c8d",
+      "requestDigest": "44f7e70709ab1c4c58a1873ff4dbc687fc1e2a5c5c6ba410b7a045499141a72e",
+      "evaluationTime": "2026-08-30T05:06:22.000Z",
+      "claimCore": {
+        "claimId": "b9e095f33222c96d1295671700009e30b30d1239bf378fa883fca2eaf33303aa",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b17411d95b55332ceb6bbbd95df731cbca56ea7d3c22db386d3dc451a180eed9",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:0b13ae806872d84092ae8298c9372da26756e3ce0e44264c2cc28ed70dd63658",
+        "canonicalBaseRevision": "ececd1d1421269ddd980daf16e78ead23be2e0eb",
+        "declaredWriteScope": [
+          "path:cloudflare/pages/agenticgraph-agent-ready-shared.mjs",
+          "path:docs/documents/agenticgraph-api-document.md",
+          "path:docs/documents/agenticgraph-cross-repo-publish-topology.md",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "semantic:storage-custom-domain-origin-cutover"
+        ],
+        "writeSetDigest": "5422767a60b2b2fbf54960345029f1a71a493e0ff9bb9cb9f9b30734943c1ada",
+        "laneRevision": "2c6d949244537a40ff54102020d1c1ce23d32cf3",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T06:03:49.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOOYnpZs8AAAABBe-kLw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "a7afd6b66c03e5dc8ca9aeee5a00b2a170af2a41255eac17390a56ebfd67a682",
+      "digest": "4dc16487b76e6a78d88d5e61e802ebb9768c98b7099cb9f8219d042a4a24b254"
     }
   ]
 }

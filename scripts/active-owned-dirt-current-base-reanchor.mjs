@@ -19,6 +19,8 @@ import { createActiveOwnedDirtCurrentBaseReanchorController }
   from "./active-owned-dirt-current-base-reanchor-controller.mjs";
 import { createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter }
   from "./active-owned-dirt-current-base-reanchor-repository-adapter.mjs";
+import { createGitHubConditionalPullBodyPort }
+  from "./github-conditional-pull-body.mjs";
 
 const OPERATION = "active-owned-dirt-current-base-reanchor";
 const COMMAND_SCHEMA = `agentic-${OPERATION}-command/v1`;
@@ -53,12 +55,17 @@ export async function runActiveOwnedDirtCurrentBaseReanchorCli(
   const journalFile = absolute(required(options, "journal"), "journal");
   const createAdapter = dependencies.createAdapter
     || createActiveOwnedDirtCurrentBaseReanchorRepositoryAdapter;
+  const adapterDependencies = composeReanchorAdapterDependencies({
+    repository,
+    adapterDependencies: dependencies.adapterDependencies,
+    createPort: dependencies.createConditionalPullBodyPort,
+  });
   const adapter = createAdapter({
     repository,
     sessionId,
     taskAuthorityFile,
     journalFile,
-  }, dependencies.adapterDependencies || {});
+  }, adapterDependencies);
   const createController = dependencies.createController
     || createActiveOwnedDirtCurrentBaseReanchorController;
   const controller = createController(adapter);
@@ -111,6 +118,29 @@ export async function runActiveOwnedDirtCurrentBaseReanchorCli(
     deployed: false,
     cleaned: false,
   });
+}
+
+export function composeReanchorAdapterDependencies({
+  repository,
+  adapterDependencies = {},
+  createPort = createGitHubConditionalPullBodyPort,
+} = {}) {
+  const result = { ...adapterDependencies };
+  const hasRead = typeof result.readConditionalPull === "function";
+  const hasPatch = typeof result.patchConditionalPull === "function";
+  if (hasRead !== hasPatch) {
+    throw new Error("Conditional pull-request dependency pair must be complete.");
+  }
+  if (!hasRead) {
+    const port = createPort({ repository });
+    if (typeof port?.readConditionalPull !== "function"
+      || typeof port?.patchConditionalPull !== "function") {
+      throw new Error("Conditional pull-request provider port is incomplete.");
+    }
+    result.readConditionalPull = port.readConditionalPull;
+    result.patchConditionalPull = port.patchConditionalPull;
+  }
+  return Object.freeze(result);
 }
 
 function parse(tokens) {

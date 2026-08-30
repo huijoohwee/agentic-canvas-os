@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6366,
-  "headDigest": "5f2cabd6aa62d2a254a847777bd24138db641ca5359d489ea11814bef6eee82f",
+  "sequence": 6367,
+  "headDigest": "94513ee746cbfc270b75c8186c89e1a0f7528e48352f3b3357c9b3e93fa4f83a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -323614,6 +323614,49 @@
       },
       "claimDigest": "2287ebe268aec353beb3d5792a545a84ea0de0308cb82a99ba02b9f615d36d81",
       "digest": "5f2cabd6aa62d2a254a847777bd24138db641ca5359d489ea11814bef6eee82f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6367,
+      "parentDigest": "5f2cabd6aa62d2a254a847777bd24138db641ca5359d489ea11814bef6eee82f",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "06dc664eabb28b6e685f6773911e1b1f84b6364cb43edb756157a380f49c2e14",
+      "idempotencyKey": "74d372d43d7f7c16bbf87bd3f3e45b0bbb18c463217fbb0ad9804fdd8cd6af53",
+      "requestDigest": "3a73e612c8f3c16696fdff8df33a4025052ff4ab89a05ea02318c5e8701f2aee",
+      "evaluationTime": "2026-08-30T11:34:35.000Z",
+      "claimCore": {
+        "claimId": "06dc664eabb28b6e685f6773911e1b1f84b6364cb43edb756157a380f49c2e14",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:667356942c082a29e5aac7941b2c6c5abaa94c44d48187302400f6a3668fa0b3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:537f0949be85a266922d4d93f257e4dbbf0d2d58da87325aa11f6dfc0e3d8391",
+        "canonicalBaseRevision": "a909f2418aba9e43996f649a7d9fffef8d364639",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-successor-rollover-continuation-refresh.test.mjs",
+          "path:docs/ACTIVE-DIRTY-SCOPE-EXPANSION-SUCCESSOR-ROLLOVER.md",
+          "path:scripts/active-dirty-scope-expansion-successor-rollover-continuation-refresh.mjs",
+          "path:scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs",
+          "path:scripts/active-dirty-scope-expansion-successor-rollover.mjs",
+          "semantic:successor-rollover-pr-marker-replan"
+        ],
+        "writeSetDigest": "019f684d69c2540c7eec72a02dd56425aaddf9227ecf10ebc5efe070b36b4d06",
+        "laneRevision": "a909f2418aba9e43996f649a7d9fffef8d364639",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T19:34:35.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "831e7299226d6c9f26c52fbe1b8d9134bcf2a588af1c4b28f8724eecbba2affe",
+      "digest": "94513ee746cbfc270b75c8186c89e1a0f7528e48352f3b3357c9b3e93fa4f83a"
     }
   ]
 }

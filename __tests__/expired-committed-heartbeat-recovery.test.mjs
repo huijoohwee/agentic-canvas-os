@@ -794,7 +794,8 @@ test("expired-source replay requires a newer cloud transition", () => {
   assert.equal(harness.markerWrites(), 0);
 });
 
-test("expired-source replay adopts repeated current response-loss with stable heartbeat", () => {
+test("expired-source replay adopts repeated current response-loss with stable heartbeat", (t) => {
+  t.mock.method(Date, "now", () => Date.parse("2026-08-30T13:00:00.000Z"));
   const source = liveManifestLease();
   source.cloudAuthority.heartbeatCounter = 1;
   const recoveryEvidenceDigest = "d".repeat(64);
@@ -870,7 +871,8 @@ test("expired-source replay adopts repeated current response-loss with stable he
   assert.equal(invokeCalls, 0);
 });
 
-test("expired-source replay renews an ordered dormant response-loss chain", () => {
+test("expired-source replay renews an ordered dormant response-loss chain", (t) => {
+  t.mock.method(Date, "now", () => Date.parse("2026-08-30T13:00:00.000Z"));
   const source = liveManifestLease();
   source.cloudAuthority.heartbeatCounter = 1;
   const historicalRecoveryEvidenceDigests = ["d".repeat(64), "b".repeat(64)];

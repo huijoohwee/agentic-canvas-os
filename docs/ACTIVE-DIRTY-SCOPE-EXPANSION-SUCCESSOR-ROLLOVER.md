@@ -124,8 +124,8 @@ task-authority binding, and pull-request marker before returning the same sealed
 
 ## Promoted-successor continuation
 
-`plan-continuation` is available only for an interrupted Phase B whose journal is durably
-`replacement-promoted`. It does not create or promote another claim. Continuation frame and plan v2
+`plan-continuation --replacement-plan` is available only for an interrupted Phase B whose journal is
+durably `replacement-promoted`. It does not create or promote another claim. Continuation frame and plan v2
 distinguish an unchanged `promoted-unbound` C3 from a `bound-response-ahead` C3 whose cloud bind
 succeeded but whose response never reached the journal. The bound mode is admissible only when C3's
 complete claim-scoped history is exactly its sealed genesis claim followed by one canonical
@@ -143,18 +143,36 @@ does not weaken generic provider mutation mapping or authorize another review, b
 The repaired-controller identity is a dependency-closure content digest; protected HEAD ancestry is
 proved separately, so a later disjoint main advance is accepted while controller-byte drift is not.
 
+If an exactly authorized `bound-response-ahead` continuation already advanced the durable journal
+through `replacement-bound`, `local-cas`, and `pr-marker` before another controller repair landed,
+`plan-continuation --prior-continuation` may refresh that plan only from the exact `pr-marker`
+checkpoint. The adapter revalidates the live sealed bind, stored claim-local authority, local
+tombstone, task binding, current draft review identity and marker, unchanged owner fence/dirt, and
+corrected manifest; each live value must byte-join its journal phase. The refresh reuses the prior
+promoted source journal and owner, promoted claim, bound receipt, historical review, and bind proof
+byte-for-byte. Only a changed controller content digest on a clean strict descendant may produce a
+refresh-plan/v1 wrapper around the rebuilt continuation plan/v2 and a new exact authorization. The
+wrapper seals the prior plan, the exact normalized `pr-marker` journal, and the rebuilt inner plan;
+its authority permits terminal verification and reconciliation but explicitly forbids another bind,
+local CAS, or pull-request marker mutation. Earlier, later, partial, or drifted checkpoints fail
+closed. Prior plans, sidecars, and output paths remain immutable and cannot be overwritten.
+
 The continuation plan emits a third independently typed statement:
 
 ```text
 authorize active-dirty-scope-expansion-successor-rollover-continue <planDigest>
 ```
 
-`run-continuation` validates that exact statement and re-captures the complete pre-effect frame before
-creating a separate external `0600` authorization sidecar. Only then does it resume the original
-replacement controller with the original replacement plan and its already-journaled authorization.
-Replay validates the sidecar-to-plan join and the journal's immutable promoted prefix, while allowing
-the journal to have advanced monotonically through bind, local CAS, marker projection, verification,
-or completion. A v1 plan or prior sidecar cannot authorize v2: every bound-response-ahead replan needs
+`run-continuation` validates that exact statement and, for a refresh wrapper, requires the live journal
+to equal its sealed `pr-marker` checkpoint before and after paired frame capture. The pre-sidecar inner
+plan comparison is rebuilt from the plan's immutable promoted source journal, never from the mutable
+descendant journal; any checkpoint or frame drift leaves the separate external `0600` sidecar absent.
+Only then does it resume the original replacement controller with the original replacement plan and
+its already-journaled authorization. Refresh execution is forced through the PR-marker validator and
+cannot fall back to the ordinary promoted path. Replay validates the sidecar-to-wrapper join and the
+exact sealed bind/local/marker prefix while allowing terminal verification or completion. Ordinary
+continuation replay retains its monotonic promoted-prefix behavior. A legacy continuation v1 plan or
+prior sidecar cannot authorize v2: every bound-response-ahead replan needs
 a fresh plan, exact authorization, and exclusively created sidecar. Its allowed cloud action is only
 `reconcile-exact-bound-replacement`; `replacement-bind` is explicitly forbidden, so neither effect
 authorization nor a second bind may occur. Response-loss reconciliation joins the exact canonical
@@ -172,9 +190,9 @@ continuation, it accepts only that continuation plan's exact `repairedController
 change therefore invalidates both direct replacement replay and every prior continuation sidecar, and
 requires a freshly planned and exactly authorized continuation.
 
-The protected controller dependency closure includes the bind-evidence validator and
-`claim-only-partial-start-retirement-store.mjs`, which constructs the canonical operation receipt.
-Changing either dependency changes the repaired-controller digest and requires another fresh plan.
+The protected controller dependency closure includes the bind-evidence validator, continuation-refresh
+contract and proof, and `claim-only-partial-start-retirement-store.mjs`, which constructs the canonical
+operation receipt. Changing any dependency changes the repaired-controller digest and requires another fresh plan.
 Continuation never authorizes source edits, a new claim, Git changes, integration, deployment, or
 cleanup.
 
@@ -268,6 +286,18 @@ node scripts/active-dirty-scope-expansion-successor-rollover.mjs plan-continuati
   --output=/absolute/private/continuation-plan.json \
   --json
 
+# Mutually exclusive refresh form after an exact durable PR-marker checkpoint:
+node scripts/active-dirty-scope-expansion-successor-rollover.mjs plan-continuation \
+  --repository=/absolute/path/to/preserved-dirty-worktree \
+  --source-session=<source-session> \
+  --pull-request=<number> \
+  --operator-session=<distinct-operator-session> \
+  --state-path=/absolute/private/recovery-journal.json \
+  --corrected-manifest=/absolute/private/corrected-write-scope.json \
+  --prior-continuation=/absolute/private/prior-continuation-plan.json \
+  --output=/absolute/private/fresh-continuation-plan.json \
+  --json
+
 node scripts/active-dirty-scope-expansion-successor-rollover.mjs run-continuation \
   --repository=/absolute/path/to/preserved-dirty-worktree \
   --source-session=<source-session> \
@@ -292,6 +322,7 @@ new exact authorization. Phase A retirement itself remains historical fact and i
 node --test \
   __tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs \
   __tests__/active-dirty-scope-expansion-successor-rollover-continuation-contract.test.mjs \
+  __tests__/active-dirty-scope-expansion-successor-rollover-continuation-refresh.test.mjs \
   __tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs \
   __tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs
 npm run docs:check

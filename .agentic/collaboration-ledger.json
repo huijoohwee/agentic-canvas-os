@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6265,
-  "headDigest": "95b8846392cc6b41f56203578c732b7a9203d25b9780f4932c3d54a3edbd2dfc",
+  "sequence": 6266,
+  "headDigest": "4073c05caf40633c3903c3684790b1afb3d6da16a1396211c3c879451adc11ba",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -318359,6 +318359,63 @@
       },
       "claimDigest": "39e089c7a9b0123faeae2c774265a310acfc605ca58a5ba1d44b7e4bb195d478",
       "digest": "95b8846392cc6b41f56203578c732b7a9203d25b9780f4932c3d54a3edbd2dfc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6266,
+      "parentDigest": "95b8846392cc6b41f56203578c732b7a9203d25b9780f4932c3d54a3edbd2dfc",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDONN5Qzg",
+      "claimId": "bca1f4053b9b91a7c1e67b7030b15b60737ba566ae04a3db106093a8a8ecd4ba",
+      "idempotencyKey": "6b7d61ee3730b41a265b7d20b8bb122cf798608f006bc52ae779285681332582",
+      "requestDigest": "e60ebc1436f12cc4b715b92abbb9ab884486b0e86c46474c1795912d2431ac9b",
+      "evaluationTime": "2026-08-30T05:48:43.000Z",
+      "claimCore": {
+        "claimId": "bca1f4053b9b91a7c1e67b7030b15b60737ba566ae04a3db106093a8a8ecd4ba",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:8c022bd6d2030b1d7731eee5b6aaee1500b51d26972c6bae6d5b00c6ac52336e",
+        "repositoryId": "github-repository:R_kgDONN5Qzg",
+        "workItemId": "work-item:e9d0f351e566063fcdbbf4fe2f88cc11f837c7efa5a2e111393b02feeeb23f3b",
+        "canonicalBaseRevision": "12884a1fc526e3366f6b858240fda1892b7c4fa3",
+        "declaredWriteScope": [
+          "path:content/gamexr/.well-known/runtime-readiness.json",
+          "path:content/gamexr/assets/GLTFLoader-DgvSWouF.js",
+          "path:content/gamexr/assets/index-BXHGyDmD.css",
+          "path:content/gamexr/assets/index-BnUHHnsn.js",
+          "path:content/gamexr/assets/index-l8aq5JYa.js",
+          "path:content/gamexr/assets/three-animation-B5LeBG1o.js",
+          "path:content/gamexr/assets/three-assets-GM0YnDur.js",
+          "path:content/gamexr/assets/three-core-1qkaC_lC.js",
+          "path:content/gamexr/assets/three-renderer-9B9Ug37H.js",
+          "path:content/gamexr/icons/gamexr.svg",
+          "path:content/gamexr/index.html",
+          "path:content/gamexr/llms.txt",
+          "path:content/gamexr/manifest.webmanifest",
+          "path:content/gamexr/precache-manifest.json",
+          "path:content/gamexr/release-manifest.json",
+          "path:content/gamexr/schemas/apple-spatial-input.schema.json",
+          "path:content/gamexr/schemas/default-scene.json",
+          "path:content/gamexr/schemas/gamexr.scene.schema.json",
+          "path:content/gamexr/sw.js",
+          "semantic:gamexr-mirror-718298de"
+        ],
+        "writeSetDigest": "10ce6fbbfa5b9f87ae8a81d7754ef31676f57de196aaa2f46bec0b052a2a1d9e",
+        "laneRevision": "807f5a668e9bf4b5944067b180bfa856edd309cb",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-30T06:31:16.000Z",
+        "evidenceDigest": "cceb7bf11cf1122e8a3121bdd29f3225285ee630e94d8b41352fff065a81fb04",
+        "reviewRequestId": "github-pull-request:PR_kwDONN5Qzs8AAAABBfCTXw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "09d56b57f0cb4b4a3f8c789b33ac40fbfcbd811553b0cb82b6135aca6c8fee42",
+      "digest": "4073c05caf40633c3903c3684790b1afb3d6da16a1396211c3c879451adc11ba"
     }
   ]
 }

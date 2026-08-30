@@ -54,6 +54,10 @@ const RUNTIME_FILES = Object.freeze([
   "scripts/claim-only-partial-start-retirement-store.mjs",
 ]);
 
+export function isLiveWaitingSuccessorClaim(claim) {
+  return claim?.state === "waiting-successor";
+}
+
 export function readAllWaitingBridgeProviderPullRequests({ targetRepository, gh }) {
   const parts = claimOnlyRepositoryName(targetRepository).split("/");
   const [owner, name] = parts;
@@ -612,7 +616,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
       ? projectClaimOnlyClaim(bridgeMatches[0], bridgeEntries[0])
       : sealedEvidence?.bridge || null;
     const successor = successorMatches.length === 1
-      && successorMatches[0].recordedState === "waiting-successor"
+      && isLiveWaitingSuccessorClaim(successorMatches[0])
       ? projectClaimOnlyClaim(successorMatches[0], successorEntries[0])
       : sealedEvidence?.successor || null;
     if (!bridge || !successor) invalid("sealed original chain subjects");
@@ -751,7 +755,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     }
     if (frame.bridgeMatches.length !== 0 || frame.bridgeEntries.length !== 2
       || frame.successorMatches.length !== 1 || frame.successorEntries.length !== 1
-      || frame.successorMatches[0].recordedState !== "waiting-successor") {
+      || !isLiveWaitingSuccessorClaim(frame.successorMatches[0])) {
       invalid("Phase B original waiter/retired bridge cardinality");
     }
     const result = normalizeWaitingBridgeResult(

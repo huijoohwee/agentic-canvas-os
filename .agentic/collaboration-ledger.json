@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6287,
-  "headDigest": "332a97821797fe2c956ae3e6cca78f3525584c88eaa045863891981c62704f79",
+  "sequence": 6288,
+  "headDigest": "57142bb0e5f44088e8d64f18785a1a5d958441fe76a144020d276c8206f280d3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -319561,6 +319561,78 @@
       },
       "claimDigest": "bb6c0f9b7aeddcc85df598f225efa2bbdf9247404add7514a0bc23f86c675033",
       "digest": "332a97821797fe2c956ae3e6cca78f3525584c88eaa045863891981c62704f79"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6288,
+      "parentDigest": "332a97821797fe2c956ae3e6cca78f3525584c88eaa045863891981c62704f79",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "336bc1d646ac6836177633fe3d90c14f24fe999bb6309c5647ce765c063be063",
+      "idempotencyKey": "fe1ee8d893cf6efaaf97577f1086e62f45f149aeacb07056a6019c99fc92fef1",
+      "requestDigest": "2a15bc52e7ad030a846ddbf3c6337fd18c0fb5b18d3d6688a7f8c146640514f6",
+      "evaluationTime": "2026-08-30T06:59:28.000Z",
+      "claimCore": {
+        "claimId": "336bc1d646ac6836177633fe3d90c14f24fe999bb6309c5647ce765c063be063",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:b58be04f476406ab37d9131a75cabaf096ff6308d0eeb050b04d76058d611768",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:328d1d4b013d12d54f20cf54e1ba470514fa5c89b5f34c2b2bb3c7ffed7da0e1",
+        "canonicalBaseRevision": "80589fd899cf3d2d1fe0d274276f5300d265ebc9",
+        "declaredWriteScope": [
+          "path:__tests__/pre-bind-mixed-device-planned-owner-retirement.test.mjs",
+          "path:docs/PRE-BIND-MIXED-DEVICE-PLANNED-OWNER-RETIREMENT.md",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-contract.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-controller.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement-repository-adapter.mjs",
+          "path:scripts/pre-bind-mixed-device-planned-owner-retirement.mjs",
+          "semantic:pre-bind-mixed-device-owner-retirement"
+        ],
+        "writeSetDigest": "bf28b5647a21bf47b85f7a0bc3be8f18de2f4f30c81ab7cb549f76312d50f72b",
+        "laneRevision": "00cddca6ecd50fc2b7221146bd3bf8016f477d3e",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T07:59:28.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "2268a34116b2c7574228d3dc6063de4a1e3d3f5664ca4a7eeab20c80a3205a59",
+        "canonicalDescendantProof": {
+          "schema": "agentic-legacy-review-current-base-disjoint-proof/v1",
+          "sourceBaseSha": "80589fd899cf3d2d1fe0d274276f5300d265ebc9",
+          "targetBaseSha": "54b2176b7c29c356423433fb93d2813fe2590fd5",
+          "protectedMainSha": "54b2176b7c29c356423433fb93d2813fe2590fd5",
+          "canonicalChangedPaths": [
+            "__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs",
+            "__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs",
+            "__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs",
+            "docs/ACTIVE-DIRTY-SCOPE-EXPANSION-SUCCESSOR-ROLLOVER.md",
+            "scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs",
+            "scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs"
+          ],
+          "canonicalChangedPathsDigest": "ce9a006c67de5a797e7f379b0645ba7049f9d387a764ef06e715fcac8fbc5c73",
+          "preservedChangedPaths": [
+            "__tests__/pre-bind-mixed-device-planned-owner-retirement.test.mjs",
+            "docs/PRE-BIND-MIXED-DEVICE-PLANNED-OWNER-RETIREMENT.md",
+            "scripts/pre-bind-mixed-device-planned-owner-retirement-contract.mjs",
+            "scripts/pre-bind-mixed-device-planned-owner-retirement-controller.mjs",
+            "scripts/pre-bind-mixed-device-planned-owner-retirement-repository-adapter.mjs",
+            "scripts/pre-bind-mixed-device-planned-owner-retirement.mjs"
+          ],
+          "preservedChangedPathsDigest": "a22f19e742f140fcdd55a5f5fcde9d19caa36e22943764b9d25e6d462a759175",
+          "ancestry": "source-base-to-current-protected-main",
+          "overlap": "none",
+          "evidenceDigest": "bf9bbe4943f6d462282a41f9b054bc8fe39a937090e6dbbdb03500a1a4e3d958"
+        },
+        "eligibleSince": "2026-08-30T06:54:51.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-30T06:59:28.000Z"
+      },
+      "claimDigest": "4b2a9167ce8d693c7027c1cd6a4f1897cac68f22029af863218763fc9700e143",
+      "digest": "57142bb0e5f44088e8d64f18785a1a5d958441fe76a144020d276c8206f280d3"
     }
   ]
 }

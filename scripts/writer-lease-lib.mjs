@@ -335,6 +335,40 @@ export function createWriterLeaseStore({
     });
   }
 
+  // Re-anchors one bound subject onto its own lane after the lane's volatile
+  // operands moved. It changes no authority and no content, so it is the exit
+  // from a drifted binding rather than a fresh grant.
+  function rebindTaskAuthority({
+    sessionId,
+    branch,
+    targetCapabilityFile,
+    planDigest,
+    boundAt,
+  }) {
+    return withLock(() => {
+      const registry = readRegistry();
+      const current = registry.leases[branch] || null;
+      if (!current || current.status !== "active" || current.sessionId !== sessionId) {
+        throw new Error("Task authority rebind requires its exact active writer lease.");
+      }
+      if (!current.taskAuthority) throw new Error("Writer lease has no task-bound authority to rebind.");
+      const taskAuthority = assertTaskAuthorityTransition({
+        operation: "rebind",
+        lease: current,
+        targetCapabilityPath: targetCapabilityFile,
+        planDigest,
+        boundAt,
+      });
+      const lease = { ...current, taskAuthority };
+      writeRegistry({
+        ...registry,
+        revision: Number(registry.revision || 0) + 1,
+        leases: { ...registry.leases, [branch]: lease },
+      }, { transitionBranch: branch, transitionKind: "rebind" });
+      return lease;
+    });
+  }
+
   function handoffTaskAuthority({
     sessionId,
     branch,
@@ -738,7 +772,7 @@ export function createWriterLeaseStore({
   }
 
   return { annotate, assertTaskAuthority, beginCompletion, bindTaskAuthority, claim, complete,
-    handoffTaskAuthority, heartbeat, read,
+    handoffTaskAuthority, rebindTaskAuthority, heartbeat, read,
     recoverExpiredCommittedHeartbeat,
     recoverMergedPullRequestCompletion,
     recoverFromPullRequestMarker,

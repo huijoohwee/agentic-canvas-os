@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Responsibility: Expose secure capability issuance and exact clean-lane migration or handoff transitions.
+// Responsibility: Expose secure capability issuance and exact clean-lane migration,
+// handoff, or same-subject rebind transitions.
 import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -30,6 +31,8 @@ try {
   else if (command === "migrate") emit(runTransition("migration"));
   else if (command === "plan-handoff") emit(planTransition("handoff"));
   else if (command === "handoff") emit(runTransition("handoff"));
+  else if (command === "plan-rebind") emit(planTransition("rebind"));
+  else if (command === "rebind") emit(runTransition("rebind"));
   else usage();
 } catch (error) {
   if (!json) throw error;
@@ -136,14 +139,22 @@ function runTransition(operation) {
         planDigest: storedPlan.planDigest,
         boundAt,
       })
-    : context.leaseStore.handoffTaskAuthority({
-      sessionId: context.sessionId,
-      branch: context.branch,
-      sourceCapabilityFile: requiredOption("source-capability"),
-      targetCapabilityFile: targetCapabilityPath,
-      planDigest: storedPlan.planDigest,
-      boundAt,
-    });
+    : operation === "rebind"
+      ? context.leaseStore.rebindTaskAuthority({
+        sessionId: context.sessionId,
+        branch: context.branch,
+        targetCapabilityFile: targetCapabilityPath,
+        planDigest: storedPlan.planDigest,
+        boundAt,
+      })
+      : context.leaseStore.handoffTaskAuthority({
+        sessionId: context.sessionId,
+        branch: context.branch,
+        sourceCapabilityFile: requiredOption("source-capability"),
+        targetCapabilityFile: targetCapabilityPath,
+        planDigest: storedPlan.planDigest,
+        boundAt,
+      });
   return {
     schema: "agentic-task-authority-cli-result/v1",
     ok: true,
@@ -177,13 +188,22 @@ function transitionContext({ operation, targetCapabilityPath }) {
   if (context.lease.sessionId !== context.sessionId) {
     throw new Error("Task authority transition session does not match the writer lease.");
   }
-  if (context.lease.status === "active" && Date.parse(context.lease.expiresAt) <= Date.now()) {
+  // Rebind is expiry-agnostic because it confers nothing: it re-anchors an
+  // existing subject and leaves status, expiry, and content untouched, so it
+  // cannot revive anything. Refusing it on an expired lease would make expiry plus
+  // drift jointly unrecoverable, since renewal itself asserts the drifted binding.
+  if (operation !== "rebind"
+    && context.lease.status === "active"
+    && Date.parse(context.lease.expiresAt) <= Date.now()) {
     throw new Error("Task authority transition cannot revive an expired writer lease.");
   }
   if (path.resolve(context.lease.worktreePath) !== context.repository) {
     throw new Error("Task authority transition must run in the leased worktree.");
   }
-  if (context.statusPorcelain) {
+  // A rebind moves no authority and touches no working tree, so requiring a clean
+  // lane would deny the repair exactly when the lane is holding the uncommitted
+  // work the drifted binding is refusing to record.
+  if (context.statusPorcelain && operation !== "rebind") {
     throw new Error("Dirty lanes cannot migrate or transfer task authority.");
   }
   const targetCapability = readTaskAuthorityCapability(targetCapabilityPath);
@@ -302,6 +322,6 @@ function publicError(error) {
 
 function usage() {
   throw new Error(
-    "Usage: task-bound-lane-authority-cli.mjs issue|inspect|plan-migration|migrate|plan-handoff|handoff [exact options] [--json]",
+    "Usage: task-bound-lane-authority-cli.mjs issue|inspect|plan-migration|migrate|plan-handoff|handoff|plan-rebind|rebind [exact options] [--json]",
   );
 }

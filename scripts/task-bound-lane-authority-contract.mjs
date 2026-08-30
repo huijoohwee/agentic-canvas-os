@@ -25,6 +25,19 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const SUBJECT_PATTERN = /^urn:agentic-task:[0-9a-f]{64}$/u;
 const BRANCH_PATTERN = /^agent\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/u;
 
+// `rebind` re-anchors one unchanged authority subject onto its own lane after the
+// lane's volatile operands moved. Every other mode either creates authority or
+// replaces the subject; without this mode a drifted binding has no exit, which
+// makes an ordinary lane event unrecoverable.
+export const TASK_AUTHORITY_BINDING_MODES = Object.freeze([
+  "claim", "continuation", "migration", "handoff", "rebind",
+]);
+const PLANNED_BINDING_MODES = Object.freeze(["migration", "handoff", "rebind"]);
+const PRIOR_BOUND_BINDING_MODES = Object.freeze(["continuation", "handoff", "rebind"]);
+export const TASK_AUTHORITY_TRANSITION_OPERATIONS = Object.freeze([
+  "migration", "handoff", "rebind",
+]);
+
 export function createTaskAuthorityCapability({
   authoritySubjectId = `urn:agentic-task:${randomBytes(32).toString("hex")}`,
   generation = 1,
@@ -103,23 +116,23 @@ export function createTaskAuthorityBinding({
   priorBindingDigest = null,
 }) {
   const projected = projectTaskAuthorityCapability(capability);
-  const lane = normalizeLaneIdentity(lease);
+  const lane = normalizeStableLaneIdentity(lease);
   requireInstant(boundAt, "task authority boundAt");
-  if (!["claim", "continuation", "migration", "handoff"].includes(bindingMode)) {
+  if (!TASK_AUTHORITY_BINDING_MODES.includes(bindingMode)) {
     throw new Error("Task authority binding mode is invalid.");
   }
   if (bindingMode === "claim" && (transitionPlanDigest || priorBindingDigest)) {
     throw new Error("Claim binding cannot carry transition evidence.");
   }
-  if (["migration", "handoff"].includes(bindingMode)) {
+  if (PLANNED_BINDING_MODES.includes(bindingMode)) {
     requireDigest(transitionPlanDigest, "transition plan digest");
   } else if (transitionPlanDigest !== null) {
     throw new Error("Claim continuation cannot carry a transition plan digest.");
   }
-  if (["continuation", "handoff"].includes(bindingMode)) {
+  if (PRIOR_BOUND_BINDING_MODES.includes(bindingMode)) {
     requireDigest(priorBindingDigest, "prior binding digest");
   } else if (priorBindingDigest !== null) {
-    throw new Error("Only continuation or handoff may carry a prior binding digest.");
+    throw new Error("Only continuation, handoff, or rebind may carry a prior binding digest.");
   }
   const core = {
     schema: TASK_AUTHORITY_BINDING_SCHEMA,
@@ -163,22 +176,22 @@ export function normalizeTaskAuthorityBinding(value) {
   requireDigest(source.publicKeyDigest, "public key digest");
   requireDigest(source.laneBindingDigest, "lane binding digest");
   requireDigest(source.bindingDigest, "binding digest");
-  if (!["claim", "continuation", "migration", "handoff"].includes(source.bindingMode)) {
+  if (!TASK_AUTHORITY_BINDING_MODES.includes(source.bindingMode)) {
     throw new Error("Task authority binding mode is invalid.");
   }
   if (source.bindingMode === "claim") {
     if (source.transitionPlanDigest !== null || source.priorBindingDigest !== null) {
       throw new Error("Claim binding cannot carry transition evidence.");
     }
-  } else if (["migration", "handoff"].includes(source.bindingMode)) {
+  } else if (PLANNED_BINDING_MODES.includes(source.bindingMode)) {
     requireDigest(source.transitionPlanDigest, "transition plan digest");
   } else if (source.transitionPlanDigest !== null) {
     throw new Error("Claim continuation cannot carry a transition plan digest.");
   }
-  if (["continuation", "handoff"].includes(source.bindingMode)) {
+  if (PRIOR_BOUND_BINDING_MODES.includes(source.bindingMode)) {
     requireDigest(source.priorBindingDigest, "prior binding digest");
   } else if (source.priorBindingDigest !== null) {
-    throw new Error("Only continuation or handoff may carry a prior binding digest.");
+    throw new Error("Only continuation, handoff, or rebind may carry a prior binding digest.");
   }
   const normalized = {
     schema: TASK_AUTHORITY_BINDING_SCHEMA,
@@ -202,11 +215,30 @@ export function normalizeTaskAuthorityBinding(value) {
   return { ...normalized, bindingDigest: source.bindingDigest };
 }
 
+// Bindings issued before the stable-identity narrowing carry a digest over the
+// full lane identity. They stay valid while their lane is unchanged, so no
+// already-bound lease is invalidated by this contract; once such a lane moves,
+// the binding is legacy-shaped and drifted, and `rebind` is its exit.
+export function taskAuthorityLaneBindingShape({ binding, lease }) {
+  const normalized = normalizeTaskAuthorityBinding(binding);
+  if (!normalized) return "unbound";
+  if (normalized.laneBindingDigest === digestValue(normalizeStableLaneIdentity(lease))) {
+    return "stable";
+  }
+  if (normalized.laneBindingDigest === digestValue(normalizeLaneIdentity(lease))) {
+    return "legacy";
+  }
+  return "drifted";
+}
+
 export function assertTaskAuthorityBinding({ binding, lease }) {
   const normalized = normalizeTaskAuthorityBinding(binding);
   if (!normalized) throw new Error("Task-bound lane authority is not bound.");
-  if (normalized.laneBindingDigest !== digestValue(normalizeLaneIdentity(lease))) {
-    throw new Error("Task authority binding does not match the writer lease lane.");
+  if (taskAuthorityLaneBindingShape({ binding: normalized, lease }) === "drifted") {
+    throw new Error(
+      "Task authority binding does not match the writer lease lane; "
+      + "plan and run a task-bound-lane-rebind to re-anchor this subject.",
+    );
   }
   return normalized;
 }
@@ -308,7 +340,7 @@ export function createTaskAuthorityTransitionPlan({
   currentBinding = null,
   plannedAt = new Date().toISOString(),
 }) {
-  if (!["migration", "handoff"].includes(operation)) {
+  if (!TASK_AUTHORITY_TRANSITION_OPERATIONS.includes(operation)) {
     throw new Error("Task authority transition operation is invalid.");
   }
   requireSha(headSha, "transition head SHA");
@@ -318,6 +350,20 @@ export function createTaskAuthorityTransitionPlan({
   const normalizedCurrent = normalizeTaskAuthorityBinding(currentBinding);
   if (operation === "migration" && normalizedCurrent) {
     throw new Error("Migration requires an unbound writer lease.");
+  }
+  // Rebind re-anchors the same subject, so it must not become a silent handoff:
+  // the target has to be the identical authority at the identical generation.
+  if (operation === "rebind") {
+    if (!normalizedCurrent) throw new Error("Rebind requires current task authority.");
+    if (target.authoritySubjectId !== normalizedCurrent.authoritySubjectId) {
+      throw new Error("Rebind target must be the same authority subject.");
+    }
+    if (target.generation !== normalizedCurrent.generation) {
+      throw new Error("Rebind target generation must not advance.");
+    }
+    if (target.publicKeyDigest !== normalizedCurrent.publicKeyDigest) {
+      throw new Error("Rebind target must present the bound public key.");
+    }
   }
   if (operation === "handoff") {
     if (!normalizedCurrent) throw new Error("Handoff requires current task authority.");
@@ -401,17 +447,31 @@ function normalizePublicKey(value) {
   return exportPublicKey(key);
 }
 
-function normalizeLaneIdentity(lease) {
+// The durable binding covers only what the lane lifecycle never changes. `epoch`
+// advances on renewal, `baseSha` moves when canonical moves, and `cloudClaimId`
+// changes whenever a claim is re-minted, so a write-once digest over those three
+// is invalidated by ordinary lane progress and strands the lease. They stay
+// bound, but per operation: normalizeLeaseProofSubject re-covers the full lane
+// identity in every proof challenge, so narrowing here removes no coverage.
+export function normalizeStableLaneIdentity(lease) {
   const source = requireObject(lease, "writer lease");
   const lane = {
     branch: requiredText(source.branch, "lease branch"),
     scope: requiredText(source.scope, "lease scope"),
     device: requiredText(source.device, "lease device"),
+  };
+  if (!BRANCH_PATTERN.test(lane.branch)) throw new Error("Task authority lease branch is invalid.");
+  return lane;
+}
+
+function normalizeLaneIdentity(lease) {
+  const source = requireObject(lease, "writer lease");
+  const lane = {
+    ...normalizeStableLaneIdentity(lease),
     epoch: requireGeneration(source.epoch),
     baseSha: requireSha(source.baseSha, "lease base SHA"),
     cloudClaimId: source.cloudAuthority?.claimId || null,
   };
-  if (!BRANCH_PATTERN.test(lane.branch)) throw new Error("Task authority lease branch is invalid.");
   if (lane.cloudClaimId !== null) requireDigest(lane.cloudClaimId, "cloud claim id");
   return lane;
 }

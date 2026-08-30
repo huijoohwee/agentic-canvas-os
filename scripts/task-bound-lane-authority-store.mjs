@@ -267,6 +267,24 @@ export function assertTaskAuthorityTransition({
       transitionPlanDigest: planDigest,
     });
   }
+  // Rebind cannot authorize through authorizeTaskBoundLeaseMutation: that asserts
+  // the very lane binding a rebind exists to repair, so requiring it would make
+  // the repair path depend on the broken invariant. Possession of the bound
+  // capability is the authorization, and the subject, generation, and key are all
+  // held identical, so a rebind can re-anchor a lane and can never change who
+  // holds authority over it.
+  if (operation === "rebind") {
+    if (!currentBinding) throw new Error("Task authority rebind requires a bound lease.");
+    assertCapabilityMatchesBinding(targetCapability, currentBinding);
+    return createTaskAuthorityBinding({
+      capability: targetCapability,
+      lease,
+      bindingMode: "rebind",
+      boundAt,
+      transitionPlanDigest: planDigest,
+      priorBindingDigest: currentBinding.bindingDigest,
+    });
+  }
   if (operation !== "handoff") throw new Error("Unsupported task authority transition.");
   if (!currentBinding) throw new Error("Task authority handoff requires a bound lease.");
   authorizeTaskBoundLeaseMutation({

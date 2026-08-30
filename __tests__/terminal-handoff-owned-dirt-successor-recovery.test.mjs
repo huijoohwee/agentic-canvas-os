@@ -169,12 +169,16 @@ test("binds and proves the final local target with the successor capability", ()
     lease: result.lease,
     operation,
   }).proofDigest, result.proofDigest);
+  // The wrong lease is still refused. It is refused by the proof challenge rather
+  // than the durable binding, because the volatile lane operands moved out of the
+  // write-once digest and into every per-operation challenge; the source lease
+  // shares this lane's stable identity but not its epoch, base, or claim.
   assert.throws(() => verifyTaskAuthorityProof({
     proof: result.proof,
     binding: result.binding,
     lease: sourceLease,
     operation,
-  }), /does not match the writer lease lane/u);
+  }), /proof changed its bound mutation subject/u);
 });
 
 test("reconciles only the exact successor local target", async t => {

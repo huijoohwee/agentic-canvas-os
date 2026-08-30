@@ -2,6 +2,7 @@
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import {
   assertTaskAuthorityBinding,
+  normalizeStableLaneIdentity,
   normalizeTaskAuthorityBinding,
 } from "./task-bound-lane-authority-contract.mjs";
 
@@ -117,15 +118,11 @@ function assertSuccessorSubject({
   }
 }
 
+// Must stay identical to the contract's stable lane identity: a second spelling
+// of the bound operands is how a successor binding comes to disagree with the
+// checker that validates it.
 function laneIdentity(lease) {
-  return {
-    branch: lease.branch,
-    scope: lease.scope,
-    device: lease.device,
-    epoch: lease.epoch,
-    baseSha: lease.baseSha,
-    cloudClaimId: lease.cloudAuthority.claimId,
-  };
+  return normalizeStableLaneIdentity(lease);
 }
 
 function requireDigest(value, label) {

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6432,
-  "headDigest": "612b601d0a91dc878f902697f2b8aabec86d96db827acb44bd158717b12833fa",
+  "sequence": 6433,
+  "headDigest": "c7b5fb9baa495e4335537c75c48cceb923502d7e872f5c652ee4b4d889741c3a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -326953,6 +326953,48 @@
       },
       "claimDigest": "bc39bf40e4c919b17e74635916c3bab7381556db9820424f1f892d2edd3ab8a7",
       "digest": "612b601d0a91dc878f902697f2b8aabec86d96db827acb44bd158717b12833fa"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6433,
+      "parentDigest": "612b601d0a91dc878f902697f2b8aabec86d96db827acb44bd158717b12833fa",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "80ee1583aae211bc0d70bfb3135f60b39131c61386d592be819c71d4d087f4e4",
+      "idempotencyKey": "61f22574b4a0656528505b5c8c67171d1aa121a72f72242d2fad88d8e899654c",
+      "requestDigest": "797e7211cb69c9f57fd54481f958fdb04642980abe744e46f595ee8703af34b8",
+      "evaluationTime": "2026-08-30T18:52:12.000Z",
+      "claimCore": {
+        "claimId": "80ee1583aae211bc0d70bfb3135f60b39131c61386d592be819c71d4d087f4e4",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4ea4c0e43d9d419d22b20040c85887f5c5cc10e1dd06e9fd8ef86aa78cca0ae4",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:fd988c2ace9a3b8ba0f6650611eba7b665088bc1832d98b9a3a537d27cb466f6",
+        "canonicalBaseRevision": "beab09739c62eb3fdd1bafa84ea15f9df192a778",
+        "declaredWriteScope": [
+          "path:__tests__/active-owned-dirt-current-base-reanchor-github.test.mjs",
+          "path:docs/GITHUB-COOPERATIVE-PULL-BODY-PROJECTION.md",
+          "path:scripts/active-owned-dirt-current-base-reanchor-github.mjs",
+          "path:scripts/github-cooperative-pull-body-projection.mjs",
+          "semantic:github-cooperative-pull-body-projection"
+        ],
+        "writeSetDigest": "d6403f4392509137d19ac11ae02c1e4bcc996ddb5ba07594cf46d72fc189aedd",
+        "laneRevision": "beab09739c62eb3fdd1bafa84ea15f9df192a778",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-30T20:52:12.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "7a1c7ed7ae2bd2efc242756bde1adbde2902d1660f945409673cce3dd57f64fd",
+      "digest": "c7b5fb9baa495e4335537c75c48cceb923502d7e872f5c652ee4b4d889741c3a"
     }
   ]
 }

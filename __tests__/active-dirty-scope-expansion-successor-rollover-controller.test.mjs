@@ -28,7 +28,7 @@ function sourceClaimIdentity() { const core = { repositoryId: "github-repository
 function seal(core) { return { ...core, observationDigest: digestValue(core) }; }
 function retirementObservation(overrides = {}) {
   const core = {
-    schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement-observation/v1",
+    schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement-observation/v2",
     sourceClaimIdentity: sourceClaimIdentity(), controllerDigest: digest("a"),
     protectedMainSha: CURRENT_MAIN, protectedMainTreeSha: sha("d"),
     protectedMainAdvanceDigest: digest("b"), protectedMainChangedPaths: ["device-branch-lib.mjs"],
@@ -46,8 +46,7 @@ function retirementObservation(overrides = {}) {
     staleTargetManifestDigest: digest("9"), staleTargetDeclaredWriteSet: STALE,
     staleExpiresAt: "2099-08-30T00:00:00.000Z", pullRequestNumber: 808,
     pullRequestNodeId: "PR_808", pullRequestMarkerDigest: digest("a"),
-    pullRequestBodyDigest: digest("b"), observedLedgerRevision: sha("e"),
-    observedLedgerDigest: digest("c"), observedLedgerSequence: 88, ...overrides,
+    pullRequestBodyDigest: digest("b"), ...overrides,
   };
   return seal(core);
 }
@@ -118,7 +117,7 @@ function createHarness({ crashPhase = null } = {}) {
     retireStaleSuccessor: effect,
     readPhaseBState: async () => {
       const source = retirementObservation(), retired = live.get("stale-successor-retired");
-      return seal({ schema: "agentic-active-dirty-scope-expansion-successor-rollover-replacement-observation/v1",
+      return seal({ schema: "agentic-active-dirty-scope-expansion-successor-rollover-replacement-observation/v2",
         sourceClaimIdentity: source.sourceClaimIdentity, controllerDigest: digest("1"), protectedMainSha: CURRENT_MAIN,
         protectedMainTreeSha: sha("1"), protectedMainAdvanceDigest: digest("1"),
         protectedMainChangedPaths: ["device-branch-lib.mjs"], branch: source.branch,
@@ -129,8 +128,7 @@ function createHarness({ crashPhase = null } = {}) {
         staleRetirementClaimDigest: retired.retiredClaimDigest,
         staleRetirementTransitionDigest: retired.retirementTransitionDigest,
         staleRetirementTransitionCounter: retired.transitionCounter,
-        staleRetirementReceiptDigest: retired.receiptDigest, observedLedgerRevision: sha("2"),
-        observedLedgerDigest: digest("2"), observedLedgerSequence: 89 });
+        staleRetirementReceiptDigest: retired.receiptDigest });
     },
     claimReplacement: effect, promoteReplacement: effect, bindReplacement: effect,
     supersedeLocal: effect, projectPullRequest: effect, observePhaseBComplete: effect,
@@ -183,6 +181,17 @@ test("rejects wrong authorization and drift before fences or journal writes", as
   await assert.rejects(harness.controller.runRetirement({ plan: drifted,
     operatorSessionId: OPERATOR, authorization: plan.exactAuthorization }), /projection|semantics/u);
   assert.equal(harness.counts.writes, 0);
+});
+
+test("rejects an authorized v1 retirement plan before fencing or effects", async () => {
+  const harness = createHarness();
+  const plan = await harness.controller.planRetirement({ operatorSessionId: OPERATOR });
+  const legacy = { ...plan,
+    schema: "agentic-active-dirty-scope-expansion-successor-rollover-retire-plan/v1" };
+  await assert.rejects(harness.controller.runRetirement({ plan: legacy,
+    operatorSessionId: OPERATOR, authorization: legacy.exactAuthorization }), /plan schema/u);
+  assert.deepEqual(harness.counts, { fences: 0, writes: 0, authorizations: 0 });
+  assert.deepEqual(harness.calls, []);
 });
 
 test("Phase-A replay ignores ambient ledger-head advance after fresh ledger validation", async () => {

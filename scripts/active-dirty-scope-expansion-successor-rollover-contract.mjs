@@ -3,16 +3,16 @@ import { canonicalJson, digestValue, normalizeWriteSet } from "./cloud-collabora
 export const OPERATION = "active-dirty-scope-expansion-successor-rollover";
 export const RETIRE_OPERATION = `${OPERATION}-retire`;
 export const REPLACE_OPERATION = `${OPERATION}-replace`;
-export const RETIREMENT_PLAN_SCHEMA = `agentic-${RETIRE_OPERATION}-plan/v1`;
-export const REPLACEMENT_PLAN_SCHEMA = `agentic-${REPLACE_OPERATION}-plan/v1`;
-export const JOURNAL_SCHEMA = `agentic-${OPERATION}-journal/v1`;
+export const RETIREMENT_PLAN_SCHEMA = `agentic-${RETIRE_OPERATION}-plan/v2`;
+export const REPLACEMENT_PLAN_SCHEMA = `agentic-${REPLACE_OPERATION}-plan/v2`;
+export const JOURNAL_SCHEMA = `agentic-${OPERATION}-journal/v2`;
 export const RETIREMENT_PHASES = Object.freeze(["authorized", "stale-successor-retired"]);
 export const REPLACEMENT_PHASES = Object.freeze(["authorized", "replacement-claimed",
   "replacement-promoted", "replacement-bound", "local-cas", "pr-marker", "verified", "complete"]);
 const DIGEST = /^[0-9a-f]{64}$/u;
 const SHA = /^[0-9a-f]{40}$/u;
-const RETIREMENT_OBSERVATION_SCHEMA = `agentic-${OPERATION}-retirement-observation/v1`;
-const REPLACEMENT_OBSERVATION_SCHEMA = `agentic-${OPERATION}-replacement-observation/v1`;
+const RETIREMENT_OBSERVATION_SCHEMA = `agentic-${OPERATION}-retirement-observation/v2`;
+const REPLACEMENT_OBSERVATION_SCHEMA = `agentic-${OPERATION}-replacement-observation/v2`;
 export function buildSuccessorRolloverRetirementPlan({ observation, operatorSessionId } = {}) {
   const source = normalizeRetirementObservation(observation);
   const operator = text(operatorSessionId, "operator session");
@@ -196,8 +196,7 @@ function normalizeRetirementObservation(value) {
     "staleSuccessorState", "staleSuccessorPredecessorClaimId", "staleTargetCanonicalBaseSha",
     "staleTargetWriteSetDigest", "staleTargetManifestDigest", "staleTargetDeclaredWriteSet",
     "staleExpiresAt", "pullRequestNumber", "pullRequestNodeId", "pullRequestMarkerDigest",
-    "pullRequestBodyDigest", "observedLedgerRevision", "observedLedgerDigest",
-    "observedLedgerSequence", "observationDigest",
+    "pullRequestBodyDigest", "observationDigest",
   ]);
   const sourceWriteSet = normalizeWriteSet(value.sourceDeclaredWriteSet);
   const staleWriteSet = normalizeWriteSet(value.staleTargetDeclaredWriteSet);
@@ -240,9 +239,6 @@ function normalizeRetirementObservation(value) {
     pullRequestNodeId: text(value.pullRequestNodeId, "pull request node ID"),
     pullRequestMarkerDigest: digest(value.pullRequestMarkerDigest, "pull request marker"),
     pullRequestBodyDigest: digest(value.pullRequestBodyDigest, "pull request body"),
-    observedLedgerRevision: sha(value.observedLedgerRevision, "ledger revision"),
-    observedLedgerDigest: digest(value.observedLedgerDigest, "ledger digest"),
-    observedLedgerSequence: positive(value.observedLedgerSequence, "ledger sequence"),
   };
   if (core.schema !== RETIREMENT_OBSERVATION_SCHEMA || core.sourceIntentStatus !== "source-retired"
     || core.staleSuccessorState !== "waiting-successor"
@@ -263,8 +259,7 @@ function normalizeReplacementObservation(value, source, retirement) {
     "sourceDirtDigest", "sourceIntentDigest",
     "pullRequestMarkerDigest", "pullRequestBodyDigest", "staleSuccessorClaimId",
     "staleRetirementClaimDigest", "staleRetirementTransitionDigest",
-    "staleRetirementTransitionCounter", "staleRetirementReceiptDigest",
-    "observedLedgerRevision", "observedLedgerDigest", "observedLedgerSequence", "observationDigest",
+    "staleRetirementTransitionCounter", "staleRetirementReceiptDigest", "observationDigest",
   ]);
   const terminal = retirement.phases["stale-successor-retired"].values;
   const core = {
@@ -286,9 +281,6 @@ function normalizeReplacementObservation(value, source, retirement) {
     staleRetirementTransitionDigest: digest(value.staleRetirementTransitionDigest, "stale retirement transition"),
     staleRetirementTransitionCounter: positive(value.staleRetirementTransitionCounter, "stale retirement counter"),
     staleRetirementReceiptDigest: digest(value.staleRetirementReceiptDigest, "stale retirement receipt"),
-    observedLedgerRevision: sha(value.observedLedgerRevision, "ledger revision"),
-    observedLedgerDigest: digest(value.observedLedgerDigest, "ledger digest"),
-    observedLedgerSequence: positive(value.observedLedgerSequence, "ledger sequence"),
   };
   if (core.schema !== REPLACEMENT_OBSERVATION_SCHEMA
     || core.sourceClaimIdentity.identityDigest !== source.sourceClaimIdentity.identityDigest

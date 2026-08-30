@@ -136,7 +136,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
     if (candidates.length !== 1) invalid("unique stale successor");
     const stale = candidates[0];
     if (!isSuccessorRolloverStaleCandidate(stale, plan, intent.targetClaimDigest, identity)) invalid("stale waiting successor");
-    const core = { schema: `agentic-${OPERATION}-retirement-observation/v1`, sourceClaimIdentity: identity, controllerDigest: controllerDigest(),
+    const core = { schema: `agentic-${OPERATION}-retirement-observation/v2`, sourceClaimIdentity: identity, controllerDigest: controllerDigest(),
       protectedMainSha: protectedMain.mainSha, protectedMainTreeSha: protectedMain.treeSha, protectedMainAdvanceDigest: protectedMain.advanceDigest,
       protectedMainChangedPaths: protectedMain.changedPaths, branch, sourceSessionId, semanticScope: source.lease.scope, sourceFenceSha: source.lease.fenceSha,
       sourceLeaseDigest: source.leaseDigest, sourceClaimId: plan.sourceClaimId, sourceClaimDigest: plan.sourceClaimDigest, sourceReviewRequestId: plan.sourceReviewRequestId,
@@ -150,8 +150,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
       staleTargetWriteSetDigest: plan.targetWriteSetDigest, staleTargetManifestDigest: plan.targetManifestDigest,
       staleTargetDeclaredWriteSet: normalizeWriteSet(plan.targetDeclaredWriteSet), staleExpiresAt: stale.expiresAt, pullRequestNumber,
       pullRequestNodeId: source.pullRequest.nodeId, pullRequestMarkerDigest: source.pullRequest.markerDigest,
-      pullRequestBodyDigest: source.pullRequest.bodyDigest, observedLedgerRevision: cloud.status.ledgerRevision,
-      observedLedgerDigest: cloud.status.ledgerDigest, observedLedgerSequence: cloud.status.sequence };
+      pullRequestBodyDigest: source.pullRequest.bodyDigest };
     return Object.freeze({ ...core, observationDigest: digestValue(core) });
   }
   async function readPhaseBState() { return stableCapture(capturePhaseBState, "replacement observation");
@@ -161,15 +160,14 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
     const terminal = retirementTerminal(journal.retirement.planSnapshot, cloud);
     if (!terminal) invalid("terminal stale-successor retirement");
     const protectedMain = protectedFrame(source.intent);
-    const core = { schema: `agentic-${OPERATION}-replacement-observation/v1`, sourceClaimIdentity: sourceClaimIdentity(source, cloud), controllerDigest: controllerDigest(),
+    const core = { schema: `agentic-${OPERATION}-replacement-observation/v2`, sourceClaimIdentity: sourceClaimIdentity(source, cloud), controllerDigest: controllerDigest(),
       protectedMainSha: protectedMain.mainSha, protectedMainTreeSha: protectedMain.treeSha,
       protectedMainAdvanceDigest: protectedMain.advanceDigest, protectedMainChangedPaths: protectedMain.changedPaths,
       branch, sourceLeaseDigest: source.leaseDigest, sourceDirtDigest: source.dirtDigest,
       sourceIntentDigest: source.intentDigest, pullRequestMarkerDigest: source.pullRequest.markerDigest,
       pullRequestBodyDigest: source.pullRequest.bodyDigest, staleSuccessorClaimId: terminal.staleSuccessorClaimId,
       staleRetirementClaimDigest: terminal.retiredClaimDigest, staleRetirementTransitionDigest: terminal.retirementTransitionDigest,
-      staleRetirementTransitionCounter: terminal.transitionCounter, staleRetirementReceiptDigest: terminal.receiptDigest,
-      observedLedgerRevision: cloud.status.ledgerRevision, observedLedgerDigest: cloud.status.ledgerDigest, observedLedgerSequence: cloud.status.sequence };
+      staleRetirementTransitionCounter: terminal.transitionCounter, staleRetirementReceiptDigest: terminal.receiptDigest };
     return Object.freeze({ ...core, observationDigest: digestValue(core) });
   }
   function authorizeEffect({ plan, phase, operationKey }) { if (phase === "verified") return Object.freeze({ status: "not-required" });

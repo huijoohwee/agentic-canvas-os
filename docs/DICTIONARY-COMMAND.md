@@ -9,8 +9,10 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "89b506d37384d8c03b8cd76db448680f925803c02051044577463f3246d408b3"
-catalog_entry_count: 420
+catalog_digest: "9d8e6857d6b1956990204f81a913bd7ac9f5ea8dc09bfc82173c5eaa226853bf"
+catalog_entry_count: 425
+catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
+catalog_digest_owner: "scripts/dictionary-catalog-contract.mjs"
 source_docs:
   - "FACTS.md"
   - "MEMORY.md"
@@ -148,6 +150,7 @@ dictionary_entries:
   - "/payment.readiness"
   - "/workspace.parallelism.check"
   - "/coordination.schedule"
+  - "/goal.advance"
   - "/workspace.operation.review"
   - "/workspace.guards.install"
   - "/canvas.project"
@@ -319,6 +322,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/payment.readiness` | Report per-rail payment configuration completeness without mutating configuration. | `@payment-readiness`, `@payment-rail`, `@runtime-proof` | `#payment-readiness`, `#dev-only`, `#runtime-ready` | The gate lists required credential names per rail, reports presence in server-side secret storage, fails when a credential name or value appears in client bundle output or visible runtime variables, reports the pinned provider API version and configured integration model, marks a rail ready only after a sandbox payment on that rail reached a terminal state, performs zero writes, and exits non-zero on any missing required input. |
 | `/workspace.parallelism.check` | Audit every lane across the sibling repositories in one workspace root and report which lanes hold work no destructive operation could restore. | `@workspace-lane`, `@recovery-reference`, `@runtime-proof` | `#workspace-parallelism`, `#dev-only`, `#truth` | One lane owns one session, one branch is live in at most one worktree, one semantic scope per repository has one session owner, every at-risk lane is named with its dirty and untracked counts, the audit writes nothing, and readiness is true only when no lane holds untracked work or unreferenced modifications. |
 | `/coordination.schedule` | Partition independently authorized tasks into deterministic bounded waves without executing them. | `@coordination-plan`, `@runtime-proof` | `#coordination-scheduler`, `#workspace-parallelism`, `#truth` | Only current claims enter ready waves; waiting or non-writing claims retain typed dispositions, overlapping write sets serialize, dependencies propagate locally, and global attention is non-blocking only with digest-bound disjoint affected scope. The report grants no mutation or deployment authority. |
+| `/goal.advance` | Derive the next non-blocking advance decision for one declared goal from its unit set and its recorded outcomes. | exactly `@goal-plan` and `@runtime-proof` | exactly `#goal-completion` | Weights derive deterministically from recorded outcomes with a neutral prior for unseen kinds and may only reorder the ready set; unauthorized gated units are refused; each blocked unit bounds itself and its dependents while the goal stays continuable; the frozen digest-bound receipt dispatches nothing and grants no mutation, integration, release, or deployment authority. |
 | `/workspace.operation.review` | Return one fail-closed decision for a candidate destructive Git operation before it runs. | `@workspace-lane`, `@recovery-reference`, `@operator` | `#destructive-operation-guard`, `#approval-gate`, `#vcc` | The operation is classified against the explicit forbidden catalog, a foreign-owned lane is refused, any other session holding uncommitted or untracked work in that repository refuses the operation, untracked paths in the target lane refuse it outright, modified tracked paths without a durable recovery reference refuse it, and no catalog operation ever returns a plain allow. |
 | `/workspace.guards.install` | Install the destructive-operation enforcement surfaces across every repository in the workspace root and report the classes no hook can reach. | `@workspace-lane`, `@recovery-reference`, `@operator` | `#destructive-operation-guard`, `#workspace-parallelism`, `#runtime-ready` | Every repository points `core.hooksPath` at one hook directory with no copied hook file, the pre-commit, pre-push, and reference-transaction surfaces are active, the PATH shim exposes the wrapper to external tooling, the coverage report names `untrackedRemoval`, `forcedCheckout`, and `objectPruning` as hook-unreachable and marks the wrapper required, and installation writes only hook configuration and the shim without touching any ref, index, or working tree. |
 | `/canvas.project` | Project source-backed runtime state into existing Canvas owners. | `@source.frontmatter`, `@source.body`, `@canvas` | `#canvas`, `#frontmatter`, `#runtime-ready` | Source-backed graph, table, or Storyboard surface renders without dashboard-only storage. |

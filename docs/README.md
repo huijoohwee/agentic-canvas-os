@@ -36,6 +36,7 @@ the smallest set of docs needed for the task.
 
 Recommended reading order:
 
+0. [`SYSTEM-PROMPT-RUNTIME.md`](./SYSTEM-PROMPT-RUNTIME.md) as the always-on harness header for every session.
 1. [`PROJECT-RULES.md`](./PROJECT-RULES.md) for project-wide engineering and session-closeout rules.
 2. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and the registered multi-worktree rule.
 3. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused checks and release gates.
@@ -50,6 +51,8 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 
 | File | Role | Use |
 |---|---|---|
+| `SYSTEM-PROMPT-RUNTIME.md` | Always-on harness header | Under 1000 bytes of scope, principles, priorities, constraints, workflow routes, and decision framework; loaded every session and enforced by `docs:check`. |
+| `GOAL-COMPLETION-RUNTIME.md` | Adaptive non-blocking advance decision | Outcome-weighted dispatch order over the coordination scheduler, blocker locality to dependents, fail-closed gates, and one digest-bound advance receipt; owns no readiness, dispatch, or authority. |
 | `PROJECT-RULES.md` | Repository-wide engineering rules | Neutral code hygiene, validation, and session-end behavior shared across devices and tools. |
 | `SOUL.md` | Durable identity layer | Agent identity, voice, prompt slot 1 contract, personality overlay boundary, and hardcoded-default replacement rules. |
 | `FACTS.md` | Shared truth layer | Stable facts, precedence, direct `/`, `#`, and `@` definitions, deploy boundary truth, context-file and context-reference facts, tool/toolset facts, Tool Gateway and Tool Search facts, MoA facts, learning-loop facts, stateful orchestration facts, and long-horizon SuperAgent facts. |

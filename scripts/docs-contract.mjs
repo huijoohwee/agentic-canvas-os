@@ -18,8 +18,14 @@ import { validateRepositoryPackingContractDocuments } from "./repository-packing
 import { validateAlignmentAuditContractDocuments } from "./alignment-audit-contract.mjs";
 import { validateUrlIngestContractDocuments } from "./url-ingest-contract.mjs";
 import { validatePlanningContextRecordContract } from "./planning-context-record-contract.mjs";
+import { validateDictionaryCatalogContract } from "./dictionary-catalog-contract.mjs";
+import { validateKanbanProjection } from "./kanban-projection.mjs";
 
 export const MAX_DOCS_ARTIFACT_BYTES = 500_000;
+// The always-on harness header is loaded every session, so it carries a much
+// tighter budget than a normal owner document.
+export const SYSTEM_PROMPT_PATH = "SYSTEM-PROMPT-RUNTIME.md";
+export const MAX_SYSTEM_PROMPT_BYTES = 1_000;
 
 const REQUIRED_AUTHORED_KEYS = [
   "title",
@@ -132,6 +138,8 @@ export async function runDocsContract({
   failures.push(...validateRepositoryPackingContractDocuments(documents));
   failures.push(...validateAlignmentAuditContractDocuments(documents));
   failures.push(...validateUrlIngestContractDocuments(documents));
+  failures.push(...validateDictionaryCatalogContract(documents));
+  failures.push(...validateKanbanProjection(documents, { repository: repositoryRoot }));
   failures.push(...validatePlanningContextRecordContract({ repository: repositoryRoot }).failures);
 
   if (failures.length > 0) throw new Error(failures.join("\n"));
@@ -163,9 +171,12 @@ async function collectDirectory(absoluteDirectory, relativeDirectory, artifacts)
 
 function validateArtifactSize({ relativePath, text }) {
   const size = Buffer.byteLength(text, "utf8");
-  return size < MAX_DOCS_ARTIFACT_BYTES
+  const budget = relativePath === SYSTEM_PROMPT_PATH
+    ? MAX_SYSTEM_PROMPT_BYTES
+    : MAX_DOCS_ARTIFACT_BYTES;
+  return size < budget
     ? []
-    : [`${relativePath}: ${size} bytes exceeds the <${MAX_DOCS_ARTIFACT_BYTES} byte budget`];
+    : [`${relativePath}: ${size} bytes exceeds the <${budget} byte budget`];
 }
 
 function validateAuthoredFrontmatter({ relativePath, frontmatter, failures }) {

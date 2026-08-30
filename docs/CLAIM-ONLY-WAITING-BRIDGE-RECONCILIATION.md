@@ -22,14 +22,18 @@ This lane recovers one exact cloud-only chain without changing source bytes, Git
 
 The planned inventory must prove three distinct v2 claims in one actor and repository:
 
-- the anchor is the exact dormant, scope-reserving admitted claim retained by one writer-registry lease and its one ownership pull request;
+- the anchor is the exact dormant, scope-reserving admitted claim retained by one exact open draft ownership pull request; its local writer-registry association may be either the one exact joined lease or absent, but an absent lease requires zero local claim, branch, and PR-URL collisions;
 - the bridge is an expired, transition-1, heartbeat-0 `waiting-successor` whose predecessor is the anchor;
 - the successor is an expired, transition-1, heartbeat-0 `waiting-successor` whose predecessor is the bridge;
 - bridge and successor use the same device, have exactly one claim entry, and have no review, evidence, recovery, integration, retirement, writer-registry, or PR-marker association;
 - anchor overlaps bridge, bridge overlaps successor, and anchor is disjoint from successor; and
-- no foreign relevant or predecessor-connected claim exists, and the successor is the bridge's sole direct successor.
+- no foreign relevant or predecessor-connected live claim exists, and the successor is the bridge's sole live direct successor.
 
-The registry digest, the complete provider inventory digest, and the exact association records are sealed. Provider inventory uses GraphQL pages of 100 with a 1,000-page ceiling. Missing totals, errors, incomplete envelopes, duplicate PR numbers or node IDs, repeated/nonadvancing cursors, malformed ownership markers, duplicate marker claims, and a returned count different from `totalCount` all block.
+The immutable ledger may contain older direct siblings of the bridge only when each sibling is absent from the current claim inventory, has exactly one transition-1 `waiting-successor` genesis followed by one transition-2 `retired` entry with reason `superseded`, preserves its complete subject, scope, epoch, expiry, and predecessor, retires its genesis lane revision with null review and integration fields, and has no writer-registry or ownership-marker association. The complete direct-successor ID set is partitioned into that sorted terminal history set and the one sorted live successor ID. The history, entry, claim, and empty-association digests are sealed and rechecked before and after both cloud actions.
+
+The registry digest, the complete provider inventory digest, and the exact association records are sealed. Provider inventory uses GraphQL pages of 100 with a 1,000-page ceiling. Missing totals, errors, incomplete envelopes, duplicate PR numbers or node IDs, repeated/nonadvancing cursors, malformed JSON or marker structure, duplicate raw marker claims, and a returned count different from `totalCount` all block. The anchor, bridge, selected successor, and every ledger-discovered direct sibling require canonical semantic marker parsing. A structurally unique JSON marker whose raw claim ID is unrelated to that protected set may remain in the complete inventory even when obsolete semantics make canonical parsing fail; its raw claim ID, body digest, marker digest, and `semantic-stale-unrelated` disposition stay sealed. This tolerance cannot hide a target or direct-sibling association.
+
+The provider-only anchor bracket is exact: its sole marker claim and fence equal the dormant anchor, the marker branch equals the provider head branch, and marker lane, marker fence, and provider head all equal the anchor lane revision. The PR must remain open and draft. A local anchor lease, when present, must still join that PR number, branch, claim, and fence exactly.
 
 Provider-marker absence is a bracketed observation before and after each cloud action. The cloud claims' `reviewRequestId: null` is the authoritative ledger fact; the design does not claim an impossible atomic transaction between GitHub PR inventory and the collaboration ledger.
 

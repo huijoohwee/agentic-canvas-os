@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6449,
-  "headDigest": "6daf746eb97d93950c0fce4722fef1f967294ad3b48dd3fbe3b5fc94de58b10b",
+  "sequence": 6450,
+  "headDigest": "a0fa3b5de0d71b2d9acab3f54c8076490ed9aeba46bb9354733399870b1aa1e6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -327767,6 +327767,62 @@
       },
       "claimDigest": "79e7d19004b20cffbfe0ad2ab008c93c3a7c4a962eb40e78b02f48a06656e1ef",
       "digest": "6daf746eb97d93950c0fce4722fef1f967294ad3b48dd3fbe3b5fc94de58b10b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6450,
+      "parentDigest": "6daf746eb97d93950c0fce4722fef1f967294ad3b48dd3fbe3b5fc94de58b10b",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d191efeece375429d73bd7da15d78e80f46ceadaf37f3499f4a91687713bdcab",
+      "idempotencyKey": "37fb4fb2981f3cbf8ca7a344cb4212baa9ed994bcb73982b2d2bb220bea7b804",
+      "requestDigest": "7ebb6255df66de5de9704f14b6239b14be167e7af4c4ceb9c53c3113763d5362",
+      "evaluationTime": "2026-08-30T20:44:19.000Z",
+      "claimCore": {
+        "claimId": "d191efeece375429d73bd7da15d78e80f46ceadaf37f3499f4a91687713bdcab",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:5ae59cd953edd6cbdbc31abaff0dae5a5dfcba669a05784b93c1c1b80ec34c67",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:3898c256e30b2789eb41de40fa7acf0a67ca73ac1e05145725f4bedbfce30d39",
+        "canonicalBaseRevision": "ed7461e5b272da1cba4cd31c079e12259965eaf1",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-squash-attribution-recovery-terminalization.test.mjs",
+          "path:docs/CANONICAL-SQUASH-ATTRIBUTION-RECOVERY-TERMINALIZATION.md",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-contract.mjs",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-controller.mjs",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-repository-adapter.mjs",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization.mjs",
+          "semantic:canonical-squash-recovery-terminalizer"
+        ],
+        "writeSetDigest": "22a6f1461488edde621b5eca727a068528865606b8b2df148c07e731c5a1a36e",
+        "laneRevision": "d29a375715b0a363c475dac0bc33969fad4aa82e",
+        "leaseEpoch": 3,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-30T21:06:32.000Z",
+        "evidenceDigest": "d90275144178dad4771d108f991164267905b0d2f0e35bb3c5eee384e7c45a97",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBf-hDQ",
+        "predecessorClaimId": "129f4e97e0c38eb422526346c963c292625a1bf8a9f6f65a08b27f115cb5ce65",
+        "eligibleSince": "2026-08-30T20:35:06.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-30T20:36:32.000Z",
+        "integration": {
+          "candidateRevision": "d29a375715b0a363c475dac0bc33969fad4aa82e",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBf-hDQ",
+          "focusedEvidenceDigest": "d90275144178dad4771d108f991164267905b0d2f0e35bb3c5eee384e7c45a97",
+          "dependencyClosureDigest": "73ce6591b3e5f4da0301897bfa80f5e3048b83468f300d9a9efa8bc235e1a696",
+          "namedChecksDigest": "45c580db6b890aa291b2e68ab8b4bf9286cb9d98d0ef8a82141788bac160e6b4",
+          "handoffEvidenceDigest": "06cdc975886a60c0afaa304aff91881b499b13cff4c4f555be6bdb199f4eaccf",
+          "operatorDecisionDigest": "5f45c8f05d7ce0751316c1ea45398cf3ba68b16cd8d9c8853fc40dd419ea1578",
+          "integrationIntentDigest": "2df8c96a4fbeb501adc96510b56d1f0cf7595ade592f714bc2215244640364f7",
+          "integratedAt": "2026-08-30T20:44:19.000Z"
+        }
+      },
+      "claimDigest": "23ebcbfb93f48ac0b190e7f97563db7aefa938004b946edd1861667e769efa68",
+      "digest": "a0fa3b5de0d71b2d9acab3f54c8076490ed9aeba46bb9354733399870b1aa1e6"
     }
   ]
 }

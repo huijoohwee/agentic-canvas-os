@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6202,
-  "headDigest": "d1497067274f58066a2e72832920ddfe6a1a295388de1115ef9e486f2bba0e43",
+  "sequence": 6203,
+  "headDigest": "dbdedaf9ed2937898c4934c6e672734024f614006a8b717e35d10084c26dfa36",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -315075,6 +315075,52 @@
       },
       "claimDigest": "e7fe92dd1150bd7b680fcc0e2d5acd8674a337fd321dc8eb6279923548c151bb",
       "digest": "d1497067274f58066a2e72832920ddfe6a1a295388de1115ef9e486f2bba0e43"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6203,
+      "parentDigest": "d1497067274f58066a2e72832920ddfe6a1a295388de1115ef9e486f2bba0e43",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d7737a5542376a0730713b50d792bfb4898f7d0b3212e85c628c25df1cb3018d",
+      "idempotencyKey": "cb086e12fc12e88b64bf81d2b91a0add3200fc94fc78ef45c789079ba9440d2a",
+      "requestDigest": "d0556be2f440079be59e80015ffcbb689cea22eff685247b886939b45baa872b",
+      "evaluationTime": "2026-08-30T01:31:08.000Z",
+      "claimCore": {
+        "claimId": "d7737a5542376a0730713b50d792bfb4898f7d0b3212e85c628c25df1cb3018d",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:667356942c082a29e5aac7941b2c6c5abaa94c44d48187302400f6a3668fa0b3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1a83b62b445fd25fbf9ac4bd579bb41e68b4d42fc8f3273b36b3ebd7bd41457c",
+        "canonicalBaseRevision": "f6097288dbc0de353f64d24fa18e443b144626cb",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-untracked-relocation.test.mjs",
+          "path:__tests__/scoped-lane-bootstrap-canonical-dirty-main.test.mjs",
+          "path:docs/CANONICAL-UNTRACKED-RELOCATION.md",
+          "path:package.json",
+          "path:scripts/canonical-untracked-relocation-contract.mjs",
+          "path:scripts/canonical-untracked-relocation-repository-adapter.mjs",
+          "path:scripts/canonical-untracked-relocation.mjs",
+          "path:scripts/scoped-lane-bootstrap-authorization.mjs",
+          "semantic:canonical-untracked-relocation-controller"
+        ],
+        "writeSetDigest": "e4a74ccacbc9641b794a6d0196cf859afebc27b50b5c6cea2e08143000f4d655",
+        "laneRevision": "5d8c811e19b737a1dcb415d54ccba6133211c56e",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-30T03:31:08.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBecfFA",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "dc41bdfb93a4d441e4eaa972669e0db2599eaf5842fbee271b941eb22cbadff1",
+      "digest": "dbdedaf9ed2937898c4934c6e672734024f614006a8b717e35d10084c26dfa36"
     }
   ]
 }

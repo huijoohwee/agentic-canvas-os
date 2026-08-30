@@ -170,7 +170,7 @@ test("factory exposes the complete repository surface and keeps an async entrypo
   const fixture = repositoryFixture(t);
   const adapter = createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapter(fixture.options, fixture.dependencies);
   assert.deepEqual(Object.keys(adapter).sort(), ["authorizeEffect", "bindReplacement", "claimReplacement", "observePhaseBComplete",
-    "projectPullRequest", "promoteReplacement", "readPhaseAObservation", "readPhaseBState", "readRecoveryJournal", "reconcilePhase",
+    "projectPullRequest", "promoteReplacement", "readContinuationFrame", "readPhaseAObservation", "readPhaseBState", "readRecoveryJournal", "reconcilePhase",
     "retireStaleSuccessor", "supersedeLocal", "verifyCompleted", "withEntrypointFence", "writeRecoveryJournal"].sort());
   let release;
   const gate = new Promise(resolve => { release = resolve; });

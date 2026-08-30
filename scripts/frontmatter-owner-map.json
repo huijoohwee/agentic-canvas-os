@@ -1,0 +1,4 @@
+{
+  "note": "Declared accountable role per doc_type. `owner` names a role and is never derived from a path, so each entry is an operator decision. An absent entry keeps its artifacts needs-decision; nothing is guessed.",
+  "ownerByDocType": {}
+}

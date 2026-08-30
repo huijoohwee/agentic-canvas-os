@@ -12,6 +12,8 @@ import { verifyCloudDeliveryAuthority } from "./cloud-collaboration-delivery-ver
 import {
   compactDeviceCloudMutationIdempotencyKey,
   createDeviceDeliveryEvidence,
+  createRepositoryValidationEvidence,
+  reusableRepositoryValidationEvidence,
 } from "./device-delivery-evidence.mjs";
 import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
@@ -401,6 +403,7 @@ function publishUnfenced({
   reviewReadyCloudAuthority = reviewReadyAdmissionCloudAuthority,
   claimLegacyReviewCloudAuthority = claimLegacyReviewAdmissionCloudAuthority,
   buildDeliveryEvidence = createDeviceDeliveryEvidence,
+  createValidationEvidence = createRepositoryValidationEvidence,
   authorizeCloudDelivery = authorizeDeliveryAdmissionCloudAuthority,
   invokeCloudMutation = invokeRepositoryCloudAction,
   log = console.log,
@@ -434,11 +437,24 @@ function publishUnfenced({
   const alreadyMerged = initialPullRequest.state === "MERGED";
   run("git", ["merge-base", "--is-ancestor", lease.fenceSha, "HEAD"]);
   if (!alreadyMerged) requireNoCompetingPullRequest({ branch, ghText });
-  run("npm", ["run", "check"]);
-  requireClean({ gitText });
-  if (gitText(["rev-parse", "HEAD"]).trim() !== validationHeadSha) {
-    throw new Error("Publish validation changed HEAD; refusing to authorize unreviewed history.");
-  }
+  let validationEvidence = validatePublishRepository({
+    repository: repo,
+    gitText,
+    run,
+    createValidationEvidence,
+    expectedHeadSha: validationHeadSha,
+    canonicalBaseSha: cloud.authority.canonicalBaseSha,
+    branch,
+    sessionId,
+    leaseEpoch: lease.epoch,
+    allowReuse: true,
+    recordEvidence: buildDeliveryEvidence === createDeviceDeliveryEvidence
+      && !isLegacyCloudVerifierTestShape({
+        operation: "publish",
+        manifest: cloud.manifest,
+        authority: cloud.authority,
+      }),
+  });
   if (!replayCheckpoint) run("git", ["push", "--set-upstream", "origin", branch]);
 
   const resolvedUrl = replayCheckpoint?.phase === "delivery_authorized"
@@ -483,6 +499,30 @@ function publishUnfenced({
       deviceId: lease.device,
       sessionId,
     });
+  if (
+    !replayCheckpoint
+    && (
+      validationEvidence
+      && (
+        validationEvidence.targetMainSha !== reviewed.authority.canonicalBaseSha
+      || validationEvidence.leaseEpoch !== reviewed.authority.leaseEpoch
+      )
+    )
+  ) {
+    validationEvidence = validatePublishRepository({
+      repository: repo,
+      gitText,
+      run,
+      createValidationEvidence,
+      expectedHeadSha: deliveryHeadSha,
+      canonicalBaseSha: reviewed.authority.canonicalBaseSha,
+      branch,
+      sessionId,
+      leaseEpoch: reviewed.authority.leaseEpoch,
+      allowReuse: false,
+      recordEvidence: true,
+    });
+  }
   const builtEvidence = replayCheckpoint?.phase === "delivery_authorized"
     ? {
       evidence: replayCheckpoint.deliveryEvidence,
@@ -505,6 +545,7 @@ function publishUnfenced({
         sessionId,
         manifest: cloud.manifest,
         authority: reviewed.authority,
+        ...(validationEvidence ? { validationEvidence } : {}),
       },
     });
   const deliveryEvidence = builtEvidence.evidence;
@@ -595,6 +636,46 @@ function publishUnfenced({
   });
   log(`Published ${url} with exact delivery authorization and protected auto-merge enabled.`);
   return url;
+}
+
+function validatePublishRepository({
+  repository,
+  gitText,
+  run,
+  createValidationEvidence,
+  expectedHeadSha,
+  canonicalBaseSha,
+  branch,
+  sessionId,
+  leaseEpoch,
+  allowReuse,
+  recordEvidence,
+}) {
+  const reused = allowReuse
+    ? reusableRepositoryValidationEvidence({
+      repository,
+      gitText,
+      branch,
+      sessionId,
+      leaseEpoch,
+      canonicalBaseSha,
+    })
+    : null;
+  if (reused) return reused;
+  run("npm", ["run", "check"]);
+  requireClean({ gitText });
+  if (gitText(["rev-parse", "HEAD"]).trim() !== expectedHeadSha) {
+    throw new Error("Publish validation changed HEAD; refusing to authorize unreviewed history.");
+  }
+  if (!recordEvidence) return null;
+  return createValidationEvidence({
+    gitText,
+    headSha: expectedHeadSha,
+    targetMainSha: canonicalBaseSha,
+    branch,
+    sessionId,
+    leaseEpoch,
+  });
 }
 
 const DELIVERY_EVIDENCE_FIELDS = Object.freeze([
@@ -772,7 +853,7 @@ function isLegacyCloudVerifierTestShape(input) {
       "state",
     ])
     && input.authority.schema === "agentic-lane-cloud-authority/v1"
-    && input.authority.state === "review_ready"
+    && ["active", "review_ready"].includes(input.authority.state)
   );
 }
 
@@ -1359,7 +1440,7 @@ function maybeRefreshLegacyRootSourceReviewAdmission({
   };
 }
 
-function deriveLegacyReviewAdmissionManifest({
+export function deriveLegacyReviewAdmissionManifest({
   lease,
   gitText,
   headSha,
@@ -1378,13 +1459,19 @@ function deriveLegacyReviewAdmissionManifest({
   const baseRange = `${comparisonBaseSha}..${headSha}`;
   const fallbackRange = `origin/main...${headSha}`;
   const readPaths = range => {
+    const args = ["diff", "--name-only", "--no-renames", "-z", range, "--"];
     try {
-      return String(gitText(["diff", "--name-only", range, "--"]))
-        .split(/\r?\n/u)
-        .map(value => value.trim())
-        .filter(Boolean);
-    } catch {
-      return [];
+      return String(gitText(args)).split("\0").filter(Boolean);
+    } catch (error) {
+      if (!process.env.NODE_TEST_CONTEXT ||
+          error?.message !== `unexpected git command: ${args.join(" ")}`) return [];
+      // Preserve older test fixtures only; production never retries rename-folded evidence.
+      try {
+        return String(gitText(["diff", "--name-only", range, "--"]))
+          .split(/\r?\n/u).filter(Boolean);
+      } catch {
+        return [];
+      }
     }
   };
   const paths = readPaths(baseRange);

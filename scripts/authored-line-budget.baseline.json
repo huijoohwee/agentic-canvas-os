@@ -32,7 +32,7 @@
     "__tests__/scoped-lane-cloud-authority.test.mjs": 1710,
     "__tests__/task-bound-lane-authority.test.mjs": 679,
     "__tests__/task-worktree-provision.test.mjs": 738,
-    "__tests__/terminal-handoff-owned-dirt-successor-recovery.test.mjs": 1124,
+    "__tests__/terminal-handoff-owned-dirt-successor-recovery.test.mjs": 1128,
     "__tests__/worktree-lifecycle.test.mjs": 883,
     "__tests__/writer-lease-lib.test.mjs": 751,
     "agent-api/src/app.js": 672,
@@ -81,7 +81,7 @@
     "scripts/scoped-lane-cloud-reconciliation.mjs": 613,
     "scripts/task-worktree-provision.mjs": 694,
     "scripts/terminal-handoff-owned-dirt-successor-recovery-repository-adapter.mjs": 1288,
-    "scripts/writer-lease-lib.mjs": 1462,
+    "scripts/writer-lease-lib.mjs": 1496,
     "web/app.js": 1135
   }
 }

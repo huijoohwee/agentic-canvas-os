@@ -4,12 +4,18 @@
 //
 // Owner of the rules: huijoohwee.github.io/guidelines/
 //   agentic-sdlc-yaml-frontmatter-runtime-guidelines.md
-// This file is that module's reference implementation. It defines no rule of its
-// own and no finding name the guidelines set does not own.
+// Owner of the key vocabulary: docs/schemas/frontmatter-runtime-dictionary.v1.json
+//
+// This file defines no rule and no key of its own. Every tier membership, every
+// substitute spelling, and every forbidden value pattern below is read from that
+// dictionary at load time, because a vocabulary restated in code is a second
+// source that drifts from the prose silently. It gates only the keys the
+// dictionary marks `required`; a `recommended` key is documented, not enforced,
+// so no table can promise a check that does not run.
 //
 // A survey of 295 authored artifacts across two corpora found only five shared
 // keys: one corpus recorded evidence and no accountability, the other recorded
-// accountability and no evidence. Tiers below encode that unification.
+// accountability and no evidence. The dictionary encodes that unification.
 //
 // Migration is a ratchet, never a sweep. A 295-artifact rewrite is an
 // unreviewable change, so the baseline records existing debt and this contract
@@ -18,6 +24,7 @@
 //
 // Deterministic: no clock, no randomness, no network, no model call, no write.
 
+import { readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,23 +34,78 @@ export const FINDING_RUNG_CONFLATED = "rung-conflated";
 export const FINDING_UNPROVEN = "runtime-readiness-unproven";
 export const FINDING_UNNAMED_EVALUATOR = "unnamed-evaluator";
 
-export const TIER_IDENTITY = Object.freeze([
-  "title", "doc_type", "date", "lang", "frontmatter_contract",
-]);
-export const TIER_ADDRESS = Object.freeze(["schema"]);
-export const TIER_ACCOUNTABILITY = Object.freeze(["owner", "local_rung", "delivered_rung"]);
-export const TIER_EVIDENCE = Object.freeze(["runtime_proof", "evaluator"]);
+export const DICTIONARY_PATH = fileURLToPath(
+  new URL("../docs/schemas/frontmatter-runtime-dictionary.v1.json", import.meta.url),
+);
+export const DICTIONARY_SCHEMA = "agentic-frontmatter-runtime-dictionary/v1";
+
+// Fail closed: an unreadable, unpinned, or structurally invalid dictionary must
+// stop the check outright. Falling back to a built-in vocabulary would silently
+// restore the drift this extraction removed.
+export function loadDictionary(dictionaryPath = DICTIONARY_PATH) {
+  let dictionary;
+  try {
+    dictionary = JSON.parse(readFileSync(dictionaryPath, "utf8"));
+  } catch (error) {
+    throw new Error(`frontmatter dictionary is unreadable: ${error.message}`);
+  }
+  if (dictionary.schema !== DICTIONARY_SCHEMA) {
+    throw new Error(
+      `frontmatter dictionary declares schema ${dictionary.schema}; expected ${DICTIONARY_SCHEMA}`,
+    );
+  }
+  if (!Array.isArray(dictionary.keys) || dictionary.keys.length === 0) {
+    throw new Error("frontmatter dictionary declares no keys");
+  }
+  for (const entry of dictionary.keys) {
+    if (!entry.key || !entry.tier || !entry.enforcement) {
+      throw new Error(`frontmatter dictionary entry is incomplete: ${JSON.stringify(entry)}`);
+    }
+    if (!dictionary.tiers.some((tier) => tier.id === entry.tier)) {
+      throw new Error(`frontmatter dictionary key ${entry.key} names unknown tier ${entry.tier}`);
+    }
+    if (!["required", "recommended"].includes(entry.enforcement)) {
+      throw new Error(`frontmatter dictionary key ${entry.key} declares unknown enforcement`);
+    }
+  }
+  return Object.freeze(dictionary);
+}
+
+export const DICTIONARY = loadDictionary();
+
+// Enforced tiers are the `required` slice. `recommended` keys stay visible in
+// the dictionary and the projection without gating anything.
+export function tierKeys(tierId, { enforcement = "required", dictionary = DICTIONARY } = {}) {
+  return Object.freeze(dictionary.keys
+    .filter((entry) => entry.tier === tierId
+      && (enforcement === "any" || entry.enforcement === enforcement))
+    .map((entry) => entry.key));
+}
+
+function substitutesFor(key, dictionary = DICTIONARY) {
+  const entry = dictionary.keys.find((candidate) => candidate.key === key);
+  return Object.freeze([key, ...(entry?.substitutes ?? [])]);
+}
+
+export const TIER_IDENTITY = tierKeys("identity");
+export const TIER_ADDRESS = tierKeys("address");
+export const TIER_ACCOUNTABILITY = tierKeys("accountability");
+export const TIER_EVIDENCE = tierKeys("evidence");
 
 // A rung above these two is a readiness claim and triggers Tier 4.
-export const UNPROVEN_RUNGS = Object.freeze(["draft", "undocumented"]);
+export const UNPROVEN_RUNGS = Object.freeze([...DICTIONARY.unprovenRungs]);
 // `proof` is the permitted short form only under a declared byte budget.
-export const PROOF_KEYS = Object.freeze(["runtime_proof", "proof"]);
+export const PROOF_KEYS = substitutesFor("runtime_proof");
+export const LOCAL_RUNG_KEYS = Object.freeze([...DICTIONARY.localRungKeys]);
+export const ADDRESS_TRIGGER_KEYS = Object.freeze([...DICTIONARY.addressTriggerKeys]);
 
-const DATE_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
-const FORBIDDEN_VALUE_PATTERNS = Object.freeze([
-  /\/Users\//, /\/home\/[a-z]/, /C:\\/,
-  /(?:api[_-]?key|secret|token|password)\s*[:=]/i,
-]);
+const DATE_PATTERN = new RegExp(DICTIONARY.valueForms.date.pattern);
+const FORBIDDEN_VALUE_PATTERNS = Object.freeze(
+  DICTIONARY.forbiddenValuePatterns.map((entry) => ({
+    id: entry.id,
+    pattern: new RegExp(entry.pattern, entry.flags ?? ""),
+  })),
+);
 
 export function parseFrontmatter(text) {
   if (!text.startsWith("---\n")) return null;
@@ -64,11 +126,11 @@ export function parseFrontmatter(text) {
 // The artifact's own declarations decide which tiers bind it. Nothing is
 // inferred from a file name or directory, per the Agnosticity rule.
 export function triggeredTiers(frontmatter) {
-  const localRung = frontmatter.get("local_rung") ?? frontmatter.get("status") ?? "";
+  const localRung = LOCAL_RUNG_KEYS.map((key) => frontmatter.get(key)).find(Boolean) ?? "";
   const claimsReadiness = Boolean(localRung) && !UNPROVEN_RUNGS.includes(localRung);
   return Object.freeze({
     identity: true,
-    address: frontmatter.has("schema") || frontmatter.has("graphId") || claimsReadiness,
+    address: ADDRESS_TRIGGER_KEYS.some((key) => frontmatter.has(key)) || claimsReadiness,
     accountability: Boolean(localRung),
     evidence: claimsReadiness,
     claimsReadiness,
@@ -99,9 +161,12 @@ export function evaluateArtifact({ relativePath, text }) {
     // substitute: without it a green local lane reads as a delivered claim.
     if (!frontmatter.get("delivered_rung")) {
       findings.push({ type: FINDING_RUNG_CONFLATED, detail: "delivered_rung absent" });
-    } else if (frontmatter.get("local_rung") && frontmatter.get("status")
-      && frontmatter.get("local_rung") !== frontmatter.get("status")) {
-      findings.push({ type: FINDING_RUNG_CONFLATED, detail: "local_rung and status disagree" });
+    } else if (LOCAL_RUNG_KEYS.every((key) => frontmatter.get(key))
+      && new Set(LOCAL_RUNG_KEYS.map((key) => frontmatter.get(key))).size > 1) {
+      findings.push({
+        type: FINDING_RUNG_CONFLATED,
+        detail: `${LOCAL_RUNG_KEYS.join(" and ")} disagree`,
+      });
     }
   }
 
@@ -119,9 +184,12 @@ export function evaluateArtifact({ relativePath, text }) {
     findings.push({ type: FINDING_KEY_ABSENT, detail: `date is not YYYY-MM-DD: ${date}` });
   }
   for (const [key, value] of frontmatter) {
-    for (const pattern of FORBIDDEN_VALUE_PATTERNS) {
+    for (const { id, pattern } of FORBIDDEN_VALUE_PATTERNS) {
       if (pattern.test(value)) {
-        findings.push({ type: FINDING_KEY_ABSENT, detail: `${key} carries a forbidden value` });
+        findings.push({
+          type: FINDING_KEY_ABSENT,
+          detail: `${key} carries a forbidden value (${id})`,
+        });
       }
     }
   }

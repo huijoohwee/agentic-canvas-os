@@ -46,6 +46,8 @@
     "frontmatter-migration:plan": "node ./scripts/frontmatter-runtime-migration.mjs",
     "frontmatter-migration:review": "node ./scripts/frontmatter-runtime-migration.mjs --review",
     "frontmatter-migration:apply": "node ./scripts/frontmatter-runtime-migration.mjs --apply",
+    "frontmatter-dictionary:check": "node --test __tests__/frontmatter-dictionary-projection.test.mjs && node ./scripts/frontmatter-dictionary-projection.mjs && npm run docs:check",
+    "frontmatter-dictionary:project": "node ./scripts/frontmatter-dictionary-projection.mjs --write",
     "kanban:project": "node ./scripts/kanban-projection.mjs --write",
     "function-calling:check": "node --test __tests__/function-calling.test.mjs",
     "function-gateway:check": "node --test __tests__/function-calling.test.mjs __tests__/function-calling-continuation.test.mjs __tests__/function-execution-receipts.test.mjs __tests__/openai-function-gateway.test.mjs __tests__/knowgrph-mcp-client.test.mjs",

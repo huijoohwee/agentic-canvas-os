@@ -21,6 +21,7 @@ import { validatePlanningContextRecordContract } from "./planning-context-record
 import { validateDictionaryCatalogContract } from "./dictionary-catalog-contract.mjs";
 import { validateKanbanProjection } from "./kanban-projection.mjs";
 import { evaluateCorpus, evaluateRatchet } from "./frontmatter-runtime-contract.mjs";
+import { validateFrontmatterDictionaryProjection } from "./frontmatter-dictionary-projection.mjs";
 
 export const MAX_DOCS_ARTIFACT_BYTES = 500_000;
 // The always-on harness header is loaded every session, so it carries a much
@@ -141,6 +142,7 @@ export async function runDocsContract({
   failures.push(...validateUrlIngestContractDocuments(documents));
   failures.push(...validateDictionaryCatalogContract(documents));
   failures.push(...validateKanbanProjection(documents, { repository: repositoryRoot }));
+  failures.push(...validateFrontmatterDictionaryProjection(documents));
   failures.push(...await validateFrontmatterRuntimeRatchet({ documents, repositoryRoot }));
   failures.push(...validatePlanningContextRecordContract({ repository: repositoryRoot }).failures);
 

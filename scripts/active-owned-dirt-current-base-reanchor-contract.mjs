@@ -8,6 +8,7 @@ import { pseudonymousIdentifier }
   from "./github-cloud-collaboration-mapping.mjs";
 import { assertTaskAuthorityBinding }
   from "./task-bound-lane-authority-contract.mjs";
+import { parseDeviceBranch } from "./writer-lease-lib.mjs";
 
 export const OPERATION = "active-owned-dirt-current-base-reanchor";
 export const EVIDENCE_SCHEMA = `agentic-${OPERATION}-evidence/v1`;
@@ -33,6 +34,33 @@ export const PHASES = Object.freeze([
   "verified",
   "complete",
 ]);
+
+export function resolveReanchorWorkItem({ claim, lease } = {}) {
+  if (typeof claim?.workItemId !== "string" || claim.workItemId.length === 0
+    || typeof lease?.scope !== "string" || lease.scope.length === 0) {
+    invalid("source work-item identity");
+  }
+  const scopeWorkItemId = pseudonymousIdentifier("work-item", lease?.scope);
+  if (claim?.workItemId === scopeWorkItemId) {
+    return deepFreeze({
+      kind: "scope-derived",
+      preimage: lease.scope,
+      workItemId: scopeWorkItemId,
+    });
+  }
+  const branchIdentity = parseDeviceBranch(lease?.branch);
+  if (branchIdentity?.device === lease?.device
+    && branchIdentity.scope === lease?.scope) {
+    const branchWorkItemId = pseudonymousIdentifier("work-item", lease.branch);
+    if (claim.workItemId !== branchWorkItemId) invalid("source work-item identity");
+    return deepFreeze({
+      kind: "canonical-branch-derived-legacy",
+      preimage: lease.branch,
+      workItemId: branchWorkItemId,
+    });
+  }
+  invalid("source work-item identity");
+}
 
 const DIGEST = /^[0-9a-f]{64}$/u;
 const OBJECT_ID = /^[0-9a-f]{40,64}$/u;
@@ -328,13 +356,13 @@ function requireLease(lease) {
 }
 
 function requireClaim(claim, lease) {
+  resolveReanchorWorkItem({ claim, lease });
   if (!claim || claim.claimId !== lease.cloudAuthority.claimId
     || claim.fenceRevision !== lease.cloudAuthority.claimDigest
     || claim.canonicalBaseRevision !== lease.baseSha
     || claim.laneRevision !== lease.fenceSha
     || claim.deviceId !== pseudonymousIdentifier("device", lease.device)
     || claim.sessionId !== pseudonymousIdentifier("session", lease.sessionId)
-    || claim.workItemId !== pseudonymousIdentifier("work-item", lease.scope)
     || !/^github-user:\d+$/u.test(String(claim.actorId || ""))
     || canonicalJson(normalizeWriteSet(claim.declaredWriteScope))
       !== canonicalJson(lease.admission.declaredWriteSet)

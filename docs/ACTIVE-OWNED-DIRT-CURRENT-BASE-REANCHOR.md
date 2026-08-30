@@ -61,6 +61,14 @@ unsupported entry types, protected/admitted-scope overlap, a non-empty fence,
 a non-descendant protected head, missing or ambiguous cloud authority, or any
 identity disagreement fails closed.
 
+The current source claim normally derives its work-item identity from the
+lease scope. A repository-originated legacy lane may instead retain the exact
+canonical branch-derived identity only when its branch parses as
+`agent/<lease-device>/<lease-scope>`. The controller seals which of those two
+closed forms is present and uses the same raw preimage when reserving the
+successor, so reanchoring cannot silently change claim identity. An arbitrary
+alias, malformed branch, or device/scope mismatch fails closed.
+
 For every repository path \(p\), entry equality includes absence, mode, object
 type, and blob identity. The reanchor projection is:
 

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6240,
-  "headDigest": "3b680cd4065523c8be4eca3ef19e588c06d91aadfbfdf5e6d09e35477b8d90a0",
+  "sequence": 6241,
+  "headDigest": "b7faa76d5b3b4cb43c9d84ad6d581ad14f92feb115d50e8fcd49016de95b9dfd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -317052,6 +317052,68 @@
       },
       "claimDigest": "7413132bf5c00edbf2018a4d2924b956f4cd3655e48566c8e17f50165ce44460",
       "digest": "3b680cd4065523c8be4eca3ef19e588c06d91aadfbfdf5e6d09e35477b8d90a0"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6241,
+      "parentDigest": "3b680cd4065523c8be4eca3ef19e588c06d91aadfbfdf5e6d09e35477b8d90a0",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d302a382a6f448cfbe4cd8172a287b8a655631d967c0cb728dd322f9a803618f",
+      "idempotencyKey": "f2be61476e39f92837a1366619a9ddc3fffa55b20b55fccc0a1e66e39387c3c1",
+      "requestDigest": "20955b086034ced1cc2e599d4d2541c1a73c89200c14e04d5ff812e246572c30",
+      "evaluationTime": "2026-08-30T04:02:44.000Z",
+      "claimCore": {
+        "claimId": "d302a382a6f448cfbe4cd8172a287b8a655631d967c0cb728dd322f9a803618f",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:32f0791d847dcd32ba25cc158961cc6100856212afa99ce1c07211eb40cbb477",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:491d04bbb67573a834c06e6dac96acd77b2760c0dbeb6411eeabad6f49930eed",
+        "canonicalBaseRevision": "15cfb2e6ad447f6384abba8270ffcce434a7bb60",
+        "declaredWriteScope": [
+          "path:__tests__/device-integrate.test.mjs",
+          "path:__tests__/device-integration-delta.test.mjs",
+          "path:__tests__/integration-order-contract.test.mjs",
+          "path:__tests__/live-sync.test.mjs",
+          "path:docs/INTEGRATION-ORDER.md",
+          "path:scripts/active-publish-write-scope.mjs",
+          "path:scripts/device-branch-lib.mjs",
+          "path:scripts/device-delivery-evidence.mjs",
+          "path:scripts/device-integrate-lib.mjs",
+          "path:scripts/device-integration-delta.mjs",
+          "path:scripts/integration-order-contract.mjs",
+          "path:scripts/live-sync.mjs",
+          "semantic:diff-first-worktree-integration"
+        ],
+        "writeSetDigest": "c272eb94538b30e60c65648d6cac38dc8029375d02b33e650246b721348c3419",
+        "laneRevision": "5ff8bceeea0dfef8f2e57dcf09fcf81f8dd0fd4d",
+        "leaseEpoch": 2,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-30T04:26:03.000Z",
+        "evidenceDigest": "f7d4bf4fef5e5458970401d943ff07e88195f1d84d03648b0daf12c5d85f459e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBep01w",
+        "predecessorClaimId": "e7b622ae620068fd788587ca4c01ba890548ca12a6a70f1eb8da241ff6eb3e82",
+        "eligibleSince": "2026-08-30T03:54:46.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-30T03:56:03.000Z",
+        "integration": {
+          "candidateRevision": "5ff8bceeea0dfef8f2e57dcf09fcf81f8dd0fd4d",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBep01w",
+          "focusedEvidenceDigest": "f7d4bf4fef5e5458970401d943ff07e88195f1d84d03648b0daf12c5d85f459e",
+          "dependencyClosureDigest": "048be93e736105206b7cfeb3e47ace7f7fc7d5cdeb0f84292ca273fa66e3be4b",
+          "namedChecksDigest": "84f4ff45b57dee83d0c010f93d8e35fe033012a51d6668d2b41dabbe8e05eb62",
+          "handoffEvidenceDigest": "9f6238fb4b8edd274f430e96fa07324c72bab6a92d0f92d35ff9cb49acd82fce",
+          "operatorDecisionDigest": "90f238953d515ef37d8a5ef973e7bec2ea1d0e8557ca8b93cf828bc8626a15d5",
+          "integrationIntentDigest": "10d1195d066e5d6bce8f3bc8caf8761e579d1af69aff5640df9ea0cac4ef129e",
+          "integratedAt": "2026-08-30T04:02:44.000Z"
+        }
+      },
+      "claimDigest": "4a78106e1374e93e6297e368224ccbe81d19d15325131f3eff61d7a396f86e72",
+      "digest": "b7faa76d5b3b4cb43c9d84ad6d581ad14f92feb115d50e8fcd49016de95b9dfd"
     }
   ]
 }

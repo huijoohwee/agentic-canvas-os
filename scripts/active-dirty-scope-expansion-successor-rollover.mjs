@@ -22,9 +22,16 @@ import {
   authorizeSuccessorRolloverContinuation,
   buildSuccessorRolloverContinuationPlan,
   normalizeSuccessorRolloverContinuationAuthorization,
-  normalizeSuccessorRolloverContinuationPlan,
   requireSuccessorRolloverContinuationJournal,
 } from "./active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs";
+import {
+  authorizeSuccessorRolloverContinuationRefresh,
+  buildSuccessorRolloverContinuationRefreshPlan,
+  isSuccessorRolloverContinuationRefreshPlan,
+  normalizeSuccessorRolloverContinuationAuthorityPlan,
+  normalizeSuccessorRolloverContinuationRefreshAuthorization,
+  requireSuccessorRolloverContinuationRefreshJournal,
+} from "./active-dirty-scope-expansion-successor-rollover-continuation-refresh.mjs";
 
 const RESULT_SCHEMA =
   "agentic-active-dirty-scope-expansion-successor-rollover-result/v1";
@@ -47,6 +54,7 @@ const OPTIONS = new Set([
   "operator-session",
   "output",
   "plan",
+  "prior-continuation",
   "pull-request",
   "repository",
   "replacement-plan",
@@ -107,11 +115,22 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
       allowAbsent: true,
     })
     : null;
-  const replacementPlanFile = command === "plan-continuation"
+  if (command === "plan-continuation"
+    && options.has("replacement-plan") === options.has("prior-continuation")) {
+    throw new Error("plan-continuation requires exactly one of --replacement-plan or --prior-continuation.");
+  }
+  const replacementPlanFile = command === "plan-continuation" && options.has("replacement-plan")
     ? privateExternalPath(required(options, "replacement-plan"), {
       repository,
       controllerRoot,
       label: "replacement plan",
+    })
+    : null;
+  const priorContinuationFile = command === "plan-continuation" && options.has("prior-continuation")
+    ? privateExternalPath(required(options, "prior-continuation"), {
+      repository,
+      controllerRoot,
+      label: "prior continuation plan",
     })
     : null;
   const continuationStateFile = command === "run-continuation"
@@ -129,15 +148,21 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
     planFile,
     outputFile,
     replacementPlanFile,
+    priorContinuationFile,
     continuationStateFile,
   ].filter(Boolean));
 
   const inputPlan = planFile ? readJson(planFile, "plan") : null;
   const normalizeContinuationPlan = dependencies.normalizeContinuationPlan
-    || normalizeSuccessorRolloverContinuationPlan;
+    || normalizeSuccessorRolloverContinuationAuthorityPlan;
   const continuationPlan = command === "run-continuation"
     ? normalizeContinuationPlan(inputPlan)
-    : null;
+    : priorContinuationFile
+      ? normalizeContinuationPlan(readJson(priorContinuationFile, "prior continuation plan"))
+      : null;
+  const continuationRefresh = isSuccessorRolloverContinuationRefreshPlan(continuationPlan);
+  const runtimeContinuationPlan = continuationRefresh
+    ? continuationPlan.continuationPlanSnapshot : continuationPlan;
 
   const adapter = (dependencies.createAdapter
     || createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapter)({
@@ -151,7 +176,9 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
     taskAuthorityFile,
     statePath,
     controllerRoot,
-    continuationPlan,
+    continuationPlan: runtimeContinuationPlan,
+    continuationRefreshPlan: continuationRefresh ? continuationPlan : null,
+    refreshContinuationPlan: Boolean(priorContinuationFile),
   }, dependencies.adapterDependencies || {});
   const controller = (dependencies.createController
     || createActiveDirtyScopeExpansionSuccessorRolloverController)(adapter);
@@ -168,14 +195,23 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
   if (planning) {
     let plan;
     if (continuation) {
-      const replacementPlan = readJson(replacementPlanFile, "replacement plan");
+      const priorRuntimePlan = isSuccessorRolloverContinuationRefreshPlan(continuationPlan)
+        ? continuationPlan.continuationPlanSnapshot : continuationPlan;
+      const replacementPlan = priorRuntimePlan?.replacementPlanSnapshot
+        || readJson(replacementPlanFile, "replacement plan");
       const journal = await adapter.readRecoveryJournal();
       const frame = await adapter.readContinuationFrame({ plan: replacementPlan });
-      const buildContinuationPlan = dependencies.buildContinuationPlan
-        || buildSuccessorRolloverContinuationPlan;
-      plan = buildContinuationPlan({
-        replacementPlan, journal, frame, operatorSessionId,
-      });
+      if (continuationPlan) {
+        const buildRefreshPlan = dependencies.buildContinuationRefreshPlan
+          || buildSuccessorRolloverContinuationRefreshPlan;
+        plan = buildRefreshPlan({
+          priorPlan: continuationPlan, currentJournal: journal, frame, operatorSessionId,
+        });
+      } else {
+        const buildContinuationPlan = dependencies.buildContinuationPlan
+          || buildSuccessorRolloverContinuationPlan;
+        plan = buildContinuationPlan({ replacementPlan, journal, frame, operatorSessionId });
+      }
     } else if (replacement) {
       plan = await controller.planReplacement({
         operatorSessionId,
@@ -245,13 +281,26 @@ async function runContinuation({
   controller,
   dependencies,
 }) {
+  const refresh = isSuccessorRolloverContinuationRefreshPlan(plan);
+  const runtimePlan = refresh ? plan.continuationPlanSnapshot : plan;
   const authorize = dependencies.authorizeContinuation
-    || authorizeSuccessorRolloverContinuation;
+    || (refresh ? authorizeSuccessorRolloverContinuationRefresh
+      : authorizeSuccessorRolloverContinuation);
   const authorizationRecord = authorize({ plan, authorization });
   const journal = await adapter.readRecoveryJournal();
+  const requireJournal = ({ current, exactCheckpoint = false }) => {
+    if (dependencies.requireContinuationJournal) return dependencies.requireContinuationJournal(
+      refresh ? { plan, journal: current, exactCheckpoint } : { plan, journal: current });
+    return refresh
+      ? requireSuccessorRolloverContinuationRefreshJournal({
+        plan, journal: current, exactCheckpoint,
+      })
+      : requireSuccessorRolloverContinuationJournal({ plan: runtimePlan, journal: current });
+  };
   if (existsSync(continuationStateFile)) {
     const normalizeAuthorization = dependencies.normalizeContinuationAuthorization
-      || normalizeSuccessorRolloverContinuationAuthorization;
+      || (refresh ? normalizeSuccessorRolloverContinuationRefreshAuthorization
+        : normalizeSuccessorRolloverContinuationAuthorization);
     const stored = normalizeAuthorization(
       readJson(continuationStateFile, "continuation state"),
       { plan },
@@ -259,24 +308,26 @@ async function runContinuation({
     if (stored.authorizationDigest !== authorizationRecord.authorizationDigest) {
       throw new Error("Continuation state does not match the exact authorization.");
     }
-    const requireJournal = dependencies.requireContinuationJournal
-      || requireSuccessorRolloverContinuationJournal;
-    requireJournal({ plan, journal });
+    requireJournal({ current: journal });
   } else {
+    if (refresh || runtimePlan.sourceJournalSnapshot) {
+      requireJournal({ current: journal, exactCheckpoint: refresh });
+    }
     const frame = await adapter.readContinuationFrame({
-      plan: plan.replacementPlanSnapshot,
+      plan: runtimePlan.replacementPlanSnapshot,
     });
     const buildContinuationPlan = dependencies.buildContinuationPlan
       || buildSuccessorRolloverContinuationPlan;
     const observed = buildContinuationPlan({
-      replacementPlan: plan.replacementPlanSnapshot,
-      journal,
+      replacementPlan: runtimePlan.replacementPlanSnapshot,
+      journal: runtimePlan.sourceJournalSnapshot || journal,
       frame,
       operatorSessionId,
     });
-    if (observed.planDigest !== plan.planDigest) {
+    if (observed.planDigest !== runtimePlan.planDigest) {
       throw new Error("Successor rollover continuation frame drifted before authorization persistence.");
     }
+    if (refresh) requireJournal({ current: await adapter.readRecoveryJournal(), exactCheckpoint: true });
     writePrivateJsonExclusive(
       continuationStateFile,
       authorizationRecord,
@@ -285,9 +336,9 @@ async function runContinuation({
     );
   }
   return controller.runReplacement({
-    plan: plan.replacementPlanSnapshot,
+    plan: runtimePlan.replacementPlanSnapshot,
     operatorSessionId,
-    authorization: plan.replacementPlanSnapshot.exactAuthorization,
+    authorization: runtimePlan.replacementPlanSnapshot.exactAuthorization,
   });
 }
 
@@ -324,6 +375,7 @@ function rejectIrrelevantOptions(options, {
   if (!running) forbidden.push("plan", "authorization", "task-authority");
   if (!replacementSubject) forbidden.push("corrected-manifest");
   if (command !== "plan-continuation") forbidden.push("replacement-plan");
+  if (command !== "plan-continuation") forbidden.push("prior-continuation");
   if (command !== "run-continuation") forbidden.push("continuation-state");
   if (command === "inspect") forbidden.push("operator-session");
   for (const name of forbidden) {
@@ -494,6 +546,7 @@ function usage() {
     + "--state-path=<external-private-json> [--operator-session=<id>] "
     + "[--corrected-manifest=<external-json>] [--output=<external-private-plan>] "
     + "[--replacement-plan=<external-private-replacement-plan>] "
+    + "[--prior-continuation=<external-private-continuation-plan>] "
     + "[--plan=<external-private-plan> --task-authority=<external-private-capability> "
     + "--authorization=<exact-text>] [--continuation-state=<external-private-json>] "
     + "[--controller-root=<protected-controller>] [--json]";

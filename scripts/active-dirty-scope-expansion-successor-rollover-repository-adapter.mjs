@@ -16,21 +16,16 @@ import { createWriterLeaseStore, parseWriterLeasePullRequestBody, projectWriterL
 import { mutateWriterLeaseRegistry, readScopeExpansionIntent, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 import { successorRolloverOperationKey, successorRolloverTaskOperation } from "./active-dirty-scope-expansion-successor-rollover-contract.mjs";
 import { createSuccessorRolloverJournalStore } from "./active-dirty-scope-expansion-successor-rollover-controller.mjs";
-import { claimOnlyOperationReceiptForEntry } from "./claim-only-partial-start-retirement-store.mjs";
-import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
-import { normalizeSuccessorRolloverContinuationPlan } from "./active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs";
-import { buildSuccessorRolloverContinuationFrame, captureSuccessorRolloverProtectedControllerAdvance } from "./active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs";
+import { claimOnlyOperationReceiptForEntry } from "./claim-only-partial-start-retirement-store.mjs"; import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
+import { normalizeSuccessorRolloverContinuationPlan } from "./active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs"; import { buildSuccessorRolloverContinuationFrame, captureSuccessorRolloverProtectedControllerAdvance } from "./active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs"; import { buildSuccessorRolloverContinuationRefreshFrame, normalizeSuccessorRolloverContinuationRefreshPlan, rebuildSuccessorRolloverAuthorizedPrMarkerFrame, requireSuccessorRolloverContinuationRefreshJournal } from "./active-dirty-scope-expansion-successor-rollover-continuation-refresh.mjs";
 import { assertSuccessorRolloverBindMutationAllowed, assertSuccessorRolloverTerminalControllerIdentity, classifySuccessorRolloverBindEvidence, projectSuccessorRolloverTerminalVerifiedLease, requireSuccessorRolloverSealedBindEvidence } from "./active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs";
-import { requireProtectedMainEquivalent } from "./device-branch-ownership-lib.mjs";
-const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
-const OPERATION = "active-dirty-scope-expansion-successor-rollover";
-const RETIREMENT_SCHEMA = `agentic-${OPERATION}-retirement/v1`;
-const LOCAL_SCHEMA = `agentic-${OPERATION}-local-receipt/v1`;
+import { requireProtectedMainEquivalent } from "./device-branch-ownership-lib.mjs"; const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const OPERATION = "active-dirty-scope-expansion-successor-rollover", RETIREMENT_SCHEMA = `agentic-${OPERATION}-retirement/v1`, LOCAL_SCHEMA = `agentic-${OPERATION}-local-receipt/v1`;
 const IMPLEMENTATION = Object.freeze([
   "scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-controller.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs",
-  "scripts/active-dirty-scope-expansion-successor-rollover.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs", "scripts/claim-only-partial-start-retirement-store.mjs",
+  "scripts/active-dirty-scope-expansion-successor-rollover.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-refresh.mjs", "scripts/claim-only-partial-start-retirement-store.mjs",
   "__tests__/active-dirty-scope-expansion-successor-rollover-bind-evidence.test.mjs",
-  "__tests__/active-dirty-scope-expansion-successor-rollover-continuation-contract.test.mjs", "__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs", "__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs",
+    "__tests__/active-dirty-scope-expansion-successor-rollover-continuation-contract.test.mjs", "__tests__/active-dirty-scope-expansion-successor-rollover-continuation-refresh.test.mjs", "__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs", "__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs",
   "__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs", "docs/ACTIVE-DIRTY-SCOPE-EXPANSION-SUCCESSOR-ROLLOVER.md",
 ]);
 export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapter(options = {}, dependencies = {}) { const repository = realpathSync(path.resolve(text(options.repository, "source repository")));
@@ -43,7 +38,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
   if (options.statePath && options.journalFile && path.resolve(options.statePath) !== path.resolve(options.journalFile)) invalid("journal path aliases");
   const taskAuthorityFile = options.taskAuthorityFile ? privateCapabilityPath(options.taskAuthorityFile, externalRoots) : null;
   const correctedManifestFile = options.correctedManifestFile ? externalPath(options.correctedManifestFile, externalRoots, "corrected manifest") : null;
-  const continuationPlan = options.continuationPlan ? (dependencies.normalizeContinuationPlan || normalizeSuccessorRolloverContinuationPlan)(options.continuationPlan) : null;
+  const continuationPlan = options.continuationPlan ? (dependencies.normalizeContinuationPlan || normalizeSuccessorRolloverContinuationPlan)(options.continuationPlan) : null, refreshContinuationPlan = options.refreshContinuationPlan === true, continuationRefreshPlan = options.continuationRefreshPlan ? (dependencies.normalizeContinuationRefreshPlan || normalizeSuccessorRolloverContinuationRefreshPlan)(options.continuationRefreshPlan) : null; if ((refreshContinuationPlan || continuationRefreshPlan) && !continuationPlan || continuationRefreshPlan && continuationRefreshPlan.continuationPlanDigest !== continuationPlan.planDigest) invalid("continuation refresh plan");
   const environment = dependencies.environment || process.env;
   const now = dependencies.now || (() => new Date());
   const execute = dependencies.execute || ((command, args, cwd = repository) => execFileSync(command, args,
@@ -171,8 +166,8 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
       staleRetirementTransitionCounter: terminal.transitionCounter, staleRetirementReceiptDigest: terminal.receiptDigest };
     return Object.freeze({ ...core, observationDigest: digestValue(core) });
   }
-  async function readContinuationFrame({ plan }) { return stableCapture(() => captureContinuationFrame(plan), "continuation frame", "frameDigest"); }
-  function captureContinuationFrame(plan) { const journal = requireJournal(), source = sourceFrame(), cloud = cloudFrame(source.lease.cloudAuthority);
+  async function readContinuationFrame({ plan }) { return stableCapture(() => captureContinuationFrame(plan), "continuation frame", "frameDigest"); } function captureContinuationFrame(plan) { const journal = requireJournal(), forceRefresh = refreshContinuationPlan || continuationRefreshPlan; if (continuationRefreshPlan) requireSuccessorRolloverContinuationRefreshJournal({ plan: continuationRefreshPlan, journal, exactCheckpoint: true }); if (forceRefresh || continuationPlan && journal.replacement.status !== "replacement-promoted") { if (journal.replacement.status !== "pr-marker") invalid("continuation planning checkpoint"); return captureContinuationRefreshFrame(plan, journal); }
+    const source = sourceFrame(), cloud = cloudFrame(source.lease.cloudAuthority);
     const candidate = replacementCandidate(plan, cloud);
     const evidence = classifySuccessorRolloverBindEvidence({ plan, journal, ledger: cloud.ledger, candidate }); const pull = source.pullRequest;
     return buildSuccessorRolloverContinuationFrame({ replacementPlan: plan, journal,
@@ -184,7 +179,13 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
         headSha: pull.headRefOid, baseBranch: pull.baseRefName, baseSha: pull.baseRefOid, markerDigest: pull.markerDigest, bodyDigest: pull.bodyDigest },
       protectedControllerAdvance: protectedControllerAdvance(plan), repairedControllerDigest: controllerContentDigest() });
   }
-  function authorizeEffect({ plan, phase, operationKey }) { if (phase === "verified") return Object.freeze({ status: "not-required" });
+  function captureContinuationRefreshFrame(plan, journal) { const source = sourceFrame({ requireOriginal: false, allowPriorMarker: true }), cloud = cloudFrame(source.lease.cloudAuthority), candidate = replacementCandidate(plan, cloud), bound = requireContinuationBound(plan, cloud, candidate), local = reconcileLocal(plan), marker = reconcilePullRequest(plan), prior = continuationPlan.continuationFrameSnapshot, pull = source.pullRequest, target = manifest(plan);
+    if (continuationPlan.replacementPlanDigest !== plan.planDigest || !bound || !local || !marker || digestValue(repository) !== prior.owner.repositoryPathDigest || source.headSha !== prior.owner.headSha || source.remoteHeadSha !== prior.owner.remoteHeadSha || source.dirtDigest !== prior.owner.dirtDigest || source.intentDigest !== prior.owner.intentDigest || digestValue(source.changedPaths) !== prior.owner.changedPathsDigest
+      || pull.nodeId !== prior.reviewRequest.nodeId || pull.state !== prior.reviewRequest.state || pull.isDraft !== prior.reviewRequest.isDraft || pull.headRefName !== prior.reviewRequest.branch || pull.headRefOid !== prior.reviewRequest.headSha || pull.baseRefName !== prior.reviewRequest.baseBranch || pull.baseRefOid !== prior.reviewRequest.baseSha) invalid("preserved PR-marker continuation subject");
+    requireCorrectedManifest(plan, source.lease.scope); const checked = prepareProjectedVerification(source.lease.cloudAuthority, target); validateProjectedLease(projectSuccessorRolloverTerminalVerifiedLease({ lease: source.lease, verifiedAuthority: checked.authority }), target, checked);
+    return (refreshContinuationPlan ? buildSuccessorRolloverContinuationRefreshFrame : rebuildSuccessorRolloverAuthorizedPrMarkerFrame)({ priorPlan: continuationRefreshPlan || continuationPlan, currentJournal: journal, liveBoundValues: { authority: projectAuthority(source.lease.cloudAuthority), receiptDigest: bound.boundReplacement.receipt.receiptDigest }, liveLocalValues: local, livePullRequestValues: marker, protectedControllerAdvance: protectedControllerAdvance(plan), repairedControllerDigest: controllerContentDigest(), gitText: args => gitRaw(args, controllerRoot) });
+  }
+  function authorizeEffect({ plan, phase, operationKey }) { if (continuationRefreshPlan && phase !== "verified") invalid("refresh effect boundary"); if (phase === "verified") return Object.freeze({ status: "not-required" });
     if (continuationPlan && phase === "replacement-bound") assertSuccessorRolloverBindMutationAllowed(continuationPlan.continuationDisposition);
     const file = requireTaskAuthority();
     const lease = sourceFrame({ requireOriginal: phase !== "pr-marker", allowPriorMarker: phase === "pr-marker" }).lease;
@@ -194,7 +195,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
     pendingAuthority.set(operationKey, { planDigest: plan.planDigest, phase, leaseDigest: writerLeaseDigest(lease), bindingDigest: receipt.bindingDigest, receipt });
     return receipt;
   }
-  async function reconcilePhase({ plan, journal, phase }) { if (phase === "stale-successor-retired") return retirementTerminal(plan, cloudFrame(sourceFrame().lease.cloudAuthority));
+  async function reconcilePhase({ plan, journal, phase }) { if (continuationRefreshPlan && phase !== "verified") invalid("refresh effect boundary"); if (phase === "stale-successor-retired") return retirementTerminal(plan, cloudFrame(sourceFrame().lease.cloudAuthority));
     if (["replacement-claimed", "replacement-promoted", "replacement-bound"].includes(phase)) return reconcileCloudReplacement(plan, journal, phase);
     if (phase === "local-cas") return reconcileLocal(plan);
     if (phase === "pr-marker") return reconcilePullRequest(plan);
@@ -395,10 +396,9 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
       requireProtectedMainEquivalent({ planned: continuationPlan.protectedControllerAdvance.advance, observed: current.advance,
         gitText: args => gitRaw(args, controllerRoot) });
     } else if (current.changedPaths.some(changed => covers(plan.target.declaredWriteSet, changed))) invalid("corrected target overlap with protected-main advance");
-    if (correctedManifestFile) { const supplied = normalizeDeclaredWriteScopeManifest(readJson(correctedManifestFile), { expectedScope: source.lease.scope });
-      if (supplied.manifestDigest !== plan.target.manifestDigest || supplied.writeSetDigest !== plan.target.writeSetDigest) invalid("corrected manifest file drift");
-    }
+    requireCorrectedManifest(plan, source.lease.scope);
   }
+  function requireCorrectedManifest(plan, scope) { if (!correctedManifestFile) return; const supplied = normalizeDeclaredWriteScopeManifest(readJson(correctedManifestFile), { expectedScope: scope }); if (supplied.manifestDigest !== plan.target.manifestDigest || supplied.writeSetDigest !== plan.target.writeSetDigest) invalid("corrected manifest file drift"); }
   function replacementCandidate(plan, cloud) { const matches = cloud.status.claims.filter(claim => (claim.predecessorClaimId ?? null) === null
       && claim.canonicalBaseRevision === plan.targetCanonicalBaseSha && claim.laneRevision === plan.sourceFenceSha && claim.writeSetDigest === plan.target.writeSetDigest
       && claim.leaseEpoch === plan.targetCloudLeaseEpoch && matchesSuccessorRolloverSourceClaimIdentity(claim, plan.sourceClaimIdentity));

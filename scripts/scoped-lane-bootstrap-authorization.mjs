@@ -79,6 +79,10 @@ export function createRootSourceBootstrapAuthorization({
     branch,
     currentRemoteClaims,
   });
+  if (preservedLanes !== null && preservedLanes !== undefined
+    && !Array.isArray(preservedLanes)) {
+    throw new Error("Root-source bootstrap preservedLanes must be an array.");
+  }
   const requestedPreservedLanes = Array.isArray(preservedLanes)
     ? preservedLanes.map((lane) => Object.freeze({
       path: path.resolve(requiredText(lane.path, "preserved lane path")),
@@ -268,7 +272,7 @@ export function normalizeRootSourceBootstrapAuthorization({
   ) {
     throw new Error("Root-source bootstrap authorization drifted from its candidate bindings.");
   }
-  if (!Array.isArray(source.preservedLanes) || source.preservedLanes.length === 0) {
+  if (!Array.isArray(source.preservedLanes)) {
     throw new Error("Root-source bootstrap authorization requires preservedLanes.");
   }
   if (source.preservedLanes.length > ROOT_SOURCE_BOOTSTRAP_MAX_PRESERVED_LANES) {
@@ -382,6 +386,11 @@ export function normalizeRootSourceBootstrapAuthorization({
       `Root-source bootstrap maintenance bytes are not exactly allowlisted: ${unownedPaths.join(", ") || "maintenance state mismatch"}`,
     );
   }
+  if (preservedLanes.length === 0 && !canonicalDirtyMaintenance) {
+    throw new Error(
+      "Root-source bootstrap requires at least one preserved lane unless maintenance is canonical-dirty-main.",
+    );
+  }
   const core = {
     schema: ROOT_SOURCE_BOOTSTRAP_AUTHORIZATION_SCHEMA,
     operatorDecision,
@@ -444,14 +453,17 @@ export function assertRootSourceBootstrapCurrent({
   }), {
     expectedManifestDigest: authorization.maintenanceManifestDigest,
   });
+  const liveCanonicalDirtyMaintenance = path.resolve(authorization.maintenanceSourcePath)
+    === path.resolve(report.repository)
+    && maintenanceProof.branch === "refs/heads/main"
+    && maintenanceProof.dirty
+    && !maintenanceProof.retiredPreserved
+    && maintenanceProof.leaseCount === 0;
   if (
-    (authorization.maintenanceMode === "canonical-dirty-main" && (
-      path.resolve(authorization.maintenanceSourcePath) !== path.resolve(report.repository)
-      || maintenanceProof.branch !== "refs/heads/main"
-      || !maintenanceProof.dirty
-      || maintenanceProof.retiredPreserved
-      || maintenanceProof.leaseCount !== 0
-    ))
+    !Array.isArray(authorization.preservedLanes)
+    || (authorization.preservedLanes.length === 0 && !liveCanonicalDirtyMaintenance)
+    || (authorization.maintenanceMode === "canonical-dirty-main"
+      && !liveCanonicalDirtyMaintenance)
     || (authorization.maintenanceMode === "separate-root-lane" &&
       path.resolve(authorization.maintenanceSourcePath) === path.resolve(report.repository))
     || !["canonical-dirty-main", "separate-root-lane"].includes(authorization.maintenanceMode)

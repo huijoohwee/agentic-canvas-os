@@ -24,7 +24,7 @@ const passingProof = {
     requiredDeviceCount: 2,
     verificationDigest: "a".repeat(64),
     devices: ["owner", "guest"],
-    knowgrphRevision: "b".repeat(40),
+    agenticgraphRevision: "b".repeat(40),
     agenticCanvasOsRevision: "c".repeat(40),
     catalogRevision: "c".repeat(40),
     catalogHydrationStatus: "fresh",

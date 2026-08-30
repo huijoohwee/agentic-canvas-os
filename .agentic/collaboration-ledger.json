@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6467,
-  "headDigest": "861df16d0c5064151688b5555196af9bdc86768c168c50fd643d63f5dfb7ff79",
+  "sequence": 6468,
+  "headDigest": "dd496fa92a66c4fc116e8520f672f02e4063ffa0384497b2935ea56479ed939c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -328647,6 +328647,48 @@
       },
       "claimDigest": "508c81c614866cade66ccb4207dbab0625cd78a17d1d7ef25efc4fda9641b092",
       "digest": "861df16d0c5064151688b5555196af9bdc86768c168c50fd643d63f5dfb7ff79"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6468,
+      "parentDigest": "861df16d0c5064151688b5555196af9bdc86768c168c50fd643d63f5dfb7ff79",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "e8f86e3bb992e90ff32c0d7a4be2afa8d1f0924c38f4eebd50ab9f762291f028",
+      "idempotencyKey": "72c51f05de17afe26c032bff8c4b3643c2c5eea612a09a8d073b71a50023609d",
+      "requestDigest": "da2c8bcb9c3623394f557e944da2cc78f32fcaa1aad6051969dd016b25e8ab11",
+      "evaluationTime": "2026-08-30T22:38:39.000Z",
+      "claimCore": {
+        "claimId": "e8f86e3bb992e90ff32c0d7a4be2afa8d1f0924c38f4eebd50ab9f762291f028",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:051cb95db88cb0cbcdd519b37f955d1e6d8b9489add92ab74a945548bec52672",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0dc923dd0162800dd0ef2dc9a48072fd31a6b9c57b93b2ad8ebcfdac98c0befe",
+        "canonicalBaseRevision": "2329c600366e841a4e9d284d6cb291fff46884fe",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-waiting-bridge-reconciliation.test.mjs",
+          "path:docs/CLAIM-ONLY-WAITING-BRIDGE-RECONCILIATION.md",
+          "path:scripts/claim-only-waiting-bridge-reconciliation-contract.mjs",
+          "path:scripts/claim-only-waiting-bridge-reconciliation-repository-adapter.mjs",
+          "semantic:claim-only-waiting-bridge-live-topology"
+        ],
+        "writeSetDigest": "766aaa3eb05b7b281f6c25b19ca4b99bd9e9e836fbfbf4a85c3df175718fc51a",
+        "laneRevision": "53bc1c3d016d38d6cbf353f7c4459fd1efbcd420",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T00:36:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBiH67w",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "f5658a5b60a2c73fc5a02983971a7a6dcdca5280f21e91d44339d1663cf10ce1",
+      "digest": "dd496fa92a66c4fc116e8520f672f02e4063ffa0384497b2935ea56479ed939c"
     }
   ]
 }

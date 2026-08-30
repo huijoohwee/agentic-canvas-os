@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6476,
-  "headDigest": "c8220e0f5e70224a48e56c95655d989f9f4abf86b3b11bd5a87c5d488402e350",
+  "sequence": 6477,
+  "headDigest": "ce3387eff93b97190a52bdbd7b508e009271205a089989d8b8ad4b53cb0383f2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -329053,6 +329053,48 @@
       },
       "claimDigest": "8d121c62bac5b24d0e31acc4128be34a1b084977b6c87e59a042368a0dcc1fe8",
       "digest": "c8220e0f5e70224a48e56c95655d989f9f4abf86b3b11bd5a87c5d488402e350"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6477,
+      "parentDigest": "c8220e0f5e70224a48e56c95655d989f9f4abf86b3b11bd5a87c5d488402e350",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "0820cd60692b83d777ebd6efa954d04f384bab5ed7993998d4a8a923e1087d3b",
+      "idempotencyKey": "695b9ffba9e2d865b2972a815660765417006a32f2ff7a6e82eb624409768afd",
+      "requestDigest": "77243bc5051926618f03e0066e149e3b98ce7a88fd1f2ec5891130d4dbedc151",
+      "evaluationTime": "2026-08-30T23:39:54.000Z",
+      "claimCore": {
+        "claimId": "0820cd60692b83d777ebd6efa954d04f384bab5ed7993998d4a8a923e1087d3b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:71f0aff9c9d241c3f7d7234d8bf5e0ef7cb37c9eafc6bdc65870c1e27cfce0dd",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:c0b37479813f45df967aefb3e20175a323317a6ba9e1c96e68265d6eb87ad076",
+        "canonicalBaseRevision": "04cd7f6b5f30ccc86095122bd1fabb3f20f2b7fa",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-squash-attribution-recovery-terminalization.test.mjs",
+          "path:docs/CANONICAL-SQUASH-ATTRIBUTION-RECOVERY-TERMINALIZATION.md",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-contract.mjs",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-repository-adapter.mjs",
+          "semantic:generic-canonical-squash-terminalizer"
+        ],
+        "writeSetDigest": "2a19a4eae8e743a1101678df72e35b6b8d4efc2f7f407f539946696fa02238aa",
+        "laneRevision": "6eeb7d06e76b48e23d5456166ae9e0889062ba95",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T01:35:50.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBiTMSg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e8d7e062d17c7108ab4e486221ce8d64da34e2f1b45002776dd6f67c6c37212f",
+      "digest": "ce3387eff93b97190a52bdbd7b508e009271205a089989d8b8ad4b53cb0383f2"
     }
   ]
 }

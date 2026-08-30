@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { createCollaborationGateSandbox } from "./collaboration-gate-sandbox.mjs";
+import { withPrivateOperationLock } from "./private-operation-lock.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultAgenticCanvasOsRoot = path.resolve(path.dirname(scriptPath), "..");
@@ -98,7 +100,7 @@ export function validateCollaborationProof(proof) {
   if (!/^[0-9a-f]{64}$/.test(String(identity.verificationDigest || ""))) {
     throw new Error("Knowgrph collaboration proof has no common verification digest.");
   }
-  for (const field of ["knowgrphRevision", "agenticCanvasOsRevision", "catalogRevision"]) {
+  for (const field of ["agenticgraphRevision", "agenticCanvasOsRevision", "catalogRevision"]) {
     if (!/^[0-9a-f]{40}$/.test(String(identity[field] || ""))) {
       throw new Error(`Knowgrph collaboration proof has an invalid ${field}.`);
     }
@@ -113,6 +115,58 @@ export function validateCollaborationProof(proof) {
     throw new Error("Knowgrph collaboration proof runtime devices are not distinct.");
   }
   return proof;
+}
+
+export function withRecoverableGitMutationFence({
+  plan,
+  action,
+  acquireLock = withPrivateOperationLock,
+  readGit = gitText,
+} = {}) {
+  if (!/^[0-9a-f]{64}$/.test(String(plan?.planDigest || ""))
+    || typeof action !== "function" || typeof acquireLock !== "function"
+    || typeof readGit !== "function") {
+    throw new Error("Git mutation fence requires a sealed plan, lock owner, and synchronous action.");
+  }
+  const { source, target } = plan.evidence;
+  const common = realGateDirectory(source.commonDirectory, "Git fence common directory");
+  const sourceGit = realGateDirectory(path.resolve(source.worktree,
+    readGit(source.worktree, ["rev-parse", "--git-dir"])), "source Git directory");
+  const targetGit = realGateDirectory(path.resolve(target.worktree,
+    readGit(target.worktree, ["rev-parse", "--git-dir"])), "target Git directory");
+  if (readGit(source.worktree, ["rev-parse", "--show-ref-format"]) !== "files") {
+    throw new Error("Git mutation fence requires the native files ref backend.");
+  }
+  if (readGit(source.worktree, ["check-ref-format", "--branch", target.branch]) !== target.branch) {
+    throw new Error("Git mutation fence target branch is invalid.");
+  }
+  const worktreeLock = path.join(targetGit, "locked");
+  const lockPaths = [worktreeLock, ...[
+    path.join(sourceGit, "HEAD.lock"), path.join(sourceGit, "index.lock"),
+    path.join(targetGit, "HEAD.lock"), path.join(targetGit, "index.lock"),
+    path.join(common, "packed-refs.lock"),
+    path.join(common, "refs", "heads", "main.lock"),
+    path.join(common, "refs", "heads", `${target.branch}.lock`),
+    path.join(common, "refs", "remotes", "origin", "main.lock"),
+  ].map(file => path.resolve(file)).sort()];
+  for (const directory of [sourceGit, targetGit]) requireGitFenceDescendant(common, directory);
+  for (const file of lockPaths) requireGitFenceDescendant(common, file);
+  const context = Object.freeze({
+    schema: "agentic-canonical-untracked-relocation-git-fence/v1",
+    commonDirectory: common,
+    lockSetDigest: digestValue(lockPaths),
+    planDigest: plan.planDigest,
+    sourceWorktree: path.resolve(source.worktree),
+    subjectDigest: digestValue({ commonDirectory: common,
+      sourceWorktree: path.resolve(source.worktree), targetBranch: target.branch,
+      targetWorktree: path.resolve(target.worktree) }),
+    targetBranch: target.branch,
+    targetWorktree: path.resolve(target.worktree),
+  });
+  const acquire = index => index === lockPaths.length ? runSynchronousFenceAction(action)
+    : acquireLock({ file: lockPaths[index], context: { ...context, lockPath: lockPaths[index] },
+      action: () => acquire(index + 1) });
+  return acquire(0);
 }
 
 function passedResult({ knowgrphRoot, sandbox, proof }) {
@@ -130,7 +184,7 @@ function passedResult({ knowgrphRoot, sandbox, proof }) {
       requiredDeviceCount: identity.requiredDeviceCount,
       verificationDigest: identity.verificationDigest,
       devices: identity.devices,
-      knowgrphRevision: identity.knowgrphRevision,
+      agenticgraphRevision: identity.agenticgraphRevision,
       agenticCanvasOsRevision: identity.agenticCanvasOsRevision,
       catalogRevision: identity.catalogRevision,
       catalogHydrationStatus: identity.catalogHydrationStatus,
@@ -157,6 +211,34 @@ function gateError(message, gateResult) {
   const error = new Error(message);
   error.gateResult = gateResult;
   return error;
+}
+
+function runSynchronousFenceAction(action) {
+  const result = action();
+  if (result && typeof result.then === "function") {
+    throw new Error("Git mutation fence action must remain synchronous under the registry lock.");
+  }
+  return result;
+}
+
+function requireGitFenceDescendant(common, candidate) {
+  if (candidate !== common && !candidate.startsWith(`${common}${path.sep}`)) {
+    throw new Error("Git mutation fence escaped the common directory.");
+  }
+}
+
+function realGateDirectory(value, label) {
+  const target = path.resolve(String(value || ""));
+  if (!path.isAbsolute(String(value || "")) || !lstatSync(target).isDirectory()) {
+    throw new Error(`${label} must be an absolute directory.`);
+  }
+  return realpathSync(target);
+}
+
+function gitText(worktree, args) {
+  return execFileSync("git", args, {
+    cwd: worktree, encoding: "utf8", maxBuffer: 4 * 1024 * 1024,
+  }).trim();
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {

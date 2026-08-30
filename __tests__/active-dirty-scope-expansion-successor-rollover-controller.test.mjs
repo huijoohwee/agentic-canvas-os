@@ -54,9 +54,9 @@ function targetManifest() { return { schema: "agentic-declared-write-scope/v1",
   semanticScope: "commerce", declaredWriteSet: CORRECTED,
   writeSetDigest: digestValue(CORRECTED), manifestDigest: digest("3") }; }
 
-function createHarness({ crashPhase = null } = {}) {
-  let journal = null, crashUsed = false, completedChecks = 0, ledgerVersion = 1,
-    retirementLedgerValidations = 0;
+function createHarness({ crashPhase = null, haltBeforePhase = null } = {}) {
+  let journal = null, crashUsed = false, haltUsed = false, completedChecks = 0,
+    ledgerVersion = 1, retirementLedgerValidations = 0;
   const live = new Map(), calls = [], counts = { fences: 0, writes: 0, authorizations: 0 };
   const retirement = plan => ({
     schema: "agentic-active-dirty-scope-expansion-successor-rollover-retirement/v1",
@@ -109,6 +109,9 @@ function createHarness({ crashPhase = null } = {}) {
     readPhaseAObservation: async () => retirementObservation(),
     authorizeEffect: async input => { counts.authorizations += 1; calls.push(`authorize:${input.phase}`); },
     reconcilePhase: async ({ phase }) => {
+      if (phase === haltBeforePhase && !haltUsed) {
+        haltUsed = true; throw new Error(`halt before ${phase}`);
+      }
       if (phase === "stale-successor-retired") {
         retirementLedgerValidations += 1; void ledgerVersion;
       }
@@ -135,7 +138,10 @@ function createHarness({ crashPhase = null } = {}) {
     verifyCompleted: async () => { completedChecks += 1; return live.get("verified"); },
   };
   return { adapter, controller: createActiveDirtyScopeExpansionSuccessorRolloverController(adapter),
-    calls, counts, advanceLedger() { ledgerVersion += 1; }, get journal() { return journal; },
+    calls, counts, advanceLedger() { ledgerVersion += 1; },
+    phaseValues(phase, plan) { return effects[phase]({ plan }); },
+    seedPhase(phase, values) { live.set(phase, values); },
+    get journal() { return journal; },
     get retirementLedgerValidations() { return retirementLedgerValidations; },
     get completedChecks() { return completedChecks; } };
 }
@@ -225,6 +231,34 @@ for (const phase of ["stale-successor-retired", "replacement-claimed", "local-ca
       phase === "stale-successor-retired" ? "stale-successor-retired" : "complete");
   });
 }
+
+test("reconciles an exact response-ahead bind without authorizing or binding again", async () => {
+  const harness = createHarness({ haltBeforePhase: "replacement-bound" });
+  await retire(harness);
+  const plan = await harness.controller.planReplacement({
+    operatorSessionId: OPERATOR, targetManifest: targetManifest(),
+  });
+  const run = () => harness.controller.runReplacement({ plan, operatorSessionId: OPERATOR,
+    authorization: plan.exactAuthorization });
+  await assert.rejects(run(), /halt before replacement-bound/u);
+  assert.equal(harness.journal.replacement.status, "replacement-promoted");
+
+  const exact = harness.phaseValues("replacement-bound", plan);
+  const mismatched = structuredClone(exact);
+  mismatched.authority.transitionCounter += 1;
+  harness.seedPhase("replacement-bound", mismatched);
+  await assert.rejects(run(), /promotion to binding join/u);
+  assert.equal(harness.journal.replacement.status, "replacement-promoted");
+
+  harness.seedPhase("replacement-bound", exact);
+  const complete = await run();
+  assert.equal(complete.status, "complete");
+  assert.deepEqual({
+    authorizeEffect: harness.calls.filter(value =>
+      value === "authorize:replacement-bound").length,
+    bindReplacement: harness.calls.filter(value => value === "replacement-bound").length,
+  }, { authorizeEffect: 0, bindReplacement: 0 });
+});
 
 test("blocks replacement planning before terminal retirement", async () => {
   const harness = createHarness();

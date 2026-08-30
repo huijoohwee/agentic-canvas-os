@@ -9,6 +9,7 @@ import {
 import {
   normalizeSuccessorRolloverJournal,
   normalizeSuccessorRolloverReplacementPlan,
+  successorRolloverOperationKey,
 } from "./active-dirty-scope-expansion-successor-rollover-contract.mjs";
 import {
   captureProtectedMainAdvance,
@@ -16,7 +17,7 @@ import {
 } from "./device-branch-ownership-lib.mjs";
 
 export const CONTINUATION_FRAME_SCHEMA =
-  "agentic-active-dirty-scope-expansion-successor-rollover-continuation-frame/v1";
+  "agentic-active-dirty-scope-expansion-successor-rollover-continuation-frame/v2";
 export const HISTORICAL_BIND_PROOF_SCHEMA =
   "agentic-legacy-review-current-base-disjoint-proof/v1";
 export const PROTECTED_CONTROLLER_ADVANCE_SCHEMA =
@@ -115,6 +116,7 @@ export function buildSuccessorRolloverContinuationFrame({
   journal,
   owner,
   replacementClaim,
+  boundReplacement = null,
   reviewRequest,
   protectedControllerAdvance,
   repairedControllerDigest,
@@ -129,6 +131,9 @@ export function buildSuccessorRolloverContinuationFrame({
     reviewRequestBaseSha: normalizedReview.baseSha,
   });
   const claim = normalizeReplacementClaim(replacementClaim, sourceJournal, plan);
+  const bound = normalizeBoundReplacement(boundReplacement, claim, plan);
+  const continuationDisposition = bound === null
+    ? "promoted-unbound" : "bound-response-ahead";
   const controllerAdvance = normalizeProtectedControllerAdvance(
     protectedControllerAdvance,
     plan,
@@ -145,8 +150,10 @@ export function buildSuccessorRolloverContinuationFrame({
     sourceReplacementIntentDigest: sourceJournal.replacement.intentDigest,
     promotedPhaseReceiptDigest: promoted.receiptDigest,
     promotedPrefixDigest: promotedPrefixDigest(sourceJournal),
+    continuationDisposition,
     owner: normalizedOwner,
     replacementClaim: claim,
+    boundReplacement: bound,
     reviewRequest: normalizedReview,
     historicalBindProof,
     protectedControllerAdvance: controllerAdvance,
@@ -162,7 +169,8 @@ export function normalizeSuccessorRolloverContinuationFrame(
   exactObject(value, "continuation frame", [
     "schema", "replacementPlanDigest", "sourceJournalDigest",
     "sourceReplacementIntentDigest", "promotedPhaseReceiptDigest", "promotedPrefixDigest",
-    "owner", "replacementClaim", "reviewRequest", "historicalBindProof",
+    "continuationDisposition", "owner", "replacementClaim", "boundReplacement",
+    "reviewRequest", "historicalBindProof",
     "protectedControllerAdvance", "repairedControllerDigest", "frameDigest",
   ]);
   if (value.schema !== CONTINUATION_FRAME_SCHEMA) invalid("continuation frame schema");
@@ -173,6 +181,7 @@ export function normalizeSuccessorRolloverContinuationFrame(
     journal: sourceJournal,
     owner: value.owner,
     replacementClaim: value.replacementClaim,
+    boundReplacement: value.boundReplacement,
     reviewRequest: value.reviewRequest,
     protectedControllerAdvance: value.protectedControllerAdvance,
     repairedControllerDigest: value.repairedControllerDigest,
@@ -198,7 +207,8 @@ export function requireSuccessorRolloverContinuationFrame({
   });
   for (const key of ["replacementPlanDigest", "sourceJournalDigest",
     "sourceReplacementIntentDigest", "promotedPhaseReceiptDigest", "promotedPrefixDigest",
-    "owner", "replacementClaim", "reviewRequest", "historicalBindProof",
+    "continuationDisposition", "owner", "replacementClaim", "boundReplacement",
+    "reviewRequest", "historicalBindProof",
     "repairedControllerDigest"]) {
     if (canonicalJson(expected[key]) !== canonicalJson(current[key])) {
       invalid(`continuation frame ${key} drift`);
@@ -343,6 +353,85 @@ function normalizeReplacementClaim(value, journal, plan) {
     invalid("exact promoted replacement claim");
   }
   return deepFreeze(claim);
+}
+
+function normalizeBoundReplacement(value, promoted, plan) {
+  if (value === null) return null;
+  exactObject(value, "bound replacement frame", ["schema", "claim", "receipt"]);
+  exactObject(value.claim, "bound replacement claim", ["schema", "claimId", "claimDigest",
+    "claimLedgerRevision", "transitionCounter", "state", "predecessorClaimId",
+    "canonicalBaseSha", "laneRevision", "writeSetDigest", "leaseEpoch",
+    "reviewRequestId", "expiresAt", "operationReceiptDigest"]);
+  const claim = {
+    schema: text(value.claim.schema, "bound replacement claim schema"),
+    claimId: digest(value.claim.claimId, "bound replacement claim"),
+    claimDigest: digest(value.claim.claimDigest, "bound replacement claim digest"),
+    claimLedgerRevision: digest(value.claim.claimLedgerRevision, "bound replacement transition"),
+    transitionCounter: positive(value.claim.transitionCounter, "bound replacement transition counter"),
+    state: text(value.claim.state, "bound replacement claim state"),
+    predecessorClaimId: value.claim.predecessorClaimId === null
+      ? null : digest(value.claim.predecessorClaimId, "bound replacement predecessor"),
+    canonicalBaseSha: sha(value.claim.canonicalBaseSha, "bound replacement canonical base"),
+    laneRevision: sha(value.claim.laneRevision, "bound replacement lane revision"),
+    writeSetDigest: digest(value.claim.writeSetDigest, "bound replacement write set"),
+    leaseEpoch: positive(value.claim.leaseEpoch, "bound replacement lease epoch"),
+    reviewRequestId: text(value.claim.reviewRequestId, "bound replacement review request"),
+    expiresAt: instant(value.claim.expiresAt, "bound replacement expiry"),
+    operationReceiptDigest: digest(value.claim.operationReceiptDigest,
+      "bound replacement operation receipt"),
+  };
+  const stable = ["claimId", "state", "predecessorClaimId", "canonicalBaseSha",
+    "laneRevision", "writeSetDigest", "leaseEpoch", "expiresAt"];
+  if (value.schema !== "agentic-active-dirty-scope-expansion-successor-rollover-bound-frame/v1"
+    || claim.schema !== promoted.schema || stable.some(key =>
+      canonicalJson(claim[key]) !== canonicalJson(promoted[key]))
+    || claim.claimDigest === promoted.claimDigest
+    || claim.transitionCounter !== promoted.transitionCounter + 1
+    || claim.reviewRequestId !== plan.sourceReviewRequestId) {
+    invalid("exact bound replacement claim");
+  }
+  const identity = plan.sourceClaimIdentity;
+  const intent = {
+    repositoryId: identity.repositoryId, actorId: identity.actorId,
+    deviceId: identity.deviceId, sessionId: identity.sessionId,
+    claimId: promoted.claimId, expectedFenceRevision: promoted.claimDigest,
+    expectedTransitionCounter: promoted.transitionCounter, mode: "projection",
+    laneRevision: plan.sourceFenceSha, reviewRequestId: plan.sourceReviewRequestId,
+    expiresAt: null, focusedEvidenceDigest: null, handoffEvidenceDigest: null,
+    recoveryEvidenceDigest: null,
+  };
+  exactObject(value.receipt, "bound replacement receipt", ["schema", "operation", "status",
+    "repositoryId", "claimId", "claimDigest", "fenceRevision", "ledgerRevision",
+    "ledgerSequence", "idempotencyKey", "requestDigest", "evaluationTime", "receiptDigest"]);
+  const receiptCore = {
+    schema: text(value.receipt.schema, "bound replacement receipt schema"),
+    operation: text(value.receipt.operation, "bound replacement receipt operation"),
+    status: text(value.receipt.status, "bound replacement receipt status"),
+    repositoryId: text(value.receipt.repositoryId, "bound replacement receipt repository"),
+    claimId: digest(value.receipt.claimId, "bound replacement receipt claim"),
+    claimDigest: digest(value.receipt.claimDigest, "bound replacement receipt claim digest"),
+    fenceRevision: digest(value.receipt.fenceRevision, "bound replacement receipt fence"),
+    ledgerRevision: digest(value.receipt.ledgerRevision, "bound replacement receipt ledger"),
+    ledgerSequence: positive(value.receipt.ledgerSequence, "bound replacement receipt sequence"),
+    idempotencyKey: digest(value.receipt.idempotencyKey, "bound replacement receipt operation key"),
+    requestDigest: digest(value.receipt.requestDigest, "bound replacement receipt request"),
+    evaluationTime: instant(value.receipt.evaluationTime, "bound replacement receipt time"),
+  };
+  const expectedKey = digestValue(successorRolloverOperationKey(plan, "replacement-bound"));
+  if (receiptCore.schema !== "agentic-collaboration-continuation-receipt/v1"
+    || receiptCore.operation !== "continue" || receiptCore.status !== "current"
+    || receiptCore.repositoryId !== identity.repositoryId || receiptCore.claimId !== claim.claimId
+    || receiptCore.claimDigest !== claim.claimDigest
+    || receiptCore.fenceRevision !== claim.claimDigest
+    || receiptCore.ledgerRevision !== claim.claimLedgerRevision
+    || receiptCore.idempotencyKey !== expectedKey
+    || receiptCore.requestDigest !== digestValue({ action: "continue", intent })
+    || value.receipt.receiptDigest !== digestValue(receiptCore)
+    || claim.operationReceiptDigest !== value.receipt.receiptDigest) {
+    invalid("exact bound replacement receipt");
+  }
+  return deepFreeze({ schema: value.schema, claim,
+    receipt: { ...receiptCore, receiptDigest: value.receipt.receiptDigest } });
 }
 
 function normalizeProtectedControllerAdvance(value, plan) {

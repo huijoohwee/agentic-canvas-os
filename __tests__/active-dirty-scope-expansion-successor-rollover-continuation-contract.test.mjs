@@ -9,6 +9,7 @@ import {
   buildSuccessorRolloverReplacementPlan,
   buildSuccessorRolloverRetirementPlan,
   createSuccessorRolloverJournal,
+  successorRolloverOperationKey,
 } from "../scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs";
 import {
   authorizeSuccessorRolloverContinuation,
@@ -37,6 +38,10 @@ const TARGET = ["path:a.mjs", "path:b.mjs", "path:c.mjs", "semantic:commerce"];
 
 test("seals distinct historical-bind and protected-controller proofs plus static authority", () => {
   const fixture = prepared();
+  assert.equal(fixture.frame.continuationDisposition, "promoted-unbound");
+  assert.equal(fixture.frame.boundReplacement, null);
+  assert.ok(fixture.plan.allowedEffects.includes("bind-exact-promoted-replacement"));
+  assert.ok(!fixture.plan.forbiddenEffects.includes("replacement-bind"));
   assert.equal(fixture.frame.historicalBindProof.sourceBaseSha, HISTORICAL_BASE);
   assert.equal(fixture.frame.historicalBindProof.targetBaseSha, C3_BASE);
   assert.deepEqual(fixture.frame.historicalBindProof.preservedChangedPaths,
@@ -66,6 +71,55 @@ test("seals distinct historical-bind and protected-controller proofs plus static
     plan: fixture.plan,
     authorization: "authorize active-dirty-scope-expansion-successor-rollover-continue wrong",
   }), /requires exact authorization/u);
+});
+
+test("seals an exact response-ahead bind as reconciliation-only authority", () => {
+  const fixture = prepared(), bound = boundReplacement(fixture);
+  const frame = buildSuccessorRolloverContinuationFrame({
+    replacementPlan: fixture.replacementPlan,
+    journal: fixture.journal,
+    owner: fixture.owner,
+    replacementClaim: fixture.liveClaim,
+    boundReplacement: bound,
+    reviewRequest: fixture.reviewRequest,
+    protectedControllerAdvance: fixture.controllerAdvance,
+    repairedControllerDigest: digest("9"),
+  });
+  const plan = buildSuccessorRolloverContinuationPlan({
+    replacementPlan: fixture.replacementPlan,
+    journal: fixture.journal,
+    frame,
+    operatorSessionId: OPERATOR,
+  });
+  assert.equal(frame.continuationDisposition, "bound-response-ahead");
+  assert.deepEqual(frame.replacementClaim, fixture.liveClaim);
+  assert.deepEqual(frame.boundReplacement, bound);
+  assert.equal(plan.continuationDisposition, "bound-response-ahead");
+  assert.ok(plan.allowedEffects.includes("reconcile-exact-bound-replacement"));
+  assert.ok(!plan.allowedEffects.includes("bind-exact-promoted-replacement"));
+  assert.ok(plan.forbiddenEffects.includes("replacement-bind"));
+  assert.deepEqual(normalizeSuccessorRolloverContinuationPlan(plan), plan);
+  assert.throws(() => normalizeSuccessorRolloverContinuationFrame({
+    ...frame,
+    schema: "agentic-active-dirty-scope-expansion-successor-rollover-continuation-frame/v1",
+  }, { replacementPlan: fixture.replacementPlan, journal: fixture.journal }),
+  /continuation frame schema/u);
+  for (const changed of [
+    { claim: { ...bound.claim, reviewRequestId: "github-pull-request:foreign" } },
+    { claim: { ...bound.claim, transitionCounter: bound.claim.transitionCounter + 1 } },
+    { claim: { ...bound.claim, canonicalBaseSha: sha("f") } },
+    { receipt: { ...bound.receipt, requestDigest: digest("f") } },
+    { receipt: { ...bound.receipt, receiptDigest: digest("f") } },
+  ]) assert.throws(() => buildSuccessorRolloverContinuationFrame({
+    replacementPlan: fixture.replacementPlan,
+    journal: fixture.journal,
+    owner: fixture.owner,
+    replacementClaim: fixture.liveClaim,
+    boundReplacement: { ...bound, ...changed },
+    reviewRequest: fixture.reviewRequest,
+    protectedControllerAdvance: fixture.controllerAdvance,
+    repairedControllerDigest: digest("9"),
+  }), /exact bound replacement/u);
 });
 
 test("rejects owner, C3, review-request, and protected-controller drift", () => {
@@ -268,6 +322,43 @@ function prepared() {
   });
   return { retirementPlan, retiredJournal, replacementPlan, journal, owner, liveClaim,
     reviewRequest, controllerAdvance, frame, plan };
+}
+
+function boundReplacement(fixture) {
+  const plan = fixture.replacementPlan, promoted = fixture.liveClaim;
+  const claim = {
+    ...promoted,
+    claimDigest: digest("8"),
+    claimLedgerRevision: digest("7"),
+    transitionCounter: promoted.transitionCounter + 1,
+    reviewRequestId: plan.sourceReviewRequestId,
+    operationReceiptDigest: digest("0"),
+  };
+  const identity = plan.sourceClaimIdentity;
+  const intent = {
+    repositoryId: identity.repositoryId, actorId: identity.actorId,
+    deviceId: identity.deviceId, sessionId: identity.sessionId,
+    claimId: promoted.claimId, expectedFenceRevision: promoted.claimDigest,
+    expectedTransitionCounter: promoted.transitionCounter, mode: "projection",
+    laneRevision: plan.sourceFenceSha, reviewRequestId: plan.sourceReviewRequestId,
+    expiresAt: null, focusedEvidenceDigest: null, handoffEvidenceDigest: null,
+    recoveryEvidenceDigest: null,
+  };
+  const receiptCore = {
+    schema: "agentic-collaboration-continuation-receipt/v1",
+    operation: "continue", status: "current", repositoryId: identity.repositoryId,
+    claimId: claim.claimId, claimDigest: claim.claimDigest,
+    fenceRevision: claim.claimDigest, ledgerRevision: claim.claimLedgerRevision,
+    ledgerSequence: 91,
+    idempotencyKey: digestValue(successorRolloverOperationKey(plan, "replacement-bound")),
+    requestDigest: digestValue({ action: "continue", intent }),
+    evaluationTime: "2026-08-30T00:01:00.000Z",
+  };
+  const receipt = { ...receiptCore, receiptDigest: digestValue(receiptCore) };
+  return {
+    schema: "agentic-active-dirty-scope-expansion-successor-rollover-bound-frame/v1",
+    claim: { ...claim, operationReceiptDigest: receipt.receiptDigest }, receipt,
+  };
 }
 
 function promotedJournal(retiredJournal, replacementPlan, claimReceipt) {

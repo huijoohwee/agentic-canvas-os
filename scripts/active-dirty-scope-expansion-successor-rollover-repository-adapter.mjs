@@ -20,6 +20,7 @@ import { claimOnlyOperationReceiptForEntry } from "./claim-only-partial-start-re
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
 import { normalizeSuccessorRolloverContinuationPlan } from "./active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs";
 import { buildSuccessorRolloverContinuationFrame, captureSuccessorRolloverProtectedControllerAdvance } from "./active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs";
+import { assertSuccessorRolloverBindMutationAllowed, classifySuccessorRolloverBindEvidence, requireSuccessorRolloverSealedBindEvidence } from "./active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs";
 import { requireProtectedMainEquivalent } from "./device-branch-ownership-lib.mjs";
 const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const OPERATION = "active-dirty-scope-expansion-successor-rollover";
@@ -27,7 +28,8 @@ const RETIREMENT_SCHEMA = `agentic-${OPERATION}-retirement/v1`;
 const LOCAL_SCHEMA = `agentic-${OPERATION}-local-receipt/v1`;
 const IMPLEMENTATION = Object.freeze([
   "scripts/active-dirty-scope-expansion-successor-rollover-contract.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-controller.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-repository-adapter.mjs",
-  "scripts/active-dirty-scope-expansion-successor-rollover.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs",
+  "scripts/active-dirty-scope-expansion-successor-rollover.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-bind-evidence.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-contract.mjs", "scripts/active-dirty-scope-expansion-successor-rollover-continuation-frame.mjs", "scripts/claim-only-partial-start-retirement-store.mjs",
+  "__tests__/active-dirty-scope-expansion-successor-rollover-bind-evidence.test.mjs",
   "__tests__/active-dirty-scope-expansion-successor-rollover-continuation-contract.test.mjs", "__tests__/active-dirty-scope-expansion-successor-rollover-contract.test.mjs", "__tests__/active-dirty-scope-expansion-successor-rollover-controller.test.mjs",
   "__tests__/active-dirty-scope-expansion-successor-rollover-repository-adapter.test.mjs", "docs/ACTIVE-DIRTY-SCOPE-EXPANSION-SUCCESSOR-ROLLOVER.md",
 ]);
@@ -41,7 +43,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
   if (options.statePath && options.journalFile && path.resolve(options.statePath) !== path.resolve(options.journalFile)) invalid("journal path aliases");
   const taskAuthorityFile = options.taskAuthorityFile ? privateCapabilityPath(options.taskAuthorityFile, externalRoots) : null;
   const correctedManifestFile = options.correctedManifestFile ? externalPath(options.correctedManifestFile, externalRoots, "corrected manifest") : null;
-  const continuationPlan = options.continuationPlan ? normalizeSuccessorRolloverContinuationPlan(options.continuationPlan) : null;
+  const continuationPlan = options.continuationPlan ? (dependencies.normalizeContinuationPlan || normalizeSuccessorRolloverContinuationPlan)(options.continuationPlan) : null;
   const environment = dependencies.environment || process.env;
   const now = dependencies.now || (() => new Date());
   const execute = dependencies.execute || ((command, args, cwd = repository) => execFileSync(command, args,
@@ -172,23 +174,21 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
   async function readContinuationFrame({ plan }) { return stableCapture(() => captureContinuationFrame(plan), "continuation frame", "frameDigest"); }
   function captureContinuationFrame(plan) { const journal = requireJournal(), source = sourceFrame(), cloud = cloudFrame(source.lease.cloudAuthority);
     const candidate = replacementCandidate(plan, cloud);
-    if (!candidate || candidate.state !== "current" || candidate.reviewRequestId !== null) invalid("exact promoted replacement before continuation");
-    validateSuccessorRolloverReplacementClaimLineage({ plan, cloud, candidate, journal }); const pull = source.pullRequest;
+    const evidence = classifySuccessorRolloverBindEvidence({ plan, journal, ledger: cloud.ledger, candidate }); const pull = source.pullRequest;
     return buildSuccessorRolloverContinuationFrame({ replacementPlan: plan, journal,
       owner: { schema: `agentic-${OPERATION}-owner-frame/v1`, repositoryPathDigest: digestValue(repository), branch, sourceSessionId,
         headSha: source.headSha, remoteHeadSha: source.remoteHeadSha, leaseDigest: source.leaseDigest, dirtDigest: source.dirtDigest, intentDigest: source.intentDigest,
         intentStatus: source.intent.status, changedPaths: source.changedPaths, changedPathsDigest: digestValue(source.changedPaths) },
-      replacementClaim: { schema: `agentic-${OPERATION}-claim-frame/v1`, claimId: candidate.claimId, claimDigest: candidate.fenceRevision,
-        claimLedgerRevision: candidate.transitionDigest, transitionCounter: candidate.transitionCounter, state: candidate.state, predecessorClaimId: candidate.predecessorClaimId ?? null,
-        canonicalBaseSha: candidate.canonicalBaseRevision, laneRevision: candidate.laneRevision, writeSetDigest: candidate.writeSetDigest, leaseEpoch: candidate.leaseEpoch, reviewRequestId: candidate.reviewRequestId,
-        expiresAt: candidate.expiresAt, operationReceiptDigest: candidate.operationReceiptDigest },
+      replacementClaim: evidence.promotedClaim, boundReplacement: evidence.boundReplacement,
       reviewRequest: { schema: `agentic-${OPERATION}-review-frame/v1`, reviewRequestId: plan.sourceReviewRequestId, pullRequestNumber, nodeId: pull.nodeId, state: pull.state, isDraft: pull.isDraft, branch: pull.headRefName,
         headSha: pull.headRefOid, baseBranch: pull.baseRefName, baseSha: pull.baseRefOid, markerDigest: pull.markerDigest, bodyDigest: pull.bodyDigest },
       protectedControllerAdvance: protectedControllerAdvance(plan), repairedControllerDigest: controllerContentDigest() });
   }
   function authorizeEffect({ plan, phase, operationKey }) { if (phase === "verified") return Object.freeze({ status: "not-required" });
+    if (continuationPlan && phase === "replacement-bound") assertSuccessorRolloverBindMutationAllowed(continuationPlan.continuationDisposition);
     const file = requireTaskAuthority();
     const lease = sourceFrame({ requireOriginal: phase !== "pr-marker", allowPriorMarker: phase === "pr-marker" }).lease;
+    if (["local-cas", "pr-marker"].includes(phase)) requireCurrentContinuationBound(plan, lease);
     const operation = successorRolloverTaskOperation(plan, phase);
     const receipt = authorize({ lease, capabilityPath: file, operation, now: now() });
     pendingAuthority.set(operationKey, { planDigest: plan.planDigest, phase, leaseDigest: writerLeaseDigest(lease), bindingDigest: receipt.bindingDigest, receipt });
@@ -239,6 +239,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
   }
   async function bindReplacement(context) { const adopted = await reconcilePhase({ ...context, phase: "replacement-bound" });
     if (adopted) return adopted;
+    if (continuationPlan) assertSuccessorRolloverBindMutationAllowed(continuationPlan.continuationDisposition);
     consumeAuthority(context); assertReplacementFrame(context.plan);
     const source = sourceFrame(), target = manifest(context.plan);
     const cloud = cloudFrame(source.lease.cloudAuthority);
@@ -260,6 +261,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
     mutateWriterLeaseRegistry({ leaseStore, branch, expectedLeaseDigest: source.leaseDigest, expectedClaimId: context.plan.sourceClaimId, action: ({ registry, lease }) => {
         const liveIntent = registry.scopeExpansionIntents?.[branch];
         if (digestValue(liveIntent) !== context.plan.observation.sourceIntentDigest || liveIntent.status !== "source-retired") invalid("old intent at local CAS");
+        requireCurrentContinuationBound(context.plan, lease);
         consumeAuthority(context, lease);
         const expansionPlan = replacementExpansionPlan(context.plan, lease, source);
         const admission = buildActiveDirtyScopeExpansionSuccessorAdmission({ sourceAdmission: lease.admission, plan: expansionPlan, authority });
@@ -288,7 +290,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
     const local = reconcileLocal(context.plan); if (!local) invalid("local projection before PR marker");
     let values;
     mutateWriterLeaseRegistry({ leaseStore, branch, expectedLeaseDigest: local.leaseDigest,
-      expectedClaimId: context.journal.replacement.phases["replacement-claimed"].values.claim.claimId, action: ({ registry, lease }) => { consumeAuthority(context, lease);
+      expectedClaimId: context.journal.replacement.phases["replacement-claimed"].values.claim.claimId, action: ({ registry, lease }) => { requireCurrentContinuationBound(context.plan, lease); consumeAuthority(context, lease);
         const receipt = registry.scopeExpansionSuccessorRolloverReceipts?.[branch];
         if (!receipt || receipt.replacementIntentDigest !== local.replacementIntentDigest) invalid("local receipt at PR marker");
         const expectedPull = { url: lease.pullRequestUrl, nodeId: context.plan.retirementPlanSnapshot.observation.pullRequestNodeId, headSha: lease.fenceSha };
@@ -314,7 +316,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
     const marker = reconcilePullRequest(plan);
     if (!local || !marker || source.dirtDigest !== plan.observation.sourceDirtDigest) { invalid("terminal local, PR, or dirt projection");
     }
-    validateProjectedLease(source.lease, manifest(plan));
+    requireCurrentContinuationBound(plan, source.lease); validateProjectedLease(source.lease, manifest(plan));
     const core = { leaseDigest: source.leaseDigest, replacementIntentDigest: local.replacementIntentDigest,
       cloudAuthorityDigest: digestValue(source.lease.cloudAuthority), taskAuthorityBindingDigest: source.lease.taskAuthority.bindingDigest,
       markerDigest: marker.markerDigest, bodyDigest: marker.bodyDigest, dirtDigest: source.dirtDigest };
@@ -324,21 +326,24 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
   function reconcileCloudReplacement(plan, journal, phase) { assertReplacementFrame(plan);
     const cloud = cloudFrame(sourceFrame().lease.cloudAuthority);
     const candidate = replacementCandidate(plan, cloud);
-    if (!candidate) return null;
-    const claimEntry = validateSuccessorRolloverReplacementClaimLineage({ plan, cloud, candidate, journal });
+    if (!candidate) { if (continuationPlan?.continuationDisposition === "bound-response-ahead") invalid("sealed bound replacement reconciliation"); return null; }
     const claimed = projectClaim(candidate, cloud.status);
-    if (phase === "replacement-claimed") return { claim: claimed, receiptDigest: claimOnlyOperationReceiptForEntry(claimEntry, "current").receiptDigest };
+    if (phase === "replacement-claimed") { const entry = validateSuccessorRolloverReplacementClaimLineage({ plan, cloud, candidate, journal });
+      return { claim: claimed, receiptDigest: claimOnlyOperationReceiptForEntry(entry, "current").receiptDigest }; }
     if (phase === "replacement-promoted") { if (candidate.state !== "current") return null;
+      const entry = validateSuccessorRolloverReplacementClaimLineage({ plan, cloud, candidate, journal });
       const prior = journal?.replacement?.phases?.["replacement-claimed"]?.values?.claim;
-      return { claim: claimed, promoted: prior?.state === "waiting-successor", receiptDigest: claimOnlyOperationReceiptForEntry(claimEntry, "current").receiptDigest };
+      return { claim: claimed, promoted: prior?.state === "waiting-successor", receiptDigest: claimOnlyOperationReceiptForEntry(entry, "current").receiptDigest };
     }
-    if (!isSuccessorRolloverRawBoundCandidate(candidate, plan.sourceReviewRequestId)) return null;
+    const evidence = requireContinuationBound(plan, cloud, candidate)
+      || classifySuccessorRolloverBindEvidence({ plan, journal, ledger: cloud.ledger, candidate });
+    if (!evidence.boundReplacement) { if (continuationPlan?.continuationDisposition === "bound-response-ahead") invalid("sealed bound replacement reconciliation"); return null; }
     const actual = actualAuthority(plan, sourceFrame().lease, cloud, candidate);
-    const bindEntry = exactReplacementBindEntry(plan, cloud, candidate);
-    return { authority: projectAuthority(actual), receiptDigest: claimOnlyOperationReceiptForEntry(bindEntry, "current").receiptDigest };
+    return { authority: projectAuthority(actual), receiptDigest: evidence.boundReplacement.receipt.receiptDigest };
   }
   function reconcileLocal(plan) { const source = sourceFrame({ requireOriginal: false, allowPriorMarker: true }), receipt = source.tombstone;
     if (!receipt) return null;
+    requireCurrentContinuationBound(plan, source.lease);
     return validateSuccessorRolloverLocalReceipt(receipt, { planDigest: plan.planDigest, sourceIntentDigest: plan.observation.sourceIntentDigest,
       sourceLeaseDigest: plan.observation.sourceLeaseDigest, sourceClaimId: plan.sourceClaimId,
       retiredStaleSuccessorClaimId: plan.retiredStaleSuccessorClaimId, replacementAuthorityDigest: digestValue(source.lease.cloudAuthority),
@@ -348,7 +353,7 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
   function reconcilePullRequest(plan) { const local = reconcileLocal(plan); if (!local) return null;
     const receipt = leaseStore.readRegistry().scopeExpansionSuccessorRolloverReceipts?.[branch];
     if (receipt?.status !== "pr-marker" || !receipt.prMarker) return null;
-    const pull = readPullRequest();
+    requireCurrentContinuationBound(plan, leaseStore.read(branch)); const pull = readPullRequest();
     return validateSuccessorRolloverPullRequestReceipt({ receipt, planDigest: plan.planDigest, pull,
       leaseMarkerDigest: digestValue(projectWriterLeasePullRequestMarker(leaseStore.read(branch))) });
   }
@@ -403,18 +408,6 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
     }
     return matches[0] || null;
   }
-  function exactReplacementBindEntry(plan, cloud, candidate) { const entries = cloud.ledger.entries.filter(value => value.claimId === candidate.claimId);
-    const prior = entries.at(-2), entry = entries.at(-1), owner = prior?.claimCore;
-    const intent = { repositoryId: entry?.repositoryId, actorId: owner?.actorId, deviceId: owner?.deviceId, sessionId: owner?.sessionId, claimId: candidate.claimId,
-      expectedFenceRevision: prior?.claimDigest, expectedTransitionCounter: owner?.transitionCounter,
-      mode: "projection", laneRevision: plan.sourceFenceSha, reviewRequestId: plan.sourceReviewRequestId, expiresAt: null,
-      focusedEvidenceDigest: null, handoffEvidenceDigest: null, recoveryEvidenceDigest: null };
-    if (entry?.action !== "continue" || entry.idempotencyKey
-      !== digestValue(successorRolloverOperationKey(plan, "replacement-bound")) || entry.requestDigest !== digestValue({ action: "continue", intent })
-      || candidate.operationReceiptDigest !== claimOnlyOperationReceiptForEntry(entry, "current").receiptDigest) { invalid("replacement bind operation join");
-    }
-    return entry;
-  }
   function actualAuthority(plan, lease, cloud, candidate) {
     return normalizeBoundAuthority({ result: { schema: cloud.status.schema, ok: true, action: "status", ledgerRevision: cloud.status.ledgerRevision,
       ledgerDigest: cloud.status.ledgerDigest, claimDigest: candidate.fenceRevision, claim: candidate },
@@ -425,12 +418,18 @@ export function createActiveDirtyScopeExpansionSuccessorRolloverRepositoryAdapte
   }
   function boundActualAuthority(plan) { const source = sourceFrame(), cloud = cloudFrame(source.lease.cloudAuthority);
     const candidate = replacementCandidate(plan, cloud);
-    if (!isSuccessorRolloverRawBoundCandidate(candidate, plan.sourceReviewRequestId)) invalid("bound replacement authority");
+    if (!requireContinuationBound(plan, cloud, candidate)
+      && !isSuccessorRolloverRawBoundCandidate(candidate, plan.sourceReviewRequestId)) invalid("bound replacement authority");
     const authority = actualAuthority(plan, source.lease, cloud, candidate);
     if (projectAuthority(authority).authorityDigest
       !== digestValue(authority)) invalid("bound authority projection");
     return authority;
   }
+  function requireContinuationBound(plan, cloud, candidate) { if (continuationPlan?.continuationDisposition !== "bound-response-ahead") return null;
+    return requireSuccessorRolloverSealedBindEvidence({ plan, journal: continuationPlan.sourceJournalSnapshot, ledger: cloud.ledger, candidate,
+      expectedBoundReplacement: continuationPlan.continuationFrameSnapshot.boundReplacement }); }
+  function requireCurrentContinuationBound(plan, lease) { if (continuationPlan?.continuationDisposition !== "bound-response-ahead") return null;
+    const cloud = cloudFrame(lease.cloudAuthority); return requireContinuationBound(plan, cloud, replacementCandidate(plan, cloud)); }
   function prepareProjectedVerification(authority, target) { if (dependencies.prepareProjectedVerification) { return dependencies.prepareProjectedVerification(authority, target);
     }
     return verifyAdmissionCloudAuthority({ authority, manifest: target, canonicalBaseSha: authority.canonicalBaseSha, environment, inspect: invoke, invoke: verify });

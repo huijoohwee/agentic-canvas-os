@@ -6,6 +6,13 @@ import { normalizeDeclaredWriteScopeManifest }
   from "./scoped-lane-admission-lib.mjs";
 import { normalizeActiveDirtyScopeExpansionPlan }
   from "./active-dirty-scope-expansion-contract.mjs";
+import {
+  normalizeActiveOwnedDirtLeaseRecovery,
+  validateCompletedActiveOwnedDirtRecoveryIntent,
+}
+  from "./active-owned-dirt-recovery-contract.mjs";
+import { normalizeTaskAuthorityBinding }
+  from "./task-bound-lane-authority-contract.mjs";
 import { SCOPE_EXPANSION_INTENT_SCHEMA }
   from "./writer-lease-registry-cas.mjs";
 import {
@@ -22,6 +29,8 @@ export const AUTHORIZATION_SCHEMA =
 export const RECEIPT_SCHEMA =
   "agentic-active-dirty-scope-expansion-intent-supersession-receipt/v1";
 export const RECEIPT_MAP = "scopeExpansionIntentSupersessionReceipts";
+export const RECOVERED_CONTINUATION_SCHEMA =
+  "agentic-active-dirty-scope-expansion-intent-supersession-active-owned-dirt-continuation/v1";
 
 const DIGEST = /^[0-9a-f]{64}$/u;
 const SHA = /^[0-9a-f]{40}$/u;
@@ -217,6 +226,20 @@ export function buildActiveDirtyScopeExpansionIntentSupersessionReceipt({
     registryRevisionBefore: before,
     registryRevisionAfter: after,
     sourceIntentSnapshot: normalized.evidence.sourceIntent,
+    ...(normalized.evidence.sourceContinuation ? {
+      sourceContinuationDigest: normalized.evidence.sourceContinuation.continuationDigest,
+      historicalSourceLeaseDigest:
+        normalized.evidence.sourceContinuation.historicalLeaseDigest,
+      completedRecoveryPlanDigest:
+        normalized.evidence.sourceContinuation.recoveryIntent.planDigest,
+      completedRecoveryIntentDigest:
+        normalized.evidence.sourceContinuation.recoveryIntentDigest,
+      completedRecoveryFinalReceiptDigest:
+        normalized.evidence.sourceContinuation.recoveryIntent.finalReceiptDigest,
+      recoveredSourceLeaseDigest:
+        normalized.evidence.sourceContinuation.currentLeaseDigest,
+      sourceContinuationSnapshot: normalized.evidence.sourceContinuation,
+    } : {}),
     planSnapshot: normalized,
     completionEffects: {
       sourceBytesChanged: false,
@@ -320,6 +343,11 @@ function normalizeEvidence(value) {
   const controller = normalizeController(value.controller);
   const lease = normalizeLease(value.lease);
   const pullRequest = normalizePullRequest(value.pullRequest);
+  const sourceContinuation = Object.hasOwn(value, "sourceContinuation")
+    ? normalizeSourceContinuation(value.sourceContinuation, {
+        sourceIntent, lease, dirt, pullRequest, branch: value.branch,
+      })
+    : null;
   const cloud = normalizeCloud(value.cloud);
   const protectedMainAdvance = normalizeProtectedMainAdvance(value.protectedMainAdvance);
   const freshExpansionPlan = normalizeActiveDirtyScopeExpansionPlan(
@@ -328,7 +356,9 @@ function normalizeEvidence(value) {
   const canonicalDescendantProof = freshExpansionPlan.canonicalDescendantProof;
   if (sourceIntent.targetManifestDigest !== targetManifest.manifestDigest
     || sourceIntent.targetWriteSetDigest !== targetManifest.writeSetDigest
-    || sourceIntent.sourceLeaseDigest !== lease.leaseDigest
+    || (sourceContinuation === null
+      ? sourceIntent.sourceLeaseDigest !== lease.leaseDigest
+      : sourceIntent.sourceLeaseDigest === lease.leaseDigest)
     || sourceIntent.sourceClaimId !== lease.claimId
     || value.sourceIntentDigest !== digestValue(sourceIntent)
     || freshExpansionPlan.targetManifestDigest !== targetManifest.manifestDigest
@@ -356,9 +386,18 @@ function normalizeEvidence(value) {
     || canonicalDescendantProof?.canonicalChangedPathsDigest
       !== protectedMainAdvance.changedPathsDigest
     || cloud.sourceClaimId !== lease.claimId
-    || cloud.sourceClaimDigest !== sourceIntent.planSnapshot.sourceClaimDigest
-    || cloud.sourceTransitionCounter
-      !== sourceIntent.planSnapshot.sourceClaimTransitionCounter
+    || (sourceContinuation === null
+      ? cloud.sourceClaimDigest !== sourceIntent.planSnapshot.sourceClaimDigest
+        || cloud.sourceTransitionCounter
+          !== sourceIntent.planSnapshot.sourceClaimTransitionCounter
+      : cloud.sourceClaimDigest
+          !== sourceContinuation.recoveryIntent.cloud.claimDigest
+        || cloud.sourceTransitionDigest
+          !== sourceContinuation.recoveryIntent.cloud.claimLedgerRevision
+        || cloud.sourceTransitionCounter
+          !== sourceContinuation.recoveryIntent.cloud.transitionCounter
+        || cloud.sourceExpiresAt
+          !== sourceContinuation.recoveryIntent.cloud.expiresAt)
     || cloud.effectiveState !== lease.disposition
     || cloud.revision !== cloud.rereadRevision
     || cloud.blobSha !== cloud.rereadBlobSha
@@ -390,6 +429,7 @@ function normalizeEvidence(value) {
     pullRequest,
     sourceIntent,
     sourceIntentDigest: digest(value.sourceIntentDigest, "source intent digest"),
+    ...(sourceContinuation ? { sourceContinuation } : {}),
     targetManifest,
     dirt,
     protectedMainAdvance,
@@ -405,6 +445,96 @@ function normalizeEvidence(value) {
     throw new Error("Scope-expansion intent supersession evidence digest drifted.");
   }
   return deepFreeze({ ...core, evidenceDigest: expectedDigest });
+}
+
+function normalizeSourceContinuation(value, { sourceIntent, lease, dirt, pullRequest, branch }) {
+  object(value, "recovered source continuation");
+  exactKeys(value, ["schema", "variant", "recoveryIntent", "recoveryIntentDigest",
+    "recoveredLease", "taskAuthorityContinuation", "historicalLeaseDigest",
+    "currentLeaseDigest", "priorTaskAuthorityBindingDigest",
+    "currentTaskAuthorityBindingDigest", "continuationDigest"],
+  "recovered source continuation");
+  const recoveryIntent = validateCompletedActiveOwnedDirtRecoveryIntent(value.recoveryIntent);
+  const recoveryPlan = recoveryIntent.planSnapshot;
+  const recoveredLease = normalizeActiveOwnedDirtLeaseRecovery(value.recoveredLease);
+  const taskAuthorityContinuation = normalizeTaskAuthorityBinding(
+    value.taskAuthorityContinuation,
+  );
+  const core = {
+    schema: value.schema,
+    variant: value.variant,
+    recoveryIntent,
+    recoveryIntentDigest: digest(value.recoveryIntentDigest, "recovery-intent digest"),
+    recoveredLease,
+    taskAuthorityContinuation,
+    historicalLeaseDigest: digest(value.historicalLeaseDigest, "historical lease digest"),
+    currentLeaseDigest: digest(value.currentLeaseDigest, "current lease digest"),
+    priorTaskAuthorityBindingDigest: digest(
+      value.priorTaskAuthorityBindingDigest,
+      "prior task-authority binding digest",
+    ),
+    currentTaskAuthorityBindingDigest: digest(
+      value.currentTaskAuthorityBindingDigest,
+      "current task-authority binding digest",
+    ),
+  };
+  const oldPlan = sourceIntent.planSnapshot;
+  const currentPaths = dirt.entries.map(entry => entry.path);
+  if (core.schema !== RECOVERED_CONTINUATION_SCHEMA
+    || core.variant !== "completed-active-owned-dirt-recovery-successor"
+    || core.recoveryIntentDigest !== digestValue(recoveryIntent)
+    || core.historicalLeaseDigest !== sourceIntent.sourceLeaseDigest
+    || core.historicalLeaseDigest !== recoveryIntent.sourceLeaseDigest
+    || core.historicalLeaseDigest !== recoveryPlan.sourceLeaseDigest
+    || core.currentLeaseDigest !== lease.leaseDigest
+    || recoveryIntent.localProjection.leaseDigest !== lease.leaseDigest
+    || core.currentTaskAuthorityBindingDigest !== lease.taskAuthorityBindingDigest
+    || taskAuthorityContinuation?.bindingMode !== "continuation"
+    || taskAuthorityContinuation.transitionPlanDigest !== null
+    || taskAuthorityContinuation.bindingDigest !== core.currentTaskAuthorityBindingDigest
+    || taskAuthorityContinuation.priorBindingDigest
+      !== core.priorTaskAuthorityBindingDigest
+    || taskAuthorityContinuation.boundAt !== recoveryIntent.cloud.recoveredAt
+    || recoveredLease.planDigest !== recoveryIntent.planDigest
+    || recoveredLease.sourceEpoch !== recoveryPlan.sourceEpoch
+    || recoveredLease.sourceSessionId !== recoveryPlan.sourceSessionId
+    || recoveredLease.sourceDevice !== recoveryPlan.sourceDevice
+    || recoveredLease.sourceBranch !== recoveryPlan.sourceBranch
+    || recoveredLease.sourceFenceSha !== recoveryPlan.sourceFenceSha
+    || recoveredLease.sourceClaimId !== recoveryPlan.sourceClaimId
+    || recoveredLease.evidenceDigest !== recoveryPlan.evidenceDigest
+    || recoveredLease.snapshotReceiptDigest
+      !== recoveryIntent.snapshot.snapshotReceiptDigest
+    || recoveredLease.snapshotRef !== recoveryIntent.snapshot.snapshotRef
+    || recoveredLease.snapshotCommitSha !== recoveryIntent.snapshot.commitSha
+    || recoveredLease.snapshotIndexCommitSha !== recoveryIntent.snapshot.indexCommitSha
+    || recoveredLease.recoveredClaimDigest !== recoveryIntent.cloud.claimDigest
+    || recoveredLease.recoveredLedgerRevision !== recoveryIntent.cloud.ledgerRevision
+    || recoveredLease.recoveredClaimLedgerRevision
+      !== recoveryIntent.cloud.claimLedgerRevision
+    || recoveredLease.recoveredTransitionCounter
+      !== recoveryIntent.cloud.transitionCounter
+    || recoveredLease.recoveredAt !== recoveryIntent.cloud.recoveredAt
+    || recoveryIntent.pullRequestProjection.markerDigest !== pullRequest.markerDigest
+    || recoveryIntent.branch !== branch
+    || recoveryPlan.sourceBranch !== branch
+    || recoveryPlan.sourceFenceSha !== sourceIntent.sourceFenceSha
+    || recoveryPlan.sourceClaimId !== sourceIntent.sourceClaimId
+    || recoveryPlan.sourceClaimDigest !== oldPlan.sourceClaimDigest
+    || recoveryPlan.sourceCloudTransitionCounter !== oldPlan.sourceClaimTransitionCounter
+    || recoveryPlan.sourceReviewRequestId !== oldPlan.sourceReviewRequestId
+    || recoveryPlan.sourceManifestDigest !== oldPlan.sourceManifestDigest
+    || recoveryPlan.sourceWriteSetDigest !== oldPlan.sourceWriteSetDigest
+    || recoveryPlan.sourceBaseSha !== sourceIntent.targetCanonicalBaseSha
+    || recoveryPlan.evidenceDigest !== dirt.evidenceDigest
+    || JSON.stringify(currentPaths) !== JSON.stringify(oldPlan.sourceChangedPaths)) {
+    throw new Error("Recovered scope-expansion continuation does not join exactly.");
+  }
+  const expectedDigest = digestValue(core);
+  if (digest(value.continuationDigest, "source continuation digest") !== expectedDigest) {
+    throw new Error("Recovered scope-expansion continuation digest drifted.");
+  }
+  return deepFreeze({ ...core, continuationDigest: expectedDigest });
 }
 
 function normalizeProtectedMainAdvance(value) {

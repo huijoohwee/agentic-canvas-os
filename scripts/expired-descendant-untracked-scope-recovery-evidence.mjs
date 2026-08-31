@@ -321,7 +321,7 @@ function requireJoins({ source, inner, claim, decision, additions, repository,
     || claim.fenceRevision !== source.sourceClaimDigest
     || claim.deviceId !== pseudonymousIdentifier("device", source.sourceDevice)
     || claim.sessionId !== pseudonymousIdentifier("session", source.sourceSessionId)
-    || claim.workItemId !== pseudonymousIdentifier("work-item", source.sourceScope)
+    || claim.workItemId !== source.sourceWorkItemId
     || claim.repositoryId !== `github-repository:${repository.nodeId}`
     || claim.actorId !== repository.actorId
     || claim.canonicalBaseRevision !== source.sourceBaseSha

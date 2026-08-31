@@ -209,6 +209,7 @@ function normalizeIncidentCore(value) {
     sourceSessionId: text(value.sourceSessionId, "source session"),
     sourceDevice: text(value.sourceDevice, "source device"),
     sourceScope: text(value.sourceScope, "source scope"),
+    sourceWorkItemId: text(value.sourceWorkItemId, "source work item"),
     sourceBranch: text(value.sourceBranch, "source branch"),
     sourceBaseSha: sha(value.sourceBaseSha, "source base"),
     sourceFenceSha: sha(value.sourceFenceSha, "source fence"),

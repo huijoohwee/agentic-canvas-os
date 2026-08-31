@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6550,
-  "headDigest": "b9d3b21ef0b2dcbeb1e82d12e688d0eb47971ff106e4c74403753e2dd12a2c5d",
+  "sequence": 6551,
+  "headDigest": "7c892513ce414f9a955ff5d89141031718a5b9e2635cadee882da8163e3a411c",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -332589,6 +332589,54 @@
       },
       "claimDigest": "73dbd652399aebc0ed3af923c6b2d9fbc18ba5a4dfa9a1d33e9f25105e4a3ddf",
       "digest": "b9d3b21ef0b2dcbeb1e82d12e688d0eb47971ff106e4c74403753e2dd12a2c5d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6551,
+      "parentDigest": "b9d3b21ef0b2dcbeb1e82d12e688d0eb47971ff106e4c74403753e2dd12a2c5d",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "7804191e6fd3aadd90b20af66954a3b9d098ed51ceab1fa52a9813a99a8b0db0",
+      "idempotencyKey": "4ed439ae899bb922e3b0f1721062200e2dff3fe5612ce438fe42f7fc8adb66ec",
+      "requestDigest": "5d9c86a9cb359049f0cc2994cd3f43a84761d3438e429ce944aa2170033e8a91",
+      "evaluationTime": "2026-08-31T03:28:44.000Z",
+      "claimCore": {
+        "claimId": "7804191e6fd3aadd90b20af66954a3b9d098ed51ceab1fa52a9813a99a8b0db0",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:dbff2f0372d91160b597f8e34deb6a1316b5ee9fe04cc755b93978c3c928d14c",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b3ea20d35ad993b1758b10a194a11729837fe494fbd485cf5d6d1ea99b39bd92",
+        "canonicalBaseRevision": "eca6a90ae8f98258d5296e394e09de9071b55058",
+        "declaredWriteScope": [
+          "path:__tests__/active-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/active-descendant-untracked-scope-recovery-contract.test.mjs",
+          "path:__tests__/active-descendant-untracked-scope-recovery-controller.test.mjs",
+          "path:__tests__/active-descendant-untracked-scope-recovery-repository-adapter.test.mjs",
+          "path:docs/ACTIVE-DESCENDANT-UNTRACKED-SCOPE-RECOVERY.md",
+          "path:scripts/active-descendant-untracked-scope-recovery-contract.mjs",
+          "path:scripts/active-descendant-untracked-scope-recovery-controller.mjs",
+          "path:scripts/active-descendant-untracked-scope-recovery-evidence.mjs",
+          "path:scripts/active-descendant-untracked-scope-recovery-repository-adapter.mjs",
+          "path:scripts/active-descendant-untracked-scope-recovery.mjs",
+          "semantic:active-descendant-untracked-scope-recovery"
+        ],
+        "writeSetDigest": "88454d71c8a3a4e0a9ca458ebe26fa654331a3ae094d6070e02a2a6202f1fe03",
+        "laneRevision": "eca6a90ae8f98258d5296e394e09de9071b55058",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T11:28:44.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "88735c87188f7485eb3afb1ad5b64dd4a16cfd09ffb7e71539061600c8773aeb",
+      "digest": "7c892513ce414f9a955ff5d89141031718a5b9e2635cadee882da8163e3a411c"
     }
   ]
 }

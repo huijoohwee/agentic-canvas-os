@@ -19,6 +19,7 @@ import {
 import path from "node:path";
 
 import {
+  CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE,
   EVIDENCE_SCHEMA,
   GENERIC_SELF_HOSTED_RECOVERY_EVIDENCE_PATH,
   GENERIC_SELF_HOSTED_RECOVERY_PATHS,
@@ -31,6 +32,8 @@ import {
 } from "./canonical-squash-attribution-recovery-terminalization-contract.mjs";
 import { normalizeActiveOwnedDirtLeaseRecovery }
   from "./active-owned-dirt-recovery-contract.mjs";
+import { normalizeRepair }
+  from "./source-correction-successor-task-binding-reconciliation-contract.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { validateLedger } from "./cloud-collaboration-contract.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
@@ -860,8 +863,10 @@ function requireSubjectEvidence({
     : genericSelfHosted
       ? []
       : ["Co-authored-by: knowgrph-lifecycle[bot] <knowgrph-lifecycle[bot]@users.noreply.github.com>"];
-  const sourceCommitProviderActors = Object.freeze(deliveryProfile.profile
-    === LEGACY_ADMISSION_CONTINUATION_PROFILE
+  const sourceCommitProviderActors = Object.freeze([
+    LEGACY_ADMISSION_CONTINUATION_PROFILE,
+    CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE,
+  ].includes(deliveryProfile.profile)
     ? sourceCommits.map(revision => readProviderCommitActors({
       repository: lease.cloudAuthority.targetRepository,
       revision,
@@ -968,9 +973,9 @@ function requireSubjectEvidence({
       objectMessageByteLength: malformed.objectMessageByteLength,
       objectMessageSha256: malformed.objectMessageSha256,
       objectMessageTerminalLf: malformed.objectMessageTerminalLf,
-      classification: deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE
-        ? "provider-rewritten-terminal-attribution-body-mismatch"
-        : "provider-rewritten-nonterminal-attribution",
+      classification: deliveryProfile.profile === STANDARD_AUTO_DELIVERY_PROFILE
+        ? "provider-rewritten-nonterminal-attribution"
+        : "provider-rewritten-terminal-attribution-body-mismatch",
     },
     changedEntries: reviewedChanges,
     changedPaths: [...lease.integration.paths],
@@ -982,7 +987,9 @@ function requireSubjectEvidence({
       historicalLeaseEpoch: genericManaged.leaseEpoch,
       predecessorAuthority,
     } : {}),
-    ...(deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE ? {
+    ...([LEGACY_ADMISSION_CONTINUATION_PROFILE,
+      CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE]
+      .includes(deliveryProfile.profile) ? {
       sourceCommitProviderActors,
     } : {}),
   });
@@ -1643,6 +1650,8 @@ export function canonicalSquashRecoveryImmutableLeaseProjection(lease, {
     binding: lease.taskAuthority,
     lease,
   });
+  const closedPr834SourceCorrection = deliveryProfile.profile
+    === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE;
   return Object.freeze({
     schema: lease.schema,
     epoch: lease.epoch,
@@ -1674,7 +1683,13 @@ export function canonicalSquashRecoveryImmutableLeaseProjection(lease, {
     integration: structuredClone(lease.integration),
     taskAuthority,
     ...(genericSelfHosted ? {
-      successorLineage: genericSuccessorLineageProjection(lease),
+      successorLineage: closedPr834SourceCorrection
+        ? null
+        : genericSuccessorLineageProjection(lease),
+      ...(closedPr834SourceCorrection ? {
+        sourceCorrectionSuccessorLineage:
+          sourceCorrectionSuccessorLineageProjection(lease),
+      } : {}),
     } : {}),
     ...(deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE ? {
       admissionContinuation: structuredClone(deliveryProfile.admissionContinuation),
@@ -1727,7 +1742,27 @@ function requireCanonicalSquashRecoveryLeaseKeySet(lease, {
     "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
   ];
   const presentLineage = lineageKeys.filter(name => Object.hasOwn(lease, name));
-  if (presentLineage.length > 0) {
+  if (deliveryProfile?.profile
+    === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE) {
+    const sourceCorrectionKeys = [
+      "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
+      "sourceCorrectionSuccessorTaskBindingReconciliation",
+    ];
+    if (!genericSelfHosted
+      || JSON.stringify(presentLineage.sort())
+        !== JSON.stringify(sourceCorrectionKeys.slice(0, 2).sort())) {
+      throw new Error(
+        "Closed PR834 recovery lease lacks its exact partial source-correction lineage.",
+      );
+    }
+    if (Object.hasOwn(lease, "reviewHeadSha")) {
+      if (lease.reviewHeadSha !== null) {
+        throw new Error("Closed PR834 recovery lease review head must remain null.");
+      }
+      keys.push("reviewHeadSha");
+    }
+    keys.push(...sourceCorrectionKeys);
+  } else if (presentLineage.length > 0) {
     if (!genericSelfHosted || presentLineage.length !== lineageKeys.length) {
       throw new Error("Canonical squash recovery lease has partial or foreign successor lineage.");
     }
@@ -1739,6 +1774,69 @@ function requireCanonicalSquashRecoveryLeaseKeySet(lease, {
   if (JSON.stringify(Object.keys(lease).sort()) !== JSON.stringify(keys.sort())) {
     throw new Error("Canonical squash recovery lease key set drifted from the sealed delivery lineage.");
   }
+}
+
+function sourceCorrectionSuccessorLineageProjection(lease) {
+  const repairValue = lease?.sourceCorrectionSuccessorTaskBindingReconciliation;
+  const successor = lease?.activePublishTaskAuthoritySuccessor;
+  const successorKeys = [
+    "boundAt", "branch", "cloudOperationReceiptDigest",
+    "cloudVerificationReceiptDigest", "epoch", "receiptDigest", "schema",
+    "sourceBaseSha", "sourceBindingDigest", "sourceClaimId", "sourceFenceSha",
+    "targetBaseSha", "targetBindingDigest", "targetClaimId", "targetFenceSha",
+  ];
+  let repair = null;
+  try {
+    repair = normalizeRepair(repairValue);
+  } catch {
+    throw new Error("Closed PR834 source-correction repair lineage is malformed.");
+  }
+  const exactSuccessorKeys = successor && !Array.isArray(successor)
+    && JSON.stringify(Object.keys(successor).sort())
+      === JSON.stringify([...successorKeys].sort());
+  const exactInstant = value => typeof value === "string"
+    && Number.isFinite(Date.parse(value));
+  const exactDigests = fields => fields.every(name =>
+    DIGEST.test(String(successor?.[name] || "")));
+  const exactShas = fields => fields.every(name =>
+    SHA.test(String(successor?.[name] || "")));
+  if (digestValue(repair) !== digestValue(repairValue)
+    || !exactSuccessorKeys
+    || lease.activePublishSuccessorIntent !== null
+    || repair.branch !== lease.branch
+    || repair.successorClaimId !== successor.sourceClaimId
+    || repair.targetBindingDigest !== successor.sourceBindingDigest
+    || successor.schema
+      !== "agentic-active-publish-task-authority-successor-receipt/v1"
+    || successor.branch !== lease.branch
+    || successor.epoch !== lease.epoch
+    || successor.targetBaseSha !== lease.baseSha
+    || successor.targetFenceSha !== lease.fenceSha
+    || successor.targetFenceSha !== lease.deliveryHeadSha
+    || successor.targetClaimId !== lease.cloudAuthority.claimId
+    || successor.sourceBindingDigest !== lease.taskAuthority.priorBindingDigest
+    || successor.targetBindingDigest !== lease.taskAuthority.bindingDigest
+    || !exactInstant(successor.boundAt)
+    || !exactDigests([
+      "sourceClaimId", "targetClaimId", "sourceBindingDigest", "targetBindingDigest",
+      "cloudOperationReceiptDigest", "cloudVerificationReceiptDigest", "receiptDigest",
+    ])
+    || !exactShas([
+      "sourceBaseSha", "sourceFenceSha", "targetBaseSha", "targetFenceSha",
+    ])
+    || successor.receiptDigest !== digestValue(Object.fromEntries(
+      Object.entries(successor).filter(([name]) => name !== "receiptDigest"),
+    ))) {
+    throw new Error(
+      "Closed PR834 source-correction successor does not join the current lease.",
+    );
+  }
+  return Object.freeze({
+    schema: "agentic-canonical-squash-source-correction-successor-lineage/v1",
+    sourceCorrectionSuccessorTaskBindingReconciliation: structuredClone(repair),
+    activePublishTaskAuthoritySuccessor: structuredClone(successor),
+    activePublishSuccessorIntent: null,
+  });
 }
 
 function genericSuccessorLineageProjection(lease) {
@@ -1822,6 +1920,18 @@ function genericSuccessorLineageProjection(lease) {
     activePublishTaskAuthoritySuccessor: structuredClone(successor),
     activePublishSuccessorIntent: null,
   });
+}
+
+function genericProtectedRefreshSuccessor(lease) {
+  if (Object.hasOwn(
+    lease || {},
+    "sourceCorrectionSuccessorTaskBindingReconciliation",
+  )) {
+    return sourceCorrectionSuccessorLineageProjection(lease)
+      .activePublishTaskAuthoritySuccessor;
+  }
+  return genericSuccessorLineageProjection(lease)
+    ?.activePublishTaskAuthoritySuccessor ?? null;
 }
 
 function completingWorktreeProjection({ subjectPath, subject, mainSha }) {
@@ -1992,9 +2102,8 @@ function readGenericSuccessorPredecessorAuthority({
   lease,
   historicalLeaseEpoch,
 }) {
-  const lineage = genericSuccessorLineageProjection(lease);
-  if (lineage === null) return null;
-  const successor = lineage.activePublishTaskAuthoritySuccessor;
+  const successor = genericProtectedRefreshSuccessor(lease);
+  if (successor === null) return null;
   const ledger = readValidatedCollaborationLedger({ ghText, ledgerRepository });
   const current = ledger.entries.filter(entry => entry.claimId === lease.cloudAuthority.claimId)
     .at(-1)?.claimCore;
@@ -2264,27 +2373,26 @@ function exactGenericProtectedRefresh({
   root, lease, reviewed, reviewedChanges, expectedReviewedMessage,
 }) {
   const authored = gitCommit(root, lease.integration.commitSha);
-  const successorLineage = genericSuccessorLineageProjection(lease);
+  const successor = genericProtectedRefreshSuccessor(lease);
   if (authored.treeSha !== lease.integration.treeSha
     || authored.message !== expectedReviewedMessage
     || authored.objectMessageTerminalLf !== true) {
     throw new Error("Generic authored integration commit drifted from its sealed bytes.");
   }
   if (authored.sha === reviewed.sha) {
-    if (successorLineage !== null || authored.treeSha !== reviewed.treeSha) {
+    if (successor !== null || authored.treeSha !== reviewed.treeSha) {
       throw new Error("Generic unrefreshed integration tree drifted.");
     }
     return null;
   }
-  if (successorLineage === null
+  if (successor === null
     || authored.parentShas.length !== 1
     || reviewed.parentShas.length !== 2
     || reviewed.parentShas[0] !== authored.sha
     || reviewed.parentShas[1] !== lease.baseSha
     || reviewed.message !== authored.message
     || reviewed.objectMessageTerminalLf !== true
-    || authored.parentShas[0] !== successorLineage
-      .activePublishTaskAuthoritySuccessor.sourceFenceSha) {
+    || authored.parentShas[0] !== successor.sourceFenceSha) {
     throw new Error("Generic protected refresh topology drifted from its authored head.");
   }
   const authoredChanges = exactTreeChanges(root, authored.parentShas[0], authored.sha);
@@ -2359,6 +2467,58 @@ export function assertCanonicalSquashRecoveryMalformedProviderMessage({
   pullRequest = null,
   sourceCommitProviderActors = [],
 } = {}) {
+  if (profile === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE) {
+    const autoMerge = pullRequest?.autoMergeRequest;
+    if (!Array.isArray(sourceHistorySubjects)
+      || sourceHistorySubjects.length !== 3
+      || sourceHistorySubjects.some(subject => typeof subject !== "string"
+        || !subject || /[\r\n]/u.test(subject))
+      || sourceHistorySubjects[0] === headline
+      || sourceHistorySubjects[1] !== headline
+      || sourceHistorySubjects[2] !== headline
+      || !Array.isArray(attributionTrailers)
+      || attributionTrailers.length !== 0
+      || autoMerge?.mergeMethod !== "SQUASH"
+      || autoMerge.commitHeadline !== headline
+      || autoMerge.commitBody !== null
+      || autoMerge.enabledBy?.login !== pullRequest.mergedBy
+      || autoMerge.enabledBy?.isBot !== false
+      || !Array.isArray(sourceCommitRevisions)
+      || sourceCommitRevisions.length !== sourceHistorySubjects.length
+      || new Set(sourceCommitRevisions).size !== sourceCommitRevisions.length
+      || sourceCommitRevisions.some(revision => !SHA.test(String(revision || "")))
+      || !Array.isArray(sourceCommitProviderActors)
+      || sourceCommitProviderActors.length !== sourceCommitRevisions.length
+      || sourceCommitProviderActors.some((actor, index) =>
+        actor?.revision !== sourceCommitRevisions[index]
+        || actor.authorLogin !== pullRequest.mergedBy
+        || actor.committerLogin !== pullRequest.mergedBy)) {
+      throw new Error(
+        "Provider-generated closed PR834 squash actor and source attribution is not exact.",
+      );
+    }
+    const bullets = Object.freeze([sourceHistorySubjects[0], headline]);
+    const expected = [
+      headline,
+      "",
+      `* ${bullets[0]}`,
+      "",
+      `* ${bullets[1]}`,
+      "",
+      expectedBody,
+    ].join("\n");
+    const expectedManagedTrailers = String(expectedBody)
+      .split("\n").slice(-4).join("\n");
+    if (message !== expected || !hasExactFinalManagedTrailers(message)
+      || finalTrailerBlock(message).join("\n") !== expectedManagedTrailers
+      || message.includes("\n\n---------\n\n")
+      || /(^|\n)Co-authored-by:/u.test(message)) {
+      throw new Error(
+        "Provider-generated closed PR834 terminal managed framing is not exact.",
+      );
+    }
+    return bullets;
+  }
   if (profile === STANDARD_AUTO_DELIVERY_PROFILE) {
     const bullets = providerBulletSubjects({
       message,

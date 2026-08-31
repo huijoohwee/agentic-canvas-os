@@ -155,6 +155,7 @@ export function createActiveDescendantUntrackedScopeRecoveryRepositoryAdapter(op
       sourceSessionId,
       sourceDevice: lease.device,
       sourceScope: lease.scope,
+      sourceWorkItemId: cloud.claim.workItemId,
       sourceBranch: lease.branch,
       sourceBaseSha: lease.baseSha,
       sourceFenceSha: lease.fenceSha,

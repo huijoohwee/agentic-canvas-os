@@ -220,7 +220,8 @@ function fixture() {
   const incident = buildActiveDescendantUntrackedIncident({
     repository: authority.targetRepository, authorityRepository: authority.ledgerRepository,
     worktreeIdentityDigest: D("worktree"), sourceSessionId: lease.sessionId,
-    sourceDevice: lease.device, sourceScope: SCOPE, sourceBranch: BRANCH,
+    sourceDevice: lease.device, sourceScope: SCOPE,
+    sourceWorkItemId: "work-item:authoritative-existing-id", sourceBranch: BRANCH,
     sourceBaseSha: BASE, sourceFenceSha: FENCE, sourceHeadSha: HEAD,
     sourceHeadTreeSha: S("8"), commitInventoryDigest: D("commits"),
     rangeDiffDigest: D("diff"), committedPaths: [TRACKED], dirt,
@@ -256,7 +257,7 @@ function fixture() {
       sessionId: pseudonymousIdentifier("session", lease.sessionId),
       deviceId: pseudonymousIdentifier("device", lease.device),
       repositoryId: "github-repository:R_repo",
-      workItemId: pseudonymousIdentifier("work-item", SCOPE),
+      workItemId: "work-item:authoritative-existing-id",
       canonicalBaseRevision: BASE, laneRevision: FENCE,
       declaredWriteScope: source.declaredWriteSet,
       writeSetDigest: source.writeSetDigest, leaseEpoch: 1, transitionCounter: 3,

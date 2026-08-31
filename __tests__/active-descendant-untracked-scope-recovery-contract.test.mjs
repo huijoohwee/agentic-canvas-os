@@ -186,6 +186,7 @@ function fixture() {
     sourceSessionId: lease.sessionId,
     sourceDevice: lease.device,
     sourceScope: SCOPE,
+    sourceWorkItemId: "work-item:fixture-existing-id",
     sourceBranch: BRANCH,
     sourceBaseSha: BASE,
     sourceFenceSha: FENCE,

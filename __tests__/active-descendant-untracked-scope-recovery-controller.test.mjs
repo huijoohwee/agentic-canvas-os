@@ -123,7 +123,8 @@ function fixture() {
   const incident = buildActiveDescendantUntrackedIncident({
     repository: authority.targetRepository, authorityRepository: authority.ledgerRepository,
     worktreeIdentityDigest: D("worktree"), sourceSessionId: lease.sessionId,
-    sourceDevice: lease.device, sourceScope: SCOPE, sourceBranch: BRANCH,
+    sourceDevice: lease.device, sourceScope: SCOPE,
+    sourceWorkItemId: "work-item:fixture-existing-id", sourceBranch: BRANCH,
     sourceBaseSha: BASE, sourceFenceSha: FENCE, sourceHeadSha: HEAD,
     sourceHeadTreeSha: S("8"), commitInventoryDigest: D("commits"),
     rangeDiffDigest: D("diff"), committedPaths: [TRACKED], dirt,

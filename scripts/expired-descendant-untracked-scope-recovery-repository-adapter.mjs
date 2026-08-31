@@ -233,6 +233,7 @@ export function createExpiredDescendantUntrackedScopeRecoveryRepositoryAdapter(
       sourceSessionId,
       sourceDevice: lease.device,
       sourceScope: lease.scope,
+      sourceWorkItemId: sourceClaim.workItemId,
       sourceBranch: lease.branch,
       sourceBaseSha: lease.baseSha,
       sourceFenceSha: lease.fenceSha,

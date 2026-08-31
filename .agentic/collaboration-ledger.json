@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6636,
-  "headDigest": "4ce12450983228194db0c62d6f3e59176db33200465fcf63520bcb8a2fc7d0b3",
+  "sequence": 6637,
+  "headDigest": "e7f672ad74897b782b52fccd03e7c03f3278b236fbce714bd6ac889a65cc7d30",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -336951,6 +336951,61 @@
       },
       "claimDigest": "cc4f119a0870704545f21308821481e2d070c3d6b25291dba76246201dfe7b7b",
       "digest": "4ce12450983228194db0c62d6f3e59176db33200465fcf63520bcb8a2fc7d0b3"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6637,
+      "parentDigest": "4ce12450983228194db0c62d6f3e59176db33200465fcf63520bcb8a2fc7d0b3",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "62e2a1e66489989745ff2e1f0b94e19766b5f39faa4b8c7daf5aa5082a7f4d4e",
+      "idempotencyKey": "bc989a4f9af2b6c583b90dce0690944ddd4ddb92c9a1a482b502d85fb70c6420",
+      "requestDigest": "36d4c37589f01e82ca782b031c2f7bf1a72d1d1864ba9e61642bf70c9ea17354",
+      "evaluationTime": "2026-08-31T07:10:52.000Z",
+      "claimCore": {
+        "claimId": "62e2a1e66489989745ff2e1f0b94e19766b5f39faa4b8c7daf5aa5082a7f4d4e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ac3d3efb1ee6d84c0ffe6e5c95db9eed3340fecdaa6a33cd26677fa77d04db33",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:72658d338ac8405f6e4abf9695e08eb36bd18ea17de6f61db26d06c4d2011a85",
+        "canonicalBaseRevision": "8e181b5d7d750a5fc527e2e25d25160a73dd6f61",
+        "declaredWriteScope": [
+          "path:__tests__/active-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-contract.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-controller.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-adapter.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-observer.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-terminal.test.mjs",
+          "path:docs/EXPIRED-DESCENDANT-UNTRACKED-SCOPE-RECOVERY.md",
+          "path:scripts/active-descendant-untracked-scope-recovery.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-contract.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-controller.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-evidence.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-adapter.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-observer.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-terminal.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery.mjs",
+          "semantic:expired-descendant-untracked-scope-recovery"
+        ],
+        "writeSetDigest": "cdd88fc6e8b9e787a785c23d06483fa415ab173b28aa1734d8bfff9a00ab4e20",
+        "laneRevision": "5712602c03a422148819f6901614c0794ce65279",
+        "leaseEpoch": 1,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T15:10:52.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "84d1388624b468f424b94060e247d0ec8bba5a5172864113fcd2e2057746e337",
+        "eligibleSince": "2026-08-31T07:09:37.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-31T07:10:52.000Z"
+      },
+      "claimDigest": "d9f7bf41f7eceffd200eac83de42bab59ac6c17b4eabdd8334ccce629ff20c4a",
+      "digest": "e7f672ad74897b782b52fccd03e7c03f3278b236fbce714bd6ac889a65cc7d30"
     }
   ]
 }

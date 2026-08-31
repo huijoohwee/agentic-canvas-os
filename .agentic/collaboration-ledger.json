@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6710,
-  "headDigest": "1d8da1bf83054deb2c2342c9877fa0928e374f7e73b7a070134acd61c388ea35",
+  "sequence": 6711,
+  "headDigest": "681ca8d1aba54255a4b77a4d2c9175e52c3238e140694ef6dbe214b6ad3fe8b4",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -340515,6 +340515,46 @@
       },
       "claimDigest": "34201b875d12e231b47bae2ccdc59afbaf9f50ab4efe2f2409d716f527f38858",
       "digest": "1d8da1bf83054deb2c2342c9877fa0928e374f7e73b7a070134acd61c388ea35"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6711,
+      "parentDigest": "1d8da1bf83054deb2c2342c9877fa0928e374f7e73b7a070134acd61c388ea35",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2013030f0b161d689c8f92b761b792b2d3694e84769fa373fd09964bcc55ca66",
+      "idempotencyKey": "7cdf60967edc7d4e5fdfa2fb696e2cb8b5fe56974e5c305141a765c7cb52cd04",
+      "requestDigest": "16b016653cf8b9854e339533d39c52fd52dc18425304f6fcb050ed7cf09bd2b9",
+      "evaluationTime": "2026-08-31T14:11:17.000Z",
+      "claimCore": {
+        "claimId": "2013030f0b161d689c8f92b761b792b2d3694e84769fa373fd09964bcc55ca66",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:66fad68c5f864f4453dcffcab9781324c29cd25b16a199b8e4240ec9dc3ed790",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:9e1d62a68eaed1e191e25db80803a4deb1b35f84576e6dc9916add43af9c4471",
+        "canonicalBaseRevision": "b16c811656775501dabbf220456317c677627378",
+        "declaredWriteScope": [
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-evidence.test.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-evidence.mjs",
+          "semantic:provider-pair-legacy-v1-identity"
+        ],
+        "writeSetDigest": "dda1b25a8520f19a141c8c53f82305f5cf843c360f4eff5dc5e9d5c4767a059d",
+        "laneRevision": "b57d7ba8e157c2622fd38f3b92d05ed50d560481",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T17:51:20.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBnEA-Q",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "90c7a996bf182731388524f4d18986dbd3625e2e0c22c92c8fb6e17bbcabd48d",
+      "digest": "681ca8d1aba54255a4b77a4d2c9175e52c3238e140694ef6dbe214b6ad3fe8b4"
     }
   ]
 }

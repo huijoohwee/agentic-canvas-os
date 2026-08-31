@@ -14,6 +14,8 @@ export const PROVIDER_ONLY_MERGED_CLAIM_PAIR_RECONCILIATION_RUNTIME_PATHS = Obje
 
 const SHA = /^[0-9a-f]{40}$/u;
 const DIGEST = /^[0-9a-f]{64}$/u;
+const CLAIM_ENTRY_V1 = "agentic-cloud-collaboration-entry/v1";
+const CLAIM_ENTRY_V2 = "agentic-cloud-collaboration-entry/v2";
 export function buildProviderOnlyMergedClaimPairReconciliationEvidence(input) {
   object(input, "Provider-only reconciliation evidence input");
   return assemble({
@@ -177,7 +179,18 @@ function normalizeCloud(value) {
 function normalizeClaim(value, label = "cloud claim") {
   object(value, label);
   const declaredWriteScope = Object.freeze(normalizeWriteSet(value.declaredWriteScope));
+  const entrySchema = text(value.entrySchema ?? CLAIM_ENTRY_V2, `${label} entry schema`);
+  const claimIdentitySchema = text(
+    value.claimIdentitySchema ?? entrySchema,
+    `${label} claim identity schema`,
+  );
+  if (![CLAIM_ENTRY_V1, CLAIM_ENTRY_V2].includes(entrySchema)
+    || claimIdentitySchema !== entrySchema) {
+    throw new Error(`${label} has an unsupported or mismatched claim identity schema.`);
+  }
   const normalized = {
+    entrySchema,
+    claimIdentitySchema,
     claimId: digest(value.claimId, `${label} ID`),
     claimDigest: digest(value.claimDigest ?? value.fenceRevision, `${label} digest`),
     transitionDigest: digest(value.transitionDigest, `${label} transition digest`),
@@ -205,16 +218,21 @@ function normalizeClaim(value, label = "cloud claim") {
     integration: jsonValue(value.integration ?? null, `${label} integration`),
     retirement: jsonValue(value.retirement ?? null, `${label} retirement`),
   };
-  if (normalized.writeSetDigest !== digestValue(declaredWriteScope)
-    || normalized.claimId !== digestValue({
+  const identity = {
       actorId: normalized.actorId,
       canonicalBaseRevision: normalized.canonicalBaseRevision,
       leaseEpoch: normalized.leaseEpoch,
       repositoryId: normalized.repositoryId,
       workItemId: normalized.workItemId,
       writeSetDigest: normalized.writeSetDigest,
-    })) {
-    throw new Error(`${label} has an invalid v2 write-set or claim identity digest.`);
+  };
+  if (claimIdentitySchema === CLAIM_ENTRY_V1) {
+    identity.deviceId = normalized.deviceId;
+    identity.sessionId = normalized.sessionId;
+  }
+  if (normalized.writeSetDigest !== digestValue(declaredWriteScope)
+    || normalized.claimId !== digestValue(identity)) {
+    throw new Error(`${label} has an invalid write-set or claim identity digest.`);
   }
   return deepFreeze(normalized);
 }
@@ -430,6 +448,10 @@ function normalizeLocal(value) {
 function assertPair(source, waiter) {
   const same = ["actorId", "deviceId", "sessionId", "repositoryId", "workItemId",
     "canonicalBaseRevision", "laneRevision", "writeSetDigest"];
+  if (source.entrySchema !== CLAIM_ENTRY_V2 || source.claimIdentitySchema !== CLAIM_ENTRY_V2
+    || waiter.entrySchema !== CLAIM_ENTRY_V2 || waiter.claimIdentitySchema !== CLAIM_ENTRY_V2) {
+    throw new Error("Provider-only reconciliation requires an exact v2 source/waiter pair.");
+  }
   if (source.state !== "dormant-preserved" || source.recordedState !== "reviewed"
     || source.writeAuthority !== false || source.scopeReserved !== true
     || !source.reviewRequestId || !source.evidenceDigest || source.integration !== null

@@ -19,15 +19,21 @@ import {
 import path from "node:path";
 
 import {
+  CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE,
   EVIDENCE_SCHEMA,
   GENERIC_SELF_HOSTED_RECOVERY_EVIDENCE_PATH,
   GENERIC_SELF_HOSTED_RECOVERY_PATHS,
+  LEGACY_ADMISSION_CONTINUATION_PROFILE,
   LEGACY_INTEGRATION_RUN_PROFILE,
   SELF_HOSTED_CI_RUN_PROFILE,
+  STANDARD_AUTO_DELIVERY_PROFILE,
+  normalizeCanonicalSquashRecoveryDeliveryProfile,
   normalizeJournal,
 } from "./canonical-squash-attribution-recovery-terminalization-contract.mjs";
 import { normalizeActiveOwnedDirtLeaseRecovery }
   from "./active-owned-dirt-recovery-contract.mjs";
+import { normalizeRepair }
+  from "./source-correction-successor-task-binding-reconciliation-contract.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { validateLedger } from "./cloud-collaboration-contract.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
@@ -758,7 +764,10 @@ function requireSubjectEvidence({
 }) {
   requireMergedPull(pullRequest, lease.pullRequestUrl, lease.branch);
   const genericSelfHosted = lease.cloudAuthority?.targetRepository === controllerRepository;
-  if (lease.status !== "delivery" || lease.autoDelivery !== true || lease.runtimeRequired !== true
+  const deliveryProfile = normalizeCanonicalSquashRecoveryDeliveryProfile(lease, {
+    genericSelfHosted,
+  });
+  if (lease.status !== "delivery"
     || !lease.taskAuthority || !lease.admission || !lease.cloudAuthority
     || lease.cloudAuthority.state !== "delivery_authorized"
     || lease.cloudAuthority.deviceId !== lease.device
@@ -782,6 +791,15 @@ function requireSubjectEvidence({
     throw new Error("Subject worktree is not clean on its exact reviewed head.");
   }
   const reviewedTreeSha = git(subjectPath, ["rev-parse", `${head}^{tree}`]);
+  if (deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE) {
+    assertCanonicalSquashRecoveryLegacyContinuationTopology({
+      lease,
+      reviewedHeadSha: head,
+      fenceTreeSha: git(subjectPath, ["rev-parse", `${lease.fenceSha}^{tree}`]),
+      isAncestorRevision: (ancestor, descendant) =>
+        isAncestor(canonicalRoot, ancestor, descendant),
+    });
+  }
   const remoteBranchRevision = lsRemoteOptional(
     canonicalRoot,
     `refs/heads/${lease.branch}`,
@@ -840,15 +858,32 @@ function requireSubjectEvidence({
     ? uniqueCommitAuthors(sourceCommits.map(revision => exactCommitAuthor(canonicalRoot, revision)))
     : null;
   const attributionTrailers = genericSelfHosted
+    && deliveryProfile.profile === STANDARD_AUTO_DELIVERY_PROFILE
     ? sourceCommitAuthors.map(author => `Co-authored-by: ${author.name} <${author.email}>`)
-    : ["Co-authored-by: knowgrph-lifecycle[bot] <knowgrph-lifecycle[bot]@users.noreply.github.com>"];
+    : genericSelfHosted
+      ? []
+      : ["Co-authored-by: knowgrph-lifecycle[bot] <knowgrph-lifecycle[bot]@users.noreply.github.com>"];
+  const sourceCommitProviderActors = Object.freeze([
+    LEGACY_ADMISSION_CONTINUATION_PROFILE,
+    CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE,
+  ].includes(deliveryProfile.profile)
+    ? sourceCommits.map(revision => readProviderCommitActors({
+      repository: lease.cloudAuthority.targetRepository,
+      revision,
+      ghText,
+    }))
+    : []);
   const sourceSubjects = genericSelfHosted
-    ? providerBulletSubjects({
+    ? assertCanonicalSquashRecoveryMalformedProviderMessage({
+      profile: deliveryProfile.profile,
       message: malformed.message,
       headline: lease.integration.commitMessage,
       expectedBody,
       attributionTrailers,
       sourceHistorySubjects,
+      sourceCommitRevisions: sourceCommits,
+      pullRequest,
+      sourceCommitProviderActors,
     })
     : sourceHistorySubjects;
   const protectedRefresh = genericSelfHosted
@@ -868,7 +903,7 @@ function requireSubjectEvidence({
       historicalLeaseEpoch: genericManaged.leaseEpoch,
     })
     : undefined;
-  const expectedMessage = [
+  const expectedMessage = genericSelfHosted ? null : [
     lease.integration.commitMessage,
     "",
     ...sourceSubjects.flatMap((subject, index) =>
@@ -887,10 +922,10 @@ function requireSubjectEvidence({
     || (!genericSelfHosted && lease.integration.treeSha !== reviewedTreeSha)
     || malformed.parentShas.length !== 1
     || malformed.parentShas[0] !== lease.baseSha
-    || malformed.message !== expectedMessage
-    || hasExactFinalManagedTrailers(malformed.message)
-    || finalTrailerBlock(malformed.message).join("\n")
-      !== attributionTrailers.join("\n")
+    || (!genericSelfHosted && malformed.message !== expectedMessage)
+    || (!genericSelfHosted && hasExactFinalManagedTrailers(malformed.message))
+    || (!genericSelfHosted && finalTrailerBlock(malformed.message).join("\n")
+      !== attributionTrailers.join("\n"))
     || reviewedChanges.length !== lease.integration.paths.length
     || reviewedChanges.some((entry, index) => entry.path !== lease.integration.paths[index])) {
     throw new Error("Subject canonical commit is not the exact provider attribution rewrite.");
@@ -938,7 +973,9 @@ function requireSubjectEvidence({
       objectMessageByteLength: malformed.objectMessageByteLength,
       objectMessageSha256: malformed.objectMessageSha256,
       objectMessageTerminalLf: malformed.objectMessageTerminalLf,
-      classification: "provider-rewritten-nonterminal-attribution",
+      classification: deliveryProfile.profile === STANDARD_AUTO_DELIVERY_PROFILE
+        ? "provider-rewritten-nonterminal-attribution"
+        : "provider-rewritten-terminal-attribution-body-mismatch",
     },
     changedEntries: reviewedChanges,
     changedPaths: [...lease.integration.paths],
@@ -949,6 +986,11 @@ function requireSubjectEvidence({
       protectedRefresh,
       historicalLeaseEpoch: genericManaged.leaseEpoch,
       predecessorAuthority,
+    } : {}),
+    ...([LEGACY_ADMISSION_CONTINUATION_PROFILE,
+      CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE]
+      .includes(deliveryProfile.profile) ? {
+      sourceCommitProviderActors,
     } : {}),
   });
 }
@@ -1062,7 +1104,10 @@ function requireRecoveryEvidence({
   if (genericSelfHosted) {
     requireExactOwnedRegularPaths({
       changes,
-      integrationPaths: recoveryLease.integration?.paths,
+      integrationPaths: exactGenericCompletedRecoveryPaths({
+        lease: recoveryLease,
+        sourceHeadSha: source.sha,
+      }),
       admission: recoveryLease.admission,
       cloudAuthority: recoveryLease.cloudAuthority,
       label: `generic ${genericRecoveryVariant} recovery`,
@@ -1285,8 +1330,11 @@ export function assertCanonicalSquashRecoveryCompletedRecoveryHeadProjection({
   genericSelfHosted,
 }) {
   const exact = genericSelfHosted === true
-    ? (lease?.reviewHeadSha ?? null) === null
-      && lease?.deliveryHeadSha === recovery?.sourceHeadSha
+    ? ((lease?.reviewHeadSha ?? null) === null
+      && lease?.deliveryHeadSha === recovery?.sourceHeadSha)
+      || ((lease?.integration ?? null) === null
+        && lease?.reviewHeadSha === recovery?.sourceHeadSha
+        && (lease?.deliveryHeadSha ?? null) === null)
     : lease?.reviewHeadSha === recovery?.sourceHeadSha;
   if (!exact) {
     throw new Error("Recovery terminal projection does not bind its exact reviewed head.");
@@ -1483,6 +1531,9 @@ function requirePreservedSubjectTerminalProjection({
 
 function requireLeasePlanIdentity(lease, subject, label, { allowCompleting = false } = {}) {
   const validStatus = allowCompleting ? ["delivery", "completing"] : ["delivery"];
+  normalizeCanonicalSquashRecoveryDeliveryProfile(lease, {
+    genericSelfHosted: subject.pinTransition === null,
+  });
   if (!validStatus.includes(lease?.status)
     || lease.branch !== subject.branch
     || lease.sessionId !== subject.sessionId
@@ -1504,8 +1555,10 @@ export function assertExactCanonicalSquashRecoveryCompletingReplay({
 }) {
   const subject = plan.evidence.subject;
   const phases = new Set(["completion-intent", "completion-projected", "verified"]);
+  normalizeCanonicalSquashRecoveryDeliveryProfile(lease, {
+    genericSelfHosted: subject.pinTransition === null,
+  });
   if (lease?.status !== "completing" || !phases.has(journal?.state?.phase)
-    || lease.autoDelivery !== true || lease.runtimeRequired !== true
     || lease.baseSha !== subject.pullRequest.baseSha
     || lease.deliveryHeadSha !== subject.reviewedHeadSha
     || !authoredIntegrationMatchesSubject(lease, subject)
@@ -1541,8 +1594,10 @@ export function assertExactCanonicalSquashRecoveryTerminalLeaseIdentity({
   } catch {
     throw new Error("Terminal local lease task authority is invalid.");
   }
+  normalizeCanonicalSquashRecoveryDeliveryProfile(lease, {
+    genericSelfHosted: subject.pinTransition === null,
+  });
   if (!lease || !["completing", "completed"].includes(lease.status)
-    || lease.autoDelivery !== true || lease.runtimeRequired !== true
     || lease.worktreePath !== subject.worktreePath
     || lease.branch !== subject.branch
     || lease.sessionId !== subject.sessionId
@@ -1577,7 +1632,13 @@ function authoredIntegrationMatchesSubject(lease, subject) {
 export function canonicalSquashRecoveryImmutableLeaseProjection(lease, {
   genericSelfHosted = false,
 } = {}) {
-  requireCanonicalSquashRecoveryLeaseKeySet(lease, { genericSelfHosted });
+  const deliveryProfile = normalizeCanonicalSquashRecoveryDeliveryProfile(lease, {
+    genericSelfHosted,
+  });
+  requireCanonicalSquashRecoveryLeaseKeySet(lease, {
+    genericSelfHosted,
+    deliveryProfile,
+  });
   const parkFields = [
     "parkHeadSha", "parkBranchHeadSha", "parkSourceEpoch", "parkSourceFenceSha",
     "parkStashRef", "parkStashSha", "parkStashMessage", "parkStashStatus",
@@ -1589,6 +1650,8 @@ export function canonicalSquashRecoveryImmutableLeaseProjection(lease, {
     binding: lease.taskAuthority,
     lease,
   });
+  const closedPr834SourceCorrection = deliveryProfile.profile
+    === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE;
   return Object.freeze({
     schema: lease.schema,
     epoch: lease.epoch,
@@ -1620,12 +1683,49 @@ export function canonicalSquashRecoveryImmutableLeaseProjection(lease, {
     integration: structuredClone(lease.integration),
     taskAuthority,
     ...(genericSelfHosted ? {
-      successorLineage: genericSuccessorLineageProjection(lease),
+      successorLineage: closedPr834SourceCorrection
+        ? null
+        : genericSuccessorLineageProjection(lease),
+      ...(closedPr834SourceCorrection ? {
+        sourceCorrectionSuccessorLineage:
+          sourceCorrectionSuccessorLineageProjection(lease),
+      } : {}),
+    } : {}),
+    ...(deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE ? {
+      admissionContinuation: structuredClone(deliveryProfile.admissionContinuation),
     } : {}),
   });
 }
 
-function requireCanonicalSquashRecoveryLeaseKeySet(lease, { genericSelfHosted = false } = {}) {
+export function assertCanonicalSquashRecoveryLegacyContinuationTopology({
+  lease,
+  reviewedHeadSha,
+  fenceTreeSha,
+  isAncestorRevision,
+} = {}) {
+  const deliveryProfile = normalizeCanonicalSquashRecoveryDeliveryProfile(lease, {
+    genericSelfHosted: true,
+  });
+  const continuation = deliveryProfile.admissionContinuation;
+  if (deliveryProfile.profile !== LEGACY_ADMISSION_CONTINUATION_PROFILE
+    || !SHA.test(String(reviewedHeadSha || ""))
+    || !SHA.test(String(fenceTreeSha || ""))
+    || typeof isAncestorRevision !== "function"
+    || continuation.localFenceSha !== lease.fenceSha
+    || continuation.candidateRevision !== lease.fenceSha
+    || continuation.candidateTreeSha !== fenceTreeSha
+    || !isAncestorRevision(lease.fenceSha, reviewedHeadSha)) {
+    throw new Error(
+      "Legacy admission continuation does not retain its exact fence tree and reviewed descendant.",
+    );
+  }
+  return true;
+}
+
+function requireCanonicalSquashRecoveryLeaseKeySet(lease, {
+  genericSelfHosted = false,
+  deliveryProfile,
+} = {}) {
   if (!lease || !["delivery", "completing", "completed"].includes(lease.status)) {
     throw new Error("Canonical squash recovery requires its exact delivery lease lineage.");
   }
@@ -1642,15 +1742,101 @@ function requireCanonicalSquashRecoveryLeaseKeySet(lease, { genericSelfHosted = 
     "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
   ];
   const presentLineage = lineageKeys.filter(name => Object.hasOwn(lease, name));
-  if (presentLineage.length > 0) {
+  if (deliveryProfile?.profile
+    === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE) {
+    const sourceCorrectionKeys = [
+      "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
+      "sourceCorrectionSuccessorTaskBindingReconciliation",
+    ];
+    if (!genericSelfHosted
+      || JSON.stringify(presentLineage.sort())
+        !== JSON.stringify(sourceCorrectionKeys.slice(0, 2).sort())) {
+      throw new Error(
+        "Closed PR834 recovery lease lacks its exact partial source-correction lineage.",
+      );
+    }
+    if (Object.hasOwn(lease, "reviewHeadSha")) {
+      if (lease.reviewHeadSha !== null) {
+        throw new Error("Closed PR834 recovery lease review head must remain null.");
+      }
+      keys.push("reviewHeadSha");
+    }
+    keys.push(...sourceCorrectionKeys);
+  } else if (presentLineage.length > 0) {
     if (!genericSelfHosted || presentLineage.length !== lineageKeys.length) {
       throw new Error("Canonical squash recovery lease has partial or foreign successor lineage.");
     }
     keys.push(...lineageKeys);
   }
+  if (deliveryProfile?.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE) {
+    keys.push("admissionContinuation");
+  }
   if (JSON.stringify(Object.keys(lease).sort()) !== JSON.stringify(keys.sort())) {
     throw new Error("Canonical squash recovery lease key set drifted from the sealed delivery lineage.");
   }
+}
+
+function sourceCorrectionSuccessorLineageProjection(lease) {
+  const repairValue = lease?.sourceCorrectionSuccessorTaskBindingReconciliation;
+  const successor = lease?.activePublishTaskAuthoritySuccessor;
+  const successorKeys = [
+    "boundAt", "branch", "cloudOperationReceiptDigest",
+    "cloudVerificationReceiptDigest", "epoch", "receiptDigest", "schema",
+    "sourceBaseSha", "sourceBindingDigest", "sourceClaimId", "sourceFenceSha",
+    "targetBaseSha", "targetBindingDigest", "targetClaimId", "targetFenceSha",
+  ];
+  let repair = null;
+  try {
+    repair = normalizeRepair(repairValue);
+  } catch {
+    throw new Error("Closed PR834 source-correction repair lineage is malformed.");
+  }
+  const exactSuccessorKeys = successor && !Array.isArray(successor)
+    && JSON.stringify(Object.keys(successor).sort())
+      === JSON.stringify([...successorKeys].sort());
+  const exactInstant = value => typeof value === "string"
+    && Number.isFinite(Date.parse(value));
+  const exactDigests = fields => fields.every(name =>
+    DIGEST.test(String(successor?.[name] || "")));
+  const exactShas = fields => fields.every(name =>
+    SHA.test(String(successor?.[name] || "")));
+  if (digestValue(repair) !== digestValue(repairValue)
+    || !exactSuccessorKeys
+    || lease.activePublishSuccessorIntent !== null
+    || repair.branch !== lease.branch
+    || repair.successorClaimId !== successor.sourceClaimId
+    || repair.targetBindingDigest !== successor.sourceBindingDigest
+    || successor.schema
+      !== "agentic-active-publish-task-authority-successor-receipt/v1"
+    || successor.branch !== lease.branch
+    || successor.epoch !== lease.epoch
+    || successor.targetBaseSha !== lease.baseSha
+    || successor.targetFenceSha !== lease.fenceSha
+    || successor.targetFenceSha !== lease.deliveryHeadSha
+    || successor.targetClaimId !== lease.cloudAuthority.claimId
+    || successor.sourceBindingDigest !== lease.taskAuthority.priorBindingDigest
+    || successor.targetBindingDigest !== lease.taskAuthority.bindingDigest
+    || !exactInstant(successor.boundAt)
+    || !exactDigests([
+      "sourceClaimId", "targetClaimId", "sourceBindingDigest", "targetBindingDigest",
+      "cloudOperationReceiptDigest", "cloudVerificationReceiptDigest", "receiptDigest",
+    ])
+    || !exactShas([
+      "sourceBaseSha", "sourceFenceSha", "targetBaseSha", "targetFenceSha",
+    ])
+    || successor.receiptDigest !== digestValue(Object.fromEntries(
+      Object.entries(successor).filter(([name]) => name !== "receiptDigest"),
+    ))) {
+    throw new Error(
+      "Closed PR834 source-correction successor does not join the current lease.",
+    );
+  }
+  return Object.freeze({
+    schema: "agentic-canonical-squash-source-correction-successor-lineage/v1",
+    sourceCorrectionSuccessorTaskBindingReconciliation: structuredClone(repair),
+    activePublishTaskAuthoritySuccessor: structuredClone(successor),
+    activePublishSuccessorIntent: null,
+  });
 }
 
 function genericSuccessorLineageProjection(lease) {
@@ -1734,6 +1920,18 @@ function genericSuccessorLineageProjection(lease) {
     activePublishTaskAuthoritySuccessor: structuredClone(successor),
     activePublishSuccessorIntent: null,
   });
+}
+
+function genericProtectedRefreshSuccessor(lease) {
+  if (Object.hasOwn(
+    lease || {},
+    "sourceCorrectionSuccessorTaskBindingReconciliation",
+  )) {
+    return sourceCorrectionSuccessorLineageProjection(lease)
+      .activePublishTaskAuthoritySuccessor;
+  }
+  return genericSuccessorLineageProjection(lease)
+    ?.activePublishTaskAuthoritySuccessor ?? null;
 }
 
 function completingWorktreeProjection({ subjectPath, subject, mainSha }) {
@@ -1904,9 +2102,8 @@ function readGenericSuccessorPredecessorAuthority({
   lease,
   historicalLeaseEpoch,
 }) {
-  const lineage = genericSuccessorLineageProjection(lease);
-  if (lineage === null) return null;
-  const successor = lineage.activePublishTaskAuthoritySuccessor;
+  const successor = genericProtectedRefreshSuccessor(lease);
+  if (successor === null) return null;
   const ledger = readValidatedCollaborationLedger({ ghText, ledgerRepository });
   const current = ledger.entries.filter(entry => entry.claimId === lease.cloudAuthority.claimId)
     .at(-1)?.claimCore;
@@ -2176,27 +2373,26 @@ function exactGenericProtectedRefresh({
   root, lease, reviewed, reviewedChanges, expectedReviewedMessage,
 }) {
   const authored = gitCommit(root, lease.integration.commitSha);
-  const successorLineage = genericSuccessorLineageProjection(lease);
+  const successor = genericProtectedRefreshSuccessor(lease);
   if (authored.treeSha !== lease.integration.treeSha
     || authored.message !== expectedReviewedMessage
     || authored.objectMessageTerminalLf !== true) {
     throw new Error("Generic authored integration commit drifted from its sealed bytes.");
   }
   if (authored.sha === reviewed.sha) {
-    if (successorLineage !== null || authored.treeSha !== reviewed.treeSha) {
+    if (successor !== null || authored.treeSha !== reviewed.treeSha) {
       throw new Error("Generic unrefreshed integration tree drifted.");
     }
     return null;
   }
-  if (successorLineage === null
+  if (successor === null
     || authored.parentShas.length !== 1
     || reviewed.parentShas.length !== 2
     || reviewed.parentShas[0] !== authored.sha
     || reviewed.parentShas[1] !== lease.baseSha
     || reviewed.message !== authored.message
     || reviewed.objectMessageTerminalLf !== true
-    || authored.parentShas[0] !== successorLineage
-      .activePublishTaskAuthoritySuccessor.sourceFenceSha) {
+    || authored.parentShas[0] !== successor.sourceFenceSha) {
     throw new Error("Generic protected refresh topology drifted from its authored head.");
   }
   const authoredChanges = exactTreeChanges(root, authored.parentShas[0], authored.sha);
@@ -2259,6 +2455,138 @@ function providerBulletSubjects({
   }
   return Object.freeze(bullets);
 }
+
+export function assertCanonicalSquashRecoveryMalformedProviderMessage({
+  profile,
+  message,
+  headline,
+  expectedBody,
+  attributionTrailers = [],
+  sourceHistorySubjects,
+  sourceCommitRevisions = [],
+  pullRequest = null,
+  sourceCommitProviderActors = [],
+} = {}) {
+  if (profile === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE) {
+    const autoMerge = pullRequest?.autoMergeRequest;
+    if (!Array.isArray(sourceHistorySubjects)
+      || sourceHistorySubjects.length !== 3
+      || sourceHistorySubjects.some(subject => typeof subject !== "string"
+        || !subject || /[\r\n]/u.test(subject))
+      || sourceHistorySubjects[0] === headline
+      || sourceHistorySubjects[1] !== headline
+      || sourceHistorySubjects[2] !== headline
+      || !Array.isArray(attributionTrailers)
+      || attributionTrailers.length !== 0
+      || autoMerge?.mergeMethod !== "SQUASH"
+      || autoMerge.commitHeadline !== headline
+      || autoMerge.commitBody !== null
+      || autoMerge.enabledBy?.login !== pullRequest.mergedBy
+      || autoMerge.enabledBy?.isBot !== false
+      || !Array.isArray(sourceCommitRevisions)
+      || sourceCommitRevisions.length !== sourceHistorySubjects.length
+      || new Set(sourceCommitRevisions).size !== sourceCommitRevisions.length
+      || sourceCommitRevisions.some(revision => !SHA.test(String(revision || "")))
+      || !Array.isArray(sourceCommitProviderActors)
+      || sourceCommitProviderActors.length !== sourceCommitRevisions.length
+      || sourceCommitProviderActors.some((actor, index) =>
+        actor?.revision !== sourceCommitRevisions[index]
+        || actor.authorLogin !== pullRequest.mergedBy
+        || actor.committerLogin !== pullRequest.mergedBy)) {
+      throw new Error(
+        "Provider-generated closed PR834 squash actor and source attribution is not exact.",
+      );
+    }
+    const bullets = Object.freeze([sourceHistorySubjects[0], headline]);
+    const expected = [
+      headline,
+      "",
+      `* ${bullets[0]}`,
+      "",
+      `* ${bullets[1]}`,
+      "",
+      expectedBody,
+    ].join("\n");
+    const expectedManagedTrailers = String(expectedBody)
+      .split("\n").slice(-4).join("\n");
+    if (message !== expected || !hasExactFinalManagedTrailers(message)
+      || finalTrailerBlock(message).join("\n") !== expectedManagedTrailers
+      || message.includes("\n\n---------\n\n")
+      || /(^|\n)Co-authored-by:/u.test(message)) {
+      throw new Error(
+        "Provider-generated closed PR834 terminal managed framing is not exact.",
+      );
+    }
+    return bullets;
+  }
+  if (profile === STANDARD_AUTO_DELIVERY_PROFILE) {
+    const bullets = providerBulletSubjects({
+      message,
+      headline,
+      expectedBody,
+      attributionTrailers,
+      sourceHistorySubjects,
+    });
+    const expected = [
+      headline,
+      "",
+      ...bullets.flatMap((subject, index) => index === 0
+        ? [`* ${subject}`]
+        : ["", `* ${subject}`]),
+      "",
+      expectedBody,
+      "",
+      "---------",
+      "",
+      ...attributionTrailers,
+    ].join("\n");
+    if (message !== expected || hasExactFinalManagedTrailers(message)
+      || finalTrailerBlock(message).join("\n") !== attributionTrailers.join("\n")) {
+      throw new Error("Provider-generated standard squash attribution framing is not exact.");
+    }
+    return bullets;
+  }
+  if (profile !== LEGACY_ADMISSION_CONTINUATION_PROFILE
+    || !Array.isArray(sourceHistorySubjects) || sourceHistorySubjects.length < 1
+    || sourceHistorySubjects.some(subject => typeof subject !== "string"
+      || !subject || /[\r\n]/u.test(subject))
+    || sourceHistorySubjects.at(-1) !== headline) {
+    throw new Error("Provider-generated legacy squash source history is not exact.");
+  }
+  const autoMerge = pullRequest?.autoMergeRequest;
+  if (autoMerge?.mergeMethod !== "SQUASH"
+    || autoMerge.commitHeadline !== headline
+    || autoMerge.commitBody !== null
+    || autoMerge.enabledBy?.login !== pullRequest.mergedBy
+    || autoMerge.enabledBy?.isBot !== false
+    || !Array.isArray(sourceCommitRevisions)
+    || sourceCommitRevisions.length !== sourceHistorySubjects.length
+    || sourceCommitRevisions.some(revision => !SHA.test(String(revision || "")))
+    || !Array.isArray(sourceCommitProviderActors)
+    || sourceCommitProviderActors.length !== sourceHistorySubjects.length
+    || sourceCommitProviderActors.some((actor, index) =>
+      actor?.revision !== sourceCommitRevisions[index]
+      || actor.authorLogin !== pullRequest.mergedBy
+      || actor.committerLogin !== pullRequest.mergedBy)) {
+    throw new Error("Provider-generated legacy squash actor attribution is not exact.");
+  }
+  const expected = [
+    headline,
+    "",
+    ...sourceHistorySubjects.flatMap((subject, index) => index === 0
+      ? [`* ${subject}`]
+      : ["", `* ${subject}`]),
+    "",
+    expectedBody,
+  ].join("\n");
+  const expectedManagedTrailers = String(expectedBody).split("\n").slice(-4).join("\n");
+  if (message !== expected || !hasExactFinalManagedTrailers(message)
+    || finalTrailerBlock(message).join("\n") !== expectedManagedTrailers) {
+    throw new Error("Provider-generated legacy squash managed attribution framing is not exact.");
+  }
+  return Object.freeze([...sourceHistorySubjects]);
+}
+
 function exactProviderGeneratedMessage({
   root,
   baseSha,
@@ -2346,10 +2674,25 @@ function requireExactOwnedRegularPaths({
     || JSON.stringify(paths) !== JSON.stringify(integrationPaths)
     || JSON.stringify(expectedScopes) !== JSON.stringify(admissionScopes)
     || JSON.stringify(expectedScopes) !== JSON.stringify(cloudScopes)
+    || JSON.stringify(admission?.declaredWriteSet)
+      !== JSON.stringify(cloudAuthority?.cloudDeclaredWriteScope)
     || admission?.writeSetDigest !== cloudAuthority?.writeSetDigest
     || admission?.manifestDigest !== cloudAuthority?.manifestDigest) {
     throw new Error(`${label} does not own its exact regular-file delta.`);
   }
+}
+function exactGenericCompletedRecoveryPaths({ lease, sourceHeadSha }) {
+  if (Array.isArray(lease?.integration?.paths)) return lease.integration.paths;
+  if ((lease?.integration ?? null) !== null || lease?.reviewHeadSha !== sourceHeadSha
+    || (lease?.deliveryHeadSha ?? null) !== null) return undefined;
+  const admissionPaths = (lease.admission?.declaredWriteSet || [])
+    .filter(scope => String(scope).startsWith("path:"))
+    .map(scope => scope.slice("path:".length));
+  const cloudPaths = (lease.cloudAuthority?.cloudDeclaredWriteScope || [])
+    .filter(scope => String(scope).startsWith("path:"))
+    .map(scope => scope.slice("path:".length));
+  if (JSON.stringify(admissionPaths) !== JSON.stringify(cloudPaths)) return undefined;
+  return admissionPaths;
 }
 function expectedLegacyRecoveryFrontmatter({ frontmatter, subject, controllerEvidence }) {
   return Object.freeze({
@@ -2501,6 +2844,18 @@ function readProviderCommit({ repository, revision, ghText }) {
     parentShas: (value.parents || []).map(parent => requiredSha(parent.sha, "provider parent")),
     message: required(value.commit?.message, "provider commit message"),
     verificationDigest: digestValue(value.commit.verification) });
+}
+function readProviderCommitActors({ repository, revision, ghText }) {
+  const value = JSON.parse(ghText(["api", "-H", "Accept: application/vnd.github+json",
+    "-H", "X-GitHub-Api-Version: 2026-03-10", `repos/${repository}/commits/${revision}`]));
+  if (value?.sha !== revision || !value.author?.login || !value.committer?.login) {
+    throw new Error("Source commit lacks exact provider actor attribution.");
+  }
+  return Object.freeze({
+    revision,
+    authorLogin: value.author.login,
+    committerLogin: value.committer.login,
+  });
 }
 function requireProviderCommitJoin(provider, local, label) {
   if (provider.sha !== local.sha || provider.treeSha !== local.treeSha

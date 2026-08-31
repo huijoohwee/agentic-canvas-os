@@ -4,17 +4,22 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { advanceJournal, buildPlan, createJournal, normalizeJournal, normalizeReceipt,
-  operationKey, startJournal }
+import { advanceJournal, buildPlan, createJournal,
+  GENERIC_SELF_HOSTED_RECOVERY_EVIDENCE_PATH,
+  GENERIC_SELF_HOSTED_RECOVERY_PATHS,
+  normalizeJournal, normalizeReceipt, operationKey, startJournal }
   from "../scripts/canonical-squash-attribution-recovery-terminalization-contract.mjs";
 import { createCanonicalSquashAttributionRecoveryTerminalizationController }
   from "../scripts/canonical-squash-attribution-recovery-terminalization-controller.mjs";
 import {
   assertCanonicalSquashRecoveryCompletionTopology,
+  assertCanonicalSquashRecoveryCompletedRecoveryHeadProjection,
+  assertCanonicalSquashRecoveryControllerProjection,
   assertCanonicalSquashRecoveryPreRetirementProjection,
   assertCanonicalSquashRecoveryTerminalMainTopology,
   assertExactCanonicalSquashRecoveryCompletedTaskAuthority, assertExactCanonicalSquashRecoveryCompletingReplay,
   assertExactCanonicalSquashRecoveryTerminalLeaseIdentity, classifyCanonicalSquashRecoveryCompletingProjection,
+  canonicalSquashRecoveryImmutableLeaseProjection,
   createCanonicalSquashAttributionRecoveryTerminalizationRepositoryAdapter,
   selectNewestExactIntegrationRun,
 } from "../scripts/canonical-squash-attribution-recovery-terminalization-repository-adapter.mjs";
@@ -41,10 +46,12 @@ function leaseFromSubject(subject, {
     parkStashSha: _parkStashSha,
     parkStashMessage: _parkStashMessage,
     parkStashStatus: _parkStashStatus,
+    successorLineage,
     ...identity
   } = clone(subject.leaseIdentity);
   return {
     ...identity,
+    ...(successorLineage || {}),
     status,
     heartbeatAt: "2026-08-30T12:21:00.000Z",
     expiresAt: "2026-08-30T12:51:00.000Z",
@@ -61,6 +68,208 @@ function resealEvidence(value) {
   delete next.evidenceDigest;
   next.evidenceDigest = digestValue(next);
   return next;
+}
+function genericEvidenceFixture(variant) {
+  const value = clone(liveEvidence);
+  const paths = [...GENERIC_SELF_HOSTED_RECOVERY_PATHS];
+  value.controller.targetRepository = value.controller.repository;
+  value.subject.repository = value.controller.repository;
+  value.subject.leaseIdentity.cloudAuthority.targetRepository = value.controller.repository;
+  value.subject.cloudAuthority.targetRepository = value.controller.repository;
+  value.subject.pinTransition = null;
+  value.subject.protectedRefresh = null;
+  value.subject.predecessorAuthority = null;
+  value.subject.historicalLeaseEpoch = value.subject.cloudAuthority.leaseEpoch;
+  value.subject.sourceCommitAuthors = [{
+    name: "katrinateh-dotcom",
+    email: "katrinateh@live.com",
+  }];
+  value.subject.sourceCommitSubjects = [value.subject.expectedSquashHeadline];
+  value.subject.changedPaths = paths;
+  value.subject.changedEntries = paths.map((repositoryPath, index) => ({
+    oldMode: "100644",
+    newMode: "100644",
+    oldBlob: String(index + 1).repeat(40),
+    newBlob: String(index + 5).repeat(40),
+    status: "M",
+    path: repositoryPath,
+  }));
+  value.subject.leaseIdentity.integration.paths = paths;
+  value.subject.leaseIdentity.successorLineage = null;
+  const scopes = paths.map(repositoryPath => `path:${repositoryPath}`);
+  value.subject.leaseIdentity.admission.declaredWriteSet = [
+    ...scopes,
+    `semantic:${value.subject.scope}`,
+  ];
+  value.subject.leaseIdentity.cloudAuthority.cloudDeclaredWriteScope = [
+    ...scopes,
+    `semantic:${value.subject.scope}`,
+  ];
+  value.subject.cloudAuthority = clone(value.subject.leaseIdentity.cloudAuthority);
+  value.subject.checks = value.subject.checks.map(run => ({
+    ...run,
+    workflowName: "CI",
+    workflowPath: ".github/workflows/ci.yml",
+  }));
+  value.subject.checksDigest = digestValue(value.subject.checks);
+  value.subject.leaseIdentityDigest = digestValue(value.subject.leaseIdentity);
+
+  value.recovery.genericRecoveryVariant = variant;
+  value.recovery.subjectAncestorOfRecoveryParent = true;
+  value.recovery.checks = value.recovery.checks.map(run => ({
+    ...run,
+    workflowName: "CI",
+    workflowPath: ".github/workflows/ci.yml",
+  }));
+  value.recovery.checksDigest = digestValue(value.recovery.checks);
+  if (variant === "evidence-document") {
+    const evidencePath = `docs/CANONICAL-SQUASH-PR${value.subject.pullRequest.number}-ATTRIBUTION-RECOVERY.md`;
+    value.recovery.evidencePath = evidencePath;
+    value.recovery.changedPaths = [evidencePath];
+    value.recovery.changedEntries = [{
+      oldMode: "000000",
+      newMode: "100644",
+      oldBlob: "0".repeat(40),
+      newBlob: value.recovery.evidenceBlobSha,
+      status: "A",
+      path: evidencePath,
+    }];
+    value.recovery.controllerRevision = value.subject.malformedCommit.sha;
+  } else {
+    value.recovery.evidencePath = GENERIC_SELF_HOSTED_RECOVERY_EVIDENCE_PATH;
+    value.recovery.changedPaths = paths;
+    value.recovery.changedEntries = paths.map((repositoryPath, index) => ({
+      oldMode: "100644",
+      newMode: "100644",
+      oldBlob: String(index + 1).repeat(40),
+      newBlob: repositoryPath === GENERIC_SELF_HOSTED_RECOVERY_EVIDENCE_PATH
+        ? value.recovery.evidenceBlobSha
+        : String(index + 6).repeat(40),
+      status: "M",
+      path: repositoryPath,
+    }));
+    value.recovery.controllerRevision = value.recovery.mergeSha;
+    value.controller.revision = value.recovery.mergeSha;
+    value.controller.tree = value.recovery.treeSha;
+  }
+  return resealEvidence(value);
+}
+function refreshedGenericEvidenceFixture() {
+  const value = genericEvidenceFixture("evidence-document");
+  value.subject.changedEntries = value.subject.changedEntries.map(entry => ({
+    ...entry,
+    status: "A",
+    oldMode: "000000",
+    oldBlob: "0".repeat(40),
+  }));
+  const authoredHeadSha = "a".repeat(40);
+  const authoredTreeSha = "b".repeat(40);
+  value.subject.leaseIdentity.integration.commitSha = authoredHeadSha;
+  value.subject.leaseIdentity.integration.treeSha = authoredTreeSha;
+  value.subject.protectedRefresh = {
+    authoredCommit: {
+      ...clone(value.subject.reviewedCommit),
+      sha: authoredHeadSha,
+      treeSha: authoredTreeSha,
+    },
+    authoredParentSha: "c".repeat(40),
+    reviewedParentShas: [authoredHeadSha, value.subject.leaseIdentity.baseSha],
+    changedEntries: clone(value.subject.changedEntries),
+  };
+  value.subject.leaseIdentityDigest = digestValue(value.subject.leaseIdentity);
+  return resealEvidence(value);
+}
+function lineagedGenericEvidenceFixture() {
+  const value = refreshedGenericEvidenceFixture();
+  value.subject.cloudAuthority.leaseEpoch = 3;
+  value.subject.leaseIdentity.cloudAuthority.leaseEpoch = 3;
+  value.subject.leaseIdentity.fenceSha = value.subject.leaseIdentity.deliveryHeadSha;
+  value.subject.historicalLeaseEpoch = 2;
+  const priorBindingDigest = value.subject.taskAuthority.bindingDigest;
+  const lane = leaseFromSubject(value.subject);
+  const taskAuthority = createTaskAuthorityBinding({
+    capability: createTaskAuthorityCapability({ issuedAt: "2026-08-30T00:00:00.000Z" }),
+    lease: lane,
+    bindingMode: "continuation",
+    priorBindingDigest,
+    boundAt: "2026-08-30T20:38:16.817Z",
+  });
+  value.subject.taskAuthority = clone(taskAuthority);
+  value.subject.taskAuthorityBindingDigest = taskAuthority.bindingDigest;
+  value.subject.leaseIdentity.taskAuthority = clone(taskAuthority);
+  const sourceClaimId = hash("source-claim");
+  const successorClaimId = hash("successor-claim");
+  const recoveryPlanDigest = hash("recovery-plan");
+  const sourceFenceSha = "2".repeat(40);
+  const targetBaseSha = "3".repeat(40);
+  const targetLaneRevision = "4".repeat(40);
+  value.subject.protectedRefresh.authoredParentSha = targetLaneRevision;
+  const successorCore = {
+    schema: "agentic-active-publish-task-authority-successor-receipt/v1",
+    branch: value.subject.branch,
+    epoch: value.subject.leaseIdentity.epoch,
+    sourceBaseSha: targetBaseSha,
+    sourceFenceSha: targetLaneRevision,
+    sourceClaimId: successorClaimId,
+    sourceBindingDigest: priorBindingDigest,
+    targetBaseSha: value.subject.leaseIdentity.baseSha,
+    targetFenceSha: value.subject.leaseIdentity.deliveryHeadSha,
+    targetClaimId: value.subject.cloudAuthority.claimId,
+    targetBindingDigest: taskAuthority.bindingDigest,
+    cloudOperationReceiptDigest: hash("successor-operation"),
+    cloudVerificationReceiptDigest: hash("successor-verification"),
+    boundAt: "2026-08-30T20:38:16.817Z",
+  };
+  value.subject.leaseIdentity.successorLineage = {
+    activeOwnedDirtRecovery: {
+      schema: "agentic-active-owned-dirt-recovery-lease/v1",
+      status: "recovered",
+      sourceEpoch: value.subject.leaseIdentity.epoch - 1,
+      sourceSessionId: value.subject.sessionId,
+      sourceDevice: value.subject.leaseIdentity.device,
+      sourceBranch: value.subject.branch,
+      sourceFenceSha,
+      sourceClaimId,
+      planDigest: recoveryPlanDigest,
+      evidenceDigest: hash("recovery-evidence"),
+      snapshotReceiptDigest: hash("snapshot-receipt"),
+      snapshotRef: `refs/agentic-canvas-os/recovery/active-owned-dirt/${sourceClaimId}/${recoveryPlanDigest}`,
+      snapshotCommitSha: "5".repeat(40),
+      snapshotIndexCommitSha: "6".repeat(40),
+      recoveredClaimDigest: hash("recovered-claim"),
+      recoveredLedgerRevision: "7".repeat(40),
+      recoveredClaimLedgerRevision: hash("recovered-ledger-entry"),
+      recoveredTransitionCounter: 10,
+      recoveredAt: "2026-08-30T15:55:40.000Z",
+    },
+    activeOwnedDirtCurrentBaseReanchor: {
+      schema: "agentic-active-owned-dirt-current-base-reanchor-lease/v1",
+      status: "reanchored",
+      planDigest: hash("reanchor-plan"),
+      sourceClaimId,
+      successorClaimId,
+      sourceBaseSha: "8".repeat(40),
+      sourceFenceSha,
+      targetCanonicalBaseSha: targetBaseSha,
+      targetLaneRevision,
+      targetDirtEvidenceDigest: hash("target-dirt"),
+      taskContinuationReceiptDigest: hash("task-continuation"),
+    },
+    activePublishTaskAuthoritySuccessor: {
+      ...successorCore,
+      receiptDigest: digestValue(successorCore),
+    },
+    activePublishSuccessorIntent: null,
+  };
+  value.subject.predecessorAuthority = {
+    currentClaimId: value.subject.cloudAuthority.claimId,
+    predecessorClaimId: successorClaimId,
+    canonicalBaseSha: targetBaseSha,
+    laneRevision: targetLaneRevision,
+    leaseEpoch: value.subject.historicalLeaseEpoch,
+  };
+  value.subject.leaseIdentityDigest = digestValue(value.subject.leaseIdentity);
+  return resealEvidence(value);
 }
 function taskReceipt(subject, operation, label) {
   const core = {
@@ -286,6 +495,124 @@ test("live PR893/PR894 evidence closes exact commits, runs, task identity, and r
   assert.equal(plan.evidence.preservation.remoteTrackingRefs, "unchanged");
   assert.ok(!plan.effects.includes("canonical-remote-tracking-sync"));
 });
+test("generic evidence-document and self-hosted recovery variants are exact and disjoint", () => {
+  for (const variant of ["evidence-document", "self-hosted-controller-update"]) {
+    const evidence = genericEvidenceFixture(variant);
+    const plan = buildPlan(evidence);
+    assert.equal(plan.evidence.subject.pinTransition, null);
+    assert.equal(plan.evidence.recovery.genericRecoveryVariant, variant);
+    assert.equal(plan.evidence.recovery.subjectAncestorOfRecoveryParent, true);
+    assert.deepEqual(plan.evidence.subject.checks.map(run => [
+      run.workflowName, run.workflowPath,
+    ]), [["CI", ".github/workflows/ci.yml"], ["CI", ".github/workflows/ci.yml"]]);
+  }
+  const addedSubject = genericEvidenceFixture("evidence-document");
+  addedSubject.subject.changedEntries = addedSubject.subject.changedEntries.map(entry => ({
+    ...entry,
+    status: "A",
+    oldMode: "000000",
+    oldBlob: "0".repeat(40),
+  }));
+  assert.equal(buildPlan(resealEvidence(addedSubject))
+    .evidence.recovery.genericRecoveryVariant, "evidence-document");
+  assert.throws(() => buildPlan(refreshedGenericEvidenceFixture()),
+    /protected refresh successor lineage/u);
+  const lineaged = buildPlan(lineagedGenericEvidenceFixture()).evidence.subject;
+  assert.equal(lineaged.protectedRefresh.authoredCommit.sha, "a".repeat(40));
+  const rawLease = leaseFromSubject(lineaged);
+  assert.deepEqual(canonicalSquashRecoveryImmutableLeaseProjection(rawLease, {
+    genericSelfHosted: true,
+  }), lineaged.leaseIdentity);
+});
+test("generic recovery variants reject additions, evidence aliasing, and profile drift", () => {
+  const mutations = [
+    value => {
+      value.subject.changedEntries[0].status = "A";
+      value.subject.changedEntries[0].oldMode = "000000";
+      value.subject.changedEntries[0].oldBlob = "1".repeat(40);
+    },
+    value => { value.recovery.changedEntries[1].newBlob = "f".repeat(40); },
+    value => { value.subject.checks[0].workflowPath = ".github/workflows/release.yml"; },
+    value => { value.recovery.genericRecoveryVariant = "foreign"; },
+    value => { value.controller.revision = "0".repeat(40); },
+  ];
+  for (const mutate of mutations) {
+    const value = genericEvidenceFixture("self-hosted-controller-update");
+    mutate(value);
+    assert.throws(() => buildPlan(resealEvidence(value)), /invalid/u);
+  }
+  const evidence = genericEvidenceFixture("evidence-document");
+  evidence.recovery.changedEntries[0].status = "M";
+  evidence.recovery.changedEntries[0].oldMode = "100644";
+  evidence.recovery.changedEntries[0].oldBlob = "1".repeat(40);
+  assert.throws(() => buildPlan(resealEvidence(evidence)), /invalid/u);
+  for (const mutate of [
+    value => { value.subject.protectedRefresh.reviewedParentShas[1] = "d".repeat(40); },
+    value => { value.subject.protectedRefresh.authoredCommit.treeSha = "e".repeat(40); },
+    value => { value.subject.protectedRefresh.changedEntries[0].newBlob = "f".repeat(40); },
+  ]) {
+    const refreshed = lineagedGenericEvidenceFixture();
+    mutate(refreshed);
+    refreshed.subject.leaseIdentityDigest = digestValue(refreshed.subject.leaseIdentity);
+    assert.throws(() => buildPlan(resealEvidence(refreshed)), /invalid/u);
+  }
+  for (const mutate of [
+    value => {
+      value.subject.leaseIdentity.successorLineage
+        .activeOwnedDirtRecovery.sourceClaimId = hash("foreign-source");
+    },
+    value => {
+      value.subject.leaseIdentity.successorLineage
+        .activePublishTaskAuthoritySuccessor.targetFenceSha = "0".repeat(40);
+    },
+    value => {
+      value.subject.historicalLeaseEpoch = value.subject.cloudAuthority.leaseEpoch;
+    },
+    value => { value.subject.protectedRefresh.authoredParentSha = "9".repeat(40); },
+    value => { value.subject.leaseIdentity.successorLineage = null; },
+    value => { value.subject.predecessorAuthority.predecessorClaimId = hash("foreign-predecessor"); },
+  ]) {
+    const lineaged = lineagedGenericEvidenceFixture();
+    mutate(lineaged);
+    lineaged.subject.leaseIdentityDigest = digestValue(lineaged.subject.leaseIdentity);
+    assert.throws(() => buildPlan(resealEvidence(lineaged)), /invalid/u);
+  }
+  const staleSimpleEpoch = genericEvidenceFixture("evidence-document");
+  staleSimpleEpoch.subject.historicalLeaseEpoch -= 1;
+  assert.throws(() => buildPlan(resealEvidence(staleSimpleEpoch)),
+    /historical attribution epoch/u);
+  const staleLineageEpoch = lineagedGenericEvidenceFixture();
+  staleLineageEpoch.subject.historicalLeaseEpoch = 1;
+  assert.throws(() => buildPlan(resealEvidence(staleLineageEpoch)),
+    /historical attribution epoch|predecessor authority join/u);
+
+  for (const mutate of [
+    value => { value.activeOwnedDirtRecovery.snapshotRef += "-foreign"; },
+    value => { value.activeOwnedDirtRecovery.recoveredTransitionCounter = 1; },
+    value => { value.activeOwnedDirtRecovery.recoveredAt = "not-an-instant"; },
+    value => { value.activeOwnedDirtRecovery.extra = true; },
+    value => { value.activeOwnedDirtCurrentBaseReanchor.sourceBaseSha = "invalid"; },
+    value => { value.activePublishTaskAuthoritySuccessor.boundAt = "not-an-instant"; },
+  ]) {
+    const lineaged = lineagedGenericEvidenceFixture();
+    mutate(lineaged.subject.leaseIdentity.successorLineage);
+    lineaged.subject.leaseIdentityDigest = digestValue(lineaged.subject.leaseIdentity);
+    assert.throws(() => buildPlan(resealEvidence(lineaged)), /invalid/u);
+  }
+
+  for (const mutate of [
+    value => { value.admission.declaredWriteSet.push("semantic:foreign"); },
+    value => { value.admission.semanticScope = "foreign"; },
+    value => { value.cloudAuthority.canonicalBaseSha = "f".repeat(40); },
+    value => { value.cloudAuthority.targetRepository = "foreign/repository"; },
+  ]) {
+    const generic = genericEvidenceFixture("evidence-document");
+    mutate(generic.subject.leaseIdentity);
+    generic.subject.cloudAuthority = clone(generic.subject.leaseIdentity.cloudAuthority);
+    generic.subject.leaseIdentityDigest = digestValue(generic.subject.leaseIdentity);
+    assert.throws(() => buildPlan(resealEvidence(generic)), /invalid/u);
+  }
+});
 test("contract rejects identity, topology, run, pin, and task projection drift", () => {
   const mutations = [
     value => { value.subject.taskAuthority.authoritySubjectId = "urn:foreign"; },
@@ -303,6 +630,15 @@ test("contract rejects identity, topology, run, pin, and task projection drift",
     mutate(value);
     assert.throws(() => buildPlan(resealEvidence(value)), /invalid/u);
   }
+  const hybrid = clone(liveEvidence);
+  hybrid.controller.targetRepository = hybrid.controller.repository;
+  hybrid.subject.repository = hybrid.controller.repository;
+  hybrid.subject.leaseIdentity.cloudAuthority.targetRepository = hybrid.controller.repository;
+  hybrid.subject.cloudAuthority.targetRepository = hybrid.controller.repository;
+  hybrid.subject.leaseIdentity.successorLineage = null;
+  hybrid.subject.leaseIdentityDigest = digestValue(hybrid.subject.leaseIdentity);
+  assert.throws(() => buildPlan(resealEvidence(hybrid)),
+    /subject repository classification/u);
 });
 test("controller seals both task proofs, typed terminal evidence, and stable replay receipt", async () => {
   const adapter = fakeAdapter();
@@ -446,6 +782,70 @@ test("newest matching Integration run must itself be completed successfully", ()
     sha, event: "pull_request", branch: "agent/device/scope", expectedRunId: 9,
   }), /not the newest exact run/u);
 });
+test("self-hosted CI selection binds workflow path instead of a dynamic run title", () => {
+  const sha = "7".repeat(40);
+  const exact = {
+    id: 33340720688,
+    name: "fix(claim-only-waiting-bridge): reconcile live topology",
+    path: ".github/workflows/ci.yml",
+    event: "pull_request",
+    head_branch: "agent/device/self-hosted",
+    head_sha: sha,
+    status: "completed",
+    conclusion: "success",
+  };
+  assert.equal(selectNewestExactIntegrationRun([exact], {
+    sha,
+    event: "pull_request",
+    branch: "agent/device/self-hosted",
+    profile: "self-hosted-ci",
+  }).id, 33340720688);
+  for (const drift of [
+    { ...exact, path: ".github/workflows/release.yml" },
+    { ...exact, path: undefined, name: "CI" },
+  ]) {
+    assert.throws(() => selectNewestExactIntegrationRun([drift], {
+      sha,
+      event: "pull_request",
+      branch: "agent/device/self-hosted",
+      profile: "self-hosted-ci",
+    }), /not terminally successful/u);
+  }
+  assert.throws(() => selectNewestExactIntegrationRun([exact], {
+    sha,
+    event: "pull_request",
+    branch: "agent/device/self-hosted",
+    profile: "foreign",
+  }), /selection input is invalid/u);
+});
+test("self-hosted controller replay requires the exact sealed executable revision and tree", () => {
+  const plan = buildPlan(genericEvidenceFixture("self-hosted-controller-update"));
+  const current = "9".repeat(40);
+  assert.equal(assertCanonicalSquashRecoveryControllerProjection({
+    plan,
+    currentController: clone(plan.evidence.controller),
+  }), true);
+  const descendant = { ...plan.evidence.controller, revision: current, tree: "8".repeat(40) };
+  assert.throws(() => assertCanonicalSquashRecoveryControllerProjection({
+    plan,
+    currentController: descendant,
+  }), /controller drifted/u);
+  const first = clone(plan.evidence);
+  const second = clone(plan.evidence);
+  first.controller = clone(descendant);
+  second.controller = clone(descendant);
+  first.observedAt = "2026-08-30T13:01:00.000Z";
+  second.observedAt = "2026-08-30T13:02:00.000Z";
+  first.canonical.protectedMainSha = current;
+  second.canonical.protectedMainSha = current;
+  first.evidenceDigest = hash("first-controller-descendant-observation");
+  second.evidenceDigest = hash("second-controller-descendant-observation");
+  assert.throws(() => assertCanonicalSquashRecoveryPreRetirementProjection({
+    sealedEvidence: plan.evidence,
+    firstEvidence: first,
+    secondEvidence: second,
+  }), /preservation projection drifted/u);
+});
 
 test("begin-completion response loss resumes only attached review or detached sealed main", () => {
   const subject = liveEvidence.subject;
@@ -542,6 +942,50 @@ test("completed descendant replay retains every immutable original-lease identit
       subject,
     }), /Terminal local lease|Task authority binding|Canonical squash recovery/u);
   }
+});
+test("completed recovery head projection keeps generic delivery and legacy review shapes disjoint", () => {
+  const genericRecovery = genericEvidenceFixture("evidence-document").recovery;
+  const genericLease = {
+    reviewHeadSha: null,
+    deliveryHeadSha: genericRecovery.sourceHeadSha,
+  };
+  assert.equal(assertCanonicalSquashRecoveryCompletedRecoveryHeadProjection({
+    lease: genericLease,
+    recovery: genericRecovery,
+    genericSelfHosted: true,
+  }), true);
+  for (const mutate of [
+    value => { value.reviewHeadSha = genericRecovery.sourceHeadSha; },
+    value => { value.deliveryHeadSha = "0".repeat(40); },
+  ]) {
+    const drifted = clone(genericLease);
+    mutate(drifted);
+    assert.throws(() => assertCanonicalSquashRecoveryCompletedRecoveryHeadProjection({
+      lease: drifted,
+      recovery: genericRecovery,
+      genericSelfHosted: true,
+    }), /exact reviewed head/u);
+  }
+  assert.equal(assertCanonicalSquashRecoveryCompletedRecoveryHeadProjection({
+    lease: { reviewHeadSha: liveEvidence.recovery.sourceHeadSha },
+    recovery: liveEvidence.recovery,
+    genericSelfHosted: false,
+  }), true);
+});
+test("generic completed replay preserves protected-refresh and successor lineage", () => {
+  const subject = buildPlan(lineagedGenericEvidenceFixture()).evidence.subject;
+  const lease = leaseFromSubject(subject, {
+    status: "completed",
+    mainSha: "b".repeat(40),
+  });
+  assert.equal(assertExactCanonicalSquashRecoveryTerminalLeaseIdentity({ lease, subject }),
+    lease);
+  const drifted = clone(lease);
+  drifted.activePublishTaskAuthoritySuccessor.targetClaimId = hash("foreign-target");
+  assert.throws(() => assertExactCanonicalSquashRecoveryTerminalLeaseIdentity({
+    lease: drifted,
+    subject,
+  }), /Terminal local lease|successor\/reanchor lineage/u);
 });
 
 test("completed recovery task binding rejects epoch or device drift before terminal adoption", () => {

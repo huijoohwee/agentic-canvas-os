@@ -33,6 +33,26 @@ export const BRIDGE_RETIREMENT_EVIDENCE_SCHEMA =
   "agentic-claim-only-waiting-bridge-retirement-evidence/v1";
 export const SUCCESSOR_PROMOTION_EVIDENCE_SCHEMA =
   "agentic-claim-only-existing-successor-promotion-evidence/v1";
+const PROTECTED_ADVANCE_FRAME_SCHEMA =
+  "agentic-claim-only-waiting-bridge-protected-advance-frame/v1";
+const PROTECTED_ADVANCE_PROOF_SCHEMA =
+  "agentic-claim-only-waiting-bridge-protected-advance-proof/v1";
+const PROTECTED_ADVANCE_PLAN_SCHEMA =
+  "agentic-claim-only-waiting-bridge-protected-advance-plan/v1";
+const PROTECTED_ADVANCE_AUTHORIZATION_SCHEMA =
+  "agentic-claim-only-waiting-bridge-protected-advance-authorization/v1";
+const PROTECTED_ADVANCE_RECEIPT_SCHEMA =
+  "agentic-claim-only-waiting-bridge-protected-advance-receipt/v1";
+const PROTECTED_ADVANCE_OPERATION = "claim-only-waiting-bridge-protected-advance";
+const PROTECTED_ADVANCE_ALLOWED_EFFECTS = Object.freeze([
+  "private-external-plan", "private-external-authorization", "private-external-receipt",
+  "adopt-existing-bridge-retirement-terminal",
+]);
+const PROTECTED_ADVANCE_FORBIDDEN_EFFECTS = Object.freeze([
+  "cloud-mutation", "provider-mutation", "source-byte", "git-object", "git-ref", "branch",
+  "worktree", "writer-lease", "pull-request", "pull-request-marker", "claim", "continue",
+  "integrate", "retire", "deployment", "cleanup", "rollback",
+]);
 
 const DIGEST = /^[0-9a-f]{64}$/u;
 const SHA = /^[0-9a-f]{40}$/u;
@@ -269,10 +289,16 @@ export function normalizeWaitingBridgeResult(value, operation = value?.operation
     || canonicalJson(value.forbiddenEffects) !== canonicalJson(FORBIDDEN_EFFECTS)) {
     invalid("result seal");
   }
+  const protectedAdvanceReceipt = value.protectedAdvanceReceipt === undefined ? null
+    : normalizeProtectedAdvanceReceipt(value.protectedAdvanceReceipt);
+  if (protectedAdvanceReceipt && operation !== BRIDGE_RETIREMENT_OPERATION) {
+    invalid("result protected-advance operation");
+  }
   const expectedKeys = ["anchorClaimId", "authorizationDigest", "bridgeClaimId",
     "effect", "effectDigest", "forbiddenEffects", "operation", "planDigest",
     "preservationDigest", "schema", "status", "successorClaimId",
-    "terminalRelevantDigest"].sort();
+    "terminalRelevantDigest", ...(protectedAdvanceReceipt ? ["protectedAdvanceReceipt"] : [])]
+    .sort();
   if (canonicalJson(Object.keys(core).sort()) !== canonicalJson(expectedKeys)) {
     invalid("result fields");
   }
@@ -281,7 +307,9 @@ export function normalizeWaitingBridgeResult(value, operation = value?.operation
     "terminalRelevantDigest"]) digest(core[name], `result ${name}`);
   const effectKeys = operation === BRIDGE_RETIREMENT_OPERATION
     ? ["claimId", "operationKey", "operationReceiptDigest", "requestDigest",
-      "terminalClaimDigest", "terminalEntryDigest"]
+      "terminalClaimDigest", "terminalEntryDigest",
+      ...(protectedAdvanceReceipt
+        ? ["protectedAdvanceReceiptDigest", "currentPreservationDigest"] : [])]
     : ["authorityOutputDigest", "claimId", "evaluationTime", "expiresAt",
       "operationKey", "operationReceiptDigest", "requestDigest",
       "terminalClaimDigest", "terminalEntryDigest"];
@@ -298,7 +326,18 @@ export function normalizeWaitingBridgeResult(value, operation = value?.operation
     instant(core.effect.evaluationTime, "result promotion evaluation");
     instant(core.effect.expiresAt, "result promotion expiry");
   }
-  return deepFreeze({ ...core, resultDigest: value.resultDigest });
+  if (protectedAdvanceReceipt && (
+    core.effect.protectedAdvanceReceiptDigest !== protectedAdvanceReceipt.receiptDigest
+    || core.effect.currentPreservationDigest
+      !== protectedAdvanceReceipt.currentPreservationDigest
+    || core.effect.terminalEntryDigest !== protectedAdvanceReceipt.terminalEntryDigest
+    || core.preservationDigest !== protectedAdvanceReceipt.currentPreservationDigest
+  )) invalid("result protected-advance join");
+  return deepFreeze({
+    ...core,
+    ...(protectedAdvanceReceipt ? { protectedAdvanceReceipt } : {}),
+    resultDigest: value.resultDigest,
+  });
 }
 
 function sealPlan(operation, evidence) {
@@ -343,6 +382,9 @@ function completionResult(plan, receipts) {
     terminalRelevantDigest: verified.terminalRelevantDigest,
     preservationDigest: verified.preservationDigest,
     forbiddenEffects: FORBIDDEN_EFFECTS,
+    ...(verified.protectedAdvanceReceipt ? {
+      protectedAdvanceReceipt: verified.protectedAdvanceReceipt,
+    } : {}),
   };
   return deepFreeze({ ...core, resultDigest: digestValue(core) });
 }
@@ -425,6 +467,12 @@ function normalizePhaseValues(plan, phase, value, prior) {
   }
   if (["bridge-retired", "successor-promoted"].includes(phase)) {
     const claim = phase === "bridge-retired" ? plan.evidence.bridge : plan.evidence.successor;
+    const protectedAdvanceReceipt = phase === "bridge-retired"
+      && value.protectedAdvanceReceipt !== undefined
+      ? normalizeProtectedAdvanceReceipt(value.protectedAdvanceReceipt, {
+        plan,
+        terminalEntryDigest: value.terminalEntryDigest,
+      }) : null;
     const normalized = {
       operationKey,
       claimId: exact(value.claimId, claim.claimId, `${phase} claim`),
@@ -444,6 +492,7 @@ function normalizePhaseValues(plan, phase, value, prior) {
         evaluationTime: instant(value.evaluationTime, "successor promotion evaluation"),
         expiresAt: instant(value.expiresAt, "successor promotion expiry"),
       } : {}),
+      ...(protectedAdvanceReceipt ? { protectedAdvanceReceipt } : {}),
       effectDigest: digest(value.effectDigest, `${phase} effect`),
     };
     if (normalized.providerMutation !== (normalized.disposition === "projected")) {
@@ -453,6 +502,11 @@ function normalizePhaseValues(plan, phase, value, prior) {
       && normalized.requestDigest !== bridgeRetirementRequestDigest(plan)) {
       invalid("bridge retirement request join");
     }
+    if (protectedAdvanceReceipt && (
+      normalized.disposition !== "adopted-response-loss"
+      || normalized.providerMutation !== false
+      || normalized.transportReceiptDigest !== null
+    )) invalid("protected-advance cloud-free disposition");
     if (phase === "successor-promoted" && (
       Date.parse(normalized.expiresAt) - Date.parse(normalized.evaluationTime)
         !== plan.evidence.ttlSeconds * 1_000
@@ -467,6 +521,19 @@ function normalizePhaseValues(plan, phase, value, prior) {
   if (phase === "verified") {
     const effectPhase = plan.operation === BRIDGE_RETIREMENT_OPERATION
       ? "bridge-retired" : "successor-promoted";
+    const protectedAdvanceReceipt = prior[effectPhase].protectedAdvanceReceipt || null;
+    if ((value.protectedAdvanceReceipt !== undefined) !== Boolean(protectedAdvanceReceipt)) {
+      invalid("verified protected-advance presence");
+    }
+    const verifiedProtectedAdvanceReceipt = protectedAdvanceReceipt
+      ? normalizeProtectedAdvanceReceipt(value.protectedAdvanceReceipt, {
+        plan,
+        terminalEntryDigest: prior[effectPhase].terminalEntryDigest,
+      }) : null;
+    if (protectedAdvanceReceipt && canonicalJson(verifiedProtectedAdvanceReceipt)
+      !== canonicalJson(protectedAdvanceReceipt)) {
+      invalid("verified protected-advance receipt join");
+    }
     return exactKeys({
       operationKey,
       effectDigest: exact(value.effectDigest,
@@ -475,7 +542,11 @@ function normalizePhaseValues(plan, phase, value, prior) {
         waitingBridgeTerminalRelevantDigest(plan, prior[effectPhase]),
         "terminal relevant digest"),
       preservationDigest: exact(value.preservationDigest,
-        waitingBridgePreservationDigest(plan), "terminal preservation"),
+        protectedAdvanceReceipt?.currentPreservationDigest
+          || waitingBridgePreservationDigest(plan), "terminal preservation"),
+      ...(verifiedProtectedAdvanceReceipt ? {
+        protectedAdvanceReceipt: verifiedProtectedAdvanceReceipt,
+      } : {}),
     }, value, phase);
   }
   if (phase === "complete") {
@@ -522,6 +593,20 @@ function normalizePromotionEvidence(value) {
     "Phase A bridge retirement entry");
   const terminalReceipt = claimOnlyOperationReceiptForEntry(terminal, "retired");
   const phaseAEffect = retirementResult.effect;
+  const resultProtectedAdvanceReceipt = retirementResult.protectedAdvanceReceipt || null;
+  const phaseAProtectedAdvanceReceipt = evidence.phaseA.protectedAdvanceReceipt === undefined
+    ? null : normalizeProtectedAdvanceReceipt(evidence.phaseA.protectedAdvanceReceipt, {
+      plan: retirementPlan,
+      terminalEntryDigest: terminal.digest,
+    });
+  if (Boolean(resultProtectedAdvanceReceipt) !== Boolean(phaseAProtectedAdvanceReceipt)
+    || (resultProtectedAdvanceReceipt && canonicalJson(resultProtectedAdvanceReceipt)
+      !== canonicalJson(phaseAProtectedAdvanceReceipt))) {
+    invalid("Phase A protected-advance receipt presence/join");
+  }
+  const expectedPhaseAPreservationDigest = resultProtectedAdvanceReceipt
+    ? resultProtectedAdvanceReceipt.currentPreservationDigest
+    : waitingBridgePreservationDigest(retirementPlan);
   if (retirementPlan.operation !== BRIDGE_RETIREMENT_OPERATION
     || retirementResult.planDigest !== retirementPlan.planDigest
     || retirementResult.anchorClaimId !== retirementPlan.anchorClaimId
@@ -554,8 +639,7 @@ function normalizePromotionEvidence(value) {
     || retirementResult.effectDigest !== digestValue(phaseAEffect)
     || retirementResult.terminalRelevantDigest
       !== waitingBridgeTerminalRelevantDigest(retirementPlan, phaseAEffect)
-    || retirementResult.preservationDigest
-      !== waitingBridgePreservationDigest(retirementPlan)
+    || retirementResult.preservationDigest !== expectedPhaseAPreservationDigest
     || terminal.idempotencyKey !== digestValue(waitingBridgeOperationKey(
       retirementPlan, "bridge-retired"))
     || retirementPlan.anchorClaimId !== evidence.anchor.claimId
@@ -566,8 +650,9 @@ function normalizePromotionEvidence(value) {
     || retirementPlan.evidence.anchorLineageCount !== evidence.anchorLineageCount
     || canonicalJson(retirementPlan.evidence.associations)
       !== canonicalJson(evidence.associations)
-    || canonicalJson(retirementPlan.evidence.preservation)
-      !== canonicalJson(evidence.preservation)
+    || (!resultProtectedAdvanceReceipt
+      && canonicalJson(retirementPlan.evidence.preservation)
+        !== canonicalJson(evidence.preservation))
     || canonicalJson(retirementPlan.evidence.directSuccessorTopology)
       !== canonicalJson(evidence.directSuccessorTopology)
     || canonicalJson(retirementPlan.evidence.bridge) !== canonicalJson(evidence.bridge)
@@ -577,6 +662,41 @@ function normalizePromotionEvidence(value) {
   if (evidence.bridgeCurrentCount !== 0 || evidence.bridgeLineageCount !== 2) {
     invalid("retired bridge lineage cardinality");
   }
+  if (resultProtectedAdvanceReceipt) {
+    const currentFrame = {
+      schema: PROTECTED_ADVANCE_FRAME_SCHEMA,
+      repository: evidence.repository,
+      controller: evidence.controller,
+      canonical: evidence.canonical,
+      anchor: evidence.anchor,
+      bridge: evidence.bridge,
+      successor: evidence.successor,
+      anchorEntry: evidence.anchorEntry,
+      bridgeEntry: evidence.bridgeEntry,
+      successorEntry: evidence.successorEntry,
+      anchorLineageCount: evidence.anchorLineageCount,
+      bridgeLineageCount: evidence.bridgeLineageCount,
+      successorLineageCount: evidence.successorLineageCount,
+      associations: evidence.associations,
+      preservation: evidence.preservation,
+      directSuccessorTopology: evidence.directSuccessorTopology,
+      topology: evidence.topology,
+      bridgeTerminalEntry: terminal,
+    };
+    if (canonicalJson(currentFrame)
+      !== canonicalJson(resultProtectedAdvanceReceipt.planSnapshot.currentFrameSnapshot)
+      || digestValue(currentFrame) !== resultProtectedAdvanceReceipt.currentFrameDigest
+      || digestValue(evidence.preservation)
+        !== resultProtectedAdvanceReceipt.currentPreservationDigest
+      || phaseAEffect.protectedAdvanceReceiptDigest
+        !== resultProtectedAdvanceReceipt.receiptDigest
+      || phaseAEffect.currentPreservationDigest
+        !== resultProtectedAdvanceReceipt.currentPreservationDigest
+      || phaseAEffect.terminalEntryDigest
+        !== resultProtectedAdvanceReceipt.terminalEntryDigest) {
+      invalid("Phase A protected-advance current frame binding");
+    }
+  }
   assertPriority(evidence.priority, evidence.successor);
   return deepFreeze({
     ...evidence,
@@ -585,6 +705,9 @@ function normalizePromotionEvidence(value) {
       plan: retirementPlan,
       result: retirementResult,
       bridgeRetirementEntry: terminal,
+      ...(phaseAProtectedAdvanceReceipt ? {
+        protectedAdvanceReceipt: phaseAProtectedAdvanceReceipt,
+      } : {}),
     }),
   });
 }
@@ -970,6 +1093,294 @@ function normalizePreservation(value) {
   }
 }
 
+function normalizeProtectedAdvanceFrame(value, retirementPlan) {
+  const frame = clone(object(value, "protected-advance current frame"));
+  exactObject(frame, "protected-advance current frame", [
+    "schema", "repository", "controller", "canonical", "anchor", "bridge", "successor",
+    "anchorEntry", "bridgeEntry", "successorEntry", "anchorLineageCount",
+    "bridgeLineageCount", "successorLineageCount", "associations", "preservation",
+    "directSuccessorTopology", "topology", "bridgeTerminalEntry",
+  ]);
+  if (frame.schema !== PROTECTED_ADVANCE_FRAME_SCHEMA) invalid("protected-advance frame schema");
+  const prior = retirementPlan.evidence;
+  for (const key of ["repository", "anchor", "bridge", "successor", "anchorEntry",
+    "bridgeEntry", "successorEntry", "associations", "directSuccessorTopology", "topology"]) {
+    if (canonicalJson(frame[key]) !== canonicalJson(prior[key])) {
+      invalid(`protected-advance frame preserved ${key}`);
+    }
+  }
+  exactObject(frame.repository, "protected-advance repository", [
+    "targetRepository", "providerRepositoryId", "nameWithOwner", "topLevelDigest",
+    "gitCommonDirectoryDigest", "originUrlDigest",
+  ]);
+  normalizeRepository(frame.repository);
+  exactObject(frame.controller, "protected-advance controller", [
+    "repository", "providerRepositoryId", "nameWithOwner", "branch", "headSha",
+    "originMainSha", "remoteMainSha", "runtimeDigest", "clean", "protected",
+    "protectionDigest",
+  ]);
+  normalizeController(frame.controller);
+  exactObject(frame.canonical, "protected-advance canonical", [
+    "targetRepository", "mainSha", "anchorBaseContained", "bridgeBaseContained",
+    "successorBaseContained",
+  ]);
+  normalizeCanonical(frame.canonical);
+  exactObject(frame.preservation, "protected-advance preservation", [
+    "gitRefsDigest", "gitWorktreesDigest", "registryDigest", "providerDigest",
+    "associationDigest",
+  ]);
+  normalizePreservation(frame.preservation);
+  if (frame.repository.targetRepository !== frame.controller.repository
+    || frame.repository.nameWithOwner !== frame.controller.nameWithOwner
+    || frame.repository.providerRepositoryId !== frame.controller.providerRepositoryId
+    || frame.canonical.targetRepository !== frame.repository.targetRepository
+    || frame.canonical.mainSha !== frame.controller.remoteMainSha
+    || frame.preservation.associationDigest !== digestValue(frame.associations)
+    || frame.anchorLineageCount !== prior.anchorLineageCount
+    || frame.bridgeLineageCount !== prior.bridgeLineageCount + 1
+    || frame.successorLineageCount !== prior.successorLineageCount) {
+    invalid("protected-advance current frame binding");
+  }
+  const terminal = normalizeEntry(frame.bridgeTerminalEntry,
+    "protected-advance bridge terminal entry");
+  const bridge = prior.bridge;
+  const immutable = ["actorId", "deviceId", "sessionId", "workItemId", "repositoryId",
+    "canonicalBaseRevision", "laneRevision", "writeSetDigest", "leaseEpoch", "eligibleSince"];
+  if (terminal.schema !== ENTRY_SCHEMA || terminal.action !== "retire"
+    || terminal.claimId !== bridge.claimId || terminal.repositoryId !== bridge.repositoryId
+    || terminal.idempotencyKey
+      !== digestValue(waitingBridgeOperationKey(retirementPlan, "bridge-retired"))
+    || terminal.requestDigest !== bridgeRetirementRequestDigest(retirementPlan)
+    || terminal.state !== "retired"
+    || terminal.transitionCounter !== bridge.transitionCounter + 1
+    || terminal.heartbeatCounter !== bridge.heartbeatCounter
+    || terminal.recordedExpiresAt !== bridge.expiresAt
+    || terminal.predecessorClaimId !== bridge.predecessorClaimId
+    || terminal.reviewRequestId !== null
+    || immutable.some(name => canonicalJson(terminal[name]) !== canonicalJson(bridge[name]))
+    || canonicalJson(terminal.declaredWriteScope) !== canonicalJson(bridge.declaredWriteScope)
+    || terminal.retirement?.reason !== "superseded"
+    || terminal.retirement?.finalRevision !== bridge.laneRevision
+    || terminal.retirement?.reviewRequestId !== null
+    || terminal.retirement?.integrationReceiptDigest !== null
+    || terminal.retirement?.retiredAt !== terminal.evaluationTime) {
+    invalid("protected-advance bridge terminal semantics");
+  }
+  claimOnlyOperationReceiptForEntry(terminal, "retired");
+  frame.bridgeTerminalEntry = terminal;
+  return deepFreeze(frame);
+}
+
+function normalizeProtectedAdvanceProof(value, retirementJournal, frame) {
+  const proof = clone(object(value, "protected-advance proof"));
+  exactObject(proof, "protected-advance proof", [
+    "schema", "repository", "priorMainSha", "priorTreeSha", "currentMainSha",
+    "currentTreeSha", "mergeBaseSha", "ancestry", "changedPaths", "changedPathsDigest",
+    "protectedWriteScope", "protectedWriteSetDigest", "overlap", "priorControllerDigest",
+    "currentControllerDigest", "currentFrameDigest", "protectedAdvanceDigest",
+  ]);
+  if (!Array.isArray(proof.changedPaths) || proof.changedPaths.length === 0) {
+    invalid("protected-advance changed paths");
+  }
+  const changedPaths = normalizeWriteSet(proof.changedPaths.map(path => `path:${text(
+    path, "protected-advance changed path",
+  )}`)).map(scope => scope.slice("path:".length));
+  const protectedWriteScope = normalizeWriteSet(proof.protectedWriteScope);
+  const expectedWriteScope = normalizeWriteSet([
+    ...retirementJournal.plan.evidence.anchor.declaredWriteScope,
+    ...retirementJournal.plan.evidence.bridge.declaredWriteScope,
+    ...retirementJournal.plan.evidence.successor.declaredWriteScope,
+  ]);
+  const changedWriteSet = normalizeWriteSet(changedPaths.map(path => `path:${path}`));
+  const core = { ...proof };
+  delete core.protectedAdvanceDigest;
+  core.changedPaths = changedPaths;
+  core.protectedWriteScope = protectedWriteScope;
+  const priorMainSha = retirementJournal.plan.evidence.controller.remoteMainSha;
+  const currentMainSha = frame.controller.remoteMainSha;
+  if (proof.schema !== PROTECTED_ADVANCE_PROOF_SCHEMA
+    || proof.repository !== frame.repository.targetRepository
+    || sha(proof.priorMainSha, "protected-advance prior main") !== priorMainSha
+    || sha(proof.currentMainSha, "protected-advance current main") !== currentMainSha
+    || proof.priorMainSha === proof.currentMainSha
+    || sha(proof.mergeBaseSha, "protected-advance merge base") !== proof.priorMainSha
+    || proof.ancestry !== "strict-protected-main-descendant" || proof.overlap !== "none"
+    || canonicalJson(proof.changedPaths) !== canonicalJson(changedPaths)
+    || canonicalJson(protectedWriteScope) !== canonicalJson(expectedWriteScope)
+    || writeSetsOverlap(changedWriteSet, protectedWriteScope)
+    || proof.changedPathsDigest !== digestValue(changedPaths)
+    || proof.protectedWriteSetDigest !== digestValue(protectedWriteScope)
+    || proof.priorControllerDigest
+      !== digestValue(retirementJournal.plan.evidence.controller)
+    || proof.currentControllerDigest !== digestValue(frame.controller)
+    || proof.currentFrameDigest !== digestValue(frame)
+    || proof.protectedAdvanceDigest !== digestValue(core)) {
+    invalid("protected-advance proof binding");
+  }
+  sha(proof.priorTreeSha, "protected-advance prior tree");
+  sha(proof.currentTreeSha, "protected-advance current tree");
+  return deepFreeze({ ...core, protectedAdvanceDigest: proof.protectedAdvanceDigest });
+}
+
+function normalizeProtectedAdvancePlanSnapshot(value) {
+  const snapshot = clone(object(value, "protected-advance plan snapshot"));
+  exactObject(snapshot, "protected-advance plan snapshot", [
+    "schema", "operation", "kind", "retirementPlanDigest",
+    "retirementJournalDigest", "retirementJournalSnapshot",
+    "retirementIntentReceiptDigest", "priorEvidenceDigest",
+    "priorProtectedFrameDigest", "priorPreservationDigest",
+    "currentFrameSnapshot", "currentFrameDigest", "currentPreservationDigest",
+    "protectedAdvanceSnapshot", "protectedAdvanceDigest", "terminalEntryDigest",
+    "allowedEffects", "forbiddenEffects", "cloudEffect", "providerMutation",
+    "planDigest", "exactAuthorization",
+  ]);
+  const retirementJournal = normalizeWaitingBridgeJournal(snapshot.retirementJournalSnapshot);
+  if (retirementJournal.operation !== BRIDGE_RETIREMENT_OPERATION
+    || retirementJournal.state?.phase !== "retirement-intent") {
+    invalid("protected-advance retirement-intent checkpoint");
+  }
+  const frame = normalizeProtectedAdvanceFrame(
+    snapshot.currentFrameSnapshot, retirementJournal.plan,
+  );
+  const proof = normalizeProtectedAdvanceProof(
+    snapshot.protectedAdvanceSnapshot, retirementJournal, frame,
+  );
+  const prior = retirementJournal.plan.evidence;
+  const priorFrame = Object.fromEntries([
+    "repository", "controller", "canonical", "anchor", "bridge", "successor", "anchorEntry",
+    "bridgeEntry", "successorEntry", "anchorLineageCount", "bridgeLineageCount",
+    "successorLineageCount", "associations", "preservation", "directSuccessorTopology",
+    "topology", "peerFrame",
+  ].map(key => [key, prior[key]]));
+  const core = { ...snapshot, currentFrameSnapshot: frame, protectedAdvanceSnapshot: proof };
+  delete core.planDigest;
+  delete core.exactAuthorization;
+  if (snapshot.schema !== PROTECTED_ADVANCE_PLAN_SCHEMA
+    || snapshot.operation !== PROTECTED_ADVANCE_OPERATION
+    || snapshot.kind !== "retirement-intent-response-loss-terminal-adoption"
+    || snapshot.retirementPlanDigest !== retirementJournal.plan.planDigest
+    || snapshot.retirementJournalDigest !== retirementJournal.journalDigest
+    || snapshot.retirementIntentReceiptDigest
+      !== retirementJournal.state.receipts["retirement-intent"].receiptDigest
+    || snapshot.priorEvidenceDigest !== digestValue(prior)
+    || snapshot.priorProtectedFrameDigest !== digestValue(priorFrame)
+    || snapshot.priorPreservationDigest !== digestValue(prior.preservation)
+    || snapshot.currentFrameDigest !== digestValue(frame)
+    || snapshot.currentPreservationDigest !== digestValue(frame.preservation)
+    || snapshot.protectedAdvanceDigest !== proof.protectedAdvanceDigest
+    || snapshot.terminalEntryDigest !== frame.bridgeTerminalEntry.digest
+    || canonicalJson(snapshot.allowedEffects)
+      !== canonicalJson(PROTECTED_ADVANCE_ALLOWED_EFFECTS)
+    || canonicalJson(snapshot.forbiddenEffects)
+      !== canonicalJson(PROTECTED_ADVANCE_FORBIDDEN_EFFECTS)
+    || snapshot.cloudEffect !== false || snapshot.providerMutation !== false
+    || snapshot.planDigest !== digestValue(core)
+    || snapshot.exactAuthorization
+      !== `authorize ${PROTECTED_ADVANCE_OPERATION} ${snapshot.planDigest}`) {
+    invalid("protected-advance plan binding");
+  }
+  return deepFreeze({ ...core, planDigest: snapshot.planDigest,
+    exactAuthorization: snapshot.exactAuthorization });
+}
+
+function normalizeProtectedAdvanceReceipt(value, {
+  plan = null, terminalEntryDigest = null,
+} = {}) {
+  const received = clone(object(value, "protected-advance receipt"));
+  exactObject(received, "protected-advance receipt", [
+    "schema", "operation", "status", "disposition", "planDigest", "planSnapshot",
+    "authorizationDigest", "authorizationSnapshot", "retirementPlanDigest",
+    "retirementJournalDigest", "retirementIntentReceiptDigest",
+    "priorPreservationDigest", "currentPreservationDigest", "currentFrameDigest",
+    "protectedAdvanceDigest", "terminalEntryDigest", "cloudEffect",
+    "providerMutation", "receiptDigest",
+  ]);
+  const snapshot = normalizeProtectedAdvancePlanSnapshot(received.planSnapshot);
+  const authorization = clone(object(
+    received.authorizationSnapshot, "protected-advance authorization snapshot",
+  ));
+  const frame = snapshot.currentFrameSnapshot;
+  exactObject(authorization, "protected-advance authorization snapshot", [
+    "schema", "operation", "planDigest", "statement", "authorizationDigest",
+  ]);
+  const retirementJournal = normalizeWaitingBridgeJournal(
+    snapshot.retirementJournalSnapshot,
+  );
+  for (const name of [
+    "planDigest", "authorizationDigest", "retirementPlanDigest",
+    "retirementJournalDigest", "retirementIntentReceiptDigest",
+    "priorPreservationDigest", "currentPreservationDigest", "currentFrameDigest",
+    "protectedAdvanceDigest", "terminalEntryDigest", "receiptDigest",
+  ]) digest(received[name], `protected-advance ${name}`);
+  if (received.schema !== PROTECTED_ADVANCE_RECEIPT_SCHEMA
+    || received.operation !== "claim-only-waiting-bridge-protected-advance"
+    || received.status !== "complete"
+    || received.disposition !== "authorized-terminal-adoption"
+    || received.cloudEffect !== false || received.providerMutation !== false
+    || snapshot.schema !== PROTECTED_ADVANCE_PLAN_SCHEMA
+    || snapshot.operation !== PROTECTED_ADVANCE_OPERATION
+    || snapshot.kind !== "retirement-intent-response-loss-terminal-adoption"
+    || snapshot.cloudEffect !== false || snapshot.providerMutation !== false
+    || retirementJournal.operation !== BRIDGE_RETIREMENT_OPERATION
+    || retirementJournal.state?.phase !== "retirement-intent"
+    || retirementJournal.journalDigest !== snapshot.retirementJournalDigest
+    || retirementJournal.plan.planDigest !== snapshot.retirementPlanDigest
+    || retirementJournal.state.receipts["retirement-intent"].receiptDigest
+      !== snapshot.retirementIntentReceiptDigest
+    || snapshot.priorEvidenceDigest !== digestValue(retirementJournal.plan.evidence)
+    || snapshot.priorPreservationDigest
+      !== digestValue(retirementJournal.plan.evidence.preservation)
+    || snapshot.planDigest !== received.planDigest
+    || snapshot.retirementPlanDigest !== received.retirementPlanDigest
+    || snapshot.retirementJournalDigest !== received.retirementJournalDigest
+    || snapshot.retirementIntentReceiptDigest !== received.retirementIntentReceiptDigest
+    || snapshot.priorPreservationDigest !== received.priorPreservationDigest
+    || snapshot.currentPreservationDigest !== received.currentPreservationDigest
+    || snapshot.currentFrameDigest !== received.currentFrameDigest
+    || snapshot.protectedAdvanceDigest !== received.protectedAdvanceDigest
+    || snapshot.terminalEntryDigest !== received.terminalEntryDigest
+    || frame.schema !== PROTECTED_ADVANCE_FRAME_SCHEMA
+    || digestValue(frame) !== received.currentFrameDigest
+    || digestValue(frame.preservation) !== received.currentPreservationDigest
+    || frame.bridgeTerminalEntry?.digest !== received.terminalEntryDigest
+    || authorization.schema !== PROTECTED_ADVANCE_AUTHORIZATION_SCHEMA
+    || authorization.operation !== PROTECTED_ADVANCE_OPERATION
+    || authorization.planDigest !== received.planDigest
+    || authorization.statement !== snapshot.exactAuthorization
+    || authorization.authorizationDigest !== received.authorizationDigest) {
+    invalid("protected-advance receipt binding");
+  }
+  const authorizationCore = { ...authorization };
+  delete authorizationCore.authorizationDigest;
+  if (authorization.authorizationDigest !== digestValue(authorizationCore)) {
+    invalid("protected-advance authorization seal");
+  }
+  const planCore = { ...snapshot };
+  delete planCore.planDigest;
+  delete planCore.exactAuthorization;
+  if (snapshot.planDigest !== digestValue(planCore)
+    || snapshot.exactAuthorization
+      !== `authorize ${PROTECTED_ADVANCE_OPERATION} ${snapshot.planDigest}`) {
+    invalid("protected-advance plan seal");
+  }
+  received.planSnapshot = snapshot;
+  received.authorizationSnapshot = authorization;
+  const receiptCore = { ...received };
+  delete receiptCore.receiptDigest;
+  if (received.receiptDigest !== digestValue(receiptCore)) {
+    invalid("protected-advance receipt seal");
+  }
+  if (plan && (received.retirementPlanDigest !== plan.planDigest
+    || received.priorPreservationDigest !== digestValue(plan.evidence.preservation)
+    || canonicalJson(retirementJournal.plan) !== canonicalJson(plan))) {
+    invalid("protected-advance retirement plan join");
+  }
+  if (terminalEntryDigest && received.terminalEntryDigest !== terminalEntryDigest) {
+    invalid("protected-advance terminal entry join");
+  }
+  return deepFreeze(received);
+}
+
 function effectProjection(value) {
   object(value, "effect receipt");
   return deepFreeze({
@@ -983,6 +1394,21 @@ function effectProjection(value) {
       authorityOutputDigest: value.authorityOutputDigest,
       evaluationTime: value.evaluationTime,
       expiresAt: value.expiresAt,
+    } : {}),
+    ...(value.protectedAdvanceReceipt ? {
+      protectedAdvanceReceiptDigest: value.protectedAdvanceReceipt.receiptDigest,
+      currentPreservationDigest:
+        value.protectedAdvanceReceipt.currentPreservationDigest,
+    } : value.protectedAdvanceReceiptDigest !== undefined
+      || value.currentPreservationDigest !== undefined ? {
+        protectedAdvanceReceiptDigest: digest(
+          value.protectedAdvanceReceiptDigest,
+          "projected protected-advance receipt",
+        ),
+        currentPreservationDigest: digest(
+          value.currentPreservationDigest,
+          "projected current preservation",
+        ),
     } : {}),
   });
 }
@@ -1000,6 +1426,13 @@ function exactKeys(normalized, source, label) {
   if (canonicalJson(Object.keys(normalized).sort())
     !== canonicalJson(Object.keys(source).sort())) invalid(`${label} fields`);
   return deepFreeze(normalized);
+}
+function exactObject(value, label, keys) {
+  object(value, label);
+  if (canonicalJson(Object.keys(value).sort()) !== canonicalJson([...keys].sort())) {
+    invalid(`${label} fields`);
+  }
+  return value;
 }
 function clone(value) { return JSON.parse(canonicalJson(value)); }
 function object(value, label) { if (!value || typeof value !== "object" || Array.isArray(value)) invalid(label); return value; }

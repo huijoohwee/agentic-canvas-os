@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Responsibility: Expose private planning and exact authorization for both bridge phases.
-import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import {
+  closeSync, existsSync, lstatSync, openSync, readFileSync, realpathSync, writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -11,10 +13,12 @@ import { createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter }
 
 const COMMANDS = new Set([
   "plan-retirement", "run-retirement", "plan-promotion", "run-promotion",
+  "plan-protected-advance",
 ]);
 const OPTIONS = new Set([
   "anchor-claim-id", "auth-file", "authority-output", "bridge-claim-id",
   "controller-root", "json", "ledger-repository", "plan-digest", "repository",
+  "protected-advance-auth-file", "protected-advance-output", "protected-advance-plan",
   "retirement-state-path", "state-path", "successor-claim-id", "target-repository",
   "ttl-seconds",
 ]);
@@ -25,9 +29,12 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
   const [command = "plan-retirement", ...tail] = argumentsList;
   if (!COMMANDS.has(command)) throw new Error(usage());
   const options = parseOptions(tail);
+  const protectedAdvancePlanning = command === "plan-protected-advance";
   const promotion = command.endsWith("promotion");
   const running = command.startsWith("run-");
-  rejectIrrelevantOptions(options, { promotion, running });
+  rejectIrrelevantOptions(options, {
+    command, promotion, protectedAdvancePlanning, running,
+  });
   const repository = path.resolve(required(options, "repository"));
   const controllerRoot = path.resolve(options.get("controller-root") || CONTROLLER_ROOT);
   const statePath = externalPrivatePath(required(options, "state-path"), {
@@ -45,8 +52,22 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
     ? externalPrivatePath(required(options, "auth-file"), {
       repository, controllerRoot, label: "authorization path",
     }) : null;
+  const protectedAdvanceOutputPath = protectedAdvancePlanning
+    ? externalPrivatePath(required(options, "protected-advance-output"), {
+      repository, controllerRoot, label: "protected-advance output path",
+    }) : null;
+  const protectedAdvancePlanPath = options.has("protected-advance-plan")
+    ? externalPrivatePath(required(options, "protected-advance-plan"), {
+      repository, controllerRoot, label: "protected-advance plan path",
+    }) : null;
+  const protectedAdvanceAuthorizationPath = options.has("protected-advance-auth-file")
+    ? externalPrivatePath(required(options, "protected-advance-auth-file"), {
+      repository, controllerRoot, label: "protected-advance authorization path",
+    }) : null;
   const privatePaths = [
     statePath, retirementStatePath, authorityOutputPath, authorizationPath,
+    protectedAdvanceOutputPath, protectedAdvancePlanPath,
+    protectedAdvanceAuthorizationPath,
   ].filter(Boolean);
   if (new Set(privatePaths).size !== privatePaths.length) {
     throw new Error("Journal, retirement journal, authority output, and authorization paths must be distinct.");
@@ -70,7 +91,25 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
       authorityOutputPath,
       ttlSeconds: positiveInteger(required(options, "ttl-seconds"), "promotion TTL"),
     } : {}),
+    ...(protectedAdvancePlanPath ? {
+      protectedAdvancePlan: readPrivateJson(
+        protectedAdvancePlanPath, "protected-advance plan",
+      ),
+      protectedAdvanceAuthorization: readAuthorization(
+        protectedAdvanceAuthorizationPath,
+      ),
+    } : {}),
   });
+  if (protectedAdvancePlanning) {
+    const plan = await adapter.planProtectedAdvance();
+    writePrivateJsonExclusive(protectedAdvanceOutputPath, plan);
+    return Object.freeze({
+      operation: plan.operation,
+      planDigest: plan.planDigest,
+      exactAuthorization: plan.exactAuthorization,
+      outputPath: protectedAdvanceOutputPath,
+    });
+  }
   const controller = createController({ adapter });
   if (!running) {
     return promotion ? controller.planPromotion() : controller.planRetirement();
@@ -97,12 +136,51 @@ export async function runCli(argumentsList = process.argv.slice(2)) {
   }
 }
 
-function rejectIrrelevantOptions(options, { promotion, running }) {
+function rejectIrrelevantOptions(options, {
+  command, promotion, protectedAdvancePlanning, running,
+}) {
   const forbidden = [];
   if (!promotion) forbidden.push("retirement-state-path", "authority-output", "ttl-seconds");
   if (!running) forbidden.push("auth-file", "plan-digest");
+  if (!protectedAdvancePlanning) forbidden.push("protected-advance-output");
+  if (command !== "run-retirement") {
+    forbidden.push("protected-advance-plan", "protected-advance-auth-file");
+  } else if (options.has("protected-advance-plan")
+    !== options.has("protected-advance-auth-file")) {
+    throw new Error(
+      "--protected-advance-plan and --protected-advance-auth-file must be paired.",
+    );
+  }
   for (const name of forbidden) {
     if (options.has(name)) throw new Error(`--${name} is not accepted by this command.`);
+  }
+}
+
+function readPrivateJson(value, label) {
+  const stat = lstatSync(value);
+  const currentUid = typeof process.getuid === "function" ? process.getuid() : stat.uid;
+  if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o777) !== 0o600
+    || stat.uid !== currentUid) {
+    throw new Error(`${label} must be owner-held, regular, non-symlinked, and mode 0600.`);
+  }
+  try { return JSON.parse(readFileSync(value, "utf8")); } catch {
+    throw new Error(`${label} must contain one JSON object.`);
+  }
+}
+
+function writePrivateJsonExclusive(value, payload) {
+  let descriptor;
+  try {
+    descriptor = openSync(value, "wx", 0o600);
+    writeFileSync(descriptor, `${JSON.stringify(payload)}\n`);
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+  const stat = lstatSync(value);
+  const currentUid = typeof process.getuid === "function" ? process.getuid() : stat.uid;
+  if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o777) !== 0o600
+    || stat.uid !== currentUid) {
+    throw new Error("Protected-advance output must remain owner-held and mode 0600.");
   }
 }
 
@@ -205,13 +283,17 @@ function publicMessage(error) {
 }
 function usage() {
   return "Usage: claim-only-waiting-bridge-reconciliation.mjs "
-    + "<plan-retirement|run-retirement|plan-promotion|run-promotion> "
+    + "<plan-retirement|run-retirement|plan-promotion|run-promotion"
+    + "|plan-protected-advance> "
     + "--repository=<path> --target-repository=<owner/name> "
     + "--anchor-claim-id=<digest> --bridge-claim-id=<digest> "
     + "--successor-claim-id=<digest> --state-path=<private-json> "
     + "[--retirement-state-path=<private-json> --ttl-seconds=<60..86400> "
     + "--authority-output=<private-json>] [--ledger-repository=<owner/name>] "
-    + "[--plan-digest=<digest> --auth-file=<private-text>] [--json]";
+    + "[--plan-digest=<digest> --auth-file=<private-text>] [--json]"
+    + " [--protected-advance-output=<private-json>] "
+    + "[--protected-advance-plan=<private-json> "
+    + "--protected-advance-auth-file=<private-text>]";
 }
 
 const isEntrypoint = process.argv[1]

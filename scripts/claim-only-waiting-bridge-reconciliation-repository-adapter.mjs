@@ -34,6 +34,13 @@ import {
 import {
   validateClaimOnlyRetirementTerminal,
 } from "./claim-only-partial-start-retirement-controller.mjs";
+import {
+  authorizeWaitingBridgeProtectedAdvance,
+  buildWaitingBridgeProtectedAdvancePlan,
+  buildWaitingBridgeProtectedAdvanceReceipt,
+  captureWaitingBridgeProtectedAdvance,
+  normalizeWaitingBridgeProtectedAdvancePlan,
+} from "./claim-only-waiting-bridge-protected-advance.mjs";
 
 const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const ENTRY_SCHEMA = "agentic-cloud-collaboration-entry/v2";
@@ -51,6 +58,8 @@ const RUNTIME_FILES = Object.freeze([
   "scripts/claim-only-waiting-bridge-reconciliation-controller.mjs",
   "scripts/claim-only-waiting-bridge-reconciliation-repository-adapter.mjs",
   "scripts/claim-only-waiting-bridge-reconciliation.mjs",
+  "scripts/claim-only-waiting-bridge-protected-advance.mjs",
+  "scripts/claim-only-partial-start-retirement-controller.mjs",
   "scripts/claim-only-partial-start-retirement-store.mjs",
 ]);
 
@@ -423,6 +432,22 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     && retirementStore.statePath === currentStore.statePath) {
     invalid("distinct retirement and promotion journals");
   }
+  const hasProtectedAdvancePlan = options.protectedAdvancePlan !== undefined
+    && options.protectedAdvancePlan !== null;
+  const hasProtectedAdvanceAuthorization = options.protectedAdvanceAuthorization !== undefined
+    && options.protectedAdvanceAuthorization !== null;
+  if (hasProtectedAdvancePlan !== hasProtectedAdvanceAuthorization) {
+    invalid("paired protected-advance plan and authorization");
+  }
+  const protectedAdvancePlan = hasProtectedAdvancePlan
+    ? normalizeWaitingBridgeProtectedAdvancePlan(options.protectedAdvancePlan) : null;
+  const protectedAdvanceAuthorization = protectedAdvancePlan
+    ? authorizeWaitingBridgeProtectedAdvance({
+      plan: protectedAdvancePlan,
+      authorization: exactText(
+        options.protectedAdvanceAuthorization, "protected-advance authorization",
+      ),
+    }) : null;
   const confirmed = new Map();
 
   function storeFor(operation) {
@@ -716,6 +741,66 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     };
   }
 
+  function protectedAdvanceFrame(frame) {
+    const evidence = baseEvidence(frame, BRIDGE_RETIREMENT_EVIDENCE_SCHEMA);
+    if (frame.bridgeMatches.length !== 0 || frame.bridgeEntries.length !== 2) {
+      invalid("protected-advance response-loss terminal");
+    }
+    return Object.freeze({
+      repository: evidence.repository,
+      controller: evidence.controller,
+      canonical: evidence.canonical,
+      anchor: evidence.anchor,
+      bridge: evidence.bridge,
+      successor: evidence.successor,
+      anchorEntry: evidence.anchorEntry,
+      bridgeEntry: evidence.bridgeEntry,
+      successorEntry: evidence.successorEntry,
+      anchorLineageCount: evidence.anchorLineageCount,
+      bridgeLineageCount: evidence.bridgeLineageCount,
+      successorLineageCount: evidence.successorLineageCount,
+      bridgeTerminalEntry: exactEntryProjection(frame.bridgeEntries.at(-1)),
+      associations: evidence.associations,
+      preservation: evidence.preservation,
+      directSuccessorTopology: evidence.directSuccessorTopology,
+      topology: evidence.topology,
+    });
+  }
+
+  function planProtectedAdvance() {
+    const raw = retirementStore.readJournal();
+    if (!raw) invalid("protected-advance retirement checkpoint");
+    const journal = normalizeWaitingBridgeJournal(raw);
+    if (journal.operation !== BRIDGE_RETIREMENT_OPERATION
+      || journal.state?.phase !== "retirement-intent") {
+      invalid("protected-advance retirement-intent checkpoint");
+    }
+    const frame = captureFrame();
+    const currentFrame = protectedAdvanceFrame(frame);
+    const protectedAdvance = captureWaitingBridgeProtectedAdvance({
+      journal,
+      currentFrame,
+      gitText: argumentsList => gitRaw(argumentsList, controllerRoot),
+    });
+    return buildWaitingBridgeProtectedAdvancePlan({
+      journal,
+      currentFrame,
+      protectedAdvance,
+    });
+  }
+
+  function protectedAdvanceReceipt(plan, frame) {
+    if (!protectedAdvancePlan) return null;
+    if (protectedAdvancePlan.retirementPlanDigest !== plan.planDigest) {
+      invalid("protected-advance retirement plan join");
+    }
+    return buildWaitingBridgeProtectedAdvanceReceipt({
+      plan: protectedAdvancePlan,
+      authorization: protectedAdvanceAuthorization,
+      currentFrame: protectedAdvanceFrame(frame),
+    });
+  }
+
   function observeRetirement() {
     const frame = captureFrame();
     if (frame.bridgeMatches.length !== 1 || frame.successorMatches.length !== 1
@@ -780,6 +865,10 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
         resultDigest: result.resultDigest,
         bridgeRetirementEntry: exactEntryProjection(terminal),
         effectDigest: result.effectDigest,
+        ...(prior.state.receipts["bridge-retired"].protectedAdvanceReceipt ? {
+          protectedAdvanceReceipt:
+            prior.state.receipts["bridge-retired"].protectedAdvanceReceipt,
+        } : {}),
       }),
     });
   }
@@ -797,6 +886,8 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
   }
 
   function requirePreservedPlanFrame(plan, frame) {
+    const advanceReceipt = protectedAdvanceReceipt(plan, frame);
+    if (advanceReceipt) return advanceReceipt;
     const fresh = baseEvidence(frame, plan.evidence.schema);
     const keys = [
       "repository", "controller", "canonical", "anchor", "bridge", "successor",
@@ -808,6 +899,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
         invalid(`preserved ${key} frame`);
       }
     }
+    return null;
   }
 
   function requireOriginalClaim(expected, matches, genesis, label) {
@@ -869,7 +961,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
   }
 
   function bridgeTerminal(frame, context, result = null) {
-    requirePreservedPlanFrame(context.plan, frame);
+    const advanceReceipt = requirePreservedPlanFrame(context.plan, frame);
     requireOriginalClaim(context.plan.evidence.anchor, frame.anchorMatches,
       frame.anchorEntries[0], "preserved anchor");
     requireOriginalClaim(context.plan.evidence.successor, frame.successorMatches,
@@ -897,6 +989,7 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
       transportReceiptDigest: execution?.receipt?.receiptDigest || null,
       disposition: execution ? "projected" : "adopted-response-loss",
       providerMutation: Boolean(execution),
+      ...(advanceReceipt ? { protectedAdvanceReceipt: advanceReceipt } : {}),
     };
     return Object.freeze({ ...values, effectDigest: waitingBridgeEffectDigest(values) });
   }
@@ -1148,7 +1241,10 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     return Object.freeze({
       effectDigest,
       terminalRelevantDigest: waitingBridgeTerminalRelevantDigest(plan, values),
-      preservationDigest: waitingBridgePreservationDigest(plan),
+      preservationDigest: values.protectedAdvanceReceipt?.currentPreservationDigest
+        || waitingBridgePreservationDigest(plan),
+      ...(values.protectedAdvanceReceipt !== undefined
+        ? { protectedAdvanceReceipt: values.protectedAdvanceReceipt } : {}),
     });
   }
 
@@ -1168,12 +1264,17 @@ export function createRepositoryClaimOnlyWaitingBridgeReconciliationAdapter(
     classifySuccessorPromoted,
     promoteSuccessor,
     verifyTerminal,
+    planProtectedAdvance,
   });
 }
 
 function text(value, label) {
   if (typeof value !== "string" || !value.trim()) invalid(label);
   return value.trim();
+}
+function exactText(value, label) {
+  if (typeof value !== "string" || !value || value !== value.trim()) invalid(label);
+  return value;
 }
 function digest(value, label) {
   if (!DIGEST.test(String(value || ""))) invalid(label);

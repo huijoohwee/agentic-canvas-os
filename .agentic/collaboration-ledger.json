@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6486,
-  "headDigest": "46f7b91a2679f47c351d450c4b1c27dfbbf97de9c8ed0ef6aebed089eaffdcfa",
+  "sequence": 6487,
+  "headDigest": "9aeae5c8df4d45d00903790d079b0a90edfe342ee58c803c20b217fcb9ea690d",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -329501,6 +329501,46 @@
       },
       "claimDigest": "2dbd09f3f558a2fff4f36f915305fcd0144a3f2e23b253e0fc49056be91dfa25",
       "digest": "46f7b91a2679f47c351d450c4b1c27dfbbf97de9c8ed0ef6aebed089eaffdcfa"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6487,
+      "parentDigest": "46f7b91a2679f47c351d450c4b1c27dfbbf97de9c8ed0ef6aebed089eaffdcfa",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "d72c2ffce4416186be546f19098126f66caf13f4d1e989366bebecd300faf565",
+      "idempotencyKey": "aff8e60e768cd411faa63ea42cc7a9e00e9564f76f095c647db5974377affc97",
+      "requestDigest": "48d10c1a234b43e0d4f30faeaa640e944c3f427c16b270ce380bf628b3f63f3b",
+      "evaluationTime": "2026-08-31T00:37:27.000Z",
+      "claimCore": {
+        "claimId": "d72c2ffce4416186be546f19098126f66caf13f4d1e989366bebecd300faf565",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:66fad68c5f864f4453dcffcab9781324c29cd25b16a199b8e4240ec9dc3ed790",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:d9971235771e159f57c01d0d7cc3c071d6f7c380c63caaf968632bfeaf34124f",
+        "canonicalBaseRevision": "24d5e4f404717c804a7eafb22bf594691efcf2bd",
+        "declaredWriteScope": [
+          "path:__tests__/claim-only-partial-start-retirement-controller.test.mjs",
+          "path:scripts/claim-only-partial-start-retirement-controller.mjs",
+          "semantic:claim-only-retirement-null-normalization"
+        ],
+        "writeSetDigest": "2a68f1df4437a267a295781147c33f203f3351f1d1f9bae8b217e989b84b00d8",
+        "laneRevision": "ad133ba01c24aff8657839f2316434b92ba317a1",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 0,
+        "state": "reviewed",
+        "expiresAt": "2026-08-31T04:16:12.000Z",
+        "evidenceDigest": "824e65237f8ef38eab4d37bd7c3221636e1d38cb02dcb94321449635ba932ae5",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBicmmg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "e485514b83c0f2c615a92317295bab7c8222337f9bfcb9922445f309c779ffb9",
+      "digest": "9aeae5c8df4d45d00903790d079b0a90edfe342ee58c803c20b217fcb9ea690d"
     }
   ]
 }

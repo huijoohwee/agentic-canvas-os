@@ -42,6 +42,16 @@ The isolated live-proof lane deploys only the `dev` Wrangler environments. `know
 
 Provider secrets are never command-line vars. Configure `OPENAI_API_KEY`, `AGENT_API_JWT_SECRET`, `AGENT_REVIEW_JWT_SECRET`, and `KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN` as Dev Worker secrets. The deployment script requires an operator-selected model and current price inputs, and the proof script additionally requires the exact `I_APPROVE_ONE_BOUNDED_DEV_PROVIDER_RUN` acknowledgement. Missing credentials, non-Dev URLs, unready durable state, an unexpected pause, extra model turns or tool calls, receipt mismatch, or read-back drift fails closed. Recovery mode skips manifest seeding and model start, reopens the known paused run id, and resumes that exact continuation; it cannot authorize a second logical provider run. Reviewer evidence reconstructs the guardrail owner's fixed action-field order before hashing, so durable JSON key canonicalization cannot change the signed scope.
 
+For Dev deployment, keep dynamic provider model and pricing inputs in an operator-owned offline env file outside the repository, not in source, shell history, CI logs, or chat. The file is a private regular file with owner-only permissions and contains only non-secret dynamic deployment values:
+
+- `OPENAI_FUNCTION_CALLING_MODEL`
+- `OPENAI_FUNCTION_CALLING_INPUT_USD_PER_MILLION`
+- `OPENAI_FUNCTION_CALLING_CACHED_INPUT_USD_PER_MILLION`
+- `OPENAI_FUNCTION_CALLING_CACHE_WRITE_USD_PER_MILLION`
+- `OPENAI_FUNCTION_CALLING_OUTPUT_USD_PER_MILLION`
+
+Load the file into the local shell only for the deployment process, verify the required variable names without printing values, then run `npm run function-gateway:deploy:dev`. Secrets remain Worker secrets. The command builds the web bundle and invokes `wrangler deploy --env dev` through the repository script; it does not authorize Prod, custom-domain, or mirror deployment.
+
 The accepted 2026-07-19 recovery completed one logical `gpt-5.6-luna` run in two Responses requests and one reviewed function call. Returned usage was 546 input and 55 output tokens, with zero cached or cache-write tokens and USD 0.000876 estimated cost at the supplied price snapshot. The application receipt completed without replay, the native receipt was `applied`, and authenticated read-back found the exact note at revision 1. The exact sanitized record is in `LIVE-REVIEWED-FUNCTION-PROOF.md`.
 
 | Server binding | Purpose |

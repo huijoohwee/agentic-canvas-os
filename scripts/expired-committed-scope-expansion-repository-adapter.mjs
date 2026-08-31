@@ -12,7 +12,10 @@ import {
   readExpiredCommittedScopeExpansionIntent,
   RESULT_SCHEMA,
 } from "./expired-committed-scope-expansion-contract.mjs";
-import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import {
+  digestValue,
+  writeSetsOverlap,
+} from "./cloud-collaboration-primitives.mjs";
 import { invokeRepositoryCloudVerifier } from "./cloud-collaboration-delivery-verifier.mjs";
 import { readOwnershipPullRequest } from "./device-pull-request-state.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
@@ -105,6 +108,7 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
       const plan = normalizeExpiredCommittedScopeExpansionPlan(intent.planSnapshot);
       assertTargetUnchanged(plan, targetManifest);
       assertRepositorySubject({ plan, lease, gitText, ghText });
+      assertProtectedMainProofCurrent({ plan, gitText });
       return Object.freeze({ plan, lease, intent });
     }
     assertTaskAuthorityBinding({ binding: lease.taskAuthority, lease });
@@ -119,10 +123,12 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
     const pullRequest = readOwnershipPullRequest({ url: lease.pullRequestUrl, branch, ghText });
     const status = cloudStatus({ lease, invoke, environment });
     const sourceClaim = exactClaim(status, lease.cloudAuthority.claimId);
+    run("git", ["fetch", "--no-tags", "origin", "main"]);
     const protectedMainSha = remoteMainHead(gitText);
     const protectedMainIncorporationProof = captureProtectedMainIncorporation({
       lease,
       protectedMainSha,
+      targetManifest,
       gitText,
     });
     const plan = buildExpiredCommittedScopeExpansionPlan({
@@ -143,6 +149,7 @@ export function createExpiredCommittedScopeExpansionRepositoryAdapter({
   async function execute({ authorization }) {
     const captured = capturePlan();
     const plan = captured.plan;
+    assertProtectedMainProofCurrent({ plan, gitText });
     let intent = initializeExpiredCommittedScopeExpansionIntent({
       intent: captured.intent,
       plan,
@@ -474,27 +481,59 @@ function successorAdmission({ sourceAdmission, plan, authority }) {
   });
 }
 
-function captureProtectedMainIncorporation({ lease, protectedMainSha, gitText }) {
-  if (!isAncestor(lease.baseSha, protectedMainSha, gitText)
-    || !isAncestor(protectedMainSha, lease.fenceSha, gitText)) {
-    throw new Error("Protected main is not incorporated into the exact source fence.");
+function captureProtectedMainIncorporation({ lease, protectedMainSha, targetManifest, gitText }) {
+  if (!isAncestor(lease.baseSha, protectedMainSha, gitText)) {
+    throw new Error("Protected main does not descend from the exact source base.");
+  }
+  if (!isAncestor(lease.baseSha, lease.fenceSha, gitText)) {
+    throw new Error("Source fence does not descend from the exact source base.");
   }
   const protectedMainChangedPaths = String(gitText([
     "diff", "--name-only", "--no-renames", "-z", lease.baseSha, protectedMainSha, "--",
   ]) || "").split("\0").filter(Boolean).sort();
+  const incorporated = isAncestor(protectedMainSha, lease.fenceSha, gitText);
+  if (!incorporated && protectedMainChangedPaths.some(candidate => writeSetsOverlap(
+    [`path:${candidate}`], targetManifest.declaredWriteSet,
+  ))) {
+    throw new Error("Protected main advanced within the target scope-expansion write set.");
+  }
   const core = {
-    schema: "agentic-protected-main-incorporated-fence/v1",
+    schema: incorporated
+      ? "agentic-protected-main-incorporated-fence/v1"
+      : "agentic-protected-main-disjoint-fence-advance/v1",
     sourceBaseSha: lease.baseSha,
     protectedMainSha,
     protectedMainTreeSha: requiredSha(gitText(["rev-parse", `${protectedMainSha}^{tree}`]), "protected main tree"),
     fenceSha: lease.fenceSha,
     fenceTreeSha: requiredSha(gitText(["rev-parse", `${lease.fenceSha}^{tree}`]), "source fence tree"),
     sourceBaseAncestorOfProtectedMain: true,
-    protectedMainAncestorOfFence: true,
+    sourceBaseAncestorOfFence: true,
+    protectedMainAncestorOfFence: incorporated,
     protectedMainChangedPaths,
     protectedMainChangedPathsDigest: digestValue(protectedMainChangedPaths),
+    ...(!incorporated ? {
+      targetDeclaredWriteSet: targetManifest.declaredWriteSet,
+      targetWriteSetDigest: targetManifest.writeSetDigest,
+      overlap: "none",
+    } : {}),
   };
   return Object.freeze({ ...core, evidenceDigest: digestValue(core) });
+}
+
+function assertProtectedMainProofCurrent({ plan, gitText }) {
+  const observed = captureProtectedMainIncorporation({
+    lease: { baseSha: plan.sourceBaseSha, fenceSha: plan.sourceFenceSha },
+    protectedMainSha: remoteMainHead(gitText),
+    targetManifest: {
+      declaredWriteSet: plan.targetDeclaredWriteSet,
+      writeSetDigest: plan.targetWriteSetDigest,
+    },
+    gitText,
+  });
+  if (observed.evidenceDigest !== plan.protectedMainIncorporationProof.evidenceDigest) {
+    throw new Error("Protected-main scope-expansion proof drifted before recovery effects.");
+  }
+  return observed;
 }
 
 function isAncestor(ancestor, descendant, gitText) {

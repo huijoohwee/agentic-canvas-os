@@ -14,11 +14,14 @@ runtime_proof: "focused fixed-order, authorization, topology, message, journal, 
 
 # Canonical Squash Batch Terminalizer V2
 
-The completed PR 839 bridge may omit its transient `integration` object. In
-that exact state, the adapter derives one immutable review-publication proof
-only from the joined reviewed and delivery head, source commit, admitted
-manifest, and six declared installation paths. Partial or mismatched joins
-remain blocked.
+The completed PR 839 bridge legitimately has neither a local `deliveryHeadSha`
+nor a transient local `integration` object. In that exact state, the adapter
+adopts one immutable review publication only from the bridge claim's terminal
+cloud suffix: `reviewed` -> `integrated-preserved` -> `retired`. The terminal
+integration receipt and every retained publication field must join the local
+review-ready projection, reviewed source commit, admitted manifest, and six
+declared installation paths. Partial, inferred, or mismatched joins remain
+blocked.
 
 ## Fixed incident set
 
@@ -67,7 +70,26 @@ The controller cannot authorize itself. First integrate and clean the PR that in
 - `scripts/canonical-squash-batch-terminalizer-v2-repository-adapter.mjs`
 - `scripts/canonical-squash-batch-terminalizer-v2.mjs`
 
-Planning then requires that bridge's exact merged PR, reviewed source head/tree, protected merge, completed task-bound lease, retired claim, completion main, recomputed cleanup operation ID, absent worktree and registration, preserved branch, and unchanged installed blob IDs. An unrelated later protected-main descendant is allowed only while every sealed controller blob and incident identity remains unchanged. The bridge grants no authority over any incident claim or worktree.
+PR `839` has one sealed protected-refresh topology. Its authored and reviewed
+source is `97df0afc58e5cfcdf1e0056031dc41f24d3b07b8`. Its final protected-refresh
+head is `db2a8b0a1e7313f904cfcd6acd37a522ad7893cc`, whose ordered parents are that
+reviewed source followed by target main
+`a74106e888294225f0e7a9c9388a8f102fb8ce10`. The protected squash merge is
+`90a29b8a66dd995b03d9a5db730e07587de798b5`, with the target main as its sole
+parent and the final refresh head's exact tree. The refresh operation ID is
+`151659e7b9892e614badc9a9afb9600bcdaa60cb759ba0f426bdf24b78889fff`.
+
+Planning requires that exact merged PR and topology, the completed task-bound
+lease, the immutable terminal cloud suffix and integration receipt, completion
+main, recomputed cleanup operation ID, absent worktree and registration,
+preserved branch, and unchanged installed blobs. Because the completed lease
+legitimately lacks local delivery and integration projections, only the joined
+terminal suffix supplies the reviewed publication; the final refresh head or
+protected merge cannot be substituted for it. The controller revision is the
+latest protected-main commit touching any of the six installation paths. That
+revision must descend from the bridge merge, remain an ancestor of current
+main, and have installation-path blobs byte-identical to current main. The
+bridge grants no authority over any incident claim or worktree.
 
 ## External evidence manifest
 

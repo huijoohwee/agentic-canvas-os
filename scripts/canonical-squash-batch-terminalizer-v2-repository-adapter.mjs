@@ -3,8 +3,8 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { assertV2ImmutableLease, classifyIntegratedRetirement,
-  classifyV2ProtectedMessage, EVIDENCE_SCHEMA, FIXED_PULL_REQUESTS, FIXED_SUBJECTS,
+import { assertV2ImmutableLease, classifyV2ProtectedMessage,
+  EVIDENCE_SCHEMA, FIXED_PULL_REQUESTS, FIXED_SUBJECTS,
   INSTALL_PATHS, normalizeBatchEvidence, sealBatchEvidence }
   from "./canonical-squash-batch-terminalizer-v2-contract.mjs";
 import { buildCapabilityReport, classifyV2RetiredCloud, createPrivateBatchJournalStore,
@@ -25,6 +25,9 @@ import { withPrivateOperationLock } from "./private-operation-lock.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
 import { writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 import { createWorktreeCleanupOperationId } from "./worktree-lifecycle-lib.mjs";
+import { renderProtectedHeadRefreshRearmCommitMessage,
+  verifyProtectedHeadRefreshCandidate, verifyProtectedHeadRefreshMergedCommit }
+  from "./protected-main-refresh-lib.mjs";
 
 export const EVIDENCE_MANIFEST_SCHEMA =
   "agentic-canonical-squash-batch-terminalizer-v2-evidence-manifest/v1";
@@ -35,12 +38,15 @@ const SHA = /^(?!0{40}$)[0-9a-f]{40}$/u;
 const DIGEST = /^(?!0{64}$)[0-9a-f]{64}$/u;
 const BRIDGE = Object.freeze({ pullRequest: 839,
   nodeId: "PR_kwDOSr5-fM8AAAABBjCzbQ", localEpoch: 338, claimCommitEpoch: 333,
+  claimId: "aa3d5a2352a7cdccadc17c71123858879993500b1b735da842bf44d183add745",
   device: "katrinas-macbook-pro.local", scope: OPERATION,
   sessionId: "canonical-squash-batch-terminalizer-v2-20260831",
   branch: "agent/katrinas-macbook-pro.local/canonical-squash-batch-terminalizer-v2",
   authoritySubjectId: "urn:agentic-task:64e5f7691fc2d623cd39361ae2138460e265fbe4e04ae65e21cc0e2334257cd3",
   publicKeyDigest: "f933c1c8d109270a8ae0081a27cf235e3e82ee2c2183b402064623bccc6315aa",
-  priorBindingDigest: "c64cafb1bf6470da1697e92a10cfd51d541eeabf756902b1f9af09659f1771d0" });
+  priorBindingDigest: "c64cafb1bf6470da1697e92a10cfd51d541eeabf756902b1f9af09659f1771d0",
+  refreshOperationId:
+    "151659e7b9892e614badc9a9afb9600bcdaa60cb759ba0f426bdf24b78889fff" });
 
 export function createCanonicalSquashBatchTerminalizerV2RepositoryAdapter({
   repository, controllerRoot, targetRepository = "huijoohwee/agentic-canvas-os",
@@ -375,6 +381,104 @@ function readSubject({ root, target, fixed, subject, snapshot, observerStore, gh
       stagedDiffDigest: integration.stagedDiffDigest, protectedRefresh: refresh } });
 }
 
+export function classifyCompletedBridgeCloud(snapshot, { lease, pull } = {}) {
+  const entries = snapshot?.value?.entries;
+  const authority = lease?.cloudAuthority;
+  const claimId = authority?.claimId;
+  const reviewRequestId = `github-pull-request:${pull?.nodeId || ""}`;
+  if (!Array.isArray(entries) || claimId !== BRIDGE.claimId
+    || !required(pull?.nodeId, "completed bridge pull request node ID")) {
+    throw new Error("Completed controller bridge cloud inventory is invalid.");
+  }
+  const lineage = entries.filter(entry => entry?.claimId === claimId);
+  const reviewed = lineage.at(-3); const integrated = lineage.at(-2);
+  const terminal = lineage.at(-1);
+  const reviewedCore = reviewed?.claimCore; const integratedCore = integrated?.claimCore;
+  const terminalCore = terminal?.claimCore;
+  const publication = integratedCore?.integration;
+  const retirement = terminalCore?.retirement;
+  const immutable = core => {
+    if (!core || typeof core !== "object" || Array.isArray(core)) return null;
+    const subject = structuredClone(core);
+    delete subject.state; delete subject.transitionCounter;
+    delete subject.integration; delete subject.retirement;
+    return subject;
+  };
+  const reviewedDigest = reviewed?.digest; const integratedDigest = integrated?.digest;
+  const terminalDigest = terminal?.digest;
+  const integrationReceiptDigest = retirement?.integrationReceiptDigest;
+  const declaredPaths = (lease?.admission?.declaredWriteSet || [])
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice(5));
+  if (lineage.length < 3
+    || reviewed?.action !== "continue" || reviewedCore?.state !== "reviewed"
+    || integrated?.action !== "integrate" || integratedCore?.state !== "integrated-preserved"
+    || terminal?.action !== "retire" || terminalCore?.state !== "retired"
+    || !DIGEST.test(reviewedDigest || "") || !DIGEST.test(integratedDigest || "")
+    || !DIGEST.test(terminalDigest || "") || !DIGEST.test(reviewed?.claimDigest || "")
+    || !DIGEST.test(integrated?.claimDigest || "") || !DIGEST.test(terminal?.claimDigest || "")
+    || integrated.parentDigest !== reviewedDigest || terminal.parentDigest !== integratedDigest
+    || integrated.sequence !== reviewed.sequence + 1 || terminal.sequence !== integrated.sequence + 1
+    || integratedCore.transitionCounter !== reviewedCore.transitionCounter + 1
+    || terminalCore.transitionCounter !== integratedCore.transitionCounter + 1
+    || canonicalJson(immutable(reviewedCore)) !== canonicalJson(immutable(integratedCore))
+    || canonicalJson(immutable(integratedCore)) !== canonicalJson(immutable(terminalCore))
+    || canonicalJson(terminalCore.integration) !== canonicalJson(publication)
+    || reviewedCore.claimId !== claimId || integratedCore.claimId !== claimId
+    || terminalCore.claimId !== claimId
+    || reviewedCore.reviewRequestId !== reviewRequestId
+    || reviewedCore.laneRevision !== publication?.candidateRevision
+    || reviewedCore.evidenceDigest !== publication?.focusedEvidenceDigest
+    || publication?.reviewRequestId !== reviewRequestId
+    || publication?.integratedAt !== integrated.evaluationTime
+    || retirement?.reason !== "integrated"
+    || retirement.finalRevision !== publication.candidateRevision
+    || retirement.reviewRequestId !== reviewRequestId
+    || retirement.retiredAt !== terminal.evaluationTime
+    || retirement.namedChecksDigest !== publication.namedChecksDigest
+    || retirement.handoffEvidenceDigest !== publication.handoffEvidenceDigest
+    || !DIGEST.test(integrationReceiptDigest || "")
+    || lease?.status !== "completed" || lease.reviewHeadSha !== publication.candidateRevision
+    || lease.deliveryHeadSha != null || lease.integration != null
+    || lease.baseSha !== reviewedCore.canonicalBaseRevision
+    || lease.admission?.schema !== "agentic-lane-admission-lease/v1"
+    || lease.admission.status !== "admitted"
+    || lease.admission.semanticScope !== BRIDGE.scope
+    || canonicalJson(declaredPaths) !== canonicalJson(INSTALL_PATHS)
+    || canonicalJson(lease.admission.declaredWriteSet) !== canonicalJson(
+      reviewedCore.declaredWriteScope)
+    || !DIGEST.test(lease.admission.manifestDigest || "")
+    || lease.admission.writeSetDigest !== reviewedCore.writeSetDigest
+    || lease.admission.manifestDigest !== authority?.manifestDigest
+    || authority?.claimDigest !== reviewed.claimDigest
+    || authority.claimLedgerRevision !== reviewedDigest || authority.ledgerDigest !== reviewedDigest
+    || authority.canonicalBaseSha !== reviewedCore.canonicalBaseRevision
+    || canonicalJson(authority.cloudDeclaredWriteScope)
+      !== canonicalJson(reviewedCore.declaredWriteScope)
+    || authority.writeSetDigest !== reviewedCore.writeSetDigest
+    || authority.laneRevision !== reviewedCore.laneRevision
+    || authority.leaseEpoch !== reviewedCore.leaseEpoch
+    || authority.transitionCounter !== reviewedCore.transitionCounter
+    || authority.state !== "review_ready" || authority.expiresAt !== reviewedCore.expiresAt
+    || authority.reviewRequestId !== reviewRequestId
+    || authority.focusedEvidenceDigest !== reviewedCore.evidenceDigest
+    || authority.integration !== null || authority.integrationReceiptDigest !== null) {
+    throw new Error("Completed controller bridge terminal cloud suffix is not exact.");
+  }
+  const core = { claimId, reviewedClaimDigest: reviewed.claimDigest,
+    lineageDigest: digestValue(lineage), lineageLength: lineage.length,
+    terminalState: "retired", retirementReason: "integrated",
+    leaseEpoch: reviewedCore.leaseEpoch, reviewCounter: reviewedCore.transitionCounter,
+    integrationCounter: integratedCore.transitionCounter,
+    terminalCounter: terminalCore.transitionCounter, reviewRequestId,
+    finalRevision: publication.candidateRevision, reviewedEntryDigest: reviewedDigest,
+    integrateEntryDigest: integratedDigest, terminalEntryDigest: terminalDigest,
+    terminalClaimDigest: terminal.claimDigest, integrationReceiptDigest };
+  return Object.freeze({ ...core, publication: Object.freeze(structuredClone(publication)),
+    publicationDigest: digestValue(publication), authorityDigest: digestValue(authority),
+    terminalCloudDigest: digestValue(core) });
+}
+
 function readBridge({ root, target, mainSha, manifest, snapshot, observerStore, ghText }) {
   const pull = readPull(ghText, target, manifest.pullRequest);
   const lease = observerStore.read(pull.headBranch);
@@ -398,28 +502,39 @@ function readBridge({ root, target, mainSha, manifest, snapshot, observerStore, 
     || !isAncestor(root, lease.completion.mainSha, mainSha)) {
     throw new Error("Controller bridge is not one exact completed lease.");
   }
+  const terminal = classifyCompletedBridgeCloud(snapshot, { lease, pull });
   const source = readV2JoinedCommit({ root, target, sha: pull.headSha, ghText,
+    verified: false, reason: "unsigned" });
+  const authored = readV2JoinedCommit({ root, target,
+    sha: terminal.publication.candidateRevision, ghText,
     verified: false, reason: "unsigned" });
   const protectedCommit = readV2JoinedCommit({ root, target, sha: pull.mergeSha, ghText,
     verified: true, reason: "valid" });
-  const integration = completedBridgeIntegration({ lease, pull, source });
-  const authored = readV2GitCommit(root, integration?.commitSha);
+  const integration = completedBridgeIntegration({ lease,
+    publication: terminal.publication, source: authored });
   const claimSha = authored.parentShas.length === 1 ? authored.parentShas[0] : null;
   const claim = readV2GitCommit(root, claimSha);
-  const sourceParents = integration?.commitSha === pull.headSha ? [claimSha]
-    : [integration?.commitSha, pull.baseSha];
-  if (lease.baseSha !== pull.baseSha || lease.deliveryHeadSha !== pull.headSha
-    || claimSha !== lease.fenceSha
+  const authoredSubject = authored.message.split("\n", 1)[0];
+  const expectedBody = renderProtectedHeadRefreshRearmCommitMessage({
+    pullRequestNumber: pull.number, deliveredHeadSha: authored.sha,
+    targetMainSha: pull.baseSha });
+  const provider = pull.autoMergeRequest;
+  if (claimSha !== lease.fenceSha
     || canonicalJson(claim.parentShas) !== canonicalJson([lease.baseSha])
     || claim.treeSha !== git(root, ["rev-parse", `${lease.baseSha}^{tree}`])
     || claim.message.split("\n", 1)[0]
       !== `chore(coordination): claim ${BRIDGE.scope} lease ${BRIDGE.claimCommitEpoch}`
     || source.treeSha !== protectedCommit.treeSha
-    || canonicalJson(source.parentShas) !== canonicalJson(sourceParents)
+    || canonicalJson(authored.parentShas) !== canonicalJson([claimSha])
+    || canonicalJson(source.parentShas) !== canonicalJson([authored.sha, pull.baseSha])
     || canonicalJson(protectedCommit.parentShas) !== canonicalJson([pull.baseSha])
-    || authored.message !== source.message || integration.treeSha !== authored.treeSha
-    || integration.commitMessage !== source.message.split("\n", 1)[0]
-    || !source.message.includes(`\nAgentic-Task: ${BRIDGE.scope}\nAgentic-Scope: ${BRIDGE.scope}\n`)
+    || integration.treeSha !== authored.treeSha
+    || integration.commitMessage !== authoredSubject
+    || provider?.mergeMethod !== "SQUASH" || provider.commitHeadline !== authoredSubject
+    || provider.commitBody !== expectedBody || provider.enabledBy?.login !== "huijoohwee"
+    || provider.enabledBy?.isBot !== false || !required(provider.enabledBy?.id,
+      "completed bridge auto-merge actor ID") || !Date.parse(provider.enabledAt)
+    || pull.mergedBy !== "huijoohwee"
     || canonicalJson(integration.paths) !== canonicalJson(INSTALL_PATHS)) {
     throw new Error("Controller bridge source/protected/integration topology is not exact.");
   }
@@ -427,12 +542,16 @@ function readBridge({ root, target, mainSha, manifest, snapshot, observerStore, 
     ["A", repositoryPath, gitBlobSha(root, pull.headSha, repositoryPath)]);
   verifyExactAddedDelta(root, pull.baseSha, pull.headSha, sourceDelta);
   verifyExactAddedDelta(root, claimSha, integration.commitSha, sourceDelta);
-  const message = classifyV2ProtectedMessage({ sourceMessage: source.message,
-    protectedMessage: protectedCommit.message,
-    sourceHistorySubjects: [claimSha, integration.commitSha].map(sha =>
-      git(root, ["show", "-s", "--format=%s", sha])),
-    sourceAuthors: [claimSha, integration.commitSha].map(sha => readAuthor(root, sha)),
-    autoMergeRequest: pull.autoMergeRequest, mergedBy: pull.mergedBy });
+  const refreshCandidate = verifyProtectedHeadRefreshCandidate({ candidateSha: pull.headSha,
+    observedHeadSha: authored.sha, targetMainSha: pull.baseSha,
+    operationId: BRIDGE.refreshOperationId, gitText: args => gitRaw(root, args) });
+  const mergedRefresh = verifyProtectedHeadRefreshMergedCommit({
+    mergeCommitSha: pull.mergeSha, candidateSha: pull.headSha, targetMainSha: pull.baseSha,
+    commitTitle: authoredSubject, commitMessageJson: JSON.stringify(expectedBody),
+    gitText: args => gitRaw(root, args) });
+  const message = { schema: "agentic-completed-bridge-protected-refresh-message/v1",
+    authoredMessageDigest: authored.messageDigest, refreshCandidate, mergedRefresh,
+    provider: structuredClone(provider), mergedBy: pull.mergedBy };
   const records = worktreeRecords(root);
   if (existsSync(lease.worktreePath) || records.some(record => record.path === lease.worktreePath
     || record.branch === `refs/heads/${pull.headBranch}`)) {
@@ -448,14 +567,6 @@ function readBridge({ root, target, mainSha, manifest, snapshot, observerStore, 
     preservedBranch: pull.headBranch, managedContainer: { root: managedRoot },
     sharedContainer: { root: path.dirname(managedRoot) } });
   if (cleanup !== manifest.cleanupOperationId) throw new Error("Bridge cleanup id does not recompute.");
-  const bridgeLineage = snapshot.value.entries.filter(entry =>
-    entry.claimId === lease.cloudAuthority.claimId);
-  const terminal = classifyIntegratedRetirement(snapshot, {
-    claimId: lease.cloudAuthority.claimId, finalRevision: pull.headSha,
-    reviewRequestId: `github-pull-request:${pull.nodeId}`,
-    integratedClaimDigest: bridgeLineage.at(-2)?.claimDigest,
-    integrationReceiptDigest: lease.cloudAuthority.integrationReceiptDigest,
-  });
   return Object.freeze({ pullRequest: pull.number, nodeId: pull.nodeId, url: pull.url,
     branch: pull.headBranch, scope: lease.scope, sessionId: lease.sessionId, epoch: lease.epoch,
     baseSha: pull.baseSha, autoMergeDigest: pull.autoMergeDigest,
@@ -473,14 +584,19 @@ function readBridge({ root, target, mainSha, manifest, snapshot, observerStore, 
     controllerContained: isAncestor(root, pull.mergeSha, mainSha) });
 }
 
-export function completedBridgeIntegration({ lease, pull, source }) {
-  if (lease?.integration) return lease.integration;
+export function completedBridgeIntegration({ lease, publication, source }) {
   const declaredPaths = (lease?.admission?.declaredWriteSet || [])
     .filter(value => value.startsWith("path:"))
     .map(value => value.slice(5));
   const commitMessage = source?.message?.split("\n", 1)[0];
-  if (lease?.status !== "completed" || lease.reviewHeadSha !== pull?.headSha
-    || lease.deliveryHeadSha !== pull?.headSha || source?.sha !== pull?.headSha
+  if (lease?.status !== "completed" || lease.reviewHeadSha !== publication?.candidateRevision
+    || lease.deliveryHeadSha != null || lease.integration != null
+    || source?.sha !== publication?.candidateRevision
+    || lease.cloudAuthority?.laneRevision !== publication?.candidateRevision
+    || lease.cloudAuthority?.reviewRequestId !== publication?.reviewRequestId
+    || lease.cloudAuthority?.focusedEvidenceDigest !== publication?.focusedEvidenceDigest
+    || lease.cloudAuthority?.integration !== null
+    || lease.cloudAuthority?.integrationReceiptDigest !== null
     || lease.admission?.status !== "admitted"
     || canonicalJson(declaredPaths) !== canonicalJson(INSTALL_PATHS)
     || !DIGEST.test(lease.admission.manifestDigest)
@@ -488,20 +604,26 @@ export function completedBridgeIntegration({ lease, pull, source }) {
     throw new Error("Completed controller bridge lacks an exact review publication proof.");
   }
   return Object.freeze({ schema: "agentic-completed-review-publication/v1",
-    commitSha: pull.headSha, treeSha: source.treeSha, commitMessage,
+    commitSha: publication.candidateRevision, treeSha: source.treeSha, commitMessage,
     paths: Object.freeze([...INSTALL_PATHS]),
     manifestDigest: lease.admission.manifestDigest });
 }
 
 function readController({ root, target, bridge, mainSha }) {
   if (!isAncestor(root, bridge.mergeSha, mainSha)) throw new Error("Main lacks controller bridge.");
+  const controllerRevision = git(root,
+    ["log", "-1", "--format=%H", mainSha, "--", ...INSTALL_PATHS]);
+  if (!SHA.test(controllerRevision) || !isAncestor(root, bridge.mergeSha, controllerRevision)
+    || !isAncestor(root, controllerRevision, mainSha)) {
+    throw new Error("Protected main lacks one exact installed controller revision.");
+  }
   const installBlobs = INSTALL_PATHS.map(repositoryPath => ({ path: repositoryPath,
-    blobSha: gitBlobSha(root, bridge.mergeSha, repositoryPath) }));
+    blobSha: gitBlobSha(root, controllerRevision, repositoryPath) }));
   for (const entry of installBlobs) if (gitBlobSha(root, mainSha, entry.path) !== entry.blobSha) {
     throw new Error(`Installed controller blob drifted: ${entry.path}`);
   }
-  return Object.freeze({ repository: target, revision: bridge.mergeSha,
-    treeSha: git(root, ["rev-parse", `${bridge.mergeSha}^{tree}`]),
+  return Object.freeze({ repository: target, revision: controllerRevision,
+    treeSha: git(root, ["rev-parse", `${controllerRevision}^{tree}`]),
     installBlobs: Object.freeze(installBlobs) });
 }
 
@@ -665,9 +787,10 @@ function readAuthor(root, sha) {
   return { name, email };
 }
 function ghJson(ghText, endpoint) { return JSON.parse(ghText(["api", endpoint])); }
-function git(root, args) { return String(execFileSync("git", ["-C", root, ...args],
+function gitRaw(root, args) { return String(execFileSync("git", ["-C", root, ...args],
   { encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" } })).trim(); }
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" } })); }
+function git(root, args) { return gitRaw(root, args).trim(); }
 function gitBlobSha(root, revision, repositoryPath) {
   const match = /^[0-7]{6} blob ((?!0{40}\t)[0-9a-f]{40})\t(.+)$/u.exec(git(root,
     ["ls-tree", revision, "--", repositoryPath]));

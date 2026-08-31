@@ -29,6 +29,7 @@ import {
 } from "../scripts/canonical-squash-batch-terminalizer-v2-controller.mjs";
 import {
   CAPABILITY_MANIFEST_SCHEMA,
+  classifyCompletedBridgeCloud,
   completedBridgeIntegration,
   EVIDENCE_MANIFEST_SCHEMA,
   parseV2CapabilityManifest,
@@ -40,6 +41,115 @@ const ZERO_SHA = "0".repeat(40), ZERO_DIGEST = "0".repeat(64);
 // Positive fixtures must not weaken the production rejection of zero sentinels.
 const FIXTURE_SHA = "1".repeat(40), FIXTURE_DIGEST = "1".repeat(64);
 const digest = seed => Number(seed).toString(16).padStart(64, "0").slice(-64);
+const BRIDGE_AUTHORED_SHA = "97df0afc58e5cfcdf1e0056031dc41f24d3b07b8";
+const BRIDGE_REFRESHED_SHA = "db2a8b0a1e7313f904cfcd6acd37a522ad7893cc";
+const BRIDGE_TREE_SHA = "82c2d5f31624f9db946b53291f01e8437b894542";
+const BRIDGE_CLAIM_ID =
+  "aa3d5a2352a7cdccadc17c71123858879993500b1b735da842bf44d183add745";
+const BRIDGE_REVIEW_REQUEST_ID = "github-pull-request:PR_kwDOSr5-fM8AAAABBjCzbQ";
+const BRIDGE_FOCUSED_EVIDENCE =
+  "26961d4150439ebc9fd0d464c17315c3372213e413fd52f0530f7ca80bdbef6a";
+const BRIDGE_RETIREMENT_RECEIPT =
+  "b0b04af42606955a8ecca4ca7f6f70cd971ee06aaa08024e45868885affa4ec7";
+
+function completedBridgeCloudFixture() {
+  const declaredWriteScope = [...INSTALL_PATHS.map(value => `path:${value}`),
+    "semantic:canonical-squash-batch-terminalizer-v2"];
+  const common = {
+    claimId: BRIDGE_CLAIM_ID,
+    actorId: "github-user:8945812",
+    deviceId: "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+    sessionId: "session:033c3f76d1e731bcf65e4d74563037f967375933db89b7656a621a21a000aa8e",
+    repositoryId: "github-repository:R_kgDOSr5-fA",
+    workItemId: "work-item:b50247865c93c0c74b63f53290a4b174f5aa042b92b3a3fec3f6c30080acbef1",
+    canonicalBaseRevision: "bf7a41340a2c1844151ac032287d4c2432622de3",
+    declaredWriteScope,
+    writeSetDigest: "473f0bf3f1a2d171bbb91d1ee0c0fabae2202c36b2f51cf6b720ce0db7948d9c",
+    laneRevision: BRIDGE_AUTHORED_SHA,
+    leaseEpoch: 1,
+    heartbeatCounter: 0,
+    expiresAt: "2026-09-01T10:35:31.000Z",
+    evidenceDigest: BRIDGE_FOCUSED_EVIDENCE,
+    reviewRequestId: BRIDGE_REVIEW_REQUEST_ID,
+    predecessorClaimId: null,
+    eligibleSince: null,
+    handoff: null,
+    release: null,
+    recovery: {
+      evidenceDigest: "af9d0f89201eaf28cf59cf29b72085990bd998f175810dbd407098ab98426ade",
+      recoveredAt: "2026-08-31T10:35:31.000Z",
+    },
+  };
+  const publication = {
+    candidateRevision: BRIDGE_AUTHORED_SHA,
+    reviewRequestId: BRIDGE_REVIEW_REQUEST_ID,
+    focusedEvidenceDigest: BRIDGE_FOCUSED_EVIDENCE,
+    dependencyClosureDigest:
+      "14059a5ae5162c4c02d14e83b90d6040ff4c132c0cc7c914ea7864e5e36b14a9",
+    namedChecksDigest: "40075fb15502af45a39c727bfb26a1c2623f6b8b050917d725a48c913f4349fa",
+    handoffEvidenceDigest:
+      "21b4c829eed3965a878234fea8db9854598ed79ff136c2a78b37d8b9a8a51a91",
+    operatorDecisionDigest:
+      "b4bc7a94be716bfa8127f60e8aabfca9aa03785ab8efbc54683a3d9155fc271a",
+    integrationIntentDigest:
+      "d69f1b9084b241ff2ad404a44edb160313424263b0be449836e25b84ba280c6c",
+    integratedAt: "2026-08-31T10:43:39.000Z",
+  };
+  const entry = (sequence, parentDigest, action, claimCore, claimDigest, entryDigest) => ({
+    schema: "agentic-cloud-collaboration-entry/v2", sequence, parentDigest, action,
+    repositoryId: common.repositoryId, claimId: BRIDGE_CLAIM_ID,
+    idempotencyKey: digest(sequence + 10_000), requestDigest: digest(sequence + 20_000),
+    evaluationTime: `2026-08-31T10:${sequence === 6680 ? "42:01" : sequence === 6681
+      ? "43:39" : "55:49"}.000Z`, claimCore, claimDigest, digest: entryDigest,
+  });
+  const reviewed = entry(6680,
+    "c102c0a61544a7f5b12342fb12c7cf7fe6c93df6a59c663506451ee5185953dc",
+    "continue", { ...common, transitionCounter: 7, state: "reviewed" },
+    "a182d375d1960f0055983e58330da46c4fd34ff848555b101b086bdc43fb2c19",
+    "2409ed2acaea36bbd8bdc5a6612a10e29cbd596af10a3c0486904dba9fca816d");
+  const integrated = entry(6681, reviewed.digest, "integrate",
+    { ...common, transitionCounter: 8, state: "integrated-preserved",
+      integration: publication },
+    "6919ef6653c42685df2c0650ec911a9a00ec77d5aaaaf9167a45aa740d67fa94",
+    "f4eb4aae20c4635dbb55a7232138cd45ffcc745672e94d8ca316679cec03ced9");
+  const terminal = entry(6682, integrated.digest, "retire",
+    { ...common, transitionCounter: 9, state: "retired", integration: publication,
+      retirement: { reason: "integrated", finalRevision: BRIDGE_AUTHORED_SHA,
+        reviewRequestId: BRIDGE_REVIEW_REQUEST_ID,
+        bytesDigest: "2feac4b46b8511384b6628395919387cd20881697862633d1e46f192426a017e",
+        namedChecksDigest: publication.namedChecksDigest,
+        handoffEvidenceDigest: publication.handoffEvidenceDigest,
+        integrationReceiptDigest: BRIDGE_RETIREMENT_RECEIPT,
+        retiredAt: "2026-08-31T10:55:49.000Z" } },
+    "801f409b75088de32ed8e2141c88d3c95f3c2a7c23fa92e6d1b04a572e544c44",
+    "0bd9ec2f0941c45ba205649710cf87b97555866619d765776146d1d8aea28de1");
+  const lease = {
+    status: "completed", reviewHeadSha: BRIDGE_AUTHORED_SHA,
+    baseSha: common.canonicalBaseRevision,
+    admission: { schema: "agentic-lane-admission-lease/v1", status: "admitted",
+      semanticScope: "canonical-squash-batch-terminalizer-v2",
+      writeSetDigest: common.writeSetDigest,
+      manifestDigest: "405e16b78aa4ef68a32707cdb0c42b20946e65753717c9d62ea6401bce619c84",
+      declaredWriteSet: declaredWriteScope },
+    cloudAuthority: {
+      claimId: BRIDGE_CLAIM_ID, claimDigest: reviewed.claimDigest,
+      ledgerDigest: reviewed.digest, claimLedgerRevision: reviewed.digest,
+      canonicalBaseSha: common.canonicalBaseRevision, laneRevision: BRIDGE_AUTHORED_SHA,
+      cloudDeclaredWriteScope: declaredWriteScope,
+      writeSetDigest: common.writeSetDigest, reviewRequestId: BRIDGE_REVIEW_REQUEST_ID,
+      leaseEpoch: 1, transitionCounter: 7, state: "review_ready",
+      expiresAt: common.expiresAt, integrationReceiptDigest: null, integration: null,
+      focusedEvidenceDigest: BRIDGE_FOCUSED_EVIDENCE,
+      manifestDigest: "405e16b78aa4ef68a32707cdb0c42b20946e65753717c9d62ea6401bce619c84",
+    },
+  };
+  return { lease, publication, reviewed, integrated, terminal,
+    snapshot: { value: { entries: [reviewed, integrated, terminal] } },
+    pull: { number: 839, nodeId: "PR_kwDOSr5-fM8AAAABBjCzbQ",
+      headSha: BRIDGE_REFRESHED_SHA },
+    source: { sha: BRIDGE_AUTHORED_SHA, treeSha: BRIDGE_TREE_SHA,
+      message: "feat(canonical-squash-batch-terminalizer-v2): terminalize retained lanes\n\nBody" } };
+}
 const MESSAGE_META = [
   ["feat(canonical-squash-recovery-terminalizer): terminalize recovery", 2,
     "chore(coordination): claim canonical-squash-recovery-terminalizer lease 317",
@@ -414,23 +524,84 @@ test("provider rewrite requires claim plus authored subject, never naive base..h
     autoMergeRequest: cause, mergedBy: "writer" }), /history/);
 });
 
-test("completed bridge derives exact publication after completion removes integration", () => {
-  const headSha = "97df0afc58e5cfcdf1e0056031dc41f24d3b07b8";
-  const treeSha = "82c2d5f31624f9db946b53291f01e8437b894542";
-  const lease = { status: "completed", reviewHeadSha: headSha,
-    deliveryHeadSha: headSha,
-    admission: { status: "admitted", manifestDigest: digest(71),
-      declaredWriteSet: [...INSTALL_PATHS.map(value => `path:${value}`),
-        "semantic:canonical-squash-batch-terminalizer-v2"] } };
-  const source = { sha: headSha, treeSha,
-    message: "feat(canonical-squash-batch-terminalizer-v2): terminalize retained lanes\n\nBody" };
-  const proof = completedBridgeIntegration({ lease, pull: { headSha }, source });
+test("completed protected-refresh bridge derives publication from immutable cloud history", () => {
+  const fixture = completedBridgeCloudFixture();
+  assert.equal("deliveryHeadSha" in fixture.lease, false);
+  assert.equal("integration" in fixture.lease, false);
+  assert.notEqual(fixture.pull.headSha, fixture.lease.reviewHeadSha);
+  const cloud = classifyCompletedBridgeCloud(fixture.snapshot,
+    { lease: fixture.lease, pull: fixture.pull });
+  assert.deepEqual(cloud.publication, fixture.publication);
+  assert.equal(cloud.publication.candidateRevision, BRIDGE_AUTHORED_SHA);
+  const proof = completedBridgeIntegration({ lease: fixture.lease,
+    publication: cloud.publication, source: fixture.source });
   assert.equal(proof.schema, "agentic-completed-review-publication/v1");
-  assert.equal(proof.commitSha, headSha);
-  assert.equal(proof.treeSha, treeSha);
+  assert.equal(proof.commitSha, BRIDGE_AUTHORED_SHA);
+  assert.equal(proof.treeSha, BRIDGE_TREE_SHA);
   assert.deepEqual(proof.paths, INSTALL_PATHS);
-  assert.throws(() => completedBridgeIntegration({ lease: { ...lease,
-    reviewHeadSha: ZERO_SHA }, pull: { headSha }, source }), /publication proof/);
+  assert.throws(() => completedBridgeIntegration({ lease: fixture.lease,
+    publication: { ...cloud.publication, candidateRevision: BRIDGE_REFRESHED_SHA },
+    source: fixture.source }), /publication proof/);
+  assert.throws(() => completedBridgeIntegration({ lease: fixture.lease,
+    publication: cloud.publication,
+    source: { ...fixture.source, sha: BRIDGE_REFRESHED_SHA } }), /publication proof/);
+});
+
+test("completed bridge cloud classifier rejects suffix and retained-publication drift", () => {
+  const classify = fixture => classifyCompletedBridgeCloud(fixture.snapshot,
+    { lease: fixture.lease, pull: fixture.pull });
+  const mutations = [
+    fixture => {
+      fixture.snapshot.value.entries[1].claimCore.integration.candidateRevision
+        = BRIDGE_REFRESHED_SHA;
+    },
+    fixture => {
+      fixture.snapshot.value.entries[2].claimCore.retirement.finalRevision
+        = BRIDGE_REFRESHED_SHA;
+    },
+    fixture => {
+      fixture.snapshot.value.entries[2].claimCore.retirement.integrationReceiptDigest
+        = ZERO_DIGEST;
+    },
+    fixture => {
+      fixture.snapshot.value.entries[1].parentDigest = digest(90_001);
+    },
+    fixture => {
+      fixture.snapshot.value.entries[0].digest = digest(90_002);
+    },
+    fixture => {
+      fixture.snapshot.value.entries[2].claimCore.integration.namedChecksDigest
+        = digest(90_003);
+    },
+    fixture => {
+      fixture.lease.admission.writeSetDigest = digest(90_004);
+    },
+    fixture => {
+      fixture.lease.admission.manifestDigest = digest(90_005);
+    },
+    fixture => {
+      const substitutedClaimId = digest(90_008);
+      fixture.lease.cloudAuthority.claimId = substitutedClaimId;
+      for (const entry of fixture.snapshot.value.entries) {
+        entry.claimId = substitutedClaimId;
+        entry.claimCore.claimId = substitutedClaimId;
+      }
+    },
+    fixture => {
+      const terminal = fixture.snapshot.value.entries[2];
+      fixture.snapshot.value.entries.push({ ...structuredClone(terminal), sequence: 6683,
+        parentDigest: terminal.digest, digest: digest(90_006),
+        claimDigest: digest(90_007), claimCore: { ...structuredClone(terminal.claimCore),
+          transitionCounter: 10 } });
+    },
+  ];
+  assert.equal(classify(completedBridgeCloudFixture()).publication.candidateRevision,
+    BRIDGE_AUTHORED_SHA);
+  for (const mutate of mutations) {
+    const fixture = completedBridgeCloudFixture();
+    mutate(fixture);
+    assert.throws(() => classify(fixture));
+  }
 });
 
 test("CI joins exact event, branch, workflow, run, job IDs, and digests", () => {

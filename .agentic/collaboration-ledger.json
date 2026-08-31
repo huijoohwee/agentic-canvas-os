@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6595,
-  "headDigest": "f61076f994483477103fcbddcfb7b99356eaa461100f91114b1489a95e4b96ee",
+  "sequence": 6596,
+  "headDigest": "b64ff5bdc79d53badd52cb74cec28e191e3ae3ec432b416b9a07eda81ad7c83a",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -334736,6 +334736,46 @@
       },
       "claimDigest": "781209eb817c687c9737f3df64bfe17d81ad1bea0d1366abac94ed4b1fe7eb97",
       "digest": "f61076f994483477103fcbddcfb7b99356eaa461100f91114b1489a95e4b96ee"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6596,
+      "parentDigest": "f61076f994483477103fcbddcfb7b99356eaa461100f91114b1489a95e4b96ee",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2b717ade6f15d3e6e44e7686783e66d825b6737228bb2a233bc15d7a54deff16",
+      "idempotencyKey": "199d41023df187468f3dc3809c36b317a04ab5cedaf65dfb7a0ae68bea5a1ceb",
+      "requestDigest": "bd92763b71ddbcf0fb425d1f9b69f1297a485f801cec4ccc58dc3e173a7f3f06",
+      "evaluationTime": "2026-08-31T05:14:36.000Z",
+      "claimCore": {
+        "claimId": "2b717ade6f15d3e6e44e7686783e66d825b6737228bb2a233bc15d7a54deff16",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:d7db0069f0a9ab8614921cf3b1f978114da811aaf8d4e128edbb3c41f43cb151",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:1b808e24b5df670aab0183376470c985da31cf64d6a453d714a0a067ed1c2e88",
+        "canonicalBaseRevision": "df5c9fbbc2a3c3345198b19cb5e872db56b1f833",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-controller.test.mjs",
+          "path:scripts/active-dirty-scope-expansion-controller.mjs",
+          "semantic:active-dirty-scope-expansion-work-item-continuat"
+        ],
+        "writeSetDigest": "cc1a4e4693c43d36de3269a69c7308a4a4becb9b41fe15739fb4e8d8115c1024",
+        "laneRevision": "df5c9fbbc2a3c3345198b19cb5e872db56b1f833",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-31T08:14:36.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "7d29a70cd69d799aef5b3b283ad76360d087a01631949a02d114c68a4c31960d",
+        "eligibleSince": "2026-08-31T05:14:36.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "99d23bd3d2b0157c7a1791e2ed59a50ac692b01496aa87ae1024ec9727c00e46",
+      "digest": "b64ff5bdc79d53badd52cb74cec28e191e3ae3ec432b416b9a07eda81ad7c83a"
     }
   ]
 }

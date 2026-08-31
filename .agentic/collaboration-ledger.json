@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6592,
-  "headDigest": "721f847b3522a3659ae97abc0853242acf745cbcd3df721ac92b9ccf5fa7bf64",
+  "sequence": 6593,
+  "headDigest": "9402729c4cb98d97cf12e8674f95fb54b63e29c2d634d2d39050e74e87a801a2",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -334592,6 +334592,53 @@
       },
       "claimDigest": "a86ed67831666bff7271b73a838ed8c0156b9660c5af140a31153eb5a7c31f90",
       "digest": "721f847b3522a3659ae97abc0853242acf745cbcd3df721ac92b9ccf5fa7bf64"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6593,
+      "parentDigest": "721f847b3522a3659ae97abc0853242acf745cbcd3df721ac92b9ccf5fa7bf64",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "2273a7725f362dbfcabce967887bb1997a461bbfed75863d49d6922a78b6c563",
+      "idempotencyKey": "6af367754d7d51738f7b35605d16dca418dafe15740ea90d111ce6453d1f7766",
+      "requestDigest": "be00f3121b77fd6b2e5db82640490e31f4e50cea77fb51c7c2e7143f6539b330",
+      "evaluationTime": "2026-08-31T05:07:17.000Z",
+      "claimCore": {
+        "claimId": "2273a7725f362dbfcabce967887bb1997a461bbfed75863d49d6922a78b6c563",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:667356942c082a29e5aac7941b2c6c5abaa94c44d48187302400f6a3668fa0b3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:f8dcb168e5aa1cb4fa9980f05281974e10996cc64c820a554da1a843ad859224",
+        "canonicalBaseRevision": "df5c9fbbc2a3c3345198b19cb5e872db56b1f833",
+        "declaredWriteScope": [
+          "path:__tests__/active-publish-historical-derivative-recovery.test.mjs",
+          "path:docs/ACTIVE-PUBLISH-HISTORICAL-DERIVATIVE-RECOVERY.md",
+          "path:scripts/active-publish-historical-derivative-recovery-contract.mjs",
+          "path:scripts/active-publish-historical-derivative-recovery-controller.mjs",
+          "path:scripts/active-publish-historical-derivative-recovery-evidence.mjs",
+          "path:scripts/active-publish-historical-derivative-recovery-repository-adapter.mjs",
+          "path:scripts/active-publish-historical-derivative-recovery-store.mjs",
+          "path:scripts/active-publish-historical-derivative-recovery.mjs",
+          "semantic:active-publish-historical-derivative-recovery"
+        ],
+        "writeSetDigest": "22db28dcc919d18b2af7c87ac37363631e3364332743cba2ce6da1a637240e5a",
+        "laneRevision": "08d62c02052f9ebcff3da404082b7f2ca09bbb34",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T05:36:33.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBjRI0w",
+        "predecessorClaimId": "ee5f162710d6ec57d74845b730de55b2f039d75d2eda1a61e642cc49ba977cbf",
+        "eligibleSince": "2026-08-31T05:05:07.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-31T05:06:33.000Z"
+      },
+      "claimDigest": "39064e293b0214db29e32012fb9522539f2f4b2f6bcc36b0789fe4f5dfc22c19",
+      "digest": "9402729c4cb98d97cf12e8674f95fb54b63e29c2d634d2d39050e74e87a801a2"
     }
   ]
 }

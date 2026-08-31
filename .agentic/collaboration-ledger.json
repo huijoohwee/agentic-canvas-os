@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6618,
-  "headDigest": "b59e28e0bfd2d524cd9fdd6428de330fc3102552e51fb5b99ab1c760cf180060",
+  "sequence": 6619,
+  "headDigest": "d9555f6c54f715f0c8d91ca29d9905b8717400eee3b682a12899924c97c9e076",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -335937,6 +335937,56 @@
       },
       "claimDigest": "8876ae7b25369bb5e7cfb0f9aac1058a225ef2a9f0e140549142e79086c64660",
       "digest": "b59e28e0bfd2d524cd9fdd6428de330fc3102552e51fb5b99ab1c760cf180060"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6619,
+      "parentDigest": "b59e28e0bfd2d524cd9fdd6428de330fc3102552e51fb5b99ab1c760cf180060",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "84d1388624b468f424b94060e247d0ec8bba5a5172864113fcd2e2057746e337",
+      "idempotencyKey": "8cda2757d2a72bd2ed86dbcbd4af785cf817ca51aa18a6e4608b96f3ee297b4a",
+      "requestDigest": "9d9680be27ecc6962ed1a87e81720cce207ecac287aa9316243e68e642357e81",
+      "evaluationTime": "2026-08-31T06:15:30.000Z",
+      "claimCore": {
+        "claimId": "84d1388624b468f424b94060e247d0ec8bba5a5172864113fcd2e2057746e337",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ac3d3efb1ee6d84c0ffe6e5c95db9eed3340fecdaa6a33cd26677fa77d04db33",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:72658d338ac8405f6e4abf9695e08eb36bd18ea17de6f61db26d06c4d2011a85",
+        "canonicalBaseRevision": "8e181b5d7d750a5fc527e2e25d25160a73dd6f61",
+        "declaredWriteScope": [
+          "path:__tests__/active-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-contract.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-controller.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-adapter.test.mjs",
+          "path:docs/EXPIRED-DESCENDANT-UNTRACKED-SCOPE-RECOVERY.md",
+          "path:scripts/active-descendant-untracked-scope-recovery.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-contract.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-controller.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-evidence.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-adapter.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery.mjs",
+          "semantic:expired-descendant-untracked-scope-recovery"
+        ],
+        "writeSetDigest": "0af1301d29bc2c6c1b0d05c3165f2e0a33ca5d5685324e61255b84b673549163",
+        "laneRevision": "8e181b5d7d750a5fc527e2e25d25160a73dd6f61",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T14:15:30.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "42ff4fdc8512a27725a2c581ff47c0929d7bd777c884371ab7fb10ff51c7d5a4",
+      "digest": "d9555f6c54f715f0c8d91ca29d9905b8717400eee3b682a12899924c97c9e076"
     }
   ]
 }

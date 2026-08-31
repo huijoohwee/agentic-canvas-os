@@ -14,7 +14,8 @@ import { createClaimOnlyWaitingBridgeReconciliationController,
   from "../scripts/claim-only-waiting-bridge-reconciliation-controller.mjs";
 import {
   buildWaitingBridgePromotionAuthorityOutput, projectWaitingBridgeProviderInventory,
-  projectWaitingBridgeDirectSuccessorTopology, readAllWaitingBridgeProviderPullRequests,
+  isLiveWaitingSuccessorClaim, projectWaitingBridgeDirectSuccessorTopology,
+  readAllWaitingBridgeProviderPullRequests,
 } from "../scripts/claim-only-waiting-bridge-reconciliation-repository-adapter.mjs";
 import { normalizeCloudAuthority } from "../scripts/scoped-lane-admission-lib.mjs";
 import { canonicalJson, digestValue }
@@ -41,6 +42,19 @@ const SUCCESSOR_SCOPE = ["path:zones/successor"];
 const FORBIDDEN = ["source-byte", "git-object", "git-ref", "branch", "worktree",
   "writer-lease", "pull-request", "pull-request-marker", "new-claim", "release",
   "integration", "deployment", "cleanup", "rollback"];
+
+test("live waiting-successor selection uses the public cloud status field", () => {
+  assert.equal(isLiveWaitingSuccessorClaim({ state: "waiting-successor" }), true);
+  for (const claim of [
+    {},
+    { state: "current" },
+    { state: "dormant-preserved" },
+    { recordedState: "waiting-successor" },
+    { state: "current", recordedState: "waiting-successor" },
+  ]) {
+    assert.equal(isLiveWaitingSuccessorClaim(claim), false);
+  }
+});
 
 test("retirement seals the exact three-claim bridge topology and separate authorization", () => {
   const plan = buildBridgeRetirementPlan(retirementEvidence());

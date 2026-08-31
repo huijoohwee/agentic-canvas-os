@@ -29,6 +29,7 @@ import {
 } from "../scripts/canonical-squash-batch-terminalizer-v2-controller.mjs";
 import {
   CAPABILITY_MANIFEST_SCHEMA,
+  completedBridgeIntegration,
   EVIDENCE_MANIFEST_SCHEMA,
   parseV2CapabilityManifest,
   parseV2EvidenceManifest,
@@ -411,6 +412,25 @@ test("provider rewrite requires claim plus authored subject, never naive base..h
   assert.throws(() => classifyV2ProtectedMessage({ sourceMessage: source,
     protectedMessage, sourceHistorySubjects: [history[1]], sourceAuthors: authors,
     autoMergeRequest: cause, mergedBy: "writer" }), /history/);
+});
+
+test("completed bridge derives exact publication after completion removes integration", () => {
+  const headSha = "97df0afc58e5cfcdf1e0056031dc41f24d3b07b8";
+  const treeSha = "82c2d5f31624f9db946b53291f01e8437b894542";
+  const lease = { status: "completed", reviewHeadSha: headSha,
+    deliveryHeadSha: headSha,
+    admission: { status: "admitted", manifestDigest: digest(71),
+      declaredWriteSet: [...INSTALL_PATHS.map(value => `path:${value}`),
+        "semantic:canonical-squash-batch-terminalizer-v2"] } };
+  const source = { sha: headSha, treeSha,
+    message: "feat(canonical-squash-batch-terminalizer-v2): terminalize retained lanes\n\nBody" };
+  const proof = completedBridgeIntegration({ lease, pull: { headSha }, source });
+  assert.equal(proof.schema, "agentic-completed-review-publication/v1");
+  assert.equal(proof.commitSha, headSha);
+  assert.equal(proof.treeSha, treeSha);
+  assert.deepEqual(proof.paths, INSTALL_PATHS);
+  assert.throws(() => completedBridgeIntegration({ lease: { ...lease,
+    reviewHeadSha: ZERO_SHA }, pull: { headSha }, source }), /publication proof/);
 });
 
 test("CI joins exact event, branch, workflow, run, job IDs, and digests", () => {

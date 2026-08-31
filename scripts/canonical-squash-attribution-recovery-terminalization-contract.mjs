@@ -23,6 +23,29 @@ export const GENERIC_SELF_HOSTED_RECOVERY_PATHS = Object.freeze([
 ]);
 export const LEGACY_INTEGRATION_RUN_PROFILE = "integration";
 export const SELF_HOSTED_CI_RUN_PROFILE = "self-hosted-ci";
+export const STANDARD_AUTO_DELIVERY_PROFILE = "standard-auto-delivery";
+export const LEGACY_ADMISSION_CONTINUATION_PROFILE = "legacy-admission-continuation";
+const LEGACY_PR819_LINEAGE = Object.freeze({
+  repository: "huijoohwee/agentic-canvas-os",
+  pullRequestNumber: 819,
+  pullRequestNodeId: "PR_kwDOSr5-fM8AAAABBf_I-Q",
+  pullRequestUrl: "https://github.com/huijoohwee/agentic-canvas-os/pull/819",
+  sessionId: "01a04dfc-3492-71f0-83ce-ac8e0ec66663",
+  device: "huis-macbook-pro-3.local",
+  leaseEpoch: 5,
+  scope: "successor-rollover-pr-marker-replan",
+  branch: "agent/huis-macbook-pro-3.local/successor-rollover-pr-marker-replan",
+  claimId: "06dc664eabb28b6e685f6773911e1b1f84b6364cb43edb756157a380f49c2e14",
+  baseSha: "a909f2418aba9e43996f649a7d9fffef8d364639",
+  fenceSha: "84ee696bc4eefd74979705e82812fb1a01b9e340",
+  fenceTreeSha: "036ad30104cc544da2df2e0c8253707f1ee6adf8",
+  reviewedHeadSha: "91fbc80a03c82b5ee49f0f89a8d1fba1af21ac48",
+  reviewedTreeSha: "7362a11e7cb8cf2d5488257a1c71afdbd5650c3b",
+  mergeSha: "a2fd604b8471659ccbbf1bdc5a7ac0757872141c",
+  headline: "fix(successor-rollover-pr-marker-replan): seal refresh",
+  continuationReceiptDigest:
+    "2dda014387c3e12278e4197fc27d08343c93a141e1c9ccf0065232144cf58dbd",
+});
 export const PHASES = Object.freeze([
   "authorized",
   "evidence-verified",
@@ -206,7 +229,9 @@ export function buildReceipt(journal) {
       command: "device:integrate",
       repository: current.plan.evidence.subject.worktreePath,
       sessionId: current.plan.evidence.subject.sessionId,
-      runtime: "canonical",
+      runtime: current.plan.evidence.subject.leaseIdentity.runtimeRequired
+        ? "canonical"
+        : "none",
     },
     preservation: current.plan.evidence.preservation,
     forbiddenEffects: current.plan.forbiddenEffects,
@@ -214,7 +239,7 @@ export function buildReceipt(journal) {
   return freeze({ ...core, receiptDigest: digestValue(core) });
 }
 
-export function normalizeReceipt(value) {
+export function normalizeReceipt(value, { expectedRuntime = null } = {}) {
   object(value, "recovery receipt");
   const expectedKeys = [
     "schema", "status", "operation", "planDigest", "authorizationDigest",
@@ -258,7 +283,9 @@ export function normalizeReceipt(value) {
   ])
     || continuation.schema
       !== "agentic-canonical-squash-attribution-recovery-continuation/v1"
-    || continuation.command !== "device:integrate" || continuation.runtime !== "canonical") {
+    || continuation.command !== "device:integrate"
+    || !["canonical", "none"].includes(continuation.runtime)
+    || (expectedRuntime !== null && continuation.runtime !== expectedRuntime)) {
     invalid("receipt continuation");
   }
   required(continuation.repository, "receipt continuation repository");
@@ -268,6 +295,118 @@ export function normalizeReceipt(value) {
     invalid("receipt effect contract");
   }
   return freeze({ ...core, receiptDigest });
+}
+
+export function normalizeCanonicalSquashRecoveryDeliveryProfile(leaseIdentity, {
+  genericSelfHosted = false,
+} = {}) {
+  object(leaseIdentity, "subject delivery profile lease");
+  const hasAdmissionContinuation = Object.hasOwn(leaseIdentity, "admissionContinuation");
+  if (leaseIdentity.autoDelivery === true && leaseIdentity.runtimeRequired === true) {
+    if (hasAdmissionContinuation) invalid("standard delivery profile continuation");
+    return freeze({
+      profile: STANDARD_AUTO_DELIVERY_PROFILE,
+      runtime: "canonical",
+      admissionContinuation: null,
+    });
+  }
+  const rawSuccessorNames = [
+    "activeOwnedDirtRecovery", "activeOwnedDirtCurrentBaseReanchor",
+    "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
+  ];
+  if (leaseIdentity.autoDelivery !== false || leaseIdentity.runtimeRequired !== false
+    || !genericSelfHosted || !hasAdmissionContinuation
+    || (Object.hasOwn(leaseIdentity, "successorLineage")
+      && leaseIdentity.successorLineage !== null)
+    || rawSuccessorNames.some(name => Object.hasOwn(leaseIdentity, name))) {
+    invalid("subject delivery profile");
+  }
+  return freeze({
+    profile: LEGACY_ADMISSION_CONTINUATION_PROFILE,
+    runtime: "none",
+    admissionContinuation: normalizeCanonicalSquashAdmissionContinuation(
+      leaseIdentity.admissionContinuation,
+      leaseIdentity,
+    ),
+  });
+}
+
+export function normalizeCanonicalSquashAdmissionContinuation(value, leaseIdentity) {
+  object(value, "subject admission continuation");
+  object(leaseIdentity, "subject admission continuation lease");
+  const expectedKeys = [
+    "schema", "status", "claimId", "predecessorPlanReceiptDigest",
+    "predecessorAdmissionReceiptDigest", "manifestDigest", "writeSetDigest",
+    "localFenceSha", "candidateStateDigest", "candidateRevision",
+    "candidateTreeSha", "preparedIntegrationReceiptDigest", "peerLaneStateDigest",
+    "deliveryPeerAuthorityReceiptDigest", "peerOperationReceiptDigests",
+    "dormantPreservationReceiptDigest", "protectedAdvanceReceiptDigest",
+    "cloudVerificationReceiptDigest", "plannedMutationAuthorityReceiptDigest",
+    "mutationAuthorityReceiptDigest", "continuedAt", "receiptDigest",
+  ];
+  const admission = object(leaseIdentity.admission, "subject continuation admission");
+  const authority = object(
+    leaseIdentity.cloudAuthority,
+    "subject continuation cloud authority",
+  );
+  const { receiptDigest, ...core } = value;
+  if (!exactObjectKeys(value, expectedKeys)
+    || value.schema !== "agentic-lane-admission-continuation-receipt/v1"
+    || value.status !== "admitted"
+    || receiptDigest !== digestValue(core)
+    || !exactObjectKeys(admission, [
+      "schema", "status", "semanticScope", "declaredWriteSet", "writeSetDigest",
+      "manifestDigest", "planReceiptDigest", "admissionReceiptDigest",
+      "existingLaneStateDigest", "admittedReportDigest", "preservationReceiptDigest",
+      "continuationReceiptDigest",
+    ])
+    || admission.schema !== "agentic-lane-admission-lease/v1"
+    || admission.status !== "admitted"
+    || admission.semanticScope !== leaseIdentity.scope
+    || admission.admittedReportDigest !== admission.preservationReceiptDigest
+    || admission.continuationReceiptDigest !== receiptDigest
+    || value.claimId !== authority.claimId
+    || value.predecessorPlanReceiptDigest !== admission.planReceiptDigest
+    || value.predecessorAdmissionReceiptDigest !== admission.admissionReceiptDigest
+    || value.manifestDigest !== admission.manifestDigest
+    || value.manifestDigest !== authority.manifestDigest
+    || value.writeSetDigest !== admission.writeSetDigest
+    || value.writeSetDigest !== authority.writeSetDigest
+    || value.localFenceSha !== leaseIdentity.fenceSha
+    || value.candidateRevision !== leaseIdentity.fenceSha
+    || value.preparedIntegrationReceiptDigest !== null
+    || value.peerLaneStateDigest !== admission.existingLaneStateDigest
+    || value.plannedMutationAuthorityReceiptDigest
+      !== value.mutationAuthorityReceiptDigest) {
+    invalid("subject admission continuation join");
+  }
+  for (const name of [
+    "claimId", "predecessorPlanReceiptDigest", "predecessorAdmissionReceiptDigest",
+    "manifestDigest", "writeSetDigest", "candidateStateDigest", "peerLaneStateDigest",
+    "deliveryPeerAuthorityReceiptDigest", "dormantPreservationReceiptDigest",
+    "protectedAdvanceReceiptDigest", "cloudVerificationReceiptDigest",
+    "plannedMutationAuthorityReceiptDigest", "mutationAuthorityReceiptDigest",
+    "receiptDigest",
+  ]) digest(value[name], `subject admission continuation ${name}`);
+  for (const name of [
+    "writeSetDigest", "manifestDigest", "planReceiptDigest", "admissionReceiptDigest",
+    "existingLaneStateDigest", "admittedReportDigest", "preservationReceiptDigest",
+    "continuationReceiptDigest",
+  ]) digest(admission[name], `subject continuation admission ${name}`);
+  sha(value.localFenceSha, "subject admission continuation local fence");
+  sha(value.candidateRevision, "subject admission continuation candidate revision");
+  sha(value.candidateTreeSha, "subject admission continuation candidate tree");
+  if (!Array.isArray(value.peerOperationReceiptDigests)
+    || value.peerOperationReceiptDigests.length < 1
+    || new Set(value.peerOperationReceiptDigests).size
+      !== value.peerOperationReceiptDigests.length) {
+    invalid("subject admission continuation peer operations");
+  }
+  for (const receipt of value.peerOperationReceiptDigests) {
+    digest(receipt, "subject admission continuation peer operation");
+  }
+  exactInstant(value.continuedAt, "subject admission continuation time");
+  return freeze(structuredClone(value));
 }
 
 export function phaseReceipt(phase, values) {
@@ -301,6 +440,9 @@ function normalizeEvidence(value) {
   digest(value.subject.leaseDigest, "subject lease digest");
   const leaseIdentity = object(value.subject.leaseIdentity, "subject lease identity");
   digest(value.subject.leaseIdentityDigest, "subject lease identity digest");
+  const deliveryProfile = normalizeCanonicalSquashRecoveryDeliveryProfile(leaseIdentity, {
+    genericSelfHosted: genericRepositorySubject,
+  });
   const leaseIdentityKeys = [
     "schema", "epoch", "sessionId", "device", "scope", "branch",
     "worktreePath", "baseSha", "fenceSha", "pullRequestUrl", "autoDelivery",
@@ -311,7 +453,10 @@ function normalizeEvidence(value) {
     "cloudAuthority", "integration", "taskAuthority",
   ];
   if (genericRepositorySubject) leaseIdentityKeys.push("successorLineage");
-  if (canonicalJson(Object.keys(leaseIdentity)) !== canonicalJson(leaseIdentityKeys)
+  if (deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE) {
+    leaseIdentityKeys.push("admissionContinuation");
+  }
+  if (!exactObjectKeys(leaseIdentity, leaseIdentityKeys)
     || digestValue(leaseIdentity) !== value.subject.leaseIdentityDigest
     || leaseIdentity.schema !== "agentic-writer-lease/v2"
     || !Number.isSafeInteger(leaseIdentity.epoch) || leaseIdentity.epoch < 1
@@ -319,7 +464,6 @@ function normalizeEvidence(value) {
     || leaseIdentity.scope !== value.subject.scope
     || leaseIdentity.branch !== value.subject.branch
     || leaseIdentity.worktreePath !== value.subject.worktreePath
-    || leaseIdentity.autoDelivery !== true || leaseIdentity.runtimeRequired !== true
     || leaseIdentity.ownedDirtRecovery !== null
     || leaseIdentity.pullRequestProjectionRepair !== null
     || leaseIdentity.reviewHeadSha !== null
@@ -433,7 +577,9 @@ function normalizeEvidence(value) {
     invalid("malformed commit join");
   }
   if (value.subject.malformedCommit.classification
-    !== "provider-rewritten-nonterminal-attribution") invalid("malformed classification");
+    !== (deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE
+      ? "provider-rewritten-terminal-attribution-body-mismatch"
+      : "provider-rewritten-nonterminal-attribution")) invalid("malformed classification");
   normalizeChangedEntries(value.subject.changedEntries, "subject changed entries");
   const genericSelfHosted = value.subject.pinTransition === null;
   if (genericRepositorySubject !== genericSelfHosted) {
@@ -469,6 +615,20 @@ function normalizeEvidence(value) {
     || value.subject.sourceCommitSubjects.length < 1
     || value.subject.sourceCommitSubjects.some(subject => !required(subject, "source subject"))) {
     invalid("subject source commits");
+  }
+  if (deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE) {
+    normalizeLegacySourceCommitProviderActors(
+      value.subject.sourceCommitProviderActors,
+      {
+        sourceCommitSubjects: value.subject.sourceCommitSubjects,
+        fenceSha: leaseIdentity.fenceSha,
+        reviewedHeadSha: value.subject.reviewedHeadSha,
+        mergedBy: value.subject.pullRequest.mergedBy,
+      },
+    );
+    normalizeLegacyPr819Lineage(value, leaseIdentity, deliveryProfile);
+  } else if (Object.hasOwn(value.subject, "sourceCommitProviderActors")) {
+    invalid("standard subject provider actor evidence");
   }
   normalizeRunPair(value.subject.checks, {
     label: "subject checks",
@@ -592,6 +752,115 @@ function normalizeMessageFraming(value, label, terminalLf) {
     || value.objectMessageByteLength < 1
     || value.objectMessageTerminalLf !== terminalLf) invalid(`${label} framing`);
   digest(value.objectMessageSha256, `${label} raw message SHA-256`);
+}
+function normalizeLegacySourceCommitProviderActors(value, {
+  sourceCommitSubjects,
+  fenceSha,
+  reviewedHeadSha,
+  mergedBy,
+}) {
+  if (!Array.isArray(value) || value.length !== sourceCommitSubjects.length
+    || value.length < 1) invalid("legacy subject provider actors");
+  const revisions = [];
+  for (const actor of value) {
+    object(actor, "legacy subject provider actor");
+    if (!exactObjectKeys(actor, ["revision", "authorLogin", "committerLogin"])
+      || actor.authorLogin !== mergedBy || actor.committerLogin !== mergedBy) {
+      invalid("legacy subject provider actor attribution");
+    }
+    sha(actor.revision, "legacy subject provider actor revision");
+    required(actor.authorLogin, "legacy subject provider actor author");
+    required(actor.committerLogin, "legacy subject provider actor committer");
+    revisions.push(actor.revision);
+  }
+  if (new Set(revisions).size !== revisions.length
+    || revisions[0] !== fenceSha
+    || revisions.at(-1) !== reviewedHeadSha) {
+    invalid("legacy subject provider actor revisions");
+  }
+}
+function normalizeLegacyPr819Lineage(value, leaseIdentity, deliveryProfile) {
+  const subject = value.subject;
+  const pullRequest = subject.pullRequest;
+  const malformed = subject.malformedCommit;
+  const continuation = deliveryProfile.admissionContinuation;
+  const exact = {
+    repository: subject.repository,
+    controllerRepository: value.controller.repository,
+    controllerTargetRepository: value.controller.targetRepository,
+    pullRequestNumber: pullRequest.number,
+    pullRequestNodeId: pullRequest.nodeId,
+    pullRequestUrl: pullRequest.url,
+    pullRequestHeadBranch: pullRequest.headBranch,
+    pullRequestHeadSha: pullRequest.headSha,
+    pullRequestBaseBranch: pullRequest.baseBranch,
+    pullRequestBaseSha: pullRequest.baseSha,
+    pullRequestMergeSha: pullRequest.mergeSha,
+    sessionId: subject.sessionId,
+    device: leaseIdentity.device,
+    leaseEpoch: leaseIdentity.epoch,
+    scope: subject.scope,
+    branch: subject.branch,
+    claimId: subject.claimId,
+    leaseClaimId: leaseIdentity.cloudAuthority.claimId,
+    leaseBaseSha: leaseIdentity.baseSha,
+    leaseFenceSha: leaseIdentity.fenceSha,
+    fenceTreeSha: continuation.candidateTreeSha,
+    leasePullRequestUrl: leaseIdentity.pullRequestUrl,
+    leaseDeliveryHeadSha: leaseIdentity.deliveryHeadSha,
+    integrationCommitSha: leaseIdentity.integration.commitSha,
+    integrationTreeSha: leaseIdentity.integration.treeSha,
+    integrationHeadline: leaseIdentity.integration.commitMessage,
+    reviewedHeadSha: subject.reviewedHeadSha,
+    reviewedTreeSha: subject.reviewedTreeSha,
+    expectedHeadline: subject.expectedSquashHeadline,
+    malformedSha: malformed.sha,
+    malformedParentSha: malformed.parentSha,
+    malformedTreeSha: malformed.treeSha,
+    continuationReceiptDigest: continuation.receiptDigest,
+    admissionContinuationReceiptDigest:
+      leaseIdentity.admission.continuationReceiptDigest,
+  };
+  const expected = {
+    repository: LEGACY_PR819_LINEAGE.repository,
+    controllerRepository: LEGACY_PR819_LINEAGE.repository,
+    controllerTargetRepository: LEGACY_PR819_LINEAGE.repository,
+    pullRequestNumber: LEGACY_PR819_LINEAGE.pullRequestNumber,
+    pullRequestNodeId: LEGACY_PR819_LINEAGE.pullRequestNodeId,
+    pullRequestUrl: LEGACY_PR819_LINEAGE.pullRequestUrl,
+    pullRequestHeadBranch: LEGACY_PR819_LINEAGE.branch,
+    pullRequestHeadSha: LEGACY_PR819_LINEAGE.reviewedHeadSha,
+    pullRequestBaseBranch: "main",
+    pullRequestBaseSha: LEGACY_PR819_LINEAGE.baseSha,
+    pullRequestMergeSha: LEGACY_PR819_LINEAGE.mergeSha,
+    sessionId: LEGACY_PR819_LINEAGE.sessionId,
+    device: LEGACY_PR819_LINEAGE.device,
+    leaseEpoch: LEGACY_PR819_LINEAGE.leaseEpoch,
+    scope: LEGACY_PR819_LINEAGE.scope,
+    branch: LEGACY_PR819_LINEAGE.branch,
+    claimId: LEGACY_PR819_LINEAGE.claimId,
+    leaseClaimId: LEGACY_PR819_LINEAGE.claimId,
+    leaseBaseSha: LEGACY_PR819_LINEAGE.baseSha,
+    leaseFenceSha: LEGACY_PR819_LINEAGE.fenceSha,
+    fenceTreeSha: LEGACY_PR819_LINEAGE.fenceTreeSha,
+    leasePullRequestUrl: LEGACY_PR819_LINEAGE.pullRequestUrl,
+    leaseDeliveryHeadSha: LEGACY_PR819_LINEAGE.reviewedHeadSha,
+    integrationCommitSha: LEGACY_PR819_LINEAGE.reviewedHeadSha,
+    integrationTreeSha: LEGACY_PR819_LINEAGE.reviewedTreeSha,
+    integrationHeadline: LEGACY_PR819_LINEAGE.headline,
+    reviewedHeadSha: LEGACY_PR819_LINEAGE.reviewedHeadSha,
+    reviewedTreeSha: LEGACY_PR819_LINEAGE.reviewedTreeSha,
+    expectedHeadline: LEGACY_PR819_LINEAGE.headline,
+    malformedSha: LEGACY_PR819_LINEAGE.mergeSha,
+    malformedParentSha: LEGACY_PR819_LINEAGE.baseSha,
+    malformedTreeSha: LEGACY_PR819_LINEAGE.reviewedTreeSha,
+    continuationReceiptDigest: LEGACY_PR819_LINEAGE.continuationReceiptDigest,
+    admissionContinuationReceiptDigest:
+      LEGACY_PR819_LINEAGE.continuationReceiptDigest,
+  };
+  if (canonicalJson(exact) !== canonicalJson(expected)) {
+    invalid("legacy PR819 lineage");
+  }
 }
 function normalizeChangedEntries(value, label) {
   if (!Array.isArray(value)) invalid(label);
@@ -1048,7 +1317,11 @@ function normalizeState(value, plan) {
   if (value.phase === "complete") {
     const prefix = journalForPrefix(plan, receipts, "verified");
     const expectedReceipt = buildReceipt(prefix);
-    if (normalizeReceipt(receipts.complete.receipt).receiptDigest
+    if (normalizeReceipt(receipts.complete.receipt, {
+      expectedRuntime: plan.evidence.subject.leaseIdentity.runtimeRequired
+        ? "canonical"
+        : "none",
+    }).receiptDigest
       !== expectedReceipt.receiptDigest) invalid("complete receipt join");
   }
   return freeze({ phase: value.phase, receipts: freeze(receipts) });
@@ -1335,5 +1608,10 @@ function digest(value, label) { if (!DIGEST.test(String(value || ""))) invalid(l
 function sha(value, label) { if (!SHA.test(String(value || ""))) invalid(label); return value; }
 function repository(value, label) { if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(String(value || ""))) invalid(label); return value; }
 function instant(value, label) { if (!Number.isFinite(Date.parse(String(value || "")))) invalid(label); return value; }
+function exactInstant(value, label) {
+  instant(value, label);
+  if (new Date(Date.parse(value)).toISOString() !== value) invalid(label);
+  return value;
+}
 function invalid(label) { throw new Error(`Canonical squash attribution recovery ${label} is invalid.`); }
 function freeze(value) { return Object.freeze(value); }

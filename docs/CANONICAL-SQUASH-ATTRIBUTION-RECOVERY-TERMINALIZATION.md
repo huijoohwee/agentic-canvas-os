@@ -17,11 +17,14 @@ runtime_proof: "focused contract, controller, CLI, repository-adapter, response-
 ## Purpose
 
 This controller terminalizes one preserved delivery lane whose protected squash
-commit retained the reviewed tree but whose provider-rendered message placed the
-four Agentic attribution trailers outside the final trailer block. It applies
-only after a separate protected recovery pull request has merged, passed its
-pull-request and post-main checks, and completed its own claim, task, worktree,
-and cleanup lifecycle.
+commit retained the reviewed tree but whose provider-rendered message does not
+equal the byte-exact managed squash message. The standard profile covers a
+provider-added separator and co-author block after the four Agentic trailers.
+The closed PR819 legacy profile instead covers provider-added ordered source
+bullets before an otherwise exact managed body and final Agentic trailer block.
+It applies only after a separate protected recovery pull request has merged,
+passed its pull-request and post-main checks, and completed its own claim, task,
+worktree, and cleanup lifecycle.
 
 The controller does not rewrite history or reinterpret the malformed commit as
 valid. It proves the original reviewed head and tree, the malformed one-parent
@@ -66,6 +69,51 @@ Unknown frontmatter, duplicate keys, symlinks, extra or changed paths, side
 branches, incomplete or newer failed runs, foreign capabilities, provider drift,
 and stale claim, lease, PR, tree, ref, session, or scope identities fail closed.
 
+## Closed PR819 Admission-Continuation Profile
+
+The ordinary delivery profile remains exactly `autoDelivery: true`,
+`runtimeRequired: true`, and no admission-continuation receipt. The only
+additional profile is a self-hosted subject in the protected controller
+repository with both flags false, an exact sealed
+`agentic-lane-admission-continuation-receipt/v1`, and no successor lineage. The
+two profiles are disjoint. Mixed flags, a continuation on the standard profile,
+a missing continuation on the legacy profile, protected-refresh or predecessor
+authority on the legacy profile, and any successor-lineage combination are
+rejected.
+
+That structural shape is necessary but not sufficient. At the normalized
+evidence boundary it is allowlisted only for `huijoohwee/agentic-canvas-os` PR
+819 and its exact node, URL, session, device, lease epoch, scope, branch, claim,
+base, fence and fence tree, reviewed head and tree, protected merge, managed
+headline, and admission-continuation receipt digest. A structurally valid
+receipt attached to any other lineage fails closed before a plan can be sealed.
+
+The legacy continuation receipt has a closed key set and a byte-exact digest.
+Its claim, predecessor plan and admission receipts, manifest, write set, peer
+state, delivery-peer authority, protected advance, cloud verification, and
+planned/final mutation-authority receipts join the immutable admission and cloud
+authority. Every peer-operation entry is a digest, the planned and final
+mutation-authority receipts are identical, and the admission's
+`continuationReceiptDigest` equals the receipt seal. Extra keys, reordered or
+foreign peer receipts, a resealed field mutation, or any broken join fail closed.
+
+`localFenceSha` and `candidateRevision` both equal the immutable lease fence.
+The receipt's `candidateTreeSha` equals that fence commit's tree, and the fence
+is an ancestor of the reviewed head. Thus the continuation proves the admitted
+candidate from which the reviewed PR819 history grew; a valid-looking receipt
+cannot authorize a foreign tree or a side history.
+
+The PR819 provider message is one exact no-co-author framing: expected headline,
+the complete source-history subjects as ordered `* ` bullets (including the
+terminal reviewed subject), the exact managed prose body, and the four managed
+Agentic trailers as the final block. Every source commit's verified provider
+author and committer actor equals the pull request merger and the human who
+enabled the null-body squash request. Partial, duplicate, or reordered bullets;
+a separator; any `Co-authored-by` line; actor drift; body drift; and trailer
+drift are rejected. This profile is classified separately as a provider rewrite
+whose terminal attribution is present but whose body is not the authorized
+managed message; it does not weaken the standard co-author profile.
+
 ## Generic Recovery Variants
 
 Generic mode is available only when the malformed subject and recovery target
@@ -98,12 +146,18 @@ The two generic recovery variants are mutually exclusive:
 Both variants require the malformed subject to be an ancestor of the recovery
 parent, the recovery source and protected trees to match, the unique evidence
 path blob to match byte-for-byte, and the completed recovery lease's manifest,
-declared write set, cloud authority, and integration paths to join the exact Git
-delta. The evidence-document controller revision remains the malformed subject;
-the self-hosted controller revision is the protected recovery merge. Generic
-recovery completion retains delivery shape (`reviewHeadSha` absent and
-`deliveryHeadSha` equal to the recovery source); the legacy recovery retains its
-exact reviewed-head projection.
+declared write set, cloud authority, and admitted paths to join the exact Git
+delta. A completed generic delivery recovery takes those paths from its sealed
+integration record. A completed generic review-ready recovery may have
+`integration: null`; only that exact head projection derives the same ordered
+paths from the byte-equivalent admission and cloud declarations. The
+evidence-document controller revision remains the malformed subject; the
+self-hosted controller revision is the protected recovery merge. Generic
+delivery completion retains delivery shape (`reviewHeadSha` absent and
+`deliveryHeadSha` equal to the recovery source); generic review-ready completion
+retains `reviewHeadSha` equal to the recovery source, `deliveryHeadSha` absent,
+and `integration: null`. The historical non-generic recovery retains its exact
+reviewed-head projection.
 
 The admission and cloud declarations must be byte-equivalent as complete write
 sets, not merely equivalent after path filtering. Their semantic scope, target
@@ -146,7 +200,9 @@ The only effects are:
 3. detach the registered worktree from the reviewed branch to one captured clean
    protected-main revision; and
 4. return a `completion-ready` receipt whose sole continuation is ordinary
-   repository-owned `device:integrate`.
+   repository-owned `device:integrate`, with runtime derived from the immutable
+   subject profile: `canonical` for the standard profile and `none` for the
+   closed PR819 admission-continuation profile.
 
 The authored branch and reviewed tree remain exact. The controller does not
 author or stage source and does not write authored refs, pull requests,

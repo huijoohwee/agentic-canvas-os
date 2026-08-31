@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6656,
-  "headDigest": "6c4eaeb0325f7247496da24732bfaa77d68d5f848008e98eb79525504d932927",
+  "sequence": 6657,
+  "headDigest": "1b6cb81c4ba8d41850fc813892a1aaefc5864a3bdd966fe3dffb0d90ac99dbdd",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -338001,6 +338001,60 @@
       },
       "claimDigest": "3338c90dd9285a8e76e785d5cc9da069ad83d1def761e4496dd09fe1feba116a",
       "digest": "6c4eaeb0325f7247496da24732bfaa77d68d5f848008e98eb79525504d932927"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6657,
+      "parentDigest": "6c4eaeb0325f7247496da24732bfaa77d68d5f848008e98eb79525504d932927",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "83abdba35d5f533372645af74fcaeaa9b42919e4eb70b5f6cf905e71d79bb62b",
+      "idempotencyKey": "75f30dcfdc55acf9cd0ed04d99f0aa39c91007a02c59f7f47f6f68b9bd696997",
+      "requestDigest": "c4e7d00263222a90f8101da6d1b478add730a8f7950ab4f22d82c490b04791f7",
+      "evaluationTime": "2026-08-31T08:23:16.000Z",
+      "claimCore": {
+        "claimId": "83abdba35d5f533372645af74fcaeaa9b42919e4eb70b5f6cf905e71d79bb62b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ac3d3efb1ee6d84c0ffe6e5c95db9eed3340fecdaa6a33cd26677fa77d04db33",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:72658d338ac8405f6e4abf9695e08eb36bd18ea17de6f61db26d06c4d2011a85",
+        "canonicalBaseRevision": "c7194b8d70d53ad90721f2822fe05adde4659e4e",
+        "declaredWriteScope": [
+          "path:__tests__/active-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-contract.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-controller.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-adapter.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-observer.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-terminal.test.mjs",
+          "path:docs/EXPIRED-DESCENDANT-UNTRACKED-SCOPE-RECOVERY.md",
+          "path:scripts/active-descendant-untracked-scope-recovery.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-contract.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-controller.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-evidence.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-adapter.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-observer.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-terminal.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery.mjs",
+          "semantic:expired-descendant-untracked-scope-recovery"
+        ],
+        "writeSetDigest": "cdd88fc6e8b9e787a785c23d06483fa415ab173b28aa1734d8bfff9a00ab4e20",
+        "laneRevision": "c7194b8d70d53ad90721f2822fe05adde4659e4e",
+        "leaseEpoch": 2,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "waiting-successor",
+        "expiresAt": "2026-08-31T08:53:16.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "62e2a1e66489989745ff2e1f0b94e19766b5f39faa4b8c7daf5aa5082a7f4d4e",
+        "eligibleSince": "2026-08-31T08:23:16.000Z",
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "44ad6e0d4451b68ac12e450c3f6cde6015e7a8b528510dfcb3841fd4dadbae3c",
+      "digest": "1b6cb81c4ba8d41850fc813892a1aaefc5864a3bdd966fe3dffb0d90ac99dbdd"
     }
   ]
 }

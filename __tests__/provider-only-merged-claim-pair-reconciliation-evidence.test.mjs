@@ -184,6 +184,19 @@ test("inventory digests are order-stable and relevance includes overlap and line
     [raw.cloud.source.claimId, raw.cloud.waiter.claimId, overlapping.claimId, successor.claimId].sort(),
   );
 });
+
+test("accepts an unrelated valid legacy-v1 claim without weakening the v2 pair", () => {
+  const raw = providerOnlyEvidenceFixture();
+  const legacy = additionalClaim(raw.cloud.source, {
+    workItemId: "work-item:legacy-unrelated",
+    leaseEpoch: 3,
+    declaredWriteScope: ["path:docs/legacy-unrelated"],
+    predecessorClaimId: null,
+    identitySchema: "agentic-cloud-collaboration-entry/v1",
+  });
+  raw.cloud.currentClaims.push(legacy);
+  assert.doesNotThrow(() => buildProviderOnlyMergedClaimPairReconciliationEvidence(raw));
+});
 }
 
 export function providerOnlyEvidenceFixture() {
@@ -359,22 +372,28 @@ function additionalRelevantClaim(source) {
 
 function additionalClaim(source, {
   workItemId, leaseEpoch, declaredWriteScope: rawScope, predecessorClaimId,
+  identitySchema = "agentic-cloud-collaboration-entry/v2",
 }) {
   const declaredWriteScope = normalizeWriteSet(rawScope);
   const writeSetDigest = digestValue(declaredWriteScope);
-  const claimId = digestValue({
+  const identity = {
     actorId: source.actorId,
     canonicalBaseRevision: source.canonicalBaseRevision,
     leaseEpoch,
     repositoryId: source.repositoryId,
     workItemId,
     writeSetDigest,
-  });
+  };
+  if (identitySchema === "agentic-cloud-collaboration-entry/v1") {
+    identity.deviceId = source.deviceId;
+    identity.sessionId = source.sessionId;
+  }
+  const claimId = digestValue(identity);
   return {
     ...structuredClone(source), claimId, claimDigest: digest(`fence-${claimId}`),
     transitionDigest: digest(`transition-${claimId}`),
     operationReceiptDigest: digest(`receipt-${claimId}`),
     workItemId, declaredWriteScope, writeSetDigest, leaseEpoch,
-    predecessorClaimId,
+    predecessorClaimId, entrySchema: identitySchema, claimIdentitySchema: identitySchema,
   };
 }

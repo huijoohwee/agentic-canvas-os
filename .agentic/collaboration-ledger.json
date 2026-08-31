@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6724,
-  "headDigest": "58a4a3c7d0ca162e4d93ecaaf6b5e3884535f942bca054d7bcbe61fa126f8d7f",
+  "sequence": 6725,
+  "headDigest": "ec8cd4a920ce7bbca0cd817dc17788e86882dad15f70c48091932d760881e7c6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -341135,6 +341135,67 @@
       },
       "claimDigest": "c5df8896bf23e8dfbe815691575ccce7ac63381416e165d71e8bb2a91fc2a38e",
       "digest": "58a4a3c7d0ca162e4d93ecaaf6b5e3884535f942bca054d7bcbe61fa126f8d7f"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6725,
+      "parentDigest": "58a4a3c7d0ca162e4d93ecaaf6b5e3884535f942bca054d7bcbe61fa126f8d7f",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9c8ab25d397bc6617486635a965dd5fcd04c33bdb33bd1c33b3141d3208988a3",
+      "idempotencyKey": "16f09ae4613655bcedb61521423ff4643c2eee4922fef3ba4c3970e7d201bee3",
+      "requestDigest": "6aae93020f8e179da4390223bb5b9d6f6550557f06dbcd99e942aa40bfc84e08",
+      "evaluationTime": "2026-08-31T15:01:05.000Z",
+      "claimCore": {
+        "claimId": "9c8ab25d397bc6617486635a965dd5fcd04c33bdb33bd1c33b3141d3208988a3",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:66fad68c5f864f4453dcffcab9781324c29cd25b16a199b8e4240ec9dc3ed790",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:e8157a42e89c4e9f96cf77ca376925c56a23f8d1e893bee827a2c7c328bbf8b7",
+        "canonicalBaseRevision": "ff5bd23525e1d347c1ea04be47f93529e355c34f",
+        "declaredWriteScope": [
+          "path:__tests__/provider-only-merged-claim-pair-reconciliation-evidence.test.mjs",
+          "path:scripts/provider-only-merged-claim-pair-reconciliation-evidence.mjs",
+          "semantic:provider-pair-legacy-identity-inference"
+        ],
+        "writeSetDigest": "b19f515b3e72f6e7506f862acc5bf5464d5bd46ec2fb0e186a5441ef3deaed21",
+        "laneRevision": "bdd55c3352098d1eb7b853a8c2fc9df516b7f984",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "retired",
+        "expiresAt": "2026-08-31T18:33:49.000Z",
+        "evidenceDigest": "376a8a21fdf3a34e9fe37bb36c7afd3a8ce038f1ff958a38d22977ded80e190e",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBnWx4w",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "bdd55c3352098d1eb7b853a8c2fc9df516b7f984",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBnWx4w",
+          "focusedEvidenceDigest": "376a8a21fdf3a34e9fe37bb36c7afd3a8ce038f1ff958a38d22977ded80e190e",
+          "dependencyClosureDigest": "36174d6647403aa3083e240e119bbf7b7254197ad6332b77dca2b2d9d56e1808",
+          "namedChecksDigest": "625f706602b36b018a419d23c5cc2a5234056ff893ccd049298d5c8d7ee29412",
+          "handoffEvidenceDigest": "0213c0faae1e5a4d3ad34ac26dd7e145726edcbd822e04212190a165854ce76a",
+          "operatorDecisionDigest": "72e6f6727131c00f9181dc38267af74eb956b0228af7f9cb4ed20b39f68db9cc",
+          "integrationIntentDigest": "15a8b25bfa1a8288bf2f6dd91eb9459d7a8e54790d1c52583d1caf2889448d48",
+          "integratedAt": "2026-08-31T14:58:36.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "bdd55c3352098d1eb7b853a8c2fc9df516b7f984",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBnWx4w",
+          "bytesDigest": "a7247d7432f369fa2165e53e07c7bd6f8a7c8fc6dd980f5c6761a1ac56d0922b",
+          "namedChecksDigest": "625f706602b36b018a419d23c5cc2a5234056ff893ccd049298d5c8d7ee29412",
+          "handoffEvidenceDigest": "0213c0faae1e5a4d3ad34ac26dd7e145726edcbd822e04212190a165854ce76a",
+          "integrationReceiptDigest": "4efd545541ff5da65bf5fe95c512752afcbb8707e87fe42827e48ff7d7851ec1",
+          "retiredAt": "2026-08-31T15:01:05.000Z"
+        }
+      },
+      "claimDigest": "e88ef5013fbe70d2c25b1fbc0c51616ee28b3b53bfad78dafe4a62bc0b82f2f9",
+      "digest": "ec8cd4a920ce7bbca0cd817dc17788e86882dad15f70c48091932d760881e7c6"
     }
   ]
 }

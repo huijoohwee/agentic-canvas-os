@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6659,
-  "headDigest": "8c557cd743c8b4e21bc51cd4904e46644cf779d1e7dec303ce6251924ae7000d",
+  "sequence": 6660,
+  "headDigest": "6b3646cb2da9b0b5148f749dc88b528215def55ebc43a117f87ce8d81142ebc8",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -338175,6 +338175,61 @@
       },
       "claimDigest": "11c452b5b9ee89b5ffb796c0a08622eaccc66420dabca850f92a10c9c0241986",
       "digest": "8c557cd743c8b4e21bc51cd4904e46644cf779d1e7dec303ce6251924ae7000d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6660,
+      "parentDigest": "8c557cd743c8b4e21bc51cd4904e46644cf779d1e7dec303ce6251924ae7000d",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "83abdba35d5f533372645af74fcaeaa9b42919e4eb70b5f6cf905e71d79bb62b",
+      "idempotencyKey": "4e565012ecaff8a25dfe7b9a028f6288a04cd996f21b760001c8fd5d0f62d803",
+      "requestDigest": "847e84c2d6ee72e16091db0356abf06d813aeb0116caba0de88a96ed57f4c4ed",
+      "evaluationTime": "2026-08-31T08:25:30.000Z",
+      "claimCore": {
+        "claimId": "83abdba35d5f533372645af74fcaeaa9b42919e4eb70b5f6cf905e71d79bb62b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:ac3d3efb1ee6d84c0ffe6e5c95db9eed3340fecdaa6a33cd26677fa77d04db33",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:72658d338ac8405f6e4abf9695e08eb36bd18ea17de6f61db26d06c4d2011a85",
+        "canonicalBaseRevision": "c7194b8d70d53ad90721f2822fe05adde4659e4e",
+        "declaredWriteScope": [
+          "path:__tests__/active-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-cli.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-contract.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-controller.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-adapter.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-observer.test.mjs",
+          "path:__tests__/expired-descendant-untracked-scope-recovery-repository-terminal.test.mjs",
+          "path:docs/EXPIRED-DESCENDANT-UNTRACKED-SCOPE-RECOVERY.md",
+          "path:scripts/active-descendant-untracked-scope-recovery.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-contract.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-controller.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-evidence.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-adapter.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-observer.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery-repository-terminal.mjs",
+          "path:scripts/expired-descendant-untracked-scope-recovery.mjs",
+          "semantic:expired-descendant-untracked-scope-recovery"
+        ],
+        "writeSetDigest": "cdd88fc6e8b9e787a785c23d06483fa415ab173b28aa1734d8bfff9a00ab4e20",
+        "laneRevision": "d1a6c92a3a171fc7cb15557b56ee822e1f084036",
+        "leaseEpoch": 2,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T08:54:43.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBj6vrQ",
+        "predecessorClaimId": "62e2a1e66489989745ff2e1f0b94e19766b5f39faa4b8c7daf5aa5082a7f4d4e",
+        "eligibleSince": "2026-08-31T08:23:16.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-31T08:24:43.000Z"
+      },
+      "claimDigest": "fdf1470621dd7da083b0a861b2856c6524bf8b7c2f43b0c380a0e21cfc03c63f",
+      "digest": "6b3646cb2da9b0b5148f749dc88b528215def55ebc43a117f87ce8d81142ebc8"
     }
   ]
 }

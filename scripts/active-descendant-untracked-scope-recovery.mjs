@@ -3,13 +3,15 @@
 
 import {
   closeSync,
+  constants,
   existsSync,
+  fstatSync,
   fsyncSync,
+  linkSync,
   lstatSync,
   openSync,
   readFileSync,
   realpathSync,
-  renameSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -22,8 +24,8 @@ import { createActiveDescendantUntrackedScopeRecoveryRepositoryAdapter }
   from "./active-descendant-untracked-scope-recovery-repository-adapter.mjs";
 
 const CONTROLLER_ROOT = fileURLToPath(new URL("..", import.meta.url));
-const RESULT_SCHEMA = "agentic-active-descendant-untracked-scope-recovery-cli/v1";
-const COMMANDS = new Set(["plan", "run"]);
+const RESULT_SCHEMA = "agentic-active-descendant-untracked-scope-recovery-cli/v2";
+const COMMANDS = new Set(["owner-stop", "plan", "run"]);
 const COMMON_OPTIONS = Object.freeze([
   "repository", "session", "target-manifest", "owner-stop-receipt", "ttl-seconds",
 ]);
@@ -39,19 +41,17 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
     "controller root",
   );
   const roots = [repository, controllerRoot];
-  const targetManifestFile = externalFile(
-    required(options, "target-manifest"), roots, "target manifest",
-  );
-  const ownerStopReceiptFile = externalFile(
-    required(options, "owner-stop-receipt"), roots, "owner-stop receipt",
-  );
-  const taskAuthorityFile = command === "run"
+  const targetManifestFile = command === "owner-stop" ? null : externalFile(
+    required(options, "target-manifest"), roots, "target manifest");
+  const ownerStopReceiptFile = command === "owner-stop" ? null : externalFile(
+    required(options, "owner-stop-receipt"), roots, "owner-stop receipt");
+  const taskAuthorityFile = command !== "plan"
     ? externalFile(required(options, "task-authority"), roots, "task authority")
     : null;
   const planFile = command === "run"
     ? externalFile(required(options, "plan-file"), roots, "plan file")
     : null;
-  const outputFile = command === "plan"
+  const outputFile = command !== "run"
     ? externalOutput(required(options, "output"), roots, "plan output")
     : null;
   requireDistinct([
@@ -68,6 +68,12 @@ export async function main(argumentsList = process.argv.slice(2), dependencies =
     ttlSeconds: ttl(options.get("ttl-seconds") || "1800"),
     controllerRoot,
   }, dependencies.adapterDependencies || {});
+  if (command === "owner-stop") {
+    const receipt = await adapter.createOwnerStopReceipt();
+    writePrivateJsonExclusive(outputFile, receipt, dependencies);
+    return Object.freeze({ schema: RESULT_SCHEMA, ok: true, status: "owner-stopped",
+      receiptDigest: receipt.receiptDigest, receiptOutput: outputFile });
+  }
   const controller = (dependencies.createController
     || createActiveDescendantUntrackedScopeRecoveryController)(adapter);
 
@@ -108,8 +114,10 @@ function parseOptions(tokens) {
 }
 
 function rejectOptions(values, command) {
-  const allowed = new Set([...COMMON_OPTIONS,
-    ...(command === "plan" ? ["output"] : ["plan-file", "task-authority", "authorization"])]);
+  const allowed = new Set(command === "owner-stop"
+    ? ["repository", "session", "task-authority", "ttl-seconds", "output"]
+    : [...COMMON_OPTIONS, ...(command === "plan"
+      ? ["output"] : ["plan-file", "task-authority", "authorization"])]);
   for (const name of values.keys()) {
     if (!allowed.has(name)) throw new Error(`Unsupported --${name} for ${command}.`);
   }
@@ -123,8 +131,8 @@ function required(values, name) {
 
 function ttl(value) {
   const number = Number(value);
-  if (!Number.isSafeInteger(number) || number < 60 || number > 86_400) {
-    throw new Error("--ttl-seconds must be 60..86400.");
+  if (!Number.isSafeInteger(number) || number < 60 || number > 3_600) {
+    throw new Error("--ttl-seconds must be 60..3600.");
   }
   return number;
 }
@@ -167,8 +175,21 @@ function requireDistinct(files) {
 }
 
 function readJson(file, label) {
-  try { return JSON.parse(readFileSync(file, "utf8")); }
-  catch (error) { throw new Error(`${label} JSON is invalid: ${error.message}`); }
+  const descriptor = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const before = fstatSync(descriptor);
+    if (!before.isFile() || before.nlink !== 1 || before.size > 1024 * 1024
+      || (typeof process.getuid === "function" && before.uid !== process.getuid())
+      || (before.mode & 0o077) !== 0) throw new Error(`${label} must be one private file.`);
+    const result = JSON.parse(readFileSync(descriptor, "utf8"));
+    const after = fstatSync(descriptor);
+    if (before.dev !== after.dev || before.ino !== after.ino
+      || before.size !== after.size || before.mtimeMs !== after.mtimeMs) {
+      throw new Error(`${label} changed while being read.`);
+    }
+    return result;
+  } catch (error) { throw new Error(`${label} JSON is invalid: ${error.message}`); }
+  finally { closeSync(descriptor); }
 }
 
 function writePrivateJsonExclusive(file, value, dependencies) {
@@ -179,7 +200,10 @@ function writePrivateJsonExclusive(file, value, dependencies) {
     descriptor = openSync(temporary, "wx", 0o600);
     writeFileSync(descriptor, `${JSON.stringify(value, null, 2)}\n`);
     fsyncSync(descriptor); closeSync(descriptor); descriptor = null;
-    renameSync(temporary, file);
+    linkSync(temporary, file);
+    const parent = openSync(path.dirname(file), constants.O_RDONLY);
+    try { fsyncSync(parent); } finally { closeSync(parent); }
+    unlinkSync(temporary);
   } finally {
     if (descriptor) closeSync(descriptor);
     if (existsSync(temporary)) unlinkSync(temporary);
@@ -194,8 +218,9 @@ function publicMessage(error) {
 }
 
 function usage() {
-  return "Usage: active-descendant-untracked-scope-recovery.mjs plan|run "
+  return "Usage: active-descendant-untracked-scope-recovery.mjs owner-stop|plan|run "
     + "--repository=<worktree> --session=<source-session> "
+    + "owner-stop --task-authority=<external-capability> --output=<external-owner-stop-json> | "
     + "--target-manifest=<external-json> --owner-stop-receipt=<external-json> "
     + "[--ttl-seconds=1800] --output=<external-plan-json> | "
     + "--plan-file=<external-plan-json> --task-authority=<external-capability> "

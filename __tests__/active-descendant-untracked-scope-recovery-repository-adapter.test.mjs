@@ -3,80 +3,87 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
-  assertActiveDescendantUntrackedIncidentShape,
-  normalizeActiveDescendantUntrackedOwnerStopReceipt,
-} from "../scripts/active-descendant-untracked-scope-recovery-repository-adapter.mjs";
+  activeDescendantUntrackedEntriesDigest,
+  activeDescendantUntrackedIndexEvidenceDigest,
+  assertActiveDescendantUntrackedScopePartition,
+  buildActiveDescendantUntrackedOwnerStopEvidence,
+  requireFreshActiveDescendantUntrackedOwnerStop,
+} from "../scripts/active-descendant-untracked-scope-recovery-evidence.mjs";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 
-const HEAD = "1".repeat(40);
-const FENCE = "2".repeat(40);
-const STOPPED = ["scripts/new-a.mjs", "scripts/new-b.mjs"];
+const S = digit => digit.repeat(40), D = value => digestValue(value);
+const HEAD = S("1"), FENCE = S("2"), BRANCH = "agent/device.local/scope";
+const TRACKED = "scripts/tracked.mjs", UNTRACKED = "scripts/untracked.mjs";
+const ISSUED = "2026-08-31T00:00:00.000Z", EXPIRES = "2026-08-31T00:30:00.000Z";
 
-function ownerStop(overrides = {}) {
-  const core = {
-    schema: "agentic-active-descendant-untracked-owner-stop/v1",
-    sourceSessionId: "session:owner",
-    sourceBranch: "agent/device.local/scope",
-    sourceHeadSha: HEAD,
-    sourceFenceSha: FENCE,
-    untrackedPaths: STOPPED,
-    stoppedAt: "2026-08-31T00:00:00.000Z",
-    ...overrides,
-  };
-  return { ...core, receiptDigest: digestValue(core) };
-}
-
-function incident(overrides = {}) {
-  return {
-    lease: { admission: { declaredWriteSet: ["path:scripts/tracked.mjs"] } },
-    lane: { headSha: HEAD, remoteFenceSha: FENCE },
-    dirt: { entries: [
-      { path: "scripts/tracked.mjs", untracked: false },
-      { path: STOPPED[0], untracked: true },
-      { path: STOPPED[1], untracked: true },
-    ] },
-    stop: ownerStop(),
-    target: { declaredWriteSet: [
-      "path:scripts/tracked.mjs", `path:${STOPPED[0]}`, `path:${STOPPED[1]}`,
-      "path:scripts/future-adapter.mjs",
-    ] },
-    ...overrides,
-  };
-}
-
-test("owner-stop receipt is exact, sorted, and self-digesting", () => {
-  const receipt = normalizeActiveDescendantUntrackedOwnerStopReceipt(ownerStop());
-  assert.deepEqual(receipt.untrackedPaths, STOPPED);
-  const { receiptDigest, ...core } = receipt;
-  assert.equal(receiptDigest, digestValue(core));
-
-  const extra = { ...ownerStop(), inferredExpiry: "2026-09-01T00:00:00.000Z" };
-  assert.throws(() => normalizeActiveDescendantUntrackedOwnerStopReceipt(extra), /schema/u);
-  assert.throws(
-    () => normalizeActiveDescendantUntrackedOwnerStopReceipt({ ...ownerStop(), receiptDigest: "0".repeat(64) }),
-    /receipt digest/u,
-  );
+test("owner stop is content-bound and expires closed", () => {
+  const dirt = dirtEvidence(S("7"));
+  const stop = buildActiveDescendantUntrackedOwnerStopEvidence({
+    sourceSessionId: "session:owner", sourceBranch: BRANCH,
+    sourceHeadSha: HEAD, sourceFenceSha: FENCE,
+    sourceDirtEvidenceDigest: dirt.evidenceDigest,
+    sourceIndexEvidenceDigest: activeDescendantUntrackedIndexEvidenceDigest(dirt),
+    untrackedEntriesDigest: activeDescendantUntrackedEntriesDigest(dirt),
+    taskAuthorityReceiptDigest: D("receipt"), taskAuthorityProofDigest: D("proof"),
+    taskAuthorityBindingDigest: D("binding"), untrackedPaths: [UNTRACKED],
+    issuedAt: ISSUED, expiresAt: EXPIRES,
+  });
+  const input = { ownerStop: stop, lease: { branch: BRANCH, fenceSha: FENCE },
+    frame: { headSha: HEAD, dirt, untrackedPaths: [UNTRACKED] },
+    sourceSessionId: "session:owner", ttlSeconds: 1_800,
+    now: new Date("2026-08-31T00:10:00.000Z") };
+  assert.equal(requireFreshActiveDescendantUntrackedOwnerStop(input).receiptDigest,
+    stop.receiptDigest);
+  assert.throws(() => requireFreshActiveDescendantUntrackedOwnerStop({
+    ...input,
+    frame: { ...input.frame, dirt: dirtEvidence(S("8")) },
+  }), /fresh content-bound owner stop/u);
+  assert.throws(() => requireFreshActiveDescendantUntrackedOwnerStop({
+    ...input, now: new Date(EXPIRES),
+  }), /fresh content-bound owner stop/u);
 });
 
-test("incident admits only the exact stopped untracked partition and a strict superset", () => {
-  assert.doesNotThrow(() => assertActiveDescendantUntrackedIncidentShape(incident()));
-  const wrongFence = incident({ lane: { headSha: HEAD, remoteFenceSha: "3".repeat(40) } });
-  assert.throws(() => assertActiveDescendantUntrackedIncidentShape(wrongFence), /revision identity/u);
-
-  const unstopped = incident();
-  unstopped.dirt.entries.push({ path: "scripts/foreign.mjs", untracked: true });
-  assert.throws(() => assertActiveDescendantUntrackedIncidentShape(unstopped), /scope partition/u);
-
-  const notStrict = incident({ target: { declaredWriteSet: ["path:scripts/tracked.mjs"] } });
-  assert.throws(() => assertActiveDescendantUntrackedIncidentShape(notStrict), /scope partition|strict-superset/u);
+test("scope partition admits only the exact strict-superset untracked additions", () => {
+  const incident = { sourceDeclaredWriteSet: ["semantic:scope", `path:${TRACKED}`],
+    targetDeclaredWriteSet: ["semantic:scope", `path:${TRACKED}`, `path:${UNTRACKED}`],
+    committedPaths: [TRACKED], trackedDirtyPaths: [TRACKED],
+    untrackedPaths: [UNTRACKED] };
+  assert.equal(assertActiveDescendantUntrackedScopePartition(incident), incident);
+  assert.throws(() => assertActiveDescendantUntrackedScopePartition({
+    ...incident,
+    targetDeclaredWriteSet: incident.sourceDeclaredWriteSet,
+  }), /strict-superset target scope/u);
+  assert.throws(() => assertActiveDescendantUntrackedScopePartition({
+    ...incident,
+    targetDeclaredWriteSet: [...incident.targetDeclaredWriteSet, "path:scripts/other.mjs"],
+    untrackedPaths: ["scripts/missing.mjs"],
+  }), /scope partition/u);
 });
 
-test("adapter stays bounded and contains no provider or Git authoring mutation", () => {
-  const source = readFileSync(new URL("../scripts/active-descendant-untracked-scope-recovery-repository-adapter.mjs", import.meta.url), "utf8");
+test("adapter is bounded and delegates mutations to integrated scope expansion", () => {
+  const source = readFileSync(new URL(
+    "../scripts/active-descendant-untracked-scope-recovery-repository-adapter.mjs",
+    import.meta.url), "utf8");
   assert.ok(source.split("\n").length < 600);
-  assert.doesNotMatch(source, /\["pr",\s*"edit"/u);
-  assert.doesNotMatch(source, /\b(?:add|commit|push|reset|checkout)\b[^\n]*\(\[/u);
-  assert.doesNotMatch(source, /verifyPullRequestPreserved/u);
-  assert.match(source, /pullRequestMutation:\s*false/u);
-  assert.match(source, /providerProjection:\s*"deferred"/u);
+  assert.match(source, /runActiveDirtyScopeExpansion/u);
+  assert.match(source, /createRepositoryActiveDirtyScopeExpansionAdapter/u);
+  assert.match(source, /expectedLedgerDigest: activePlan\.incident\.sourceLedgerDigest/u);
+  assert.match(source, /projectWriterLeasePullRequestMarker/u);
+  assert.doesNotMatch(source, /\["(?:add|commit|push|reset|checkout)"/u);
+  assert.doesNotMatch(source, /"pr",\s*"(?:ready|merge|close)"/u);
 });
+
+function dirtEvidence(untrackedBlob) {
+  const entries = [
+    { path: TRACKED, staged: false, unstaged: true, untracked: false,
+      headMode: "100644", headBlob: S("3"), indexMode: "100644", indexBlob: S("3"),
+      worktreeType: "file", worktreeMode: "100644", worktreeBlob: S("4") },
+    { path: UNTRACKED, staged: false, unstaged: false, untracked: true,
+      headMode: null, headBlob: null, indexMode: null, indexBlob: null,
+      worktreeType: "file", worktreeMode: "100644", worktreeBlob: untrackedBlob },
+  ];
+  const core = { schema: "agentic-active-owned-dirt-evidence/v1", headSha: HEAD,
+    entries, pathCount: 2, stagedPathCount: 0, unstagedPathCount: 1,
+    untrackedPathCount: 1 };
+  return { ...core, evidenceDigest: D(core) };
+}

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -18,8 +18,8 @@ function fixture() {
   const ownerStop = path.join(external, "owner-stop.json");
   const taskAuthority = path.join(external, "task-authority.json");
   const planFile = path.join(external, "plan.json");
-  writeFileSync(targetManifest, "{}\n"); writeFileSync(ownerStop, "{}\n");
-  writeFileSync(taskAuthority, "{}\n");
+  privateWrite(targetManifest, "{}\n"); privateWrite(ownerStop, "{}\n");
+  privateWrite(taskAuthority, "{}\n");
   return { repository, controllerRoot, targetManifest, ownerStop, taskAuthority, planFile };
 }
 
@@ -53,9 +53,27 @@ test("plan is read-only and writes one private external plan", async () => {
   );
 });
 
+test("owner-stop writes one private content-bound receipt before planning", async () => {
+  const value = fixture(), output = path.join(path.dirname(value.planFile), "stopped.json");
+  const receipt = { schema: "test-owner-stop/v1", receiptDigest: DIGEST };
+  const result = await main(["owner-stop", `--repository=${value.repository}`,
+    "--session=session:owner", `--task-authority=${value.taskAuthority}`,
+    `--output=${output}`], {
+    controllerRoot: value.controllerRoot,
+    createAdapter: options => ({ createOwnerStopReceipt: async () => {
+      assert.equal(options.taskAuthorityFile, value.taskAuthority);
+      assert.equal(options.targetManifestFile, null);
+      return receipt;
+    } }),
+  });
+  assert.equal(result.status, "owner-stopped");
+  assert.equal(statSync(output).mode & 0o777, 0o600);
+  assert.deepEqual(JSON.parse(readFileSync(output, "utf8")), receipt);
+});
+
 test("run consumes external plan, capability, and exact authorization as JSON", async () => {
   const value = fixture();
-  writeFileSync(value.planFile, `${JSON.stringify({ planDigest: DIGEST, exactAuthorization: AUTHORIZATION })}\n`);
+  privateWrite(value.planFile, `${JSON.stringify({ planDigest: DIGEST, exactAuthorization: AUTHORIZATION })}\n`);
   let received, stdout = "", stderr = "", providerMutations = 0;
   const code = await runCli(["run", ...common(value), `--plan-file=${value.planFile}`,
     `--task-authority=${value.taskAuthority}`, `--authorization=${AUTHORIZATION}`], {
@@ -77,7 +95,7 @@ test("run consumes external plan, capability, and exact authorization as JSON", 
 
 test("run fails closed on non-exact authorization", async () => {
   const value = fixture();
-  writeFileSync(value.planFile, `${JSON.stringify({ planDigest: DIGEST, exactAuthorization: AUTHORIZATION })}\n`);
+  privateWrite(value.planFile, `${JSON.stringify({ planDigest: DIGEST, exactAuthorization: AUTHORIZATION })}\n`);
   let stderr = "";
   const code = await runCli(["run", ...common(value), `--plan-file=${value.planFile}`,
     `--task-authority=${value.taskAuthority}`, "--authorization=authorize wrong"], {
@@ -91,3 +109,8 @@ test("run fails closed on non-exact authorization", async () => {
   assert.equal(code, 1);
   assert.match(JSON.parse(stderr).error, /exact authorization/u);
 });
+
+function privateWrite(file, value) {
+  writeFileSync(file, value, { mode: 0o600 });
+  chmodSync(file, 0o600);
+}

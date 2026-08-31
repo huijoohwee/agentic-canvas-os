@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6666,
-  "headDigest": "198723a97b2faa58067dd0c630b208c5323630b6d507ab0a5b797c0d7dca8b04",
+  "sequence": 6667,
+  "headDigest": "11c19d0fd6bb67d47910e50f873ae275d80bf8d77eafdb99e195585609bcd772",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -338493,6 +338493,49 @@
       },
       "claimDigest": "d5ba99e8c41b916d0764476d51ba40ea9a4324e05a3dfa0e32e4af7da6b5b526",
       "digest": "198723a97b2faa58067dd0c630b208c5323630b6d507ab0a5b797c0d7dca8b04"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6667,
+      "parentDigest": "198723a97b2faa58067dd0c630b208c5323630b6d507ab0a5b797c0d7dca8b04",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "9c62c74143902b42dbac3993e8d39fd888d24ccc833d93ec49fc4ba9a1deeb71",
+      "idempotencyKey": "5b5525c79520daaf39abff0f9fcacff9d8467a8d34a0f81a5b332f6c7df497a8",
+      "requestDigest": "3546299bb3a0be5248c1f584cf68fda3737cb9b28c3cc2257577b3e418615f6d",
+      "evaluationTime": "2026-08-31T08:49:42.000Z",
+      "claimCore": {
+        "claimId": "9c62c74143902b42dbac3993e8d39fd888d24ccc833d93ec49fc4ba9a1deeb71",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:40d5819735d70e215fad7da10f5a83255a752c2313d47de634556b38395da2b9",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b153aaabdd03dc93e3fad8844b1641ed9a8fe20beb0db61681379c00c4d71eb5",
+        "canonicalBaseRevision": "c7194b8d70d53ad90721f2822fe05adde4659e4e",
+        "declaredWriteScope": [
+          "path:__tests__/sprint-harness-e2e.test.mjs",
+          "path:__tests__/sprint-harness.test.mjs",
+          "path:docs/SPRINT-HARNESS.md",
+          "path:scripts/sprint-harness-contract.mjs",
+          "path:scripts/sprint-harness.mjs",
+          "semantic:sprint-harness-mvp"
+        ],
+        "writeSetDigest": "42ca21b0cbf10dc16fb7dff80f14a2c19e6492a0a2ec94387a7fe9e418a44be8",
+        "laneRevision": "9acab31409b22493f837782333659576b3534de6",
+        "leaseEpoch": 1,
+        "transitionCounter": 4,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-08-31T08:58:48.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBkqQzg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "a437b882a5ba8adae872ac416fd32defad70811fbedfe8df1140cae49c2e6baa",
+      "digest": "11c19d0fd6bb67d47910e50f873ae275d80bf8d77eafdb99e195585609bcd772"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6582,
-  "headDigest": "d89b0997296af34c9e87c92b948e969b6b728389fa396de9493c64013ebf5714",
+  "sequence": 6583,
+  "headDigest": "68dfee367367633dc4036c2523787500fa901a2818f30c19722c8d93c38a63e3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -334147,6 +334147,55 @@
       },
       "claimDigest": "7f6cd742532d954269c65e276d2763bede522260d30033c3a458f5d30cd020f3",
       "digest": "d89b0997296af34c9e87c92b948e969b6b728389fa396de9493c64013ebf5714"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6583,
+      "parentDigest": "d89b0997296af34c9e87c92b948e969b6b728389fa396de9493c64013ebf5714",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOOYnpZg",
+      "claimId": "30cfa1da948372c492b24f370f6a49b5d8bd0f95322702babcedb88f6e35eaab",
+      "idempotencyKey": "0b24159bafa97bf8189a836aa2bcb5be72312789444b707f6f6f22db13962908",
+      "requestDigest": "667c4a57dc01c6106738be3da82c67e4ec776d177260f244400d97746e218984",
+      "evaluationTime": "2026-08-31T04:52:02.000Z",
+      "claimCore": {
+        "claimId": "30cfa1da948372c492b24f370f6a49b5d8bd0f95322702babcedb88f6e35eaab",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:4da4fc3f69ae11b052d89290787a7c0318fa3a438519a7d55c715934a25ca731",
+        "repositoryId": "github-repository:R_kgDOOYnpZg",
+        "workItemId": "work-item:b203210e72ba576e0a8572d4d573df893f1555c06a662e243ba02419546844f5",
+        "canonicalBaseRevision": "b241c2419b7fc234f0d0ce6bcd4855af51e7548f",
+        "declaredWriteScope": [
+          "path:.github/workflows/release.yml",
+          "path:.github/workflows/travel-mesh-bootstrap.yml",
+          "path:cloudflare/workers/agenticgraph-marketplace/wrangler.jsonc",
+          "path:docs/collaboration-runtime-contract.md",
+          "path:scripts/__tests__/production-release-contract.test.mjs",
+          "path:scripts/__tests__/travel-mesh-release.test.mjs",
+          "path:scripts/travel-mesh-bootstrap-authorization.mjs",
+          "path:scripts/travel-mesh-bootstrap.mjs",
+          "path:scripts/travel-mesh-release-inventory.mjs",
+          "path:scripts/travel-mesh-release-plan.mjs",
+          "semantic:travel-mesh-provider-bootstrap"
+        ],
+        "writeSetDigest": "4032b2da4c4f71a8d7b00ec1c55eca90d1c150b4276488c290861d13c2afe9c0",
+        "laneRevision": "b241c2419b7fc234f0d0ce6bcd4855af51e7548f",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T05:22:02.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "8a84dbb5905659128288b2b46549ef33fb368d704ef101ee834c25b1cde88a3a",
+        "eligibleSince": "2026-08-31T04:46:19.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-31T04:52:02.000Z"
+      },
+      "claimDigest": "dff3b8e2e4fb56f29a2783f011e9ecd8c36b59a996245622d7951da2dcd0fb39",
+      "digest": "68dfee367367633dc4036c2523787500fa901a2818f30c19722c8d93c38a63e3"
     }
   ]
 }

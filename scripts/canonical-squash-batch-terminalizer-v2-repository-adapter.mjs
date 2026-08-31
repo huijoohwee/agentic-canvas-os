@@ -402,7 +402,7 @@ function readBridge({ root, target, mainSha, manifest, snapshot, observerStore, 
     verified: false, reason: "unsigned" });
   const protectedCommit = readV2JoinedCommit({ root, target, sha: pull.mergeSha, ghText,
     verified: true, reason: "valid" });
-  const integration = lease.integration;
+  const integration = completedBridgeIntegration({ lease, pull, source });
   const authored = readV2GitCommit(root, integration?.commitSha);
   const claimSha = authored.parentShas.length === 1 ? authored.parentShas[0] : null;
   const claim = readV2GitCommit(root, claimSha);
@@ -471,6 +471,26 @@ function readBridge({ root, target, mainSha, manifest, snapshot, observerStore, 
     completionMainSha: lease.completion.mainSha, cleanupOperationId: cleanup,
     worktree: "absent", registration: "absent", branchRef: "preserved",
     controllerContained: isAncestor(root, pull.mergeSha, mainSha) });
+}
+
+export function completedBridgeIntegration({ lease, pull, source }) {
+  if (lease?.integration) return lease.integration;
+  const declaredPaths = (lease?.admission?.declaredWriteSet || [])
+    .filter(value => value.startsWith("path:"))
+    .map(value => value.slice(5));
+  const commitMessage = source?.message?.split("\n", 1)[0];
+  if (lease?.status !== "completed" || lease.reviewHeadSha !== pull?.headSha
+    || lease.deliveryHeadSha !== pull?.headSha || source?.sha !== pull?.headSha
+    || lease.admission?.status !== "admitted"
+    || canonicalJson(declaredPaths) !== canonicalJson(INSTALL_PATHS)
+    || !DIGEST.test(lease.admission.manifestDigest)
+    || typeof commitMessage !== "string" || commitMessage.length === 0) {
+    throw new Error("Completed controller bridge lacks an exact review publication proof.");
+  }
+  return Object.freeze({ schema: "agentic-completed-review-publication/v1",
+    commitSha: pull.headSha, treeSha: source.treeSha, commitMessage,
+    paths: Object.freeze([...INSTALL_PATHS]),
+    manifestDigest: lease.admission.manifestDigest });
 }
 
 function readController({ root, target, bridge, mainSha }) {

@@ -14,6 +14,12 @@ runtime_proof: "focused fixed-order, authorization, topology, message, journal, 
 
 # Canonical Squash Batch Terminalizer V2
 
+The completed PR 839 bridge may omit its transient `integration` object. In
+that exact state, the adapter derives one immutable review-publication proof
+only from the joined reviewed and delivery head, source commit, admitted
+manifest, and six declared installation paths. Partial or mismatched joins
+remain blocked.
+
 ## Fixed incident set
 
 This controller exists only for PRs `818` -> `820` -> `822` -> `823` -> `824` -> `825` -> `826` -> `828`, in exactly that order. Missing, repeated, reordered, or additional subjects are invalid. Each subject is joined to its fixed PR node, branch, worktree basename, scope, session, local epoch, base, reviewed head, tree, protected merge, raw message hashes and lengths, CI runs and jobs, immutable lease projection, claim, task subject, task binding, task public key, integration evidence, and terminal cloud lineage. PR, branch, worktree, claim, task subject, task binding, and task public-key identities must all be distinct. The controller bridge must also be distinct from every subject.

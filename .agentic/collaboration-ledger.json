@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6686,
-  "headDigest": "035caa34103d0658cde227c1f0a81bfd585d796d1f72436927ff739e00159cfc",
+  "sequence": 6687,
+  "headDigest": "3f2c931e326cc3a0fd68c8d4caca736eebcd1b4922ea905b4a9a480ec0efff60",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -339431,6 +339431,47 @@
       },
       "claimDigest": "b88aac8e7c66a2bb7cb8e4df3a2ad701f11db328ea5078fbb13aa635410125d8",
       "digest": "035caa34103d0658cde227c1f0a81bfd585d796d1f72436927ff739e00159cfc"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6687,
+      "parentDigest": "035caa34103d0658cde227c1f0a81bfd585d796d1f72436927ff739e00159cfc",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b52858b1d27dbb40b809d4abe481af7d7a9ac1d73b1ab10555439cefbe635ffe",
+      "idempotencyKey": "9dc530153530b2bf0292dfd1e2af5e5368072364b1bda7541a25e506ba66f167",
+      "requestDigest": "a7d874be716a6e5790e0f508c78f113e8dc6a17df7972c8d4cb6fb0f85e6d673",
+      "evaluationTime": "2026-08-31T11:55:29.000Z",
+      "claimCore": {
+        "claimId": "b52858b1d27dbb40b809d4abe481af7d7a9ac1d73b1ab10555439cefbe635ffe",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:20e1e541841200ea402b4550d4a2d81df452c50b4429df32d01d72267bcbb79f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:38e3c6e6dac8a161494719ed7a13553165fba2811e70a40565d941f5c4b87e9f",
+        "canonicalBaseRevision": "b015b3828c863193bafe208483ffef3488d1ab99",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-squash-batch-terminalizer-v2.test.mjs",
+          "path:docs/CANONICAL-SQUASH-BATCH-TERMINALIZER-V2.md",
+          "path:scripts/canonical-squash-batch-terminalizer-v2-repository-adapter.mjs",
+          "semantic:batch-terminalizer-completed-bridge-proof"
+        ],
+        "writeSetDigest": "ca34759f64f79943e23af61240d5741e56f87fccacc59b20665fed8688f49ca0",
+        "laneRevision": "04976ebd45e7452576dc5c495300125d6ba6b45b",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T12:41:04.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBmA01w",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "ac546092d9a5a1b558453d67971473ce48cba1f40eeca0374a41f2b2f02ca55d",
+      "digest": "3f2c931e326cc3a0fd68c8d4caca736eebcd1b4922ea905b4a9a480ec0efff60"
     }
   ]
 }

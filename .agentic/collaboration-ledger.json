@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6509,
-  "headDigest": "1a0cdf7ebf7bb2e556c17ea43a06368b027a22f04517e91e6fe0c1a6c7cd25ed",
+  "sequence": 6510,
+  "headDigest": "6da6cf66250668f1a366ef8e738f871d4e03089a9f36f3cce2a7f1d8f273b13e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -330574,6 +330574,68 @@
       },
       "claimDigest": "22653f8b85dde876c9fe7359b92b983a0d1987fcd13097abfab2e37274640448",
       "digest": "1a0cdf7ebf7bb2e556c17ea43a06368b027a22f04517e91e6fe0c1a6c7cd25ed"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6510,
+      "parentDigest": "1a0cdf7ebf7bb2e556c17ea43a06368b027a22f04517e91e6fe0c1a6c7cd25ed",
+      "action": "retire",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cc8090a2b1a24e9fe0efac307e43c99cb0ae169834b64b886d5a4d23246766ce",
+      "idempotencyKey": "0df2c4139a20ec6b252e29a747f58abaaa4a9ae06acff526b8d3e9c0f9d7de14",
+      "requestDigest": "caf12a49f90c44ad73969d888f1f66843d7fd6bc50a0f7681f9d2143956fb967",
+      "evaluationTime": "2026-08-31T01:42:38.000Z",
+      "claimCore": {
+        "claimId": "cc8090a2b1a24e9fe0efac307e43c99cb0ae169834b64b886d5a4d23246766ce",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:bc1a7af9c9adc652a786f937eaed69406ac27ec176c409d74bdc823b37a9aa2a",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:915e07892782880698958e0e92907ffa11708019ebf6cc4a464cc09eef8295ce",
+        "canonicalBaseRevision": "528b1f93f945f97813bcb14db326ec5d7450b63c",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-squash-attribution-recovery-terminalization.test.mjs",
+          "path:docs/CANONICAL-SQUASH-ATTRIBUTION-RECOVERY-TERMINALIZATION.md",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-repository-adapter.mjs",
+          "semantic:canonical-squash-rerun-job-identity"
+        ],
+        "writeSetDigest": "04fe39156afc29f2096ce44cc089257de9148b0d571454e68e8a1221a5882aba",
+        "laneRevision": "82e98f98490fe2c4d5696022beb06ebe3c4d2e43",
+        "leaseEpoch": 2,
+        "transitionCounter": 7,
+        "heartbeatCounter": 1,
+        "state": "retired",
+        "expiresAt": "2026-08-31T04:26:33.000Z",
+        "evidenceDigest": "9425a818f04cad95670633b9c275ed42e75ebd4dbdb85edc91cad6d1206981d4",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBiqBcQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "82e98f98490fe2c4d5696022beb06ebe3c4d2e43",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBiqBcQ",
+          "focusedEvidenceDigest": "9425a818f04cad95670633b9c275ed42e75ebd4dbdb85edc91cad6d1206981d4",
+          "dependencyClosureDigest": "5bc1b17c351cb495a656b84cbb305e2ece0d33dddfca7adc53cf4fe3d2310aab",
+          "namedChecksDigest": "47d0186380612b5f7c8f6c8dababa85f4cecbaad69c1b779e6e54b1a6c3ee5b6",
+          "handoffEvidenceDigest": "8035f73ad23d9d4eabb4536b6687e65fd9ce3f40a6039ee3fe2d261a04c2b257",
+          "operatorDecisionDigest": "c8249c023b6451ae5abc8bb9aff43d2f5a075f756da2875e427340b1058ef039",
+          "integrationIntentDigest": "591f9643fefd76c011c34fae23896af1f9e068ce8b495a06b1d34b96d085013d",
+          "integratedAt": "2026-08-31T01:39:42.000Z"
+        },
+        "retirement": {
+          "reason": "integrated",
+          "finalRevision": "82e98f98490fe2c4d5696022beb06ebe3c4d2e43",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBiqBcQ",
+          "bytesDigest": "154a742e6cf48dbf5893a5a04861ca5eba5e11c6b25c1fe073d923094dc27d08",
+          "namedChecksDigest": "47d0186380612b5f7c8f6c8dababa85f4cecbaad69c1b779e6e54b1a6c3ee5b6",
+          "handoffEvidenceDigest": "8035f73ad23d9d4eabb4536b6687e65fd9ce3f40a6039ee3fe2d261a04c2b257",
+          "integrationReceiptDigest": "392c440ec5fca45a5693b2718ecc60ea75ff01347aa46597cfcdd5486055eca1",
+          "retiredAt": "2026-08-31T01:42:38.000Z"
+        }
+      },
+      "claimDigest": "4ddcf592798ac819e0a5567459f0e522218a38816a7d9f07aba33827a1c5a12a",
+      "digest": "6da6cf66250668f1a366ef8e738f871d4e03089a9f36f3cce2a7f1d8f273b13e"
     }
   ]
 }

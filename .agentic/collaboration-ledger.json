@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6537,
-  "headDigest": "725c9ee07a9db2a65750632045a143aee23ead58dc3da54cf7d92a9ea133b1c6",
+  "sequence": 6538,
+  "headDigest": "2eefee2599e078afd486aa4771a2a89bc24de80f5a55d557e07df40e4a782ae6",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -331935,6 +331935,69 @@
       },
       "claimDigest": "08f26f52930871e576c9514170becadd40c3a840bc001ba622c3597bad34f435",
       "digest": "725c9ee07a9db2a65750632045a143aee23ead58dc3da54cf7d92a9ea133b1c6"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6538,
+      "parentDigest": "725c9ee07a9db2a65750632045a143aee23ead58dc3da54cf7d92a9ea133b1c6",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "eff720ef106c878bfc39d552fcd9d5e509a967366cae9678919c7dd0df9f1217",
+      "idempotencyKey": "9641e83d76e8a7ef8da432c8f7c1a966f2abb71c2c1b6fe9dab41bac8f63b5ea",
+      "requestDigest": "8b8c40132c060b57e2c17284327368c6237e4265ff0e5ca16c9468e8f0de2f69",
+      "evaluationTime": "2026-08-31T02:56:30.000Z",
+      "claimCore": {
+        "claimId": "eff720ef106c878bfc39d552fcd9d5e509a967366cae9678919c7dd0df9f1217",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:75652a1ce55bc6263433f7863d95632ee861eea0919e8107a396828d27964d7d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:25f5f5d6c64f3fd2b2bef5ab0ae5579ac46a6f4cde97b687ed5230b81951ecf6",
+        "canonicalBaseRevision": "270b8568925cb23f5044dcf6fadd401b7439eb54",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-squash-attribution-recovery-terminalization.test.mjs",
+          "path:docs/CANONICAL-SQUASH-ATTRIBUTION-RECOVERY-TERMINALIZATION.md",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-contract.mjs",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-repository-adapter.mjs",
+          "semantic:canonical-squash-pr819-lineage-adapter"
+        ],
+        "writeSetDigest": "df9f556fefe1b254d6ab098407cfe3d181a30b300160a139879fdeff792c93ae",
+        "laneRevision": "cec362b12c0cdc23f31c22c06426ef8fd413602c",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T03:56:30.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "aac923080d9f0aad566a4cdbdf797c41757a19108e331f159ccbefd9782ce83e",
+        "canonicalDescendantProof": {
+          "schema": "agentic-legacy-review-current-base-disjoint-proof/v1",
+          "sourceBaseSha": "270b8568925cb23f5044dcf6fadd401b7439eb54",
+          "targetBaseSha": "bf7a41340a2c1844151ac032287d4c2432622de3",
+          "protectedMainSha": "bf7a41340a2c1844151ac032287d4c2432622de3",
+          "canonicalChangedPaths": [
+            "docs/CANONICAL-SQUASH-PR833-ATTRIBUTION-RECOVERY.md"
+          ],
+          "canonicalChangedPathsDigest": "70af610c97882d9b9d359653c53919fdb7e526a60db67596ee9e1606fa1c1de8",
+          "preservedChangedPaths": [
+            "__tests__/canonical-squash-attribution-recovery-terminalization.test.mjs",
+            "docs/CANONICAL-SQUASH-ATTRIBUTION-RECOVERY-TERMINALIZATION.md",
+            "scripts/canonical-squash-attribution-recovery-terminalization-contract.mjs",
+            "scripts/canonical-squash-attribution-recovery-terminalization-repository-adapter.mjs"
+          ],
+          "preservedChangedPathsDigest": "5bc8200c2a090441dc76e4feaaa061cbf3d8c373fd9a8aacaf8ab77086824f91",
+          "ancestry": "source-base-to-current-protected-main",
+          "overlap": "none",
+          "evidenceDigest": "54d30a3c067e4e24762a437977f4757b02a4ae9adebce6c6e9926be07b5a5a04"
+        },
+        "eligibleSince": "2026-08-31T02:50:31.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-31T02:56:30.000Z"
+      },
+      "claimDigest": "1edf43bddd4a8e7888aedc695e0ae60ea54d5ce4230bca869efa9963fd315f5a",
+      "digest": "2eefee2599e078afd486aa4771a2a89bc24de80f5a55d557e07df40e4a782ae6"
     }
   ]
 }

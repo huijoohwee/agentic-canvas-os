@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6557,
-  "headDigest": "e1a551faa7339f1c6f330b6702467857e87229fcae37adc300947402a1c0f206",
+  "sequence": 6558,
+  "headDigest": "f26967f5d9fd77153db4d7cca2e24d63f851b749cbe94e578928ca78b510ed8e",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -332932,6 +332932,60 @@
       },
       "claimDigest": "416265d70b508e5245173abbbe118e1ae2f8299188f7e65fd379d5dfce5fe957",
       "digest": "e1a551faa7339f1c6f330b6702467857e87229fcae37adc300947402a1c0f206"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6558,
+      "parentDigest": "e1a551faa7339f1c6f330b6702467857e87229fcae37adc300947402a1c0f206",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "afffa66aefb3318ee69fc8a1c2643daac227167f8b9d4c57ce28423b80c3f659",
+      "idempotencyKey": "6b9be8245769ed9a3230b1c319602a0c1dae2d4563a5ec15c19eb93cbd9d08b3",
+      "requestDigest": "5b1cc61e83453d011d81ef03cdefbe191287dfd637022b033b21317248b15076",
+      "evaluationTime": "2026-08-31T03:36:53.000Z",
+      "claimCore": {
+        "claimId": "afffa66aefb3318ee69fc8a1c2643daac227167f8b9d4c57ce28423b80c3f659",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:75652a1ce55bc6263433f7863d95632ee861eea0919e8107a396828d27964d7d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:25f5f5d6c64f3fd2b2bef5ab0ae5579ac46a6f4cde97b687ed5230b81951ecf6",
+        "canonicalBaseRevision": "eca6a90ae8f98258d5296e394e09de9071b55058",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-squash-attribution-recovery-terminalization.test.mjs",
+          "path:docs/CANONICAL-SQUASH-ATTRIBUTION-RECOVERY-TERMINALIZATION.md",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-contract.mjs",
+          "path:scripts/canonical-squash-attribution-recovery-terminalization-repository-adapter.mjs",
+          "semantic:canonical-squash-pr819-lineage-adapter"
+        ],
+        "writeSetDigest": "df9f556fefe1b254d6ab098407cfe3d181a30b300160a139879fdeff792c93ae",
+        "laneRevision": "88ca91612c745152f1480887501caa99187562e0",
+        "leaseEpoch": 3,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-31T03:47:37.000Z",
+        "evidenceDigest": "e0f96800ce7b1b3fbe56133509ae4fb620c66783bdacf0288ce9cc3415dd2c14",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBiwIhw",
+        "predecessorClaimId": "eff720ef106c878bfc39d552fcd9d5e509a967366cae9678919c7dd0df9f1217",
+        "eligibleSince": "2026-08-31T03:16:06.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-31T03:17:37.000Z",
+        "integration": {
+          "candidateRevision": "88ca91612c745152f1480887501caa99187562e0",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBiwIhw",
+          "focusedEvidenceDigest": "e0f96800ce7b1b3fbe56133509ae4fb620c66783bdacf0288ce9cc3415dd2c14",
+          "dependencyClosureDigest": "01cc30e32d2c169c0c2d916e31112d21a768b0d7d17c3addb273533286a2a118",
+          "namedChecksDigest": "abcb796e1de9d019d9baebc7fd08e3797c37ac2b04503229bca0639b7758efb2",
+          "handoffEvidenceDigest": "07a045289433c7eef29a154a1f9ff13361456de5491494ab08ddbb50dff45867",
+          "operatorDecisionDigest": "4c330c17d27f5ed1bdfe88ddeb0d12743af530fb80ec20346da11ab7e4e1addf",
+          "integrationIntentDigest": "6913c93d93a6f5b7c1134482884e55f469f175dd7d74ec854d9da5d0e5871f08",
+          "integratedAt": "2026-08-31T03:36:53.000Z"
+        }
+      },
+      "claimDigest": "6d84f06b3bd34a01dd9e551f9afd82aaeeebf3dfe9984b8c697fc91faf2d7938",
+      "digest": "f26967f5d9fd77153db4d7cca2e24d63f851b749cbe94e578928ca78b510ed8e"
     }
   ]
 }

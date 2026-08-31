@@ -11,6 +11,11 @@ import {
 } from "./active-owned-dirt-recovery-evidence.mjs";
 import { buildActiveDirtyScopeExpansionPlan }
   from "./active-dirty-scope-expansion-contract.mjs";
+import {
+  normalizeActiveOwnedDirtLeaseRecovery,
+  validateCompletedActiveOwnedDirtRecoveryIntent,
+}
+  from "./active-owned-dirt-recovery-contract.mjs";
 import { captureActiveDirtyScopeExpansionProtectedMain }
   from "./active-dirty-scope-expansion-protected-main.mjs";
 import {
@@ -21,6 +26,8 @@ import { normalizeDeclaredWriteScopeManifest }
   from "./scoped-lane-admission-lib.mjs";
 import { authorizeTaskBoundLeaseMutation }
   from "./task-bound-lane-authority-store.mjs";
+import { assertTaskAuthorityBinding }
+  from "./task-bound-lane-authority-contract.mjs";
 import {
   createWriterLeaseStore,
   parseWriterLeasePullRequestBody,
@@ -32,6 +39,7 @@ import {
 } from "./writer-lease-registry-cas.mjs";
 import {
   OPERATION,
+  RECOVERED_CONTINUATION_SCHEMA,
   RECEIPT_MAP,
   assertNoEffectScopeExpansionIntent,
   authorizeActiveDirtyScopeExpansionIntentSupersession,
@@ -248,6 +256,7 @@ export function analyzeNoEffectScopeExpansionCloudAbsence({
   targetCanonicalBaseSha,
   targetWriteSetDigest,
   targetDeclaredWriteSet,
+  sourceContinuation = null,
   now,
 }) {
   const failures = validateLedger(ledger);
@@ -260,13 +269,89 @@ export function analyzeNoEffectScopeExpansionCloudAbsence({
   }
   const latest = sourceEntries.at(-1);
   const core = latest.claimCore;
-  if (latest.claimDigest !== sourceClaimDigest
-    || latest.digest !== sourceTransitionDigest
-    || core?.transitionCounter !== sourceTransitionCounter
-    || core?.state !== "current"
-    || core?.expiresAt !== sourceCloudExpiresAt
-    || core?.retirement != null) {
-    throw new Error("Source claim is no longer the exact recorded-current no-retirement claim.");
+  if (sourceContinuation === null) {
+    if (latest.claimDigest !== sourceClaimDigest
+      || latest.digest !== sourceTransitionDigest
+      || core?.transitionCounter !== sourceTransitionCounter
+      || core?.state !== "current"
+      || core?.expiresAt !== sourceCloudExpiresAt
+      || core?.retirement != null) {
+      throw new Error("Source claim is no longer the exact recorded-current no-retirement claim.");
+    }
+  } else {
+    const recovery = validateCompletedActiveOwnedDirtRecoveryIntent(
+      sourceContinuation.recoveryIntent,
+    );
+    const recoveryPlan = recovery.planSnapshot;
+    const expectedRecoveryExpiry = new Date(
+      Date.parse(recovery.cloud.recoveredAt) + recoveryPlan.ttlSeconds * 1_000,
+    ).toISOString();
+    const expectedRecoveryRequestDigest = digestValue({
+      action: "continue",
+      intent: {
+        repositoryId: recoveryPlan.sourceRepositoryId,
+        actorId: recoveryPlan.sourceActorId,
+        deviceId: recoveryPlan.sourceCloudDeviceId,
+        sessionId: recoveryPlan.sourceCloudSessionId,
+        claimId: recoveryPlan.sourceClaimId,
+        expectedFenceRevision: recoveryPlan.sourceClaimDigest,
+        expectedTransitionCounter: recoveryPlan.sourceCloudTransitionCounter,
+        mode: "recovery",
+        laneRevision: null,
+        reviewRequestId: null,
+        expiresAt: expectedRecoveryExpiry,
+        focusedEvidenceDigest: null,
+        handoffEvidenceDigest: null,
+        recoveryEvidenceDigest: recovery.snapshot.snapshotReceiptDigest,
+      },
+    });
+    const historicalIndex = sourceEntries.findIndex(entry =>
+      entry.digest === recoveryPlan.sourceClaimLedgerRevision);
+    const historical = sourceEntries[historicalIndex];
+    const immutable = ["actorId", "deviceId", "sessionId", "repositoryId", "workItemId",
+      "predecessorClaimId",
+      "canonicalBaseRevision", "laneRevision", "writeSetDigest", "declaredWriteScope",
+      "reviewRequestId", "leaseEpoch"];
+    if (!historical || historicalIndex !== sourceEntries.length - 2
+      || historical.claimDigest !== recoveryPlan.sourceClaimDigest
+      || historical.claimCore?.transitionCounter
+        !== recoveryPlan.sourceCloudTransitionCounter
+      || historical.claimCore?.deviceId !== recoveryPlan.sourceCloudDeviceId
+      || historical.claimCore?.sessionId !== recoveryPlan.sourceCloudSessionId
+      || latest.claimCore?.deviceId !== recoveryPlan.sourceCloudDeviceId
+      || latest.claimCore?.sessionId !== recoveryPlan.sourceCloudSessionId
+      || recoveryPlan.sourceOperationReceiptDigest
+        !== operationReceiptDigest(historical, "current")
+      || latest.action !== "continue"
+      || latest.parentDigest !== recoveryPlan.sourceLedgerDigest
+      || latest.idempotencyKey
+        !== digestValue(`active-owned-dirt-recovery:${recoveryPlan.planDigest}`)
+      || latest.requestDigest !== expectedRecoveryRequestDigest
+      || latest.claimDigest !== sourceClaimDigest
+      || latest.digest !== sourceTransitionDigest
+      || latest.claimCore?.transitionCounter !== sourceTransitionCounter
+      || latest.claimCore?.transitionCounter
+        !== historical.claimCore.transitionCounter + 1
+      || latest.claimCore?.state !== "current"
+      || latest.claimCore?.expiresAt !== sourceCloudExpiresAt
+      || latest.claimCore?.expiresAt !== expectedRecoveryExpiry
+      || recovery.cloud.expiresAt !== expectedRecoveryExpiry
+      || latest.claimCore?.retirement != null
+      || latest.claimCore?.recovery?.evidenceDigest
+        !== recovery.snapshot.snapshotReceiptDigest
+      || latest.claimCore?.recovery?.recoveredAt !== recovery.cloud.recoveredAt
+      || latest.evaluationTime !== recovery.cloud.recoveredAt
+      || recovery.cloud.operationReceiptDigest
+        !== operationReceiptDigest(latest, "current")
+      || recovery.cloud.claimLedgerRevision !== latest.digest
+      || recovery.cloud.ledgerDigest !== latest.digest
+      || immutable.some(field =>
+        JSON.stringify(latest.claimCore?.[field])
+          !== JSON.stringify(historical.claimCore?.[field]))) {
+      throw new Error(
+        "Recovered source claim is not the exact same-claim monotonic recovery continuation.",
+      );
+    }
   }
   const rawOperationKey = `active-dirty-scope-expansion:waiting:${sourcePlanDigest}`;
   const operationKeyDigest = digestValue(rawOperationKey);
@@ -294,6 +379,9 @@ export function analyzeNoEffectScopeExpansionCloudAbsence({
     targetWriteSetDigest,
     effectiveState,
     prohibitedEntryCount: prohibited.length,
+    ...(sourceContinuation ? {
+      sourceContinuationDigest: sourceContinuation.continuationDigest,
+    } : {}),
   };
   return Object.freeze({
     sourceClaimId,
@@ -419,6 +507,13 @@ function createRuntime(options, dependencies) {
       || pull.headRefName !== branch || pull.headRefOid !== headSha) {
       throw new Error("Source pull-request writer projection drifted.");
     }
+    const sourceContinuation = buildRecoveredSourceContinuation({
+      intent,
+      recoveryIntent: registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null,
+      lease,
+      dirt,
+      marker,
+    });
     const sourceOriginMain = requiredSha(
       gitAt(sourceRepository, ["rev-parse", "origin/main"]),
       "source origin/main",
@@ -471,6 +566,7 @@ function createRuntime(options, dependencies) {
       targetCanonicalBaseSha: intent.targetCanonicalBaseSha,
       targetWriteSetDigest: intent.targetWriteSetDigest,
       targetDeclaredWriteSet: intent.planSnapshot.targetDeclaredWriteSet,
+      sourceContinuation,
       now: now(),
     });
     const disposition = cloudAbsence.effectiveState;
@@ -516,6 +612,7 @@ function createRuntime(options, dependencies) {
       },
       sourceIntent: intent,
       sourceIntentDigest: digestValue(intent),
+      ...(sourceContinuation ? { sourceContinuation } : {}),
       targetManifest,
       dirt,
       protectedMainAdvance: protectedMain.protectedMainAdvance,
@@ -588,6 +685,14 @@ function createRuntime(options, dependencies) {
     );
     const pull = readPullRequest({ ghJson, pullRequestNumber, targetRepository });
     const marker = parseWriterLeasePullRequestBody(pull.body);
+    const dirt = captureActiveOwnedDirtEvidence({ repository: sourceRepository });
+    const sourceContinuation = buildRecoveredSourceContinuation({
+      intent,
+      recoveryIntent: registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null,
+      lease,
+      dirt,
+      marker,
+    });
     const instant = now();
     const observedAt = instant instanceof Date ? instant : new Date(instant);
     if (!Number.isFinite(observedAt.getTime())) {
@@ -631,6 +736,8 @@ function createRuntime(options, dependencies) {
         bodyDigest: digestValue(pull.body),
       },
       sourceIntentDigest: digestValue(intent),
+      sourceContinuationDigest: sourceContinuation?.continuationDigest ?? null,
+      dirtEvidenceDigest: dirt.evidenceDigest,
       sourceOriginMainSha: requiredSha(
         gitAt(sourceRepository, ["rev-parse", "origin/main"]),
         "source origin/main",
@@ -644,6 +751,8 @@ function createRuntime(options, dependencies) {
       lease: expected.lease,
       pullRequest: expected.pullRequest,
       sourceIntentDigest: expected.sourceIntentDigest,
+      sourceContinuationDigest: expected.sourceContinuation?.continuationDigest ?? null,
+      dirtEvidenceDigest: expected.dirt.evidenceDigest,
       sourceOriginMainSha: expected.controller.remoteMainSha,
       registered: true,
     };
@@ -674,6 +783,18 @@ function createRuntime(options, dependencies) {
       if (writerLeaseDigest(lease) !== stored.sourceLeaseDigest
         || lease.cloudAuthority?.claimId !== stored.sourceClaimId) {
         throw new Error("Intent-supersession replay source lease or claim drifted.");
+      }
+      if (stored.sourceContinuationDigest) {
+        const recovery = validateCompletedActiveOwnedDirtRecoveryIntent(
+          registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null,
+        );
+        if (digestValue(recovery) !== stored.completedRecoveryIntentDigest
+          || digestValue(lease.activeOwnedDirtRecovery)
+            !== digestValue(stored.sourceContinuationSnapshot.recoveredLease)
+          || digestValue(lease.taskAuthority)
+            !== digestValue(stored.sourceContinuationSnapshot.taskAuthorityContinuation)) {
+          throw new Error("Intent-supersession recovered replay subject drifted.");
+        }
       }
       const plan = buildActiveDirtyScopeExpansionIntentSupersessionPlan({
         evidence: stored.planSnapshot.evidence,
@@ -747,6 +868,7 @@ function createRuntime(options, dependencies) {
         targetCanonicalBaseSha: plan.evidence.sourceIntent.targetCanonicalBaseSha,
         targetWriteSetDigest: plan.evidence.sourceIntent.targetWriteSetDigest,
         targetDeclaredWriteSet: plan.evidence.sourceIntent.planSnapshot.targetDeclaredWriteSet,
+        sourceContinuation: plan.evidence.sourceContinuation ?? null,
         now: now(),
       });
       if (currentAbsence.absenceDigest !== plan.evidence.cloud.absenceDigest
@@ -780,6 +902,108 @@ function createRuntime(options, dependencies) {
       });
     },
   });
+}
+
+function buildRecoveredSourceContinuation({ intent, recoveryIntent, lease, dirt, marker }) {
+  const currentLeaseDigest = writerLeaseDigest(lease);
+  if (intent.sourceLeaseDigest === currentLeaseDigest) return null;
+  const recovery = validateCompletedActiveOwnedDirtRecoveryIntent(recoveryIntent);
+  const plan = recovery.planSnapshot;
+  const binding = assertTaskAuthorityBinding({ binding: lease.taskAuthority, lease });
+  const expectedLeaseRecovery = normalizeActiveOwnedDirtLeaseRecovery({
+    schema: "agentic-active-owned-dirt-recovery-lease/v1",
+    status: "recovered",
+    sourceEpoch: plan.sourceEpoch,
+    sourceSessionId: plan.sourceSessionId,
+    sourceDevice: plan.sourceDevice,
+    sourceBranch: plan.sourceBranch,
+    sourceFenceSha: plan.sourceFenceSha,
+    sourceClaimId: plan.sourceClaimId,
+    planDigest: plan.planDigest,
+    evidenceDigest: plan.evidenceDigest,
+    snapshotReceiptDigest: recovery.snapshot.snapshotReceiptDigest,
+    snapshotRef: recovery.snapshot.snapshotRef,
+    snapshotCommitSha: recovery.snapshot.commitSha,
+    snapshotIndexCommitSha: recovery.snapshot.indexCommitSha,
+    recoveredClaimDigest: recovery.cloud.claimDigest,
+    recoveredLedgerRevision: recovery.cloud.ledgerRevision,
+    recoveredClaimLedgerRevision: recovery.cloud.claimLedgerRevision,
+    recoveredTransitionCounter: recovery.cloud.transitionCounter,
+    recoveredAt: recovery.cloud.recoveredAt,
+  });
+  const oldPlan = intent.planSnapshot;
+  const currentPaths = dirt.entries.map(entry => entry.path);
+  if (recovery.sourceLeaseDigest !== intent.sourceLeaseDigest
+    || recovery.sourceClaimId !== intent.sourceClaimId
+    || recovery.localProjection.leaseDigest !== currentLeaseDigest
+    || recovery.localProjection.epoch !== lease.epoch
+    || recovery.pullRequestProjection.markerDigest !== digestValue(marker)
+    || plan.sourceSessionId !== lease.sessionId
+    || plan.sourceDevice !== lease.device
+    || plan.sourceScope !== lease.scope
+    || plan.sourceBranch !== lease.branch
+    || plan.sourceBaseSha !== lease.baseSha
+    || plan.sourceFenceSha !== lease.fenceSha
+    || plan.sourceClaimId !== lease.cloudAuthority?.claimId
+    || plan.sourceReviewRequestId !== lease.cloudAuthority?.reviewRequestId
+    || plan.sourceCloudLeaseEpoch !== lease.cloudAuthority?.leaseEpoch
+    || plan.sourceManifestDigest !== lease.admission?.manifestDigest
+    || plan.sourceWriteSetDigest !== lease.admission?.writeSetDigest
+    || JSON.stringify(plan.sourceDeclaredWriteSet)
+      !== JSON.stringify(lease.admission?.declaredWriteSet)
+    || recovery.cloud.claimDigest !== lease.cloudAuthority?.claimDigest
+    || recovery.cloud.claimLedgerRevision !== lease.cloudAuthority?.claimLedgerRevision
+    || recovery.cloud.transitionCounter !== lease.cloudAuthority?.transitionCounter
+    || recovery.cloud.operationReceiptDigest !== lease.cloudAuthority?.operationReceiptDigest
+    || recovery.cloud.expiresAt !== lease.cloudAuthority?.expiresAt
+    || digestValue(recovery.cloud.authority) !== digestValue(lease.cloudAuthority)
+    || digestValue(expectedLeaseRecovery) !== digestValue(lease.activeOwnedDirtRecovery)
+    || plan.evidenceDigest !== dirt.evidenceDigest
+    || plan.dirtyPathCount !== dirt.pathCount
+    || JSON.stringify(currentPaths) !== JSON.stringify(oldPlan.sourceChangedPaths)
+    || binding.bindingMode !== "continuation"
+    || binding.transitionPlanDigest !== null
+    || binding.boundAt !== recovery.cloud.recoveredAt
+    || binding.priorBindingDigest === null) {
+    throw new Error("Completed active-owned-dirt continuation does not own the live source.");
+  }
+  const core = {
+    schema: RECOVERED_CONTINUATION_SCHEMA,
+    variant: "completed-active-owned-dirt-recovery-successor",
+    recoveryIntent: recovery,
+    recoveryIntentDigest: digestValue(recovery),
+    recoveredLease: expectedLeaseRecovery,
+    taskAuthorityContinuation: binding,
+    historicalLeaseDigest: intent.sourceLeaseDigest,
+    currentLeaseDigest,
+    priorTaskAuthorityBindingDigest: binding.priorBindingDigest,
+    currentTaskAuthorityBindingDigest: binding.bindingDigest,
+  };
+  return Object.freeze({ ...core, continuationDigest: digestValue(core) });
+}
+
+function operationReceiptDigest(entry, status) {
+  const schemas = {
+    claim: "agentic-collaboration-claim-receipt/v1",
+    continue: "agentic-collaboration-continuation-receipt/v1",
+    integrate: "agentic-collaboration-integration-receipt/v1",
+    retire: "agentic-collaboration-retirement-receipt/v1",
+  };
+  const core = {
+    schema: schemas[entry.action],
+    operation: entry.action,
+    status,
+    repositoryId: entry.repositoryId,
+    claimId: entry.claimId,
+    claimDigest: entry.claimDigest,
+    fenceRevision: entry.claimDigest,
+    ledgerRevision: entry.digest,
+    ledgerSequence: entry.sequence,
+    idempotencyKey: entry.idempotencyKey,
+    requestDigest: entry.requestDigest,
+    evaluationTime: entry.evaluationTime,
+  };
+  return digestValue(core);
 }
 
 export function assertIntentSupersessionRepositoryAuthority({

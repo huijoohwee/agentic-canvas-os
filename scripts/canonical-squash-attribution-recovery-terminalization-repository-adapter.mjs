@@ -2552,6 +2552,60 @@ function parseFrontmatter(text, fields = RECOVERY_FRONTMATTER) {
   return Object.freeze(values);
 }
 
+const SELF_HOSTED_REQUIRED_JOB_STEPS = Object.freeze([
+  "Require exact CI authorization",
+  "Run npm run collab:test",
+]);
+
+export function classifySelfHostedSuccessfulJobInventory({ jobs, repository, runId }) {
+  repositoryName(repository, "self-hosted CI repository");
+  if (!Number.isSafeInteger(runId) || runId < 1 || !Array.isArray(jobs)) {
+    throw new Error("Self-hosted CI job inventory input is invalid.");
+  }
+  const materializedJobIds = [];
+  const providerProjectionJobIds = [];
+  const seenJobIds = new Set();
+  for (const job of jobs.filter(candidate => candidate?.name === "collaboration-integration")) {
+    const jobId = job?.databaseId;
+    if (!Number.isSafeInteger(jobId) || jobId < 1 || seenJobIds.has(jobId)
+      || !Array.isArray(job.steps)) {
+      throw new Error("Self-hosted CI collaboration job identity is invalid or duplicated.");
+    }
+    seenJobIds.add(jobId);
+    const materializedUrl = `https://github.com/${repository}/actions/runs/${runId}/job/${jobId}`;
+    const providerProjectionUrl = `https://github.com/${repository}/runs/${jobId}`;
+    if (job.url === materializedUrl) {
+      if (job.status !== "completed" || job.conclusion !== "success" || job.steps.length === 0) {
+        throw new Error("Self-hosted CI materialized collaboration job is not successful.");
+      }
+      const requiredSteps = SELF_HOSTED_REQUIRED_JOB_STEPS.map(name =>
+        job.steps
+          .map((step, index) => ({ step, index }))
+          .filter(({ step }) => step?.name === name));
+      if (requiredSteps.some(matches => matches.length !== 1
+        || matches[0].step.status !== "completed"
+        || matches[0].step.conclusion !== "success")
+        || requiredSteps[0][0].index >= requiredSteps[1][0].index) {
+        throw new Error("Self-hosted CI materialized collaboration job lacks exact successful required steps.");
+      }
+      materializedJobIds.push(jobId);
+      continue;
+    }
+    if (job.url !== providerProjectionUrl || job.status !== "completed"
+      || job.conclusion !== "success" || job.steps.length !== 0) {
+      throw new Error("Self-hosted CI collaboration job inventory contains an invalid provider projection.");
+    }
+    providerProjectionJobIds.push(jobId);
+  }
+  if (materializedJobIds.length !== 1) {
+    throw new Error("Self-hosted CI job inventory must contain exactly one materialized collaboration job.");
+  }
+  return Object.freeze({
+    materializedJobId: materializedJobIds[0],
+    providerProjectionJobIds: Object.freeze(providerProjectionJobIds.sort((left, right) => left - right)),
+  });
+}
+
 function requireSuccessfulRun(ghText, repository, id, sha, event, branch, label,
   expectedJobId = null, profile = LEGACY_INTEGRATION_RUN_PROFILE) {
   const run = JSON.parse(ghText([
@@ -2573,15 +2627,25 @@ function requireSuccessfulRun(ghText, repository, id, sha, event, branch, label,
     || run.event !== event || run.headBranch !== branch) {
     throw new Error(`${label} is not exact and successful.`);
   }
-  const jobs = (run.jobs || []).filter(job => job.name === jobName
-    && job.status === "completed" && job.conclusion === "success");
-  if (jobs.length !== 1 || !Number.isSafeInteger(jobs[0].databaseId)) {
-    throw new Error(`${label} lacks its exact successful ${jobName} job.`);
+  let jobDatabaseId;
+  if (profile === SELF_HOSTED_CI_RUN_PROFILE) {
+    jobDatabaseId = classifySelfHostedSuccessfulJobInventory({
+      jobs: run.jobs,
+      repository,
+      runId: id,
+    }).materializedJobId;
+  } else {
+    const jobs = (run.jobs || []).filter(job => job.name === jobName
+      && job.status === "completed" && job.conclusion === "success");
+    if (jobs.length !== 1 || !Number.isSafeInteger(jobs[0].databaseId)) {
+      throw new Error(`${label} lacks its exact successful ${jobName} job.`);
+    }
+    jobDatabaseId = jobs[0].databaseId;
   }
-  if (expectedJobId !== null && jobs[0].databaseId !== expectedJobId) {
+  if (expectedJobId !== null && jobDatabaseId !== expectedJobId) {
     throw new Error(`${label} job identity drifted from the pull-request check.`);
   }
-  return Object.freeze({ databaseId: run.databaseId, jobDatabaseId: jobs[0].databaseId,
+  return Object.freeze({ databaseId: run.databaseId, jobDatabaseId,
     event: run.event, headBranch: run.headBranch, headSha: run.headSha,
     workflowName: run.workflowName,
     ...(workflowPath ? { workflowPath } : {}),

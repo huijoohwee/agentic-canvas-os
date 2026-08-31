@@ -50,7 +50,13 @@ Planning requires:
   required head and event is itself completed successfully: legacy target lanes
   bind workflow `Integration` and job `Integration Gate`; self-hosted controller
   lanes bind REST workflow path `.github/workflows/ci.yml`, workflow identity
-  `CI`, and job `collaboration-integration`, independent of a dynamic run title;
+  `CI`, and job `collaboration-integration`, independent of a dynamic run title.
+  A self-hosted run must expose exactly one materialized Actions job at the
+  canonical repository/run/job URL with successful `Require exact CI
+  authorization` and `Run npm run collab:test` steps. Additional same-name
+  entries are accepted only as terminal-success, zero-step provider projections
+  at their canonical `/runs/<job-id>` URLs; every other duplicate or identity
+  drift fails closed;
 - a clean, remote-exact protected main containing the recovery blob and the
   protected controller revision; and
 - byte-exact frontmatter, commit-message framing, modes, blobs, pin transition,

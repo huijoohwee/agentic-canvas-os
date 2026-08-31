@@ -19,6 +19,7 @@ import {
   assertCanonicalSquashRecoveryTerminalMainTopology,
   assertExactCanonicalSquashRecoveryCompletedTaskAuthority, assertExactCanonicalSquashRecoveryCompletingReplay,
   assertExactCanonicalSquashRecoveryTerminalLeaseIdentity, classifyCanonicalSquashRecoveryCompletingProjection,
+  classifySelfHostedSuccessfulJobInventory,
   canonicalSquashRecoveryImmutableLeaseProjection,
   createCanonicalSquashAttributionRecoveryTerminalizationRepositoryAdapter,
   selectNewestExactIntegrationRun,
@@ -817,6 +818,86 @@ test("self-hosted CI selection binds workflow path instead of a dynamic run titl
     branch: "agent/device/self-hosted",
     profile: "foreign",
   }), /selection input is invalid/u);
+});
+test("self-hosted CI job inventory selects one materialized job and only terminal provider projections", () => {
+  const repository = "huijoohwee/agentic-canvas-os";
+  const runId = 33345692525;
+  const materializedJob = {
+    databaseId: 99351243179,
+    name: "collaboration-integration",
+    status: "completed",
+    conclusion: "success",
+    url: `https://github.com/${repository}/actions/runs/${runId}/job/99351243179`,
+    steps: [
+      { name: "Require exact CI authorization", status: "completed", conclusion: "success" },
+      { name: "Set up job", status: "completed", conclusion: "success" },
+      { name: "Run npm run collab:test", status: "completed", conclusion: "success" },
+    ],
+  };
+  const providerProjection = {
+    databaseId: 99351687813,
+    name: "collaboration-integration",
+    status: "completed",
+    conclusion: "success",
+    url: `https://github.com/${repository}/runs/99351687813`,
+    steps: [],
+  };
+  const unrelated = {
+    databaseId: 99351243180,
+    name: "policy-runtime-readiness",
+    status: "completed",
+    conclusion: "success",
+    url: `https://github.com/${repository}/actions/runs/${runId}/job/99351243180`,
+    steps: [],
+  };
+  const exact = classifySelfHostedSuccessfulJobInventory({
+    jobs: [providerProjection, unrelated, materializedJob], repository, runId,
+  });
+  assert.equal(exact.materializedJobId, materializedJob.databaseId);
+  assert.deepEqual(exact.providerProjectionJobIds, [providerProjection.databaseId]);
+
+  const secondMaterialized = {
+    ...materializedJob,
+    databaseId: 99351243181,
+    url: `https://github.com/${repository}/actions/runs/${runId}/job/99351243181`,
+  };
+  const invalidInventories = [
+    [providerProjection],
+    [materializedJob, secondMaterialized],
+    [materializedJob, { ...providerProjection, status: "in_progress", conclusion: null }],
+    [materializedJob, { ...providerProjection, conclusion: "failure" }],
+    [materializedJob, { ...providerProjection, steps: [{
+      name: "Run npm run collab:test", status: "completed", conclusion: "success",
+    }] }],
+    [materializedJob, { ...providerProjection,
+      url: `https://github.com/foreign/repository/runs/${providerProjection.databaseId}` }],
+    [materializedJob, { ...providerProjection,
+      url: `https://github.com/${repository}/actions/runs/${runId}/job/${providerProjection.databaseId}` }],
+    [materializedJob, { ...providerProjection, databaseId: materializedJob.databaseId,
+      url: `https://github.com/${repository}/runs/${materializedJob.databaseId}` }],
+    [{ ...materializedJob,
+      url: `https://github.com/${repository}/actions/runs/${runId + 1}/job/${materializedJob.databaseId}` }],
+    [{ ...materializedJob, steps: materializedJob.steps.filter(step =>
+      step.name !== "Require exact CI authorization") }],
+    [{ ...materializedJob, steps: materializedJob.steps.map(step =>
+      step.name === "Require exact CI authorization" ? { ...step, conclusion: "failure" } : step) }],
+    [{ ...materializedJob, steps: materializedJob.steps.filter(step =>
+      step.name !== "Run npm run collab:test") }],
+    [{ ...materializedJob, steps: [...materializedJob.steps,
+      { name: "Run npm run collab:test", status: "completed", conclusion: "success" }] }],
+    [{ ...materializedJob, steps: [...materializedJob.steps].reverse() }],
+  ];
+  for (const jobs of invalidInventories) {
+    assert.throws(() => classifySelfHostedSuccessfulJobInventory({
+      jobs, repository, runId,
+    }), /Self-hosted CI/u);
+  }
+  assert.throws(() => classifySelfHostedSuccessfulJobInventory({
+    jobs: [materializedJob], repository: "foreign", runId,
+  }), /repository is invalid/u);
+  assert.throws(() => classifySelfHostedSuccessfulJobInventory({
+    jobs: [materializedJob], repository, runId: 0,
+  }), /inventory input is invalid/u);
 });
 test("self-hosted controller replay requires the exact sealed executable revision and tree", () => {
   const plan = buildPlan(genericEvidenceFixture("self-hosted-controller-update"));

@@ -19,18 +19,20 @@ runtime_proof: "focused contract, controller, CLI, repository-adapter, response-
 This controller terminalizes one preserved delivery lane whose protected squash
 commit retained the reviewed tree but whose provider-rendered message placed the
 four Agentic attribution trailers outside the final trailer block. It applies
-only after a separate append-only evidence pull request has protected-merged,
-passed its pull-request and post-main Integration runs, and completed its own
-claim, task, worktree, and cleanup lifecycle.
+only after a separate protected recovery pull request has merged, passed its
+pull-request and post-main checks, and completed its own claim, task, worktree,
+and cleanup lifecycle.
 
 The controller does not rewrite history or reinterpret the malformed commit as
 valid. It proves the original reviewed head and tree, the malformed one-parent
-squash, the exact one-file runtime-pin change, the provider auto-merge request
-that carried a null body, and the append-only recovery commit. The recovery must
-add exactly one regular evidence blob, preserve the original tree contents, and
-carry its own valid final Agentic trailer block. Complete provider inventory,
-verified Git commit objects, exact workflow events and jobs, raw collaboration
-ledger lineage, local task binding, and cleanup evidence are all authoritative.
+squash, the exact admission-owned regular-file delta, the provider auto-merge
+request that carried a null body, and one of two closed recovery variants. A
+legacy runtime-pin subject retains its exact one-file evidence-child contract.
+A generic self-hosted subject uses either one append-only evidence document or
+the exact four-file terminalizer contract/adapter/test/document update. Complete
+provider inventory, verified Git commit objects, exact workflow events and jobs,
+raw collaboration ledger lineage, local task binding, and cleanup evidence are
+all authoritative.
 
 ## Applicability
 
@@ -44,8 +46,11 @@ Planning requires:
   boundary, while exact generation and binding proof occurs before each effect;
 - the original integrated-preserved cloud transition and the recovery lane's
   reviewed, integrated, and retired ledger lineage;
-- complete paginated Actions inventory where the newest matching Integration
-  run at every required head and event is itself completed successfully;
+- complete paginated Actions inventory where the newest matching run at every
+  required head and event is itself completed successfully: legacy target lanes
+  bind workflow `Integration` and job `Integration Gate`; self-hosted controller
+  lanes bind REST workflow path `.github/workflows/ci.yml`, workflow identity
+  `CI`, and job `collaboration-integration`, independent of a dynamic run title;
 - a clean, remote-exact protected main containing the recovery blob and the
   protected controller revision; and
 - byte-exact frontmatter, commit-message framing, modes, blobs, pin transition,
@@ -54,6 +59,77 @@ Planning requires:
 Unknown frontmatter, duplicate keys, symlinks, extra or changed paths, side
 branches, incomplete or newer failed runs, foreign capabilities, provider drift,
 and stale claim, lease, PR, tree, ref, session, or scope identities fail closed.
+
+## Generic Recovery Variants
+
+Generic mode is available only when the malformed subject and recovery target
+are the protected controller repository itself. The original subject must be a
+nonempty, admission-owned sequence of exact regular-file additions or
+modifications; deleted, renamed, symlink, submodule, unowned, or reordered
+entries are rejected. The self-hosted four-file recovery remains modification-only.
+Its reviewed history supplies the ordered provider bullet subjects and unique
+raw author identities used to reconstruct the malformed provider message.
+
+The two generic recovery variants are mutually exclusive:
+
+- `evidence-document` adds exactly
+  `docs/CANONICAL-SQUASH-PR<number>-ATTRIBUTION-RECOVERY.md`. Its ordered
+  frontmatter binds the malformed protected SHA, reviewed PR/head/tree, explicit
+  positive reviewed and post-main run IDs, controller repository and revision,
+  and forbidden deployment authority. The protected evidence commit is accepted
+  only as the exact provider-generated attribution rewrite of its valid source
+  commit.
+- `self-hosted-controller-update` modifies exactly this contract document, its
+  contract module, repository adapter, and focused test. Its frontmatter is the
+  canonical contract frontmatter above; run IDs are selected from complete
+  current Actions inventory because the recovery itself installs the generic
+  selector. Both source and protected commits must retain exact final Agentic
+  trailers. At plan time the protected controller revision and tree must equal
+  that recovery merge exactly; an ancestor-only controller relation is not
+  sufficient. The evidence-document variant may retain its historical
+  controller revision as an ancestor of the exact sealed current controller.
+
+Both variants require the malformed subject to be an ancestor of the recovery
+parent, the recovery source and protected trees to match, the unique evidence
+path blob to match byte-for-byte, and the completed recovery lease's manifest,
+declared write set, cloud authority, and integration paths to join the exact Git
+delta. The evidence-document controller revision remains the malformed subject;
+the self-hosted controller revision is the protected recovery merge. Generic
+recovery completion retains delivery shape (`reviewHeadSha` absent and
+`deliveryHeadSha` equal to the recovery source); the legacy recovery retains its
+exact reviewed-head projection.
+
+The admission and cloud declarations must be byte-equivalent as complete write
+sets, not merely equivalent after path filtering. Their semantic scope, target
+repository, and canonical base must join the subject scope, repository, and
+lease base exactly.
+
+A generic reviewed head may be the exact protected-refresh merge of an earlier
+authored integration commit. That exception is closed: the authored commit and
+tree remain the immutable integration record; the reviewed refresh has exactly
+two ordered parents (authored head, current protected base); the authored-parent
+revision joins the sealed current-base reanchor/successor handoff; and the two
+base-relative deltas have identical ordered paths, modes, and blobs. The valid
+historical Agentic message and lease epoch come from the authored/reviewed commit
+bytes, while effect authorization remains bound to the newer current cloud and
+task-authority successor. A simple generic lane without such a refresh continues
+to require authored integration head/tree equal to reviewed head/tree and its
+historical epoch to equal the current cloud epoch. Protected refresh and
+successor lineage are an all-or-none pair; a successor's historical epoch is
+exactly one less than the current cloud epoch.
+
+When present, generic successor lineage is one exact all-or-none projection of
+the recovered owned-dirt lease, current-base reanchor, task-authority successor
+receipt, and null successor intent. Source claim/fence, intermediate successor
+claim/base/fence, current claim/base/fence, branch, epoch, prior/current task
+bindings, operation receipts, and the successor receipt seal must all join. The
+owned-dirt recovery must also pass the canonical recovery normalizer, including
+its claim-derived snapshot ref, positive transition, and exact timestamps; the
+reanchor and successor records use closed key sets and typed SHA/digest/time
+fields. The live ledger must identify the successor source claim as the current
+claim's predecessor and reproduce that predecessor's exact base, lane, and
+historical epoch. The same projection is retained through delivery, completing,
+and completed replay.
 
 ## Authorized Effects
 
@@ -106,6 +182,17 @@ task/claim projection, and preservation contract. Only observation time,
 evidence digest, and an independently proven protected-main descendant may vary;
 such a descendant is accepted before replay only when exact subject retirement
 is already observable as the response-loss result.
+
+Every plan, including a self-hosted plan, requires the controller checkout to
+remain at the exact sealed revision and tree through every replay. A protected
+controller descendant is not accepted even when the four recovery-delta blobs
+are unchanged, because transitive authorization, ledger, and completion modules
+are part of the executable trust boundary. Recovery-lane cleanup may still
+record a protected
+completion-main descendant rather than the recovery merge itself, but only when
+the recovery merge is its ancestor, it is an ancestor of current protected main,
+and the exact evidence blob remains present at both revisions; cleanup identity
+is recomputed from that actual completion main.
 
 ## Private Files and Commands
 

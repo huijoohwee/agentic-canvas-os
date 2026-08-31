@@ -20,8 +20,14 @@ import path from "node:path";
 
 import {
   EVIDENCE_SCHEMA,
+  GENERIC_SELF_HOSTED_RECOVERY_EVIDENCE_PATH,
+  GENERIC_SELF_HOSTED_RECOVERY_PATHS,
+  LEGACY_INTEGRATION_RUN_PROFILE,
+  SELF_HOSTED_CI_RUN_PROFILE,
   normalizeJournal,
 } from "./canonical-squash-attribution-recovery-terminalization-contract.mjs";
+import { normalizeActiveOwnedDirtLeaseRecovery }
+  from "./active-owned-dirt-recovery-contract.mjs";
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import { validateLedger } from "./cloud-collaboration-contract.mjs";
 import { pseudonymousIdentifier } from "./github-cloud-collaboration-mapping.mjs";
@@ -52,6 +58,31 @@ const RECOVERY_FRONTMATTER = Object.freeze([
   "status",
   "lang",
   "frontmatter_contract",
+  "failed_protected_main_sha",
+  "reviewed_pull_request",
+  "reviewed_source_head",
+  "reviewed_source_tree",
+  "reviewed_run_id",
+  "post_merge_run_id",
+  "controller_source",
+  "controller_revision",
+  "deployment_authority",
+]);
+const GENERIC_SELF_HOSTED_RECOVERY_FRONTMATTER = Object.freeze([
+  "title",
+  "graphId",
+  "doc_type",
+  "date",
+  "lang",
+  "schema",
+  "frontmatter_contract",
+  "status",
+  "authority",
+  "runtime_scope",
+  "runtime_proof",
+]);
+const GENERIC_EVIDENCE_RECOVERY_FRONTMATTER = Object.freeze([
+  ...GENERIC_SELF_HOSTED_RECOVERY_FRONTMATTER,
   "failed_protected_main_sha",
   "reviewed_pull_request",
   "reviewed_source_head",
@@ -170,6 +201,7 @@ export function createCanonicalSquashAttributionRecoveryTerminalizationRepositor
     const recoveryLease = leaseStore.read(recoveryPr.headBranch);
     const subjectSeed = requireSubjectEvidence({
       canonicalRoot, lease, subjectPath, pullRequest: subjectPr, ghText,
+      controllerRepository: controllerEvidence.repository,
     });
     const recoverySeed = requireRecoveryEvidence({
       canonicalRoot,
@@ -198,6 +230,7 @@ export function createCanonicalSquashAttributionRecoveryTerminalizationRepositor
         recovery: recoveryValues,
         ghText,
         ledgerRepository: ledger,
+        target,
       }),
     });
     const protectedMainSha = requireProtectedMain({ canonicalRoot, recovery, target });
@@ -239,9 +272,10 @@ export function createCanonicalSquashAttributionRecoveryTerminalizationRepositor
     const phase = journal?.state?.phase;
     const terminalReplay = ["completion-projected", "verified"].includes(phase);
     const currentController = requireController({ controller, targetRepository: target });
-    if (digestValue(currentController) !== digestValue(plan.evidence.controller)) {
-      throw new Error("Recovery controller drifted from the sealed protected revision.");
-    }
+    assertCanonicalSquashRecoveryControllerProjection({
+      plan,
+      currentController,
+    });
     requirePlanRunsCurrent({ plan, ghText, target });
     const lease = currentSubjectLease({ allowTerminal: false });
     if (!lease || !["delivery", "completing", ...(terminalReplay ? ["completed"] : [])]
@@ -547,6 +581,7 @@ export function createCanonicalSquashAttributionRecoveryTerminalizationRepositor
         device: plan.evidence.subject.cloudAuthority.deviceId,
         cloudAuthority: plan.evidence.subject.cloudAuthority,
         laneRevision: plan.evidence.subject.reviewedHeadSha,
+        predecessorAuthority: plan.evidence.subject.predecessorAuthority,
       }),
     });
   }
@@ -563,9 +598,10 @@ export function createCanonicalSquashAttributionRecoveryTerminalizationRepositor
 
   function verifyTerminal({ plan, journal }) {
     const currentController = requireController({ controller, targetRepository: target });
-    if (digestValue(currentController) !== digestValue(plan.evidence.controller)) {
-      throw new Error("Recovery controller drifted from the sealed protected revision.");
-    }
+    assertCanonicalSquashRecoveryControllerProjection({
+      plan,
+      currentController,
+    });
     requirePlanRunsCurrent({ plan, ghText, target });
     const projected = journal.state.receipts["completion-projected"];
     const lease = currentSubjectLease({ allowTerminal: true });
@@ -712,18 +748,28 @@ export function createCanonicalSquashAttributionRecoveryTerminalizationRepositor
   });
 }
 
-function requireSubjectEvidence({ canonicalRoot, lease, subjectPath, pullRequest, ghText }) {
+function requireSubjectEvidence({
+  canonicalRoot,
+  lease,
+  subjectPath,
+  pullRequest,
+  ghText,
+  controllerRepository,
+}) {
   requireMergedPull(pullRequest, lease.pullRequestUrl, lease.branch);
+  const genericSelfHosted = lease.cloudAuthority?.targetRepository === controllerRepository;
   if (lease.status !== "delivery" || lease.autoDelivery !== true || lease.runtimeRequired !== true
     || !lease.taskAuthority || !lease.admission || !lease.cloudAuthority
     || lease.cloudAuthority.state !== "delivery_authorized"
     || lease.cloudAuthority.deviceId !== lease.device
     || !lease.cloudAuthority.integrationReceiptDigest
     || lease.deliveryHeadSha !== pullRequest.headSha
-    || lease.integration?.commitSha !== pullRequest.headSha) {
+    || (!genericSelfHosted && lease.integration?.commitSha !== pullRequest.headSha)) {
     throw new Error("Subject lease is not the exact integrated delivery lane.");
   }
-  const leaseIdentity = canonicalSquashRecoveryImmutableLeaseProjection(lease);
+  const leaseIdentity = canonicalSquashRecoveryImmutableLeaseProjection(lease, {
+    genericSelfHosted,
+  });
   const parkedStashes = git(subjectPath, ["stash", "list", "--format=%gs"])
     .split("\n").filter(subject => subject.includes(`park: ${lease.branch} `));
   if (parkedStashes.length !== 0) {
@@ -751,7 +797,15 @@ function requireSubjectEvidence({ canonicalRoot, lease, subjectPath, pullRequest
     ghText,
   });
   requireProviderCommitJoin(providerMalformed, malformed, "subject malformed commit");
-  const expectedBody = renderProtectedSquashCommitBody({ branch: lease.branch, lease });
+  const genericManaged = genericSelfHosted
+    ? exactGenericManagedIntegrationBody({
+      message: reviewed.message,
+      headline: lease.integration.commitMessage,
+      scope: lease.scope,
+    })
+    : null;
+  const expectedBody = genericManaged?.body
+    ?? renderProtectedSquashCommitBody({ branch: lease.branch, lease });
   const expectedReviewedMessage = `${lease.integration.commitMessage}\n\n${expectedBody}`;
   const sourceCommits = git(canonicalRoot, [
     "rev-list", "--reverse", `${lease.baseSha}..${head}`,
@@ -759,8 +813,61 @@ function requireSubjectEvidence({ canonicalRoot, lease, subjectPath, pullRequest
   if (sourceCommits.length < 1) {
     throw new Error("Subject source history has no admitted reviewed delta.");
   }
-  const sourceSubjects = sourceCommits.map(revision =>
+  const sourceHistorySubjects = sourceCommits.map(revision =>
     exactCommitSubject(canonicalRoot, revision));
+  const reviewedChanges = exactTreeChanges(canonicalRoot, lease.baseSha, head);
+  const pinTransition = optionalRuntimeReadinessPinTransition({
+    root: canonicalRoot,
+    baseSha: lease.baseSha,
+    headSha: head,
+    changes: reviewedChanges,
+    targetRepository: lease.cloudAuthority.targetRepository,
+    controllerRepository,
+  });
+  if (genericSelfHosted !== (pinTransition === null)) {
+    throw new Error("Subject generic repository classification drifted.");
+  }
+  if (genericSelfHosted) {
+    requireExactOwnedRegularPaths({
+      changes: reviewedChanges,
+      integrationPaths: lease.integration.paths,
+      admission: lease.admission,
+      cloudAuthority: lease.cloudAuthority,
+      label: "generic subject",
+    });
+  }
+  const sourceCommitAuthors = genericSelfHosted
+    ? uniqueCommitAuthors(sourceCommits.map(revision => exactCommitAuthor(canonicalRoot, revision)))
+    : null;
+  const attributionTrailers = genericSelfHosted
+    ? sourceCommitAuthors.map(author => `Co-authored-by: ${author.name} <${author.email}>`)
+    : ["Co-authored-by: knowgrph-lifecycle[bot] <knowgrph-lifecycle[bot]@users.noreply.github.com>"];
+  const sourceSubjects = genericSelfHosted
+    ? providerBulletSubjects({
+      message: malformed.message,
+      headline: lease.integration.commitMessage,
+      expectedBody,
+      attributionTrailers,
+      sourceHistorySubjects,
+    })
+    : sourceHistorySubjects;
+  const protectedRefresh = genericSelfHosted
+    ? exactGenericProtectedRefresh({
+      root: canonicalRoot,
+      lease,
+      reviewed,
+      reviewedChanges,
+      expectedReviewedMessage,
+    })
+    : null;
+  const predecessorAuthority = genericSelfHosted
+    ? readGenericSuccessorPredecessorAuthority({
+      ghText,
+      ledgerRepository: lease.cloudAuthority.ledgerRepository,
+      lease,
+      historicalLeaseEpoch: genericManaged.leaseEpoch,
+    })
+    : undefined;
   const expectedMessage = [
     lease.integration.commitMessage,
     "",
@@ -771,26 +878,19 @@ function requireSubjectEvidence({ canonicalRoot, lease, subjectPath, pullRequest
     "",
     "---------",
     "",
-    "Co-authored-by: knowgrph-lifecycle[bot] <knowgrph-lifecycle[bot]@users.noreply.github.com>",
+    ...attributionTrailers,
   ].join("\n");
-  const reviewedChanges = exactTreeChanges(canonicalRoot, lease.baseSha, head);
-  const pinTransition = exactRuntimeReadinessPinTransition({
-    root: canonicalRoot,
-    baseSha: lease.baseSha,
-    headSha: head,
-    changes: reviewedChanges,
-  });
   if (malformed.treeSha !== reviewedTreeSha
     || reviewed.treeSha !== reviewedTreeSha
     || reviewed.message !== expectedReviewedMessage
     || reviewed.objectMessageTerminalLf !== true
-    || lease.integration.treeSha !== reviewedTreeSha
+    || (!genericSelfHosted && lease.integration.treeSha !== reviewedTreeSha)
     || malformed.parentShas.length !== 1
     || malformed.parentShas[0] !== lease.baseSha
     || malformed.message !== expectedMessage
     || hasExactFinalManagedTrailers(malformed.message)
     || finalTrailerBlock(malformed.message).join("\n")
-      !== "Co-authored-by: knowgrph-lifecycle[bot] <knowgrph-lifecycle[bot]@users.noreply.github.com>"
+      !== attributionTrailers.join("\n")
     || reviewedChanges.length !== lease.integration.paths.length
     || reviewedChanges.some((entry, index) => entry.path !== lease.integration.paths[index])) {
     throw new Error("Subject canonical commit is not the exact provider attribution rewrite.");
@@ -844,6 +944,12 @@ function requireSubjectEvidence({ canonicalRoot, lease, subjectPath, pullRequest
     changedPaths: [...lease.integration.paths],
     pinTransition,
     sourceCommitSubjects: sourceSubjects,
+    ...(genericSelfHosted ? {
+      sourceCommitAuthors,
+      protectedRefresh,
+      historicalLeaseEpoch: genericManaged.leaseEpoch,
+      predecessorAuthority,
+    } : {}),
   });
 }
 
@@ -861,59 +967,89 @@ function requireRecoveryEvidence({
     ghText,
   });
   requireProviderCommitJoin(providerRecovery, recovery, "recovery protected commit");
-  if (recovery.parentShas.length !== 1 || recovery.parentShas[0] !== subject.malformedCommit.sha
+  const genericSelfHosted = subject.pinTransition === null;
+  if (recovery.parentShas.length !== 1 || recovery.parentShas[0] !== recoveryPr.baseSha
     || recovery.treeSha !== source.treeSha) {
+    throw new Error("Recovery is not one exact protected squash over its reviewed base.");
+  }
+  if (genericSelfHosted) {
+    if (target !== controllerEvidence.repository
+      || !isAncestor(canonicalRoot, subject.malformedCommit.sha, recovery.parentShas[0])) {
+      throw new Error("Generic recovery is not a protected self-hosted subject descendant.");
+    }
+  } else if (recovery.parentShas[0] !== subject.malformedCommit.sha) {
     throw new Error("Recovery is not the exact one-parent protected child of the failed merge.");
   }
-  const changes = exactTreeChanges(canonicalRoot, subject.malformedCommit.sha, recovery.sha);
-  if (changes.length !== 1 || changes[0].status !== "A" || changes[0].path !== evidencePath
-    || changes[0].oldMode !== "000000" || changes[0].newMode !== "100644") {
+  const changes = exactTreeChanges(canonicalRoot, recovery.parentShas[0], recovery.sha);
+  const genericRecoveryVariant = genericSelfHosted
+    ? classifyGenericRecoveryVariant({ changes, evidencePath, subject })
+    : null;
+  if (!genericSelfHosted && (changes.length !== 1 || changes[0].status !== "A"
+    || changes[0].path !== evidencePath || changes[0].oldMode !== "000000"
+    || changes[0].newMode !== "100644")) {
     throw new Error("Recovery must add exactly its one evidence document.");
   }
   const sourceBlob = gitBlobAt(canonicalRoot, source.sha, evidencePath);
   const mergeBlob = gitBlobAt(canonicalRoot, recovery.sha, evidencePath);
+  const evidenceChanges = changes.filter(entry => entry.path === evidencePath);
   if (sourceBlob.mode !== "100644" || mergeBlob.mode !== "100644"
     || sourceBlob.sha !== mergeBlob.sha
     || !sourceBlob.bytes.equals(mergeBlob.bytes)
-    || changes[0].newBlob !== mergeBlob.sha) {
+    || evidenceChanges.length !== 1
+    || evidenceChanges[0].newBlob !== mergeBlob.sha) {
     throw new Error("Recovery evidence source and protected blobs do not match exactly.");
   }
   const bytes = mergeBlob.bytes;
-  const frontmatter = parseFrontmatter(bytes.toString("utf8"));
-  const expected = {
-    title: `Runtime Pin ${subject.pinTransition.newRevision.slice(0, 8)} Squash Attribution Recovery`,
-    doc_type: "Recovery Evidence",
-    status: "source-backed",
-    lang: "en-US",
-    frontmatter_contract: "required",
-    failed_protected_main_sha: subject.malformedCommit.sha,
-    reviewed_pull_request: String(subject.pullRequest.number),
-    reviewed_source_head: subject.reviewedHeadSha,
-    reviewed_source_tree: subject.reviewedTreeSha,
-    reviewed_run_id: frontmatter.reviewed_run_id,
-    post_merge_run_id: frontmatter.post_merge_run_id,
-    controller_source: controllerEvidence.repository,
-    controller_revision: frontmatter.controller_revision,
-    deployment_authority: "forbidden",
-  };
-  for (const name of RECOVERY_FRONTMATTER) {
+  const frontmatterFields = genericRecoveryVariant === "self-hosted-controller-update"
+    ? GENERIC_SELF_HOSTED_RECOVERY_FRONTMATTER
+    : genericRecoveryVariant === "evidence-document"
+      ? GENERIC_EVIDENCE_RECOVERY_FRONTMATTER
+      : RECOVERY_FRONTMATTER;
+  const frontmatter = parseFrontmatter(bytes.toString("utf8"), frontmatterFields);
+  const controllerRevision = genericRecoveryVariant === "self-hosted-controller-update"
+    ? recovery.sha
+    : frontmatter.controller_revision;
+  const expected = genericRecoveryVariant === "self-hosted-controller-update"
+    ? expectedGenericSelfHostedFrontmatter()
+    : genericRecoveryVariant === "evidence-document"
+      ? expectedGenericEvidenceFrontmatter({ frontmatter, subject, controllerEvidence })
+      : expectedLegacyRecoveryFrontmatter({ frontmatter, subject, controllerEvidence });
+  for (const name of frontmatterFields) {
     if (frontmatter[name] !== expected[name]) {
       throw new Error(`Recovery frontmatter ${name} does not bind the subject.`);
     }
   }
-  if (!isAncestor(controllerRoot, frontmatter.controller_revision, controllerEvidence.revision)) {
+  if ((genericRecoveryVariant === "self-hosted-controller-update"
+    && (controllerRevision !== controllerEvidence.revision
+      || recovery.treeSha !== controllerEvidence.tree))
+    || (genericRecoveryVariant !== "self-hosted-controller-update"
+      && !isAncestor(controllerRoot, controllerRevision, controllerEvidence.revision))) {
     throw new Error("Recovery controller revision is not an ancestor of the protected controller.");
   }
+  const reviewedRunId = genericRecoveryVariant === "self-hosted-controller-update"
+    ? null
+    : exactDeclaredRunId(frontmatter.reviewed_run_id, "reviewed run ID");
+  const postMergeRunId = genericRecoveryVariant === "self-hosted-controller-update"
+    ? null
+    : exactDeclaredRunId(frontmatter.post_merge_run_id, "post-merge run ID");
   const subjectChecks = [
     newestTerminalIntegrationRun(ghText, target, subject.reviewedHeadSha,
       "pull_request", subject.pullRequest.headBranch,
-      Number(frontmatter.reviewed_run_id), "subject reviewed-head run"),
+      reviewedRunId,
+      "subject reviewed-head run", genericSelfHosted
+        ? SELF_HOSTED_CI_RUN_PROFILE
+        : LEGACY_INTEGRATION_RUN_PROFILE),
     newestTerminalIntegrationRun(ghText, target, subject.malformedCommit.sha,
-      "push", "main", Number(frontmatter.post_merge_run_id), "subject post-merge run"),
+      "push", "main", postMergeRunId, "subject post-merge run",
+      genericSelfHosted ? SELF_HOSTED_CI_RUN_PROFILE : LEGACY_INTEGRATION_RUN_PROFILE),
   ];
   const recoveryChecks = [
-    selectedPullRequestIntegrationRun(ghText, target, recoveryPr),
-    newestTerminalIntegrationRun(ghText, target, recoveryPr.mergeSha, "push", "main"),
+    selectedPullRequestIntegrationRun(ghText, target, recoveryPr,
+      genericSelfHosted ? SELF_HOSTED_CI_RUN_PROFILE : LEGACY_INTEGRATION_RUN_PROFILE),
+    newestTerminalIntegrationRun(ghText, target, recoveryPr.mergeSha, "push", "main",
+      null, "recovery push run", genericSelfHosted
+        ? SELF_HOSTED_CI_RUN_PROFILE
+        : LEGACY_INTEGRATION_RUN_PROFILE),
   ];
   const recoveryScope = scopeFromBranch(recoveryPr.headBranch);
   if (!recoveryLease || recoveryLease.branch !== recoveryPr.headBranch
@@ -923,26 +1059,55 @@ function requireRecoveryEvidence({
     || recoveryLease.pullRequestUrl !== recoveryPr.url) {
     throw new Error("Recovery attribution epoch is not bound to its exact completed lane.");
   }
+  if (genericSelfHosted) {
+    requireExactOwnedRegularPaths({
+      changes,
+      integrationPaths: recoveryLease.integration?.paths,
+      admission: recoveryLease.admission,
+      cloudAuthority: recoveryLease.cloudAuthority,
+      label: `generic ${genericRecoveryVariant} recovery`,
+      allowEvidenceAddition: genericRecoveryVariant === "evidence-document",
+    });
+  }
   const recoveryBody = renderProtectedSquashCommitBody({
     branch: recoveryPr.headBranch,
     lease: recoveryLease,
   });
   const recoveryTitle = source.message.split("\n")[0];
   const recoveryTrailers = recoveryBody.split("\n").slice(2).join("\n");
-  const expectedSourceMessage = [
+  const legacySourceMessage = [
     recoveryTitle,
     "",
     `Record the immutable PR${subject.pullRequest.number} provider-generated squash-attribution failure and the append-only protected recovery boundary.`,
     "",
     recoveryTrailers,
   ].join("\n");
-  const expectedProtectedMessage = `${recoveryTitle}\n\n${recoveryBody}`;
-  if (source.message !== expectedSourceMessage
-    || recovery.message !== expectedProtectedMessage
-    || source.objectMessageTerminalLf !== true
-    || recovery.objectMessageTerminalLf !== false
-    || !hasExactFinalManagedTrailers(source.message)
-    || !hasExactFinalManagedTrailers(recovery.message)) {
+  const standardMessage = `${recoveryTitle}\n\n${recoveryBody}`;
+  const genericEvidenceProviderMessage = genericRecoveryVariant === "evidence-document"
+    ? exactProviderGeneratedMessage({
+      root: canonicalRoot,
+      baseSha: recoveryPr.baseSha,
+      headSha: recoveryPr.headSha,
+      headline: recoveryTitle,
+      expectedBody: recoveryBody,
+      message: recovery.message,
+      pullRequest: recoveryPr,
+    })
+    : null;
+  const messagesValid = genericRecoveryVariant === "evidence-document"
+    ? source.message === standardMessage
+      && recovery.message === genericEvidenceProviderMessage
+      && hasExactFinalManagedTrailers(source.message)
+      && !hasExactFinalManagedTrailers(recovery.message)
+    : genericRecoveryVariant === "self-hosted-controller-update"
+      ? source.message === standardMessage && recovery.message === standardMessage
+        && hasExactFinalManagedTrailers(source.message)
+        && hasExactFinalManagedTrailers(recovery.message)
+      : source.message === legacySourceMessage && recovery.message === standardMessage
+        && hasExactFinalManagedTrailers(source.message)
+        && hasExactFinalManagedTrailers(recovery.message);
+  if (!messagesValid || source.objectMessageTerminalLf !== true
+    || recovery.objectMessageTerminalLf !== false) {
     throw new Error("Recovery canonical commit lacks its exact final attribution block.");
   }
   return Object.freeze({
@@ -967,12 +1132,16 @@ function requireRecoveryEvidence({
     evidenceBlobDigest: sha256(bytes),
     evidenceContentDigest: digestValue(bytes.toString("utf8")),
     frontmatterDigest: digestValue(frontmatter),
-    controllerRevision: frontmatter.controller_revision,
+    controllerRevision,
     checks: recoveryChecks,
     checksDigest: digestValue(recoveryChecks),
     cleanupReceiptDigest: recoveryCleanupReceiptDigest,
     changedEntries: changes,
-    changedPaths: [evidencePath],
+    changedPaths: changes.map(entry => entry.path),
+    ...(genericSelfHosted ? {
+      genericRecoveryVariant,
+      subjectAncestorOfRecoveryParent: true,
+    } : {}),
     deploymentAuthority: "forbidden",
   });
 }
@@ -999,7 +1168,7 @@ function requireController({ controller, targetRepository }) {
 }
 
 function requireRecoveryTerminalProjection({
-  leaseStore, canonicalRoot, recovery, ghText, ledgerRepository,
+  leaseStore, canonicalRoot, recovery, ghText, ledgerRepository, target,
 }) {
   const branch = recovery.pullRequest.headBranch;
   const lease = leaseStore.read(branch);
@@ -1012,12 +1181,23 @@ function requireRecoveryTerminalProjection({
       return lines[0] === `worktree ${lease?.worktreePath}`
         || lines.includes(`branch refs/heads/${branch}`);
     });
+  const completionMainSha = lease?.completion?.mainSha;
+  const protectedMainSha = requireProtectedMain({ canonicalRoot, recovery, target });
+  const completionContainsEvidence = SHA.test(String(completionMainSha || ""))
+    && isAncestor(canonicalRoot, recovery.mergeSha, completionMainSha)
+    && isAncestor(canonicalRoot, completionMainSha, protectedMainSha)
+    && gitBlobAt(canonicalRoot, completionMainSha, recovery.evidencePath).sha
+      === recovery.evidenceBlobSha;
+  assertCanonicalSquashRecoveryCompletedRecoveryHeadProjection({
+    lease,
+    recovery,
+    genericSelfHosted: recovery.genericRecoveryVariant !== undefined,
+  });
   if (!lease || lease.status !== "completed" || registered
     || filesystemEntryState(lease.worktreePath, "recovery worktree") !== "absent"
     || lease.pullRequestUrl !== recovery.pullRequest.url
-    || lease.reviewHeadSha !== recovery.sourceHeadSha
     || lease.completion?.mergeCommitSha !== recovery.mergeSha
-    || lease.completion?.mainSha !== recovery.mergeSha
+    || !completionContainsEvidence
     || lease.cloudAuthority?.reviewRequestId
       !== `github-pull-request:${recovery.pullRequest.nodeId}`
     || git(canonicalRoot, ["rev-parse", `refs/heads/${branch}`]) !== recovery.sourceHeadSha
@@ -1030,7 +1210,7 @@ function requireRecoveryTerminalProjection({
     repository: canonicalRoot,
     gitCommonDir: git(canonicalRoot, ["rev-parse", "--path-format=absolute", "--git-common-dir"]),
     targetPath: lease.worktreePath,
-    completionMainSha: recovery.mergeSha,
+    completionMainSha,
     preservedBranch: branch,
     managedContainer: { root: managedContainerRoot },
     sharedContainer: { root: sharedContainerRoot },
@@ -1099,6 +1279,21 @@ function requireRecoveryTerminalProjection({
   });
 }
 
+export function assertCanonicalSquashRecoveryCompletedRecoveryHeadProjection({
+  lease,
+  recovery,
+  genericSelfHosted,
+}) {
+  const exact = genericSelfHosted === true
+    ? (lease?.reviewHeadSha ?? null) === null
+      && lease?.deliveryHeadSha === recovery?.sourceHeadSha
+    : lease?.reviewHeadSha === recovery?.sourceHeadSha;
+  if (!exact) {
+    throw new Error("Recovery terminal projection does not bind its exact reviewed head.");
+  }
+  return true;
+}
+
 export function assertExactCanonicalSquashRecoveryCompletedTaskAuthority(lease) {
   if (lease?.status !== "completed") {
     throw new Error("Recovery terminal task authority requires its completed lease.");
@@ -1146,6 +1341,17 @@ function requireProtectedDescendantRevision({
     isAncestorRevision: (ancestor, descendant) =>
       isAncestor(canonicalRoot, ancestor, descendant),
   });
+}
+
+export function assertCanonicalSquashRecoveryControllerProjection({
+  plan,
+  currentController,
+}) {
+  const sealed = plan?.evidence?.controller;
+  if (digestValue(currentController) !== digestValue(sealed)) {
+    throw new Error("Recovery controller drifted from the sealed protected revision.");
+  }
+  return true;
 }
 
 export function assertCanonicalSquashRecoveryCompletionTopology({
@@ -1284,7 +1490,7 @@ function requireLeasePlanIdentity(lease, subject, label, { allowCompleting = fal
     || lease.pullRequestUrl !== subject.pullRequest.url
     || lease.taskAuthority?.bindingDigest !== subject.taskAuthorityBindingDigest
     || lease.cloudAuthority?.claimId !== subject.claimId
-    || lease.integration?.commitSha !== subject.reviewedHeadSha) {
+    || !authoredIntegrationMatchesSubject(lease, subject)) {
     throw new Error(`${label} lease drifted from the authorized recovery plan.`);
   }
 }
@@ -1302,11 +1508,12 @@ export function assertExactCanonicalSquashRecoveryCompletingReplay({
     || lease.autoDelivery !== true || lease.runtimeRequired !== true
     || lease.baseSha !== subject.pullRequest.baseSha
     || lease.deliveryHeadSha !== subject.reviewedHeadSha
-    || lease.integration?.commitSha !== subject.reviewedHeadSha
-    || lease.integration?.treeSha !== subject.reviewedTreeSha
+    || !authoredIntegrationMatchesSubject(lease, subject)
     || lease.completion?.mergeCommitSha !== subject.malformedCommit.sha
     || !acceptCompletionMain(lease.completion?.mainSha)
-    || digestValue(canonicalSquashRecoveryImmutableLeaseProjection(lease))
+    || digestValue(canonicalSquashRecoveryImmutableLeaseProjection(lease, {
+      genericSelfHosted: subject.pinTransition === null,
+    }))
       !== subject.leaseIdentityDigest
     || digestValue(lease.cloudAuthority) !== digestValue(subject.cloudAuthority)
     || lease.taskAuthority?.authoritySubjectId !== subject.taskAuthority.authoritySubjectId
@@ -1344,12 +1551,13 @@ export function assertExactCanonicalSquashRecoveryTerminalLeaseIdentity({
     || lease.baseSha !== subject.pullRequest.baseSha
     || (lease.reviewHeadSha ?? null) !== null
     || lease.deliveryHeadSha !== subject.reviewedHeadSha
-    || lease.integration?.commitSha !== subject.reviewedHeadSha
-    || lease.integration?.treeSha !== subject.reviewedTreeSha
+    || !authoredIntegrationMatchesSubject(lease, subject)
     || lease.integration?.commitMessage !== subject.expectedSquashHeadline
     || digestValue(lease.integration?.paths) !== digestValue(subject.changedPaths)
     || lease.completion?.mergeCommitSha !== subject.malformedCommit.sha
-    || digestValue(canonicalSquashRecoveryImmutableLeaseProjection(lease))
+    || digestValue(canonicalSquashRecoveryImmutableLeaseProjection(lease, {
+      genericSelfHosted: subject.pinTransition === null,
+    }))
       !== subject.leaseIdentityDigest
     || digestValue(lease.cloudAuthority) !== digestValue(subject.cloudAuthority)
     || digestValue(taskAuthority) !== digestValue(subject.taskAuthority)) {
@@ -1358,8 +1566,18 @@ export function assertExactCanonicalSquashRecoveryTerminalLeaseIdentity({
   return lease;
 }
 
-export function canonicalSquashRecoveryImmutableLeaseProjection(lease) {
-  requireCanonicalSquashRecoveryLeaseKeySet(lease);
+function authoredIntegrationMatchesSubject(lease, subject) {
+  const authored = subject.protectedRefresh?.authoredCommit;
+  return lease.integration?.commitSha === (authored?.sha ?? subject.reviewedHeadSha)
+    && lease.integration?.treeSha === (authored?.treeSha ?? subject.reviewedTreeSha)
+    && lease.integration?.commitMessage === subject.expectedSquashHeadline
+    && digestValue(lease.integration?.paths) === digestValue(subject.changedPaths);
+}
+
+export function canonicalSquashRecoveryImmutableLeaseProjection(lease, {
+  genericSelfHosted = false,
+} = {}) {
+  requireCanonicalSquashRecoveryLeaseKeySet(lease, { genericSelfHosted });
   const parkFields = [
     "parkHeadSha", "parkBranchHeadSha", "parkSourceEpoch", "parkSourceFenceSha",
     "parkStashRef", "parkStashSha", "parkStashMessage", "parkStashStatus",
@@ -1401,10 +1619,13 @@ export function canonicalSquashRecoveryImmutableLeaseProjection(lease) {
     cloudAuthority: structuredClone(lease.cloudAuthority),
     integration: structuredClone(lease.integration),
     taskAuthority,
+    ...(genericSelfHosted ? {
+      successorLineage: genericSuccessorLineageProjection(lease),
+    } : {}),
   });
 }
 
-function requireCanonicalSquashRecoveryLeaseKeySet(lease) {
+function requireCanonicalSquashRecoveryLeaseKeySet(lease, { genericSelfHosted = false } = {}) {
   if (!lease || !["delivery", "completing", "completed"].includes(lease.status)) {
     throw new Error("Canonical squash recovery requires its exact delivery lease lineage.");
   }
@@ -1416,9 +1637,103 @@ function requireCanonicalSquashRecoveryLeaseKeySet(lease) {
     "taskAuthority", "worktreePath",
   ];
   if (lease.status !== "delivery") keys.push("completion");
+  const lineageKeys = [
+    "activeOwnedDirtRecovery", "activeOwnedDirtCurrentBaseReanchor",
+    "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
+  ];
+  const presentLineage = lineageKeys.filter(name => Object.hasOwn(lease, name));
+  if (presentLineage.length > 0) {
+    if (!genericSelfHosted || presentLineage.length !== lineageKeys.length) {
+      throw new Error("Canonical squash recovery lease has partial or foreign successor lineage.");
+    }
+    keys.push(...lineageKeys);
+  }
   if (JSON.stringify(Object.keys(lease).sort()) !== JSON.stringify(keys.sort())) {
     throw new Error("Canonical squash recovery lease key set drifted from the sealed delivery lineage.");
   }
+}
+
+function genericSuccessorLineageProjection(lease) {
+  const names = [
+    "activeOwnedDirtRecovery", "activeOwnedDirtCurrentBaseReanchor",
+    "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
+  ];
+  if (names.every(name => !Object.hasOwn(lease, name))) return null;
+  const [recovery, reanchor, successor, intent] = names.map(name => lease[name]);
+  const reanchorKeys = [
+    "planDigest", "schema", "sourceBaseSha", "sourceClaimId", "sourceFenceSha",
+    "status", "successorClaimId", "targetCanonicalBaseSha",
+    "targetDirtEvidenceDigest", "targetLaneRevision", "taskContinuationReceiptDigest",
+  ];
+  const successorKeys = [
+    "boundAt", "branch", "cloudOperationReceiptDigest",
+    "cloudVerificationReceiptDigest", "epoch", "receiptDigest", "schema",
+    "sourceBaseSha", "sourceBindingDigest", "sourceClaimId", "sourceFenceSha",
+    "targetBaseSha", "targetBindingDigest", "targetClaimId", "targetFenceSha",
+  ];
+  let normalizedRecovery = null;
+  try {
+    normalizedRecovery = normalizeActiveOwnedDirtLeaseRecovery(recovery);
+  } catch {
+    throw new Error("Generic owned-dirt recovery lineage is malformed.");
+  }
+  const exactKeys = (value, expected) => value && !Array.isArray(value)
+    && JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...expected].sort());
+  const exactInstant = value => typeof value === "string"
+    && Number.isFinite(Date.parse(value));
+  const exactDigests = (value, fields) => fields.every(name =>
+    DIGEST.test(String(value?.[name] || "")));
+  const exactShas = (value, fields) => fields.every(name =>
+    SHA.test(String(value?.[name] || "")));
+  if (!recovery || !reanchor || !successor || intent !== null
+    || digestValue(normalizedRecovery) !== digestValue(recovery)
+    || !exactKeys(reanchor, reanchorKeys)
+    || !exactKeys(successor, successorKeys)
+    || recovery.sourceEpoch >= lease.epoch
+    || recovery.sourceSessionId !== lease.sessionId
+    || recovery.sourceDevice !== lease.device
+    || recovery.sourceBranch !== lease.branch
+    || reanchor.schema !== "agentic-active-owned-dirt-current-base-reanchor-lease/v1"
+    || reanchor.status !== "reanchored"
+    || successor.schema !== "agentic-active-publish-task-authority-successor-receipt/v1"
+    || recovery.sourceClaimId !== reanchor.sourceClaimId
+    || recovery.sourceFenceSha !== reanchor.sourceFenceSha
+    || reanchor.successorClaimId !== successor.sourceClaimId
+    || reanchor.targetCanonicalBaseSha !== successor.sourceBaseSha
+    || reanchor.targetLaneRevision !== successor.sourceFenceSha
+    || successor.branch !== lease.branch || successor.epoch !== lease.epoch
+    || successor.targetBaseSha !== lease.baseSha
+    || successor.targetFenceSha !== lease.fenceSha
+    || successor.targetFenceSha !== lease.deliveryHeadSha
+    || successor.targetClaimId !== lease.cloudAuthority.claimId
+    || successor.sourceBindingDigest !== lease.taskAuthority.priorBindingDigest
+    || successor.targetBindingDigest !== lease.taskAuthority.bindingDigest
+    || !exactInstant(successor.boundAt)
+    || !exactDigests(reanchor, [
+      "planDigest", "sourceClaimId", "successorClaimId", "targetDirtEvidenceDigest",
+      "taskContinuationReceiptDigest",
+    ])
+    || !exactShas(reanchor, [
+      "sourceBaseSha", "sourceFenceSha", "targetCanonicalBaseSha", "targetLaneRevision",
+    ])
+    || !exactDigests(successor, [
+      "sourceClaimId", "targetClaimId", "sourceBindingDigest", "targetBindingDigest",
+      "cloudOperationReceiptDigest", "cloudVerificationReceiptDigest", "receiptDigest",
+    ])
+    || !exactShas(successor, [
+      "sourceBaseSha", "sourceFenceSha", "targetBaseSha", "targetFenceSha",
+    ])
+    || successor.receiptDigest !== digestValue(Object.fromEntries(
+      Object.entries(successor).filter(([name]) => name !== "receiptDigest"),
+    ))) {
+    throw new Error("Generic successor/reanchor lineage does not join the current lease.");
+  }
+  return Object.freeze({
+    activeOwnedDirtRecovery: structuredClone(recovery),
+    activeOwnedDirtCurrentBaseReanchor: structuredClone(reanchor),
+    activePublishTaskAuthoritySuccessor: structuredClone(successor),
+    activePublishSuccessorIntent: null,
+  });
 }
 
 function completingWorktreeProjection({ subjectPath, subject, mainSha }) {
@@ -1516,6 +1831,7 @@ function stablePullIdentityDigest(value) {
 }
 function exactRetiredClaimExpectation({
   ghText, pullRequest, branch, sessionId, device, cloudAuthority, laneRevision,
+  predecessorAuthority = null,
 }) {
   return Object.freeze({
     reviewRequestId: `github-pull-request:${pullRequest.nodeId}`,
@@ -1556,9 +1872,12 @@ function exactRetiredClaimExpectation({
       ),
       integrationReceiptDigest: cloudAuthority.integrationReceiptDigest || null,
     }),
+    predecessorAuthority: predecessorAuthority === null
+      ? null
+      : Object.freeze(structuredClone(predecessorAuthority)),
   });
 }
-function readExactRetiredClaim({ ghText, ledgerRepository, claimId, expected }) {
+function readValidatedCollaborationLedger({ ghText, ledgerRepository }) {
   const ref = ghJson(ghText,
     `repos/${ledgerRepository}/git/ref/heads/${encodeURIComponent("agentic/collaboration-ledger")}`);
   const ledgerRevision = requiredSha(ref?.object?.sha, "recovery ledger revision");
@@ -1577,6 +1896,44 @@ function readExactRetiredClaim({ ghText, ledgerRepository, claimId, expected }) 
     "base64").toString("utf8"));
   const failures = validateLedger(ledger);
   if (failures.length > 0) throw new Error(`Recovery cloud ledger is invalid: ${failures[0]}`);
+  return ledger;
+}
+function readGenericSuccessorPredecessorAuthority({
+  ghText,
+  ledgerRepository,
+  lease,
+  historicalLeaseEpoch,
+}) {
+  const lineage = genericSuccessorLineageProjection(lease);
+  if (lineage === null) return null;
+  const successor = lineage.activePublishTaskAuthoritySuccessor;
+  const ledger = readValidatedCollaborationLedger({ ghText, ledgerRepository });
+  const current = ledger.entries.filter(entry => entry.claimId === lease.cloudAuthority.claimId)
+    .at(-1)?.claimCore;
+  const predecessor = ledger.entries.filter(entry => entry.claimId === successor.sourceClaimId)
+    .at(-1)?.claimCore;
+  if (!current || !predecessor
+    || current.claimId !== lease.cloudAuthority.claimId
+    || current.predecessorClaimId !== successor.sourceClaimId
+    || current.canonicalBaseRevision !== lease.cloudAuthority.canonicalBaseSha
+    || current.laneRevision !== lease.cloudAuthority.laneRevision
+    || current.leaseEpoch !== lease.cloudAuthority.leaseEpoch
+    || predecessor.claimId !== successor.sourceClaimId
+    || predecessor.canonicalBaseRevision !== successor.sourceBaseSha
+    || predecessor.laneRevision !== successor.sourceFenceSha
+    || predecessor.leaseEpoch !== historicalLeaseEpoch) {
+    throw new Error("Generic successor cloud predecessor projection drifted.");
+  }
+  return Object.freeze({
+    currentClaimId: current.claimId,
+    predecessorClaimId: predecessor.claimId,
+    canonicalBaseSha: predecessor.canonicalBaseRevision,
+    laneRevision: predecessor.laneRevision,
+    leaseEpoch: predecessor.leaseEpoch,
+  });
+}
+function readExactRetiredClaim({ ghText, ledgerRepository, claimId, expected }) {
+  const ledger = readValidatedCollaborationLedger({ ghText, ledgerRepository });
   const entries = ledger.entries.filter(entry => entry.claimId === claimId);
   const terminal = entries.at(-1);
   const integration = [...entries].reverse().find(entry => entry.action === "integrate");
@@ -1585,6 +1942,10 @@ function readExactRetiredClaim({ ghText, ledgerRepository, claimId, expected }) 
     && entry.claimDigest === expected.historicalAuthority.claimDigest
     && entry.claimCore?.transitionCounter
       === expected.historicalAuthority.transitionCounter);
+  const predecessor = expected.predecessorAuthority === null
+    ? null
+    : ledger.entries.filter(entry =>
+      entry.claimId === expected.predecessorAuthority.predecessorClaimId).at(-1)?.claimCore;
   const immutableFields = ["claimId", "actorId", "deviceId", "sessionId", "repositoryId",
     "workItemId", "canonicalBaseRevision", "declaredWriteScope", "writeSetDigest",
     "laneRevision", "leaseEpoch", "heartbeatCounter", "expiresAt", "evidenceDigest",
@@ -1633,6 +1994,16 @@ function readExactRetiredClaim({ ghText, ledgerRepository, claimId, expected }) 
     || terminal.claimCore.laneRevision !== expected.laneRevision
     || terminal.claimCore.writeSetDigest !== expected.writeSetDigest
     || terminal.claimCore.leaseEpoch !== expected.leaseEpoch
+    || (expected.predecessorAuthority !== null
+      && (terminal.claimCore.claimId !== expected.predecessorAuthority.currentClaimId
+        || terminal.claimCore.predecessorClaimId
+          !== expected.predecessorAuthority.predecessorClaimId
+        || !predecessor
+        || predecessor.claimId !== expected.predecessorAuthority.predecessorClaimId
+        || predecessor.canonicalBaseRevision
+          !== expected.predecessorAuthority.canonicalBaseSha
+        || predecessor.laneRevision !== expected.predecessorAuthority.laneRevision
+        || predecessor.leaseEpoch !== expected.predecessorAuthority.leaseEpoch))
     || terminal.claimDigest !== digestValue(terminal.claimCore)
     || !integration || integration.claimCore?.state !== "integrated-preserved"
     || integration.claimCore.integration?.candidateRevision !== expected.laneRevision
@@ -1770,6 +2141,283 @@ function exactTreeChanges(root, from, to) {
   }
   return Object.freeze(entries);
 }
+function exactCommitAuthor(root, revision) {
+  const raw = execFileSync("git", ["-C", root, "show", "-s",
+    "--format=format:%an%x00%ae", revision], {
+    encoding: "utf8", maxBuffer: 4 * 1024 * 1024,
+  });
+  const fields = raw.split("\0");
+  if (fields.length !== 2 || !fields[0] || !fields[1]
+    || /[<>\r\n]/u.test(fields[0]) || /[<>\r\n]/u.test(fields[1])) {
+    throw new Error("Source commit author identity is not exact Git attribution.");
+  }
+  return Object.freeze({ name: fields[0], email: fields[1] });
+}
+function exactGenericManagedIntegrationBody({ message, headline, scope }) {
+  const prefix = `${headline}\n\n`;
+  if (!message.startsWith(prefix)) {
+    throw new Error("Generic reviewed commit headline is not exact.");
+  }
+  const body = message.slice(prefix.length);
+  const lines = body.split("\n");
+  const epoch = /^Agentic-Lease-Epoch: ([1-9][0-9]*)$/u.exec(lines[4] || "");
+  if (lines.length !== 6
+    || lines[0] !== `Integrate the declared ${scope} change through its protected managed task lane so downstream policy can attribute the change to its writer lease.`
+    || lines[1] !== ""
+    || lines[2] !== `Agentic-Task: ${scope}`
+    || lines[3] !== `Agentic-Scope: ${scope}`
+    || !epoch
+    || lines[5] !== "Agentic-Mechanism: Agentic Canvas OS protected integration") {
+    throw new Error("Generic reviewed commit lacks its exact historical managed body.");
+  }
+  return Object.freeze({ body, leaseEpoch: Number(epoch[1]) });
+}
+function exactGenericProtectedRefresh({
+  root, lease, reviewed, reviewedChanges, expectedReviewedMessage,
+}) {
+  const authored = gitCommit(root, lease.integration.commitSha);
+  const successorLineage = genericSuccessorLineageProjection(lease);
+  if (authored.treeSha !== lease.integration.treeSha
+    || authored.message !== expectedReviewedMessage
+    || authored.objectMessageTerminalLf !== true) {
+    throw new Error("Generic authored integration commit drifted from its sealed bytes.");
+  }
+  if (authored.sha === reviewed.sha) {
+    if (successorLineage !== null || authored.treeSha !== reviewed.treeSha) {
+      throw new Error("Generic unrefreshed integration tree drifted.");
+    }
+    return null;
+  }
+  if (successorLineage === null
+    || authored.parentShas.length !== 1
+    || reviewed.parentShas.length !== 2
+    || reviewed.parentShas[0] !== authored.sha
+    || reviewed.parentShas[1] !== lease.baseSha
+    || reviewed.message !== authored.message
+    || reviewed.objectMessageTerminalLf !== true
+    || authored.parentShas[0] !== successorLineage
+      .activePublishTaskAuthoritySuccessor.sourceFenceSha) {
+    throw new Error("Generic protected refresh topology drifted from its authored head.");
+  }
+  const authoredChanges = exactTreeChanges(root, authored.parentShas[0], authored.sha);
+  if (JSON.stringify(authoredChanges) !== JSON.stringify(reviewedChanges)) {
+    throw new Error("Generic protected refresh did not preserve the exact authored patch.");
+  }
+  return Object.freeze({
+    authoredCommit: Object.freeze({
+      sha: authored.sha,
+      treeSha: authored.treeSha,
+      messageDigest: digestValue(authored.message),
+      objectMessageByteLength: authored.objectMessageByteLength,
+      objectMessageSha256: authored.objectMessageSha256,
+      objectMessageTerminalLf: authored.objectMessageTerminalLf,
+    }),
+    authoredParentSha: authored.parentShas[0],
+    reviewedParentShas: Object.freeze([...reviewed.parentShas]),
+    changedEntries: authoredChanges,
+  });
+}
+function uniqueCommitAuthors(authors) {
+  const seen = new Set();
+  const result = [];
+  for (const author of authors) {
+    const identity = `${author.name}\0${author.email}`;
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    result.push(author);
+  }
+  if (result.length < 1) throw new Error("Generic recovery has no source attribution.");
+  return Object.freeze(result);
+}
+function providerBulletSubjects({
+  message,
+  headline,
+  expectedBody,
+  attributionTrailers,
+  sourceHistorySubjects,
+}) {
+  const suffix = `\n\n${expectedBody}\n\n---------\n\n${attributionTrailers.join("\n")}`;
+  if (!message.startsWith(`${headline}\n\n`) || !message.endsWith(suffix)) {
+    throw new Error("Provider-generated squash framing is not exact.");
+  }
+  const bulletText = message.slice(`${headline}\n\n`.length, -suffix.length);
+  const bullets = bulletText.split("\n\n").map(value => {
+    const match = /^\* ([^\r\n]+)$/u.exec(value);
+    if (!match) throw new Error("Provider-generated squash bullet is malformed.");
+    return match[1];
+  });
+  if (bullets.length < 1 || bullets.at(-1) !== headline) {
+    throw new Error("Provider-generated squash lacks its terminal reviewed subject.");
+  }
+  let cursor = 0;
+  for (const bullet of bullets) {
+    const next = sourceHistorySubjects.indexOf(bullet, cursor);
+    if (next < 0) {
+      throw new Error("Provider-generated squash bullet is not ordered source history.");
+    }
+    cursor = next + 1;
+  }
+  return Object.freeze(bullets);
+}
+function exactProviderGeneratedMessage({
+  root,
+  baseSha,
+  headSha,
+  headline,
+  expectedBody,
+  message,
+  pullRequest,
+}) {
+  if (pullRequest.autoMergeRequest?.mergeMethod !== "SQUASH"
+    || pullRequest.autoMergeRequest.commitHeadline !== headline
+    || pullRequest.autoMergeRequest.commitBody !== null
+    || pullRequest.autoMergeRequest.enabledBy?.login !== pullRequest.mergedBy
+    || pullRequest.autoMergeRequest.enabledBy?.isBot !== false) {
+    throw new Error("Generic evidence recovery lacks its exact null-body squash cause.");
+  }
+  const commits = git(root, ["rev-list", "--reverse", `${baseSha}..${headSha}`])
+    .split("\n").filter(Boolean);
+  if (commits.length < 1) throw new Error("Generic evidence recovery has no source history.");
+  const sourceHistorySubjects = commits.map(revision => exactCommitSubject(root, revision));
+  const authors = uniqueCommitAuthors(commits.map(revision => exactCommitAuthor(root, revision)));
+  const attributionTrailers = authors
+    .map(author => `Co-authored-by: ${author.name} <${author.email}>`);
+  const bullets = providerBulletSubjects({
+    message,
+    headline,
+    expectedBody,
+    attributionTrailers,
+    sourceHistorySubjects,
+  });
+  return [
+    headline,
+    "",
+    ...bullets.flatMap((subject, index) => index === 0
+      ? [`* ${subject}`]
+      : ["", `* ${subject}`]),
+    "",
+    expectedBody,
+    "",
+    "---------",
+    "",
+    ...attributionTrailers,
+  ].join("\n");
+}
+function classifyGenericRecoveryVariant({ changes, evidencePath, subject }) {
+  const evidenceDocument = `docs/CANONICAL-SQUASH-PR${subject.pullRequest.number}-ATTRIBUTION-RECOVERY.md`;
+  if (evidencePath === evidenceDocument && changes.length === 1
+    && changes[0].path === evidenceDocument && changes[0].status === "A"
+    && changes[0].oldMode === "000000" && changes[0].newMode === "100644") {
+    return "evidence-document";
+  }
+  if (evidencePath === GENERIC_SELF_HOSTED_RECOVERY_EVIDENCE_PATH
+    && JSON.stringify(changes.map(entry => entry.path))
+      === JSON.stringify(GENERIC_SELF_HOSTED_RECOVERY_PATHS)
+    && changes.every(entry => entry.status === "M"
+      && entry.oldMode === "100644" && entry.newMode === "100644"
+      && entry.oldBlob !== entry.newBlob)) {
+    return "self-hosted-controller-update";
+  }
+  throw new Error("Generic recovery is neither its evidence document nor controller update.");
+}
+function requireExactOwnedRegularPaths({
+  changes,
+  integrationPaths,
+  admission,
+  cloudAuthority,
+  label,
+  allowEvidenceAddition = true,
+}) {
+  const paths = changes.map(entry => entry.path);
+  const expectedScopes = paths.map(repositoryPath => `path:${repositoryPath}`);
+  const admissionScopes = (admission?.declaredWriteSet || [])
+    .filter(scope => String(scope).startsWith("path:"));
+  const cloudScopes = (cloudAuthority?.cloudDeclaredWriteScope || [])
+    .filter(scope => String(scope).startsWith("path:"));
+  const exactRegular = changes.every(entry => {
+    const addition = allowEvidenceAddition && entry.status === "A"
+      && entry.oldMode === "000000" && entry.newMode === "100644"
+      && entry.oldBlob === "0".repeat(40) && entry.newBlob !== "0".repeat(40);
+    const modification = entry.status === "M" && entry.oldMode === "100644"
+      && entry.newMode === "100644" && entry.oldBlob !== entry.newBlob;
+    return addition || modification;
+  });
+  if (!exactRegular || new Set(paths).size !== paths.length
+    || JSON.stringify(paths) !== JSON.stringify(integrationPaths)
+    || JSON.stringify(expectedScopes) !== JSON.stringify(admissionScopes)
+    || JSON.stringify(expectedScopes) !== JSON.stringify(cloudScopes)
+    || admission?.writeSetDigest !== cloudAuthority?.writeSetDigest
+    || admission?.manifestDigest !== cloudAuthority?.manifestDigest) {
+    throw new Error(`${label} does not own its exact regular-file delta.`);
+  }
+}
+function expectedLegacyRecoveryFrontmatter({ frontmatter, subject, controllerEvidence }) {
+  return Object.freeze({
+    title: `Runtime Pin ${subject.pinTransition.newRevision.slice(0, 8)} Squash Attribution Recovery`,
+    doc_type: "Recovery Evidence",
+    status: "source-backed",
+    lang: "en-US",
+    frontmatter_contract: "required",
+    failed_protected_main_sha: subject.malformedCommit.sha,
+    reviewed_pull_request: String(subject.pullRequest.number),
+    reviewed_source_head: subject.reviewedHeadSha,
+    reviewed_source_tree: subject.reviewedTreeSha,
+    reviewed_run_id: frontmatter.reviewed_run_id,
+    post_merge_run_id: frontmatter.post_merge_run_id,
+    controller_source: controllerEvidence.repository,
+    controller_revision: frontmatter.controller_revision,
+    deployment_authority: "forbidden",
+  });
+}
+function expectedGenericEvidenceFrontmatter({ frontmatter, subject, controllerEvidence }) {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(frontmatter.date)) {
+    throw new Error("Generic recovery evidence date is not canonical.");
+  }
+  return Object.freeze({
+    title: `Canonical Squash PR${subject.pullRequest.number} Attribution Recovery`,
+    graphId: `md:canonical-squash-pr${subject.pullRequest.number}-attribution-recovery`,
+    doc_type: "Recovery Evidence",
+    date: frontmatter.date,
+    lang: "en-US",
+    schema: "agentic-canonical-squash-attribution-recovery-evidence/v1",
+    frontmatter_contract: "required",
+    status: "source-backed",
+    authority: `append-only evidence for protected PR${subject.pullRequest.number} terminalization`,
+    runtime_scope: "attribution recovery evidence only",
+    runtime_proof: "protected pull-request and post-main CI evidence",
+    failed_protected_main_sha: subject.malformedCommit.sha,
+    reviewed_pull_request: String(subject.pullRequest.number),
+    reviewed_source_head: subject.reviewedHeadSha,
+    reviewed_source_tree: subject.reviewedTreeSha,
+    reviewed_run_id: frontmatter.reviewed_run_id,
+    post_merge_run_id: frontmatter.post_merge_run_id,
+    controller_source: controllerEvidence.repository,
+    controller_revision: subject.malformedCommit.sha,
+    deployment_authority: "forbidden",
+  });
+}
+function expectedGenericSelfHostedFrontmatter() {
+  return Object.freeze({
+    title: "Canonical Squash Attribution Recovery Terminalization",
+    graphId: "md:canonical-squash-attribution-recovery-terminalization",
+    doc_type: "Recovery Contract",
+    date: "2026-08-30",
+    lang: "en-US",
+    schema: "agentic-canonical-squash-attribution-recovery-terminalization-doc/v1",
+    frontmatter_contract: "required",
+    status: "runtime-ready",
+    authority: "repository-owned terminalization after one exact append-only squash-attribution recovery",
+    runtime_scope: "integrated cloud retirement and local completion-ready projection only",
+    runtime_proof: "focused contract, controller, CLI, repository-adapter, response-loss, and provider-inventory tests",
+  });
+}
+function exactDeclaredRunId(value, label) {
+  if (!/^[1-9][0-9]*$/u.test(String(value || ""))
+    || !Number.isSafeInteger(Number(value))) {
+    throw new Error(`${label} must be one canonical positive integer.`);
+  }
+  return Number(value);
+}
 function gitBlobAt(root, revision, repositoryPath) {
   const raw = execFileSync("git", ["-C", root, "ls-tree", "-z", revision, "--", repositoryPath], {
     encoding: "utf8", maxBuffer: 4 * 1024 * 1024,
@@ -1782,6 +2430,22 @@ function gitBlobAt(root, revision, repositoryPath) {
     encoding: "buffer", maxBuffer: 32 * 1024 * 1024,
   });
   return Object.freeze({ mode: match[1], sha: match[2], bytes });
+}
+function optionalRuntimeReadinessPinTransition({
+  root,
+  baseSha,
+  headSha,
+  changes,
+  targetRepository,
+  controllerRepository,
+}) {
+  if (changes.length === 1 && changes[0].path === "docs/runtime-readiness-contract.md") {
+    return exactRuntimeReadinessPinTransition({ root, baseSha, headSha, changes });
+  }
+  if (targetRepository !== controllerRepository) {
+    throw new Error("Generic squash attribution recovery is limited to its controller repository.");
+  }
+  return null;
 }
 function exactRuntimeReadinessPinTransition({ root, baseSha, headSha, changes }) {
   const repositoryPath = "docs/runtime-readiness-contract.md";
@@ -1864,17 +2528,17 @@ function finalTrailerBlock(message) {
   return result;
 }
 
-function parseFrontmatter(text) {
+function parseFrontmatter(text, fields = RECOVERY_FRONTMATTER) {
   const match = /^---\n([\s\S]*?)\n---\n/u.exec(text);
   if (!match) throw new Error("Recovery evidence frontmatter is missing.");
   const values = {};
   const lines = match[1].split("\n");
-  if (lines.length !== RECOVERY_FRONTMATTER.length) {
+  if (lines.length !== fields.length) {
     throw new Error("Recovery frontmatter must contain exactly its declared key set.");
   }
   for (const [index, line] of lines.entries()) {
-    const field = /^([a-z0-9_]+):\s+"([^"\r\n]*)"$/u.exec(line);
-    if (!field || field[1] !== RECOVERY_FRONTMATTER[index]) {
+    const field = /^([A-Za-z0-9_]+):\s+"([^"\r\n]*)"$/u.exec(line);
+    if (!field || field[1] !== fields[index]) {
       throw new Error("Recovery frontmatter contains an unknown, malformed, or reordered field.");
     }
     if (Object.hasOwn(values, field[1])) {
@@ -1882,46 +2546,63 @@ function parseFrontmatter(text) {
     }
     values[field[1]] = field[2];
   }
-  for (const name of RECOVERY_FRONTMATTER) {
+  for (const name of fields) {
     if (!Object.hasOwn(values, name)) throw new Error(`Recovery frontmatter lacks ${name}.`);
   }
   return Object.freeze(values);
 }
 
 function requireSuccessfulRun(ghText, repository, id, sha, event, branch, label,
-  expectedJobId = null) {
+  expectedJobId = null, profile = LEGACY_INTEGRATION_RUN_PROFILE) {
   const run = JSON.parse(ghText([
     "run", "view", String(id), "--repo", repository,
     "--json", "databaseId,event,headBranch,headSha,status,conclusion,workflowName,jobs,url",
   ]));
-  if (run.databaseId !== id || run.headSha !== sha || run.status !== "completed"
-    || run.conclusion !== "success" || run.workflowName !== "Integration"
+  const workflowName = profile === LEGACY_INTEGRATION_RUN_PROFILE
+    ? "Integration"
+    : profile === SELF_HOSTED_CI_RUN_PROFILE ? "CI" : null;
+  const jobName = profile === LEGACY_INTEGRATION_RUN_PROFILE
+    ? "Integration Gate"
+    : profile === SELF_HOSTED_CI_RUN_PROFILE ? "collaboration-integration" : null;
+  const workflowPath = profile === SELF_HOSTED_CI_RUN_PROFILE
+    ? ".github/workflows/ci.yml"
+    : null;
+  if (!workflowName || !jobName || run.databaseId !== id || run.headSha !== sha
+    || run.status !== "completed"
+    || run.conclusion !== "success" || run.workflowName !== workflowName
     || run.event !== event || run.headBranch !== branch) {
     throw new Error(`${label} is not exact and successful.`);
   }
-  const jobs = (run.jobs || []).filter(job => job.name === "Integration Gate"
+  const jobs = (run.jobs || []).filter(job => job.name === jobName
     && job.status === "completed" && job.conclusion === "success");
   if (jobs.length !== 1 || !Number.isSafeInteger(jobs[0].databaseId)) {
-    throw new Error(`${label} lacks its exact successful Integration Gate job.`);
+    throw new Error(`${label} lacks its exact successful ${jobName} job.`);
   }
   if (expectedJobId !== null && jobs[0].databaseId !== expectedJobId) {
     throw new Error(`${label} job identity drifted from the pull-request check.`);
   }
   return Object.freeze({ databaseId: run.databaseId, jobDatabaseId: jobs[0].databaseId,
     event: run.event, headBranch: run.headBranch, headSha: run.headSha,
-    workflowName: run.workflowName, conclusion: run.conclusion });
+    workflowName: run.workflowName,
+    ...(workflowPath ? { workflowPath } : {}),
+    conclusion: run.conclusion });
 }
-function selectedPullRequestIntegrationRun(ghText, repository, pullRequest) {
+function selectedPullRequestIntegrationRun(ghText, repository, pullRequest,
+  profile = LEGACY_INTEGRATION_RUN_PROFILE) {
   return newestTerminalIntegrationRun(
     ghText,
     repository,
     pullRequest.headSha,
     "pull_request",
     pullRequest.headBranch,
+    null,
+    "recovery pull-request run",
+    profile,
   );
 }
 function newestTerminalIntegrationRun(ghText, repository, sha, event, branch,
-  expectedRunId = null, label = `recovery ${event} run`) {
+  expectedRunId = null, label = `recovery ${event} run`,
+  profile = LEGACY_INTEGRATION_RUN_PROFILE) {
   const pages = ghJsonPages(ghText,
     `repos/${repository}/actions/runs?head_sha=${encodeURIComponent(sha)}&event=${encodeURIComponent(event)}&per_page=100`);
   const total = pages[0]?.total_count;
@@ -1930,28 +2611,31 @@ function newestTerminalIntegrationRun(ghText, repository, sha, event, branch,
     throw new Error("Complete Actions run inventory could not be proven.");
   }
   const run = selectNewestExactIntegrationRun(runs, {
-    sha, event, branch, expectedRunId,
+    sha, event, branch, expectedRunId, profile,
   });
   return requireSuccessfulRun(ghText, repository, Number(run.id), sha, event, branch,
-    label);
+    label, null, profile);
 }
 
 function requirePlanRunsCurrent({ plan, ghText, target }) {
   const subject = plan.evidence.subject;
   const recovery = plan.evidence.recovery;
+  const profile = subject.pinTransition === null
+    ? SELF_HOSTED_CI_RUN_PROFILE
+    : LEGACY_INTEGRATION_RUN_PROFILE;
   const currentSubject = [
     newestTerminalIntegrationRun(ghText, target, subject.reviewedHeadSha,
       "pull_request", subject.pullRequest.headBranch,
-      subject.checks[0].databaseId, "subject reviewed-head run"),
+      subject.checks[0].databaseId, "subject reviewed-head run", profile),
     newestTerminalIntegrationRun(ghText, target, subject.malformedCommit.sha,
-      "push", "main", subject.checks[1].databaseId, "subject post-merge run"),
+      "push", "main", subject.checks[1].databaseId, "subject post-merge run", profile),
   ];
   const currentRecovery = [
     newestTerminalIntegrationRun(ghText, target, recovery.sourceHeadSha,
       "pull_request", recovery.pullRequest.headBranch,
-      recovery.checks[0].databaseId, "recovery reviewed-head run"),
+      recovery.checks[0].databaseId, "recovery reviewed-head run", profile),
     newestTerminalIntegrationRun(ghText, target, recovery.mergeSha,
-      "push", "main", recovery.checks[1].databaseId, "recovery post-merge run"),
+      "push", "main", recovery.checks[1].databaseId, "recovery post-merge run", profile),
   ];
   if (digestValue(currentSubject) !== subject.checksDigest
     || digestValue(currentRecovery) !== recovery.checksDigest) {
@@ -1961,13 +2645,19 @@ function requirePlanRunsCurrent({ plan, ghText, target }) {
 
 export function selectNewestExactIntegrationRun(runs, {
   sha, event, branch, expectedRunId = null,
+  profile = LEGACY_INTEGRATION_RUN_PROFILE,
 }) {
   if (!Array.isArray(runs) || !SHA.test(String(sha || ""))
-    || !["pull_request", "push"].includes(event) || !String(branch || "")) {
+    || !["pull_request", "push"].includes(event) || !String(branch || "")
+    || ![LEGACY_INTEGRATION_RUN_PROFILE, SELF_HOSTED_CI_RUN_PROFILE]
+      .includes(profile)) {
     throw new Error("Integration run selection input is invalid.");
   }
+  const exactWorkflow = run => profile === LEGACY_INTEGRATION_RUN_PROFILE
+    ? run?.name === "Integration"
+    : run?.path === ".github/workflows/ci.yml";
   const candidates = runs.filter(run => run?.head_sha === sha
-    && run.name === "Integration" && run.event === event && run.head_branch === branch);
+    && exactWorkflow(run) && run.event === event && run.head_branch === branch);
   const run = candidates.sort((left, right) => Number(right.id) - Number(left.id))[0];
   if (!run || !Number.isSafeInteger(Number(run.id))
     || run.status !== "completed" || run.conclusion !== "success") {

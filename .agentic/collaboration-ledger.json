@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6653,
-  "headDigest": "0f6e3ae51acb54833c353820cc9d41b9303bc25dbe306989b2fd78123816763c",
+  "sequence": 6654,
+  "headDigest": "145b00e4ac09e25b8cd6b67c49d8c185697c9190cd7ba335448a377921b52f70",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -337867,6 +337867,49 @@
       },
       "claimDigest": "db3c4cbe32fb541a6f09c4e474ff847b137c2c4b7e8f3d2f84508e1e8d83130c",
       "digest": "0f6e3ae51acb54833c353820cc9d41b9303bc25dbe306989b2fd78123816763c"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6654,
+      "parentDigest": "0f6e3ae51acb54833c353820cc9d41b9303bc25dbe306989b2fd78123816763c",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "f8eefc7fbdaacaa4c80d71f8b56842d4a18db29962e36d1b2040a3988422119b",
+      "idempotencyKey": "4c7d9afe6ba6071e919450203f880b2f5195a7954974af8da513f51b504b5cb5",
+      "requestDigest": "2033200cb703ce8865bae872adf8978569d2e616cef4cc7c02c7388ea184eb44",
+      "evaluationTime": "2026-08-31T08:17:15.000Z",
+      "claimCore": {
+        "claimId": "f8eefc7fbdaacaa4c80d71f8b56842d4a18db29962e36d1b2040a3988422119b",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:667356942c082a29e5aac7941b2c6c5abaa94c44d48187302400f6a3668fa0b3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:071cf5ca17b236613f7955c0a869c563ff4edbe9cb1e0d0c3478c8419783f9d4",
+        "canonicalBaseRevision": "c7194b8d70d53ad90721f2822fe05adde4659e4e",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-complete-intent-supersession-replay-recovery.test.mjs",
+          "path:docs/ACTIVE-DIRTY-SCOPE-EXPANSION-COMPLETE-INTENT-SUPERSESSION-REPLAY-RECOVERY.md",
+          "path:scripts/active-dirty-scope-expansion-complete-intent-supersession-replay-recovery-contract.mjs",
+          "path:scripts/active-dirty-scope-expansion-complete-intent-supersession-replay-recovery-repository-adapter.mjs",
+          "path:scripts/active-dirty-scope-expansion-complete-intent-supersession-replay-recovery.mjs",
+          "semantic:complete-intent-replay-recovery"
+        ],
+        "writeSetDigest": "4ee8bb1e6c5b87783824e687c01c10a721a3a6718a6d59914d0ba04b96de9220",
+        "laneRevision": "c7194b8d70d53ad90721f2822fe05adde4659e4e",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T16:17:15.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "b16fb81e1010e2bc6b0b7a7f5c15262d96cd3ca27cb2ac2e6ec243d053ad01ee",
+      "digest": "145b00e4ac09e25b8cd6b67c49d8c185697c9190cd7ba335448a377921b52f70"
     }
   ]
 }

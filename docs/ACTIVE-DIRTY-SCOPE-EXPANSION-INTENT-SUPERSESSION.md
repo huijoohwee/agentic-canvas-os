@@ -46,6 +46,49 @@ This controller therefore has one universal mutation: archive the exact old
 intent and clear its branch key. Replanning remains a separate ordinary
 operation with a fresh protected-main proof and its own authorization.
 
+### Completed active-owned-dirt continuation
+
+This is not relaxed lease matching. The original direct variant still requires
+the intent lease to equal the live lease, emits no `sourceContinuation` key,
+and preserves its existing v1 plan, receipt, and replay bytes. A historical
+intent lease may differ from the live lease only through the closed
+`completed-active-owned-dirt-recovery-successor` variant: one exact completed
+active-owned-dirt recovery must join the historical lease and recorded-current
+claim transition to the recovered same-claim transition, live lease, local CAS,
+task-capability continuation, recovery snapshot, current dirt, current draft-PR
+marker, and recomputed final receipt.
+
+The completed recovery journal is carried in full. Its historical t2 claim must
+be the recovery plan's exact source, and the latest same-claim entry must be the
+single t3 `continue` recovery with counter `t2 + 1`, the exact recovery
+idempotency key and snapshot receipt. Its request digest is recomputed from the
+sealed recovery plan and its expiry must equal `recoveredAt + ttl`; unchanged
+actor/device/session and immutable claim subject are also required. The t3
+entry must directly extend the plan's sealed `sourceLedgerDigest`, and the
+completed journal's ledger and claim revisions must equal that t3 digest. A
+heartbeat, counter gap, foreign
+recipient, child claim, later same-claim transition, incomplete phase, or drift
+in the recovery intent, active-owned-dirt lease projection, task binding,
+marker, or bytes fails closed.
+
+The PR839 recovery audit that admitted this variant observed stale intent plan
+`8146344157603e64e5787eb721ec9a20af9340ba17bdf777bf32e0555a0b9a22`
+on historical lease
+`12b32fe9370230b526bbbbbc68d81493793a9d8023de81845f1b72038df87f60`,
+then completed recovery plan
+`9285b3b25b430c383ae77ef1d5ccab560cd5e3df4894fcaf816a3caaf660c89d`
+with final receipt
+`84a760ffb77d408c2b0f07e6e63e2dc8dd6c929e912b62379336590b31b657e1`.
+The live recovered lease, t3 claim, marker, and dirt evidence were respectively
+`1076e200d0def5cce79228765e320f1133984f99876491ce8c4589b192d6fab0`,
+`3338c90dd9285a8e76e785d5cc9da069ad83d1def761e4496dd09fe1feba116a`,
+`5ba66700c03f9b54c8f865b44aca28a78437ac329dbf96cded3c95486667afcb`,
+and `1b868d6db99b068739cd4beababebd40e80e35c8f8db28eda87faf29fa348bbd`.
+These are forensic identities, never reusable authorization. The remediation's
+admitted manifest/write-set pair was
+`bb10cce0efa2d268b94bf6375cccb243f6829ac8afc33ba850442dbfb05276c9` /
+`34e87659ac8720330ccfaaef9b9979057e4ec2eeae909ad73b0ab656ac4a2f50`.
+
 ## Preconditions
 
 Planning and execution fail closed unless all of these facts join exactly:
@@ -69,6 +112,15 @@ Planning and execution fail closed unless all of these facts join exactly:
   retirement, promotion, binding, local projection, pull-request projection,
   and final field is absent or null. Its full raw digest and sealed plan
   snapshot are bound into the recovery plan.
+- If the source intent names a historical lease, its optional closed
+  continuation must validate the full completed active-owned-dirt journal. The
+  recovery source lease, claim, fence, base, review request, admission,
+  manifest, write set, and dirty path set equal the old intent source; the
+  recovery local projection equals the current lease digest; its normalized
+  active-owned-dirt lease object equals the live lease projection; and its
+  normalized `continuation` task binding seals the exact prior and current
+  binding digests at `recoveredAt`. The recovered marker equals both the journal
+  and current PR marker, while current dirt equals the recovery plan evidence.
 - The target manifest is the intent's exact target manifest and write set. It
   remains a strict expansion of the source admission and covers all tracked
   dirty paths.
@@ -80,6 +132,11 @@ Planning and execution fail closed unless all of these facts join exactly:
   are identical and pass `validateLedger`. The latest source lineage remains a
   recorded-current, non-retired claim joined to the local claim digest and
   transition counter.
+- For a recovered continuation, the ledger check locates the historical source
+  entry sealed by the recovery plan and the immediately following same-claim
+  recovery entry. Absence is still evaluated against the old scope-expansion
+  waiting key and foreign derivatives, while effective current/dormant state is
+  computed from the recovered t3 cloud and live-lease expiries.
 - The validated ledger contains neither the digest of
   `active-dirty-scope-expansion:waiting:<old-plan-digest>` nor any child claim
   linked to the source claim under a different idempotency key. This rules out
@@ -149,17 +206,22 @@ The plan seals one of two dispositions. Crossing the boundary between them
 changes the plan digest and forces a replan.
 
 - `current`: after the clear receipt, renew the source heartbeat through the
-  ordinary repository-owned heartbeat flow. Then produce and authorize a new
+  ordinary repository-owned heartbeat flow when required. A recovered t3 that
+  remains current does not need another recovery; produce and authorize a new
   ordinary active-dirty scope-expansion plan against current protected main.
 - `dormant-preserved`: after the clear receipt, run the existing
-  `expired-active-dirty-scope-expansion-recovery` controller. That controller is
-  now eligible because the scope-expansion intent is absent. Once it restores
-  current authority, produce and authorize a new ordinary active-dirty
-  scope-expansion plan.
+  `expired-active-dirty-scope-expansion-recovery` controller for a direct
+  variant. For a completed active-owned-dirt continuation, run a fresh
+  active-owned-dirt recovery against the now-unfenced completed journal. Once
+  current authority is restored, produce and authorize a new ordinary
+  active-dirty scope-expansion plan.
 
 Neither continuation is performed by this command. In particular, successful
 supersession is not authority to renew, recover expiry, create a cloud claim,
-or execute the replacement scope expansion.
+or execute the replacement scope expansion. Never reuse the audited stale
+scope plan `8146344157603e64e5787eb721ec9a20af9340ba17bdf777bf32e0555a0b9a22`
+or recovery plan
+`9285b3b25b430c383ae77ef1d5ccab560cd5e3df4894fcaf816a3caaf660c89d`.
 
 ## Replay and receipt
 
@@ -172,9 +234,10 @@ source lease and all unrelated registry maps remain byte-equivalent.
 
 If the response is lost, an exact retry finds the nested receipt only when the
 branch intent is absent and the receipt joins the same plan, lease, claim, and
-source-intent digest. It returns that immutable receipt with `replayed: true`
-and does not advance the registry revision. A new or different intent rejects
-replay.
+source-intent digest. A recovered replay additionally requires the same
+completed recovery intent, active-owned-dirt lease projection, and current task
+binding. It returns that immutable receipt with `replayed: true` and does not
+advance the registry revision. A new or different intent rejects replay.
 
 The immutable receipt's `completionEffects` report the historical completion:
 source bytes, index, source refs/commit/push, pull request, ledger payload,

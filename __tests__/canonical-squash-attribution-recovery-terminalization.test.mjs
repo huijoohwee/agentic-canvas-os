@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { advanceJournal, buildPlan, createJournal,
+  CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE,
   GENERIC_SELF_HOSTED_RECOVERY_EVIDENCE_PATH,
   GENERIC_SELF_HOSTED_RECOVERY_PATHS,
   normalizeCanonicalSquashRecoveryDeliveryProfile,
@@ -79,6 +80,99 @@ const PR819 = Object.freeze({
     priorBindingDigest: null,
     bindingDigest: "16a20cac9a49ed8d9153391883c4d045b0d4bad9c3a277b59ac630186984fce8",
   }),
+});
+const PR834 = Object.freeze({
+  repository: "huijoohwee/agentic-canvas-os",
+  number: 834,
+  nodeId: "PR_kwDOSr5-fM8AAAABBiwIhw",
+  url: "https://github.com/huijoohwee/agentic-canvas-os/pull/834",
+  sessionId: "01a0554f-78d4-7221-b216-ed700a4bae72",
+  device: "huis-macbook-pro-3.local",
+  epoch: 6,
+  historicalLeaseEpoch: 2,
+  cloudLeaseEpoch: 3,
+  scope: "canonical-squash-pr819-lineage-adapter",
+  branch: "agent/huis-macbook-pro-3.local/canonical-squash-pr819-lineage-adapter",
+  claimId: "afffa66aefb3318ee69fc8a1c2643daac227167f8b9d4c57ce28423b80c3f659",
+  claimDigest: "6d84f06b3bd34a01dd9e551f9afd82aaeeebf3dfe9984b8c697fc91faf2d7938",
+  baseSha: "eca6a90ae8f98258d5296e394e09de9071b55058",
+  sourceFenceSha: "cec362b12c0cdc23f31c22c06426ef8fd413602c",
+  authoredHeadSha: "4e05a77a4e598fb55d6a48ee5e9f12c3b0894e59",
+  authoredTreeSha: "e56ef62a7c68569d87500f1508e9e0c907a489c0",
+  reviewedHeadSha: "88ca91612c745152f1480887501caa99187562e0",
+  reviewedTreeSha: "4f398685990fe8bda8cced5e4ff98a64391a5e46",
+  mergeSha: "feccd66eea65616268d5cb6d269134a7e4315dcb",
+  headline: "fix(canonical-squash-pr819-lineage-adapter): recover legacy lane",
+  integrationReceiptDigest:
+    "b09b51e79bbd127ad5453ac353bedd9a6daa06905b92a27e86f2a8b86dc18e37",
+  autoMergeDigest: "d837aa82866605ceaead3de35ce887a60d8b240032e32d6cf2d49deeafef1873",
+  paths: Object.freeze([...GENERIC_SELF_HOSTED_RECOVERY_PATHS]),
+  sourceSubjects: Object.freeze([
+    "chore(coordination): claim canonical-squash-pr819-lineage-adapter lease 6",
+    "fix(canonical-squash-pr819-lineage-adapter): recover legacy lane",
+  ]),
+  sourceRevisions: Object.freeze([
+    "cec362b12c0cdc23f31c22c06426ef8fd413602c",
+    "4e05a77a4e598fb55d6a48ee5e9f12c3b0894e59",
+    "88ca91612c745152f1480887501caa99187562e0",
+  ]),
+  taskAuthority: Object.freeze({
+    schema: "agentic-task-authority-binding/v1",
+    authoritySubjectId:
+      "urn:agentic-task:f62a2635f2d783aa0420b5056555cff8d843a57752cf5759edc9a0e8f3d0e502",
+    proofAdapterId: "urn:agentic-proof:ed25519-file:v1",
+    generation: 1,
+    publicKey: "MCowBQYDK2VwAyEA/MRWU8grKOPhSTfHsTMUCHHJMUIqqtg3XSuK3xV70m8=",
+    publicKeyDigest: "ed9752c379a3b41dfcc18591d0309f60baed9c8015e08c0abb88bcae4afde53b",
+    laneBindingDigest: "f584729688a52b8fb8fd22d14b5450fad6dba4c1e3c4080ba91d9a904ddaa4d6",
+    bindingMode: "continuation",
+    boundAt: "2026-08-31T03:19:24.348Z",
+    transitionPlanDigest: null,
+    priorBindingDigest: "0107ef4a1373fe1bac246b9fa3c2e16398ee48cd9cfa6809b9e68d23177df30f",
+    bindingDigest: "14248b4171a117d3a1e46453d7eae644bb16bfe30e480171324ece06d1cc8443",
+  }),
+});
+const PR834_SOURCE_CORRECTION_REPAIR = Object.freeze({
+  schema: "agentic-source-correction-successor-task-binding-reconciliation-local-repair/v1",
+  status: "reconciled",
+  planDigest: "94ddf36f1e159c87ebd8f84c1b91e414c8aa18f2f20ac063a670842f2f66573e",
+  branch: PR834.branch,
+  predecessorClaimId: "aac923080d9f0aad566a4cdbdf797c41757a19108e331f159ccbefd9782ce83e",
+  successorClaimId: "eff720ef106c878bfc39d552fcd9d5e509a967366cae9678919c7dd0df9f1217",
+  sourceBindingDigest: "d18140a8a290d82b2062a26a32165508ae1b68974203c5cd8b10e7a9cb22497e",
+  targetBindingDigest: PR834.taskAuthority.priorBindingDigest,
+  sourceLeaseDigest: "bd587ec972234401e9c271efb4f97ee023982d7dc5ce7e0550d2349820976eb7",
+  taskAuthorityReceiptDigest:
+    "5c833755b08ccd9a49a6ffd63e67d02f03b0d982e97bc583f8c1fbbf52ad27b2",
+  reconciledAt: "2026-08-31T03:06:49.034Z",
+  cloudEffect: false,
+  pullRequestEffect: false,
+  sourceEffect: false,
+  gitEffect: false,
+  mergeEffect: false,
+  integrationEffect: false,
+  deploymentEffect: false,
+  authoringAuthorityGranted: false,
+  receiptDigest: "7f080254bc11e2e983d9f32b732f7c00a0777c3be0b27a82c7d95031521a1c91",
+});
+const PR834_ACTIVE_PUBLISH_SUCCESSOR = Object.freeze({
+  schema: "agentic-active-publish-task-authority-successor-receipt/v1",
+  branch: PR834.branch,
+  epoch: PR834.epoch,
+  sourceBaseSha: "270b8568925cb23f5044dcf6fadd401b7439eb54",
+  sourceFenceSha: PR834.sourceFenceSha,
+  sourceClaimId: PR834_SOURCE_CORRECTION_REPAIR.successorClaimId,
+  sourceBindingDigest: PR834_SOURCE_CORRECTION_REPAIR.targetBindingDigest,
+  targetBaseSha: PR834.baseSha,
+  targetFenceSha: PR834.reviewedHeadSha,
+  targetClaimId: PR834.claimId,
+  targetBindingDigest: PR834.taskAuthority.bindingDigest,
+  cloudOperationReceiptDigest:
+    "8e430b9b1a02c52729c1792c74e96b555ddf8120134001d34b852054f3c12f1c",
+  cloudVerificationReceiptDigest:
+    "acee33fbe07eac7a898fb9ab4fd82563f20a81d0c571e12671f1aaa15116863c",
+  boundAt: PR834.taskAuthority.boundAt,
+  receiptDigest: "2435b30489b868ebb4e5b0e03739a40f1ec1b60ad1b02fbfc94736d70078acbc",
 });
 const PR819_CONTINUATION = Object.freeze({
   schema: "agentic-lane-admission-continuation-receipt/v1",
@@ -160,11 +254,21 @@ function leaseFromSubject(subject, {
     parkStashMessage: _parkStashMessage,
     parkStashStatus: _parkStashStatus,
     successorLineage,
+    sourceCorrectionSuccessorLineage,
     ...identity
   } = clone(subject.leaseIdentity);
   return {
     ...identity,
     ...(successorLineage || {}),
+    ...(sourceCorrectionSuccessorLineage ? {
+      sourceCorrectionSuccessorTaskBindingReconciliation:
+        sourceCorrectionSuccessorLineage
+          .sourceCorrectionSuccessorTaskBindingReconciliation,
+      activePublishTaskAuthoritySuccessor:
+        sourceCorrectionSuccessorLineage.activePublishTaskAuthoritySuccessor,
+      activePublishSuccessorIntent:
+        sourceCorrectionSuccessorLineage.activePublishSuccessorIntent,
+    } : {}),
     status,
     heartbeatAt: "2026-08-30T12:21:00.000Z",
     expiresAt: "2026-08-30T12:51:00.000Z",
@@ -567,6 +671,234 @@ function lineagedGenericEvidenceFixture() {
   value.subject.leaseIdentityDigest = digestValue(value.subject.leaseIdentity);
   return resealEvidence(value);
 }
+function closedPr834EvidenceFixture() {
+  const value = genericEvidenceFixture("self-hosted-controller-update");
+  const subject = value.subject;
+  const lease = subject.leaseIdentity;
+  const scopes = [
+    ...PR834.paths.map(repositoryPath => `path:${repositoryPath}`),
+    `semantic:${PR834.scope}`,
+  ];
+  const changedEntries = [
+    ["7f2ace40c0d2e075180b74aedc040fab027f1673", "3b62905b073a662004a9b7bd7c8183cb897f2faa"],
+    ["452e9235d72d81a2cae79764a92bca55e2c334fb", "55a2ca3a2cea4f36f4b387e6343c8f63d6562f55"],
+    ["b239d62a58a6193b6c45f715a9bca6d960babfd8", "343051ba27e1fdbfd045c1fe8883ed3332f357ce"],
+    ["a7b7d1d8fed0ce9eb7b334bcd7266be49e3ef587", "2383311425f167953d47238cb8a89e46cd4c0055"],
+  ].map(([oldBlob, newBlob], index) => ({
+    oldMode: "100644",
+    newMode: "100644",
+    oldBlob,
+    newBlob,
+    status: "M",
+    path: PR834.paths[index],
+  }));
+  const reviewedCommit = {
+    sha: PR834.reviewedHeadSha,
+    treeSha: PR834.reviewedTreeSha,
+    messageDigest: "2dcd328a584f0786d6980d890d997406c2e20e041669253f55d2c28090fddab3",
+    objectMessageByteLength: 432,
+    objectMessageSha256: "fbb59fec9b00a0f7ce3ea9109da57e9df302343e464accf1bf0e37595f44794d",
+    objectMessageTerminalLf: true,
+  };
+  const sourceCorrectionSuccessorLineage = {
+    schema: "agentic-canonical-squash-source-correction-successor-lineage/v1",
+    sourceCorrectionSuccessorTaskBindingReconciliation:
+      clone(PR834_SOURCE_CORRECTION_REPAIR),
+    activePublishTaskAuthoritySuccessor: clone(PR834_ACTIVE_PUBLISH_SUCCESSOR),
+    activePublishSuccessorIntent: null,
+  };
+  Object.assign(lease, {
+    epoch: PR834.epoch,
+    sessionId: PR834.sessionId,
+    device: PR834.device,
+    scope: PR834.scope,
+    branch: PR834.branch,
+    worktreePath:
+      "/Users/huijoohwee/Documents/GitHub/.recovery/acos-relocation-intents-mE0uTn/.worktrees/controller-fresh-canonical/canonical-squash-pr819-lineage-adapter",
+    baseSha: PR834.baseSha,
+    fenceSha: PR834.reviewedHeadSha,
+    pullRequestUrl: PR834.url,
+    autoDelivery: true,
+    runtimeRequired: true,
+    deliveryHeadSha: PR834.reviewedHeadSha,
+    acquiredAt: "2026-08-31T01:48:57.426Z",
+    admission: {
+      schema: "agentic-lane-admission-lease/v1",
+      status: "admitted",
+      semanticScope: PR834.scope,
+      declaredWriteSet: [...scopes],
+      writeSetDigest: "df9f556fefe1b254d6ab098407cfe3d181a30b300160a139879fdeff792c93ae",
+      manifestDigest: "63c283be021d1e1c3353ccb3b47ef58b71c841455e8e18075de543c2a9f4f03c",
+      planReceiptDigest: "f777ee15919151c95f5476d2a6b38f922693020f7c5ae5ccc893c5afae093f18",
+      admissionReceiptDigest:
+        "acee33fbe07eac7a898fb9ab4fd82563f20a81d0c571e12671f1aaa15116863c",
+      existingLaneStateDigest:
+        "0fc773ff4ead7204082047c88a491d3968f67b61de04109f925e8abbc995eeb3",
+      admittedReportDigest:
+        "e09e225742bd046328e613bbce530100c7477c6313dbb07a1f9fdbb8efa1d3d5",
+      preservationReceiptDigest:
+        "12c7fcc1765f0c3fb8417a1565284c343606564589b0d18b18e580abfffc10d8",
+    },
+    cloudAuthority: {
+      ...clone(lease.cloudAuthority),
+      targetRepository: PR834.repository,
+      claimId: PR834.claimId,
+      claimDigest: PR834.claimDigest,
+      ledgerRevision: "c90c15e7ee3dc298487a754a019053fc1f431b58",
+      ledgerDigest: "f26967f5d9fd77153db4d7cca2e24d63f851b749cbe94e578928ca78b510ed8e",
+      claimLedgerRevision:
+        "f26967f5d9fd77153db4d7cca2e24d63f851b749cbe94e578928ca78b510ed8e",
+      operationReceiptDigest: PR834.integrationReceiptDigest,
+      canonicalBaseSha: PR834.baseSha,
+      laneRevision: PR834.reviewedHeadSha,
+      cloudDeclaredWriteScope: [...scopes],
+      writeSetDigest: "df9f556fefe1b254d6ab098407cfe3d181a30b300160a139879fdeff792c93ae",
+      deviceId: PR834.device,
+      sessionId: PR834.sessionId,
+      reviewRequestId: `github-pull-request:${PR834.nodeId}`,
+      leaseEpoch: PR834.cloudLeaseEpoch,
+      transitionCounter: 5,
+      state: "delivery_authorized",
+      expiresAt: "2026-08-31T03:47:37.000Z",
+      integrationReceiptDigest: PR834.integrationReceiptDigest,
+      integration: {
+        candidateRevision: PR834.reviewedHeadSha,
+        reviewRequestId: `github-pull-request:${PR834.nodeId}`,
+        focusedEvidenceDigest:
+          "e0f96800ce7b1b3fbe56133509ae4fb620c66783bdacf0288ce9cc3415dd2c14",
+        dependencyClosureDigest:
+          "01cc30e32d2c169c0c2d916e31112d21a768b0d7d17c3addb273533286a2a118",
+        namedChecksDigest:
+          "abcb796e1de9d019d9baebc7fd08e3797c37ac2b04503229bca0639b7758efb2",
+        handoffEvidenceDigest:
+          "07a045289433c7eef29a154a1f9ff13361456de5491494ab08ddbb50dff45867",
+        operatorDecisionDigest:
+          "4c330c17d27f5ed1bdfe88ddeb0d12743af530fb80ec20346da11ab7e4e1addf",
+        integrationIntentDigest:
+          "6913c93d93a6f5b7c1134482884e55f469f175dd7d74ec854d9da5d0e5871f08",
+        integratedAt: "2026-08-31T03:36:53.000Z",
+      },
+      focusedEvidenceDigest:
+        "e0f96800ce7b1b3fbe56133509ae4fb620c66783bdacf0288ce9cc3415dd2c14",
+      manifestDigest: "63c283be021d1e1c3353ccb3b47ef58b71c841455e8e18075de543c2a9f4f03c",
+      operatorDecisionDigest:
+        "4c330c17d27f5ed1bdfe88ddeb0d12743af530fb80ec20346da11ab7e4e1addf",
+      integrationIntentDigest:
+        "6913c93d93a6f5b7c1134482884e55f469f175dd7d74ec854d9da5d0e5871f08",
+    },
+    integration: {
+      schema: "agentic-integration-commit/v1",
+      commitSha: PR834.authoredHeadSha,
+      treeSha: PR834.authoredTreeSha,
+      commitMessage: PR834.headline,
+      manifestDigest: "995f2e63ea40e23f76631b4fbae7f82c5a3b53a62b95935533b681b52c319560",
+      stagedDiffDigest:
+        "fdba662a9326a35a72284be5bb3cc3dbfde4e995868ea9be08c956c2c8574b6a",
+      paths: [...PR834.paths],
+      recordedAt: "2026-08-31T03:11:07.286Z",
+    },
+    taskAuthority: clone(PR834.taskAuthority),
+    successorLineage: null,
+    sourceCorrectionSuccessorLineage,
+  });
+  Object.assign(subject, {
+    repository: PR834.repository,
+    worktreePath: lease.worktreePath,
+    branch: PR834.branch,
+    sessionId: PR834.sessionId,
+    scope: PR834.scope,
+    leaseDigest: hash("pr834-delivery-lease"),
+    taskAuthorityBindingDigest: PR834.taskAuthority.bindingDigest,
+    taskAuthority: clone(PR834.taskAuthority),
+    claimId: PR834.claimId,
+    claimDigest: PR834.claimDigest,
+    integrationReceiptDigest: PR834.integrationReceiptDigest,
+    cloudAuthority: clone(lease.cloudAuthority),
+    reviewedHeadSha: PR834.reviewedHeadSha,
+    reviewedTreeSha: PR834.reviewedTreeSha,
+    remoteBranch: "absent",
+    reviewedCommit,
+    pullRequest: {
+      number: PR834.number,
+      nodeId: PR834.nodeId,
+      url: PR834.url,
+      headBranch: PR834.branch,
+      headSha: PR834.reviewedHeadSha,
+      baseBranch: "main",
+      baseSha: PR834.baseSha,
+      mergeSha: PR834.mergeSha,
+      mergedAt: "2026-08-31T03:40:08Z",
+      mergedBy: "huijoohwee",
+      autoMergeDigest: PR834.autoMergeDigest,
+      autoMergeRequest: {
+        mergeMethod: "SQUASH",
+        commitHeadline: PR834.headline,
+        commitBody: null,
+        enabledAt: "2026-08-31T03:38:11Z",
+        enabledBy: {
+          id: "MDQ6VXNlcjg5NDU4MTI=",
+          login: "huijoohwee",
+          isBot: false,
+        },
+      },
+    },
+    expectedSquashHeadline: PR834.headline,
+    malformedCommit: {
+      sha: PR834.mergeSha,
+      parentSha: PR834.baseSha,
+      treeSha: PR834.reviewedTreeSha,
+      messageDigest: "c79484eebbe1a4054be3b130d5c61dcd92213d7a28331a87bb80039b5bf0552b",
+      objectMessageByteLength: 576,
+      objectMessageSha256: "0f61c713c783490aca493733b3fb1886bb95fde5766139c38075ba7fcee19029",
+      objectMessageTerminalLf: false,
+      classification: "provider-rewritten-terminal-attribution-body-mismatch",
+    },
+    changedEntries,
+    changedPaths: [...PR834.paths],
+    pinTransition: null,
+    protectedRefresh: {
+      authoredCommit: {
+        ...clone(reviewedCommit),
+        sha: PR834.authoredHeadSha,
+        treeSha: PR834.authoredTreeSha,
+      },
+      authoredParentSha: PR834.sourceFenceSha,
+      reviewedParentShas: [PR834.authoredHeadSha, PR834.baseSha],
+      changedEntries: clone(changedEntries),
+    },
+    historicalLeaseEpoch: PR834.historicalLeaseEpoch,
+    predecessorAuthority: {
+      currentClaimId: PR834.claimId,
+      predecessorClaimId: PR834_ACTIVE_PUBLISH_SUCCESSOR.sourceClaimId,
+      canonicalBaseSha: PR834_ACTIVE_PUBLISH_SUCCESSOR.sourceBaseSha,
+      laneRevision: PR834_ACTIVE_PUBLISH_SUCCESSOR.sourceFenceSha,
+      leaseEpoch: PR834.historicalLeaseEpoch,
+    },
+    sourceCommitAuthors: [{
+      name: "huijoohwee",
+      email: "8945812+huijoohwee@users.noreply.github.com",
+    }],
+    sourceCommitSubjects: [...PR834.sourceSubjects],
+    sourceCommitProviderActors: PR834.sourceRevisions.map(revision => ({
+      revision,
+      authorLogin: "huijoohwee",
+      committerLogin: "huijoohwee",
+    })),
+  });
+  subject.deliveryEvidence = {
+    dependencyClosureDigest: lease.cloudAuthority.integration.dependencyClosureDigest,
+    namedChecksDigest: lease.cloudAuthority.integration.namedChecksDigest,
+    handoffEvidenceDigest: lease.cloudAuthority.integration.handoffEvidenceDigest,
+    operatorDecisionDigest: lease.cloudAuthority.integration.operatorDecisionDigest,
+    integrationIntentDigest: lease.cloudAuthority.integration.integrationIntentDigest,
+  };
+  subject.checks[0].headBranch = PR834.branch;
+  subject.checks[0].headSha = PR834.reviewedHeadSha;
+  subject.checks[1].headSha = PR834.mergeSha;
+  subject.checksDigest = digestValue(subject.checks);
+  subject.leaseIdentityDigest = digestValue(lease);
+  return resealEvidence(value);
+}
 function taskReceipt(subject, operation, label) {
   const core = {
     schema: "agentic-task-authority-verification-receipt/v1",
@@ -823,6 +1155,215 @@ test("generic evidence-document and self-hosted recovery variants are exact and 
   assert.deepEqual(canonicalSquashRecoveryImmutableLeaseProjection(rawLease, {
     genericSelfHosted: true,
   }), lineaged.leaseIdentity);
+});
+test("closed PR834 source-correction profile is exact and retains canonical runtime", async () => {
+  const evidence = closedPr834EvidenceFixture();
+  const profile = normalizeCanonicalSquashRecoveryDeliveryProfile(
+    evidence.subject.leaseIdentity,
+    { genericSelfHosted: true },
+  );
+  assert.deepEqual(profile, {
+    profile: CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE,
+    runtime: "canonical",
+    admissionContinuation: null,
+  });
+  assert.ok(Object.isFrozen(profile));
+  const plan = buildPlan(evidence);
+  assert.equal(plan.evidence.subject.pullRequest.number, PR834.number);
+  assert.equal(plan.evidence.subject.malformedCommit.classification,
+    "provider-rewritten-terminal-attribution-body-mismatch");
+  assert.deepEqual(plan.evidence.subject.sourceCommitSubjects, PR834.sourceSubjects);
+  assert.deepEqual(plan.evidence.subject.sourceCommitProviderActors
+    .map(actor => actor.revision), PR834.sourceRevisions);
+  assert.equal(plan.evidence.subject.leaseIdentity.successorLineage, null);
+  assert.equal(plan.evidence.subject.leaseIdentity.sourceCorrectionSuccessorLineage
+    .sourceCorrectionSuccessorTaskBindingReconciliation.successorClaimId,
+  PR834_ACTIVE_PUBLISH_SUCCESSOR.sourceClaimId);
+  assert.equal(plan.evidence.subject.leaseIdentity.sourceCorrectionSuccessorLineage
+    .activePublishTaskAuthoritySuccessor.targetClaimId, PR834.claimId);
+
+  const rawLease = leaseFromSubject(plan.evidence.subject);
+  assert.deepEqual(canonicalSquashRecoveryImmutableLeaseProjection(rawLease, {
+    genericSelfHosted: true,
+  }), plan.evidence.subject.leaseIdentity);
+
+  const controller = createCanonicalSquashAttributionRecoveryTerminalizationController({
+    adapter: fakeAdapter({ evidence }),
+  });
+  const observedPlan = await controller.plan();
+  const receipt = await controller.run({
+    planDigest: observedPlan.planDigest,
+    authorization: observedPlan.exactAuthorization,
+  });
+  assert.equal(receipt.continuation.runtime, "canonical");
+  assert.equal(normalizeReceipt(receipt, { expectedRuntime: "canonical" }).receiptDigest,
+    receipt.receiptDigest);
+});
+test("closed PR834 profile rejects foreign identity and resealed lineage drift", () => {
+  const foreignSha = label => digestValue({ foreign: label }).slice(0, 40);
+  const resealRepair = value => {
+    const repair = value.subject.leaseIdentity.sourceCorrectionSuccessorLineage
+      .sourceCorrectionSuccessorTaskBindingReconciliation;
+    const { receiptDigest: _receiptDigest, ...core } = repair;
+    repair.receiptDigest = digestValue(core);
+  };
+  const resealSuccessor = value => {
+    const successor = value.subject.leaseIdentity.sourceCorrectionSuccessorLineage
+      .activePublishTaskAuthoritySuccessor;
+    const { receiptDigest: _receiptDigest, ...core } = successor;
+    successor.receiptDigest = digestValue(core);
+  };
+  const mutations = [
+    value => { value.subject.pullRequest.number = 835; },
+    value => {
+      const nodeId = "PR_kwDOSr5-fM8AAAABBiwIhx";
+      value.subject.pullRequest.nodeId = nodeId;
+      value.subject.leaseIdentity.cloudAuthority.reviewRequestId =
+        `github-pull-request:${nodeId}`;
+      value.subject.leaseIdentity.cloudAuthority.integration.reviewRequestId =
+        `github-pull-request:${nodeId}`;
+    },
+    value => {
+      const url = "https://github.com/huijoohwee/agentic-canvas-os/pull/835";
+      value.subject.pullRequest.url = url;
+      value.subject.leaseIdentity.pullRequestUrl = url;
+    },
+    value => {
+      const mergeSha = foreignSha("pr834-merge");
+      value.subject.pullRequest.mergeSha = mergeSha;
+      value.subject.malformedCommit.sha = mergeSha;
+      value.subject.checks[1].headSha = mergeSha;
+    },
+    value => {
+      const repair = value.subject.leaseIdentity.sourceCorrectionSuccessorLineage
+        .sourceCorrectionSuccessorTaskBindingReconciliation;
+      repair.predecessorClaimId = hash("foreign-source-correction-predecessor");
+      resealRepair(value);
+    },
+    value => {
+      const repair = value.subject.leaseIdentity.sourceCorrectionSuccessorLineage
+        .sourceCorrectionSuccessorTaskBindingReconciliation;
+      repair.planDigest = hash("foreign-source-correction-plan");
+      resealRepair(value);
+    },
+    value => {
+      const successor = value.subject.leaseIdentity.sourceCorrectionSuccessorLineage
+        .activePublishTaskAuthoritySuccessor;
+      successor.sourceBaseSha = foreignSha("pr834-predecessor-base");
+      value.subject.predecessorAuthority.canonicalBaseSha = successor.sourceBaseSha;
+      resealSuccessor(value);
+    },
+    value => {
+      const successor = value.subject.leaseIdentity.sourceCorrectionSuccessorLineage
+        .activePublishTaskAuthoritySuccessor;
+      successor.cloudOperationReceiptDigest = hash("foreign-successor-operation");
+      resealSuccessor(value);
+    },
+  ];
+  for (const mutate of mutations) {
+    const value = closedPr834EvidenceFixture();
+    mutate(value);
+    value.subject.cloudAuthority = clone(value.subject.leaseIdentity.cloudAuthority);
+    value.subject.leaseIdentityDigest = digestValue(value.subject.leaseIdentity);
+    value.subject.checksDigest = digestValue(value.subject.checks);
+    assert.throws(() => buildPlan(resealEvidence(value)), /PR834 lineage|invalid/u);
+  }
+
+  for (const mutate of [
+    value => { value.activePublishSuccessorIntent = {}; },
+    value => { value.sourceCorrectionSuccessorTaskBindingReconciliation.cloudEffect = true; },
+    value => { delete value.sourceCorrectionSuccessorTaskBindingReconciliation; },
+    value => { value.activeOwnedDirtRecovery = {}; },
+  ]) {
+    const evidence = closedPr834EvidenceFixture();
+    mutate(evidence.subject.leaseIdentity.sourceCorrectionSuccessorLineage);
+    evidence.subject.leaseIdentityDigest = digestValue(evidence.subject.leaseIdentity);
+    assert.throws(() => buildPlan(resealEvidence(evidence)),
+      /source-correction|PR834 lineage|invalid/u);
+  }
+});
+test("closed PR834 provider framing compresses one duplicate headline exactly", () => {
+  const expectedBody = [
+    "Integrate the declared canonical-squash-pr819-lineage-adapter change through its protected managed task lane so downstream policy can attribute the change to its writer lease.",
+    "",
+    "Agentic-Task: canonical-squash-pr819-lineage-adapter",
+    "Agentic-Scope: canonical-squash-pr819-lineage-adapter",
+    "Agentic-Lease-Epoch: 2",
+    "Agentic-Mechanism: Agentic Canvas OS protected integration",
+  ].join("\n");
+  const sourceHistorySubjects = [
+    PR834.sourceSubjects[0],
+    PR834.headline,
+    PR834.headline,
+  ];
+  const messageFor = bullets => [
+    PR834.headline,
+    "",
+    ...bullets.flatMap((subject, index) => index === 0
+      ? [`* ${subject}`]
+      : ["", `* ${subject}`]),
+    "",
+    expectedBody,
+  ].join("\n");
+  const actors = PR834.sourceRevisions.map(revision => ({
+    revision,
+    authorLogin: "huijoohwee",
+    committerLogin: "huijoohwee",
+  }));
+  const pullRequest = {
+    mergedBy: "huijoohwee",
+    autoMergeRequest: {
+      mergeMethod: "SQUASH",
+      commitHeadline: PR834.headline,
+      commitBody: null,
+      enabledBy: { login: "huijoohwee", isBot: false },
+    },
+  };
+  const input = {
+    profile: CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE,
+    message: messageFor(PR834.sourceSubjects),
+    headline: PR834.headline,
+    expectedBody,
+    attributionTrailers: [],
+    sourceHistorySubjects,
+    sourceCommitRevisions: [...PR834.sourceRevisions],
+    pullRequest,
+    sourceCommitProviderActors: actors,
+  };
+  assert.deepEqual(assertCanonicalSquashRecoveryMalformedProviderMessage(input),
+    PR834.sourceSubjects);
+
+  const invalidMessages = [
+    messageFor([PR834.headline]),
+    messageFor([...PR834.sourceSubjects].reverse()),
+    messageFor(sourceHistorySubjects),
+    `${messageFor(PR834.sourceSubjects)}\n\n---------`,
+    `${messageFor(PR834.sourceSubjects)}\n\nCo-authored-by: huijoohwee <8945812+huijoohwee@users.noreply.github.com>`,
+    messageFor(PR834.sourceSubjects).replace("protected managed task lane", "foreign lane"),
+  ];
+  for (const message of invalidMessages) {
+    assert.throws(() => assertCanonicalSquashRecoveryMalformedProviderMessage({
+      ...input,
+      message,
+    }), /provider|framing|message|PR834/u);
+  }
+  const actorDrift = clone(actors);
+  actorDrift[1].committerLogin = "foreign";
+  assert.throws(() => assertCanonicalSquashRecoveryMalformedProviderMessage({
+    ...input,
+    sourceCommitProviderActors: actorDrift,
+  }), /provider|actor|PR834/u);
+  assert.throws(() => assertCanonicalSquashRecoveryMalformedProviderMessage({
+    ...input,
+    sourceCommitRevisions: [...PR834.sourceRevisions].reverse(),
+  }), /provider|actor|PR834/u);
+  assert.throws(() => assertCanonicalSquashRecoveryMalformedProviderMessage({
+    ...input,
+    pullRequest: {
+      ...pullRequest,
+      autoMergeRequest: { ...pullRequest.autoMergeRequest, commitBody: expectedBody },
+    },
+  }), /provider|null-body|squash|PR834/u);
 });
 test("closed PR819 admission-continuation profile is sealed and completes without runtime", async () => {
   const standardLease = genericEvidenceFixture("evidence-document").subject.leaseIdentity;

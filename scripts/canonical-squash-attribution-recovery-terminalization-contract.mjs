@@ -7,6 +7,8 @@ import { normalizeActiveOwnedDirtLeaseRecovery }
   from "./active-owned-dirt-recovery-contract.mjs";
 import { normalizeTaskAuthorityBinding }
   from "./task-bound-lane-authority-contract.mjs";
+import { normalizeRepair as normalizeSourceCorrectionTaskBindingRepair }
+  from "./source-correction-successor-task-binding-reconciliation-contract.mjs";
 
 export const OPERATION = "canonical-squash-attribution-recovery-terminalization";
 export const EVIDENCE_SCHEMA = `agentic-${OPERATION}-evidence/v1`;
@@ -23,6 +25,85 @@ export const GENERIC_SELF_HOSTED_RECOVERY_PATHS = Object.freeze([
 ]);
 export const LEGACY_INTEGRATION_RUN_PROFILE = "integration";
 export const SELF_HOSTED_CI_RUN_PROFILE = "self-hosted-ci";
+export const STANDARD_AUTO_DELIVERY_PROFILE = "standard-auto-delivery";
+export const CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE =
+  "closed-pr834-standard-terminal-attribution";
+export const LEGACY_ADMISSION_CONTINUATION_PROFILE = "legacy-admission-continuation";
+const SOURCE_CORRECTION_SUCCESSOR_LINEAGE_SCHEMA =
+  "agentic-canonical-squash-source-correction-successor-lineage/v1";
+const CLOSED_PR834_LINEAGE = Object.freeze({
+  repository: "huijoohwee/agentic-canvas-os",
+  pullRequestNumber: 834,
+  pullRequestNodeId: "PR_kwDOSr5-fM8AAAABBiwIhw",
+  pullRequestUrl: "https://github.com/huijoohwee/agentic-canvas-os/pull/834",
+  sessionId: "01a0554f-78d4-7221-b216-ed700a4bae72",
+  device: "huis-macbook-pro-3.local",
+  leaseEpoch: 6,
+  cloudLeaseEpoch: 3,
+  historicalLeaseEpoch: 2,
+  scope: "canonical-squash-pr819-lineage-adapter",
+  branch: "agent/huis-macbook-pro-3.local/canonical-squash-pr819-lineage-adapter",
+  claimId: "afffa66aefb3318ee69fc8a1c2643daac227167f8b9d4c57ce28423b80c3f659",
+  claimDigest: "6d84f06b3bd34a01dd9e551f9afd82aaeeebf3dfe9984b8c697fc91faf2d7938",
+  baseSha: "eca6a90ae8f98258d5296e394e09de9071b55058",
+  fenceSha: "88ca91612c745152f1480887501caa99187562e0",
+  reviewedHeadSha: "88ca91612c745152f1480887501caa99187562e0",
+  reviewedTreeSha: "4f398685990fe8bda8cced5e4ff98a64391a5e46",
+  authoredHeadSha: "4e05a77a4e598fb55d6a48ee5e9f12c3b0894e59",
+  authoredTreeSha: "e56ef62a7c68569d87500f1508e9e0c907a489c0",
+  authoredParentSha: "cec362b12c0cdc23f31c22c06426ef8fd413602c",
+  mergeSha: "feccd66eea65616268d5cb6d269134a7e4315dcb",
+  headline: "fix(canonical-squash-pr819-lineage-adapter): recover legacy lane",
+  integrationReceiptDigest:
+    "b09b51e79bbd127ad5453ac353bedd9a6daa06905b92a27e86f2a8b86dc18e37",
+  writeSetDigest: "df9f556fefe1b254d6ab098407cfe3d181a30b300160a139879fdeff792c93ae",
+  manifestDigest: "63c283be021d1e1c3353ccb3b47ef58b71c841455e8e18075de543c2a9f4f03c",
+  taskBindingDigest: "14248b4171a117d3a1e46453d7eae644bb16bfe30e480171324ece06d1cc8443",
+  priorTaskBindingDigest:
+    "0107ef4a1373fe1bac246b9fa3c2e16398ee48cd9cfa6809b9e68d23177df30f",
+  predecessorClaimId: "eff720ef106c878bfc39d552fcd9d5e509a967366cae9678919c7dd0df9f1217",
+  predecessorBaseSha: "270b8568925cb23f5044dcf6fadd401b7439eb54",
+  predecessorFenceSha: "cec362b12c0cdc23f31c22c06426ef8fd413602c",
+  sourceCorrectionPredecessorClaimId:
+    "aac923080d9f0aad566a4cdbdf797c41757a19108e331f159ccbefd9782ce83e",
+  sourceCorrectionPlanDigest:
+    "94ddf36f1e159c87ebd8f84c1b91e414c8aa18f2f20ac063a670842f2f66573e",
+  sourceCorrectionReceiptDigest:
+    "7f080254bc11e2e983d9f32b732f7c00a0777c3be0b27a82c7d95031521a1c91",
+  successorReceiptDigest:
+    "2435b30489b868ebb4e5b0e03739a40f1ec1b60ad1b02fbfc94736d70078acbc",
+  changedPaths: GENERIC_SELF_HOSTED_RECOVERY_PATHS,
+  sourceCommitSubjects: Object.freeze([
+    "chore(coordination): claim canonical-squash-pr819-lineage-adapter lease 6",
+    "fix(canonical-squash-pr819-lineage-adapter): recover legacy lane",
+  ]),
+  sourceCommitRevisions: Object.freeze([
+    "cec362b12c0cdc23f31c22c06426ef8fd413602c",
+    "4e05a77a4e598fb55d6a48ee5e9f12c3b0894e59",
+    "88ca91612c745152f1480887501caa99187562e0",
+  ]),
+});
+const LEGACY_PR819_LINEAGE = Object.freeze({
+  repository: "huijoohwee/agentic-canvas-os",
+  pullRequestNumber: 819,
+  pullRequestNodeId: "PR_kwDOSr5-fM8AAAABBf_I-Q",
+  pullRequestUrl: "https://github.com/huijoohwee/agentic-canvas-os/pull/819",
+  sessionId: "01a04dfc-3492-71f0-83ce-ac8e0ec66663",
+  device: "huis-macbook-pro-3.local",
+  leaseEpoch: 5,
+  scope: "successor-rollover-pr-marker-replan",
+  branch: "agent/huis-macbook-pro-3.local/successor-rollover-pr-marker-replan",
+  claimId: "06dc664eabb28b6e685f6773911e1b1f84b6364cb43edb756157a380f49c2e14",
+  baseSha: "a909f2418aba9e43996f649a7d9fffef8d364639",
+  fenceSha: "84ee696bc4eefd74979705e82812fb1a01b9e340",
+  fenceTreeSha: "036ad30104cc544da2df2e0c8253707f1ee6adf8",
+  reviewedHeadSha: "91fbc80a03c82b5ee49f0f89a8d1fba1af21ac48",
+  reviewedTreeSha: "7362a11e7cb8cf2d5488257a1c71afdbd5650c3b",
+  mergeSha: "a2fd604b8471659ccbbf1bdc5a7ac0757872141c",
+  headline: "fix(successor-rollover-pr-marker-replan): seal refresh",
+  continuationReceiptDigest:
+    "2dda014387c3e12278e4197fc27d08343c93a141e1c9ccf0065232144cf58dbd",
+});
 export const PHASES = Object.freeze([
   "authorized",
   "evidence-verified",
@@ -206,7 +287,9 @@ export function buildReceipt(journal) {
       command: "device:integrate",
       repository: current.plan.evidence.subject.worktreePath,
       sessionId: current.plan.evidence.subject.sessionId,
-      runtime: "canonical",
+      runtime: current.plan.evidence.subject.leaseIdentity.runtimeRequired
+        ? "canonical"
+        : "none",
     },
     preservation: current.plan.evidence.preservation,
     forbiddenEffects: current.plan.forbiddenEffects,
@@ -214,7 +297,7 @@ export function buildReceipt(journal) {
   return freeze({ ...core, receiptDigest: digestValue(core) });
 }
 
-export function normalizeReceipt(value) {
+export function normalizeReceipt(value, { expectedRuntime = null } = {}) {
   object(value, "recovery receipt");
   const expectedKeys = [
     "schema", "status", "operation", "planDigest", "authorizationDigest",
@@ -258,7 +341,9 @@ export function normalizeReceipt(value) {
   ])
     || continuation.schema
       !== "agentic-canonical-squash-attribution-recovery-continuation/v1"
-    || continuation.command !== "device:integrate" || continuation.runtime !== "canonical") {
+    || continuation.command !== "device:integrate"
+    || !["canonical", "none"].includes(continuation.runtime)
+    || (expectedRuntime !== null && continuation.runtime !== expectedRuntime)) {
     invalid("receipt continuation");
   }
   required(continuation.repository, "receipt continuation repository");
@@ -268,6 +353,156 @@ export function normalizeReceipt(value) {
     invalid("receipt effect contract");
   }
   return freeze({ ...core, receiptDigest });
+}
+
+export function normalizeCanonicalSquashRecoveryDeliveryProfile(leaseIdentity, {
+  genericSelfHosted = false,
+} = {}) {
+  object(leaseIdentity, "subject delivery profile lease");
+  const hasAdmissionContinuation = Object.hasOwn(leaseIdentity, "admissionContinuation");
+  const hasProjectedSourceCorrection = Object.hasOwn(
+    leaseIdentity,
+    "sourceCorrectionSuccessorLineage",
+  );
+  const rawSourceCorrectionNames = [
+    "sourceCorrectionSuccessorTaskBindingReconciliation",
+    "activePublishTaskAuthoritySuccessor",
+    "activePublishSuccessorIntent",
+  ];
+  const hasAnyRawSourceCorrection = Object.hasOwn(
+    leaseIdentity,
+    "sourceCorrectionSuccessorTaskBindingReconciliation",
+  );
+  const rawSourceCorrectionSubtype = rawSourceCorrectionNames.every(name =>
+    Object.hasOwn(leaseIdentity, name))
+    && leaseIdentity.activePublishSuccessorIntent === null
+    && (!Object.hasOwn(leaseIdentity, "activeOwnedDirtRecovery")
+      || leaseIdentity.activeOwnedDirtRecovery === null)
+    && (!Object.hasOwn(leaseIdentity, "activeOwnedDirtCurrentBaseReanchor")
+      || leaseIdentity.activeOwnedDirtCurrentBaseReanchor === null);
+  const projectedSourceCorrectionSubtype = hasProjectedSourceCorrection
+    && leaseIdentity.sourceCorrectionSuccessorLineage !== null;
+  if ((hasAnyRawSourceCorrection && !rawSourceCorrectionSubtype)
+    || (hasProjectedSourceCorrection && !projectedSourceCorrectionSubtype)
+    || (rawSourceCorrectionSubtype && projectedSourceCorrectionSubtype)) {
+    invalid("source-correction delivery profile lineage");
+  }
+  const sourceCorrectionSubtype = rawSourceCorrectionSubtype
+    || projectedSourceCorrectionSubtype;
+  if (leaseIdentity.autoDelivery === true && leaseIdentity.runtimeRequired === true) {
+    if (hasAdmissionContinuation) invalid("standard delivery profile continuation");
+    if (sourceCorrectionSubtype) {
+      if (!genericSelfHosted) invalid("source-correction delivery profile repository");
+      return freeze({
+        profile: CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE,
+        runtime: "canonical",
+        admissionContinuation: null,
+      });
+    }
+    return freeze({
+      profile: STANDARD_AUTO_DELIVERY_PROFILE,
+      runtime: "canonical",
+      admissionContinuation: null,
+    });
+  }
+  const rawSuccessorNames = [
+    "activeOwnedDirtRecovery", "activeOwnedDirtCurrentBaseReanchor",
+    "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
+  ];
+  if (leaseIdentity.autoDelivery !== false || leaseIdentity.runtimeRequired !== false
+    || !genericSelfHosted || !hasAdmissionContinuation
+    || sourceCorrectionSubtype
+    || (Object.hasOwn(leaseIdentity, "successorLineage")
+      && leaseIdentity.successorLineage !== null)
+    || rawSuccessorNames.some(name => Object.hasOwn(leaseIdentity, name))) {
+    invalid("subject delivery profile");
+  }
+  return freeze({
+    profile: LEGACY_ADMISSION_CONTINUATION_PROFILE,
+    runtime: "none",
+    admissionContinuation: normalizeCanonicalSquashAdmissionContinuation(
+      leaseIdentity.admissionContinuation,
+      leaseIdentity,
+    ),
+  });
+}
+
+export function normalizeCanonicalSquashAdmissionContinuation(value, leaseIdentity) {
+  object(value, "subject admission continuation");
+  object(leaseIdentity, "subject admission continuation lease");
+  const expectedKeys = [
+    "schema", "status", "claimId", "predecessorPlanReceiptDigest",
+    "predecessorAdmissionReceiptDigest", "manifestDigest", "writeSetDigest",
+    "localFenceSha", "candidateStateDigest", "candidateRevision",
+    "candidateTreeSha", "preparedIntegrationReceiptDigest", "peerLaneStateDigest",
+    "deliveryPeerAuthorityReceiptDigest", "peerOperationReceiptDigests",
+    "dormantPreservationReceiptDigest", "protectedAdvanceReceiptDigest",
+    "cloudVerificationReceiptDigest", "plannedMutationAuthorityReceiptDigest",
+    "mutationAuthorityReceiptDigest", "continuedAt", "receiptDigest",
+  ];
+  const admission = object(leaseIdentity.admission, "subject continuation admission");
+  const authority = object(
+    leaseIdentity.cloudAuthority,
+    "subject continuation cloud authority",
+  );
+  const { receiptDigest, ...core } = value;
+  if (!exactObjectKeys(value, expectedKeys)
+    || value.schema !== "agentic-lane-admission-continuation-receipt/v1"
+    || value.status !== "admitted"
+    || receiptDigest !== digestValue(core)
+    || !exactObjectKeys(admission, [
+      "schema", "status", "semanticScope", "declaredWriteSet", "writeSetDigest",
+      "manifestDigest", "planReceiptDigest", "admissionReceiptDigest",
+      "existingLaneStateDigest", "admittedReportDigest", "preservationReceiptDigest",
+      "continuationReceiptDigest",
+    ])
+    || admission.schema !== "agentic-lane-admission-lease/v1"
+    || admission.status !== "admitted"
+    || admission.semanticScope !== leaseIdentity.scope
+    || admission.admittedReportDigest !== admission.preservationReceiptDigest
+    || admission.continuationReceiptDigest !== receiptDigest
+    || value.claimId !== authority.claimId
+    || value.predecessorPlanReceiptDigest !== admission.planReceiptDigest
+    || value.predecessorAdmissionReceiptDigest !== admission.admissionReceiptDigest
+    || value.manifestDigest !== admission.manifestDigest
+    || value.manifestDigest !== authority.manifestDigest
+    || value.writeSetDigest !== admission.writeSetDigest
+    || value.writeSetDigest !== authority.writeSetDigest
+    || value.localFenceSha !== leaseIdentity.fenceSha
+    || value.candidateRevision !== leaseIdentity.fenceSha
+    || value.preparedIntegrationReceiptDigest !== null
+    || value.peerLaneStateDigest !== admission.existingLaneStateDigest
+    || value.plannedMutationAuthorityReceiptDigest
+      !== value.mutationAuthorityReceiptDigest) {
+    invalid("subject admission continuation join");
+  }
+  for (const name of [
+    "claimId", "predecessorPlanReceiptDigest", "predecessorAdmissionReceiptDigest",
+    "manifestDigest", "writeSetDigest", "candidateStateDigest", "peerLaneStateDigest",
+    "deliveryPeerAuthorityReceiptDigest", "dormantPreservationReceiptDigest",
+    "protectedAdvanceReceiptDigest", "cloudVerificationReceiptDigest",
+    "plannedMutationAuthorityReceiptDigest", "mutationAuthorityReceiptDigest",
+    "receiptDigest",
+  ]) digest(value[name], `subject admission continuation ${name}`);
+  for (const name of [
+    "writeSetDigest", "manifestDigest", "planReceiptDigest", "admissionReceiptDigest",
+    "existingLaneStateDigest", "admittedReportDigest", "preservationReceiptDigest",
+    "continuationReceiptDigest",
+  ]) digest(admission[name], `subject continuation admission ${name}`);
+  sha(value.localFenceSha, "subject admission continuation local fence");
+  sha(value.candidateRevision, "subject admission continuation candidate revision");
+  sha(value.candidateTreeSha, "subject admission continuation candidate tree");
+  if (!Array.isArray(value.peerOperationReceiptDigests)
+    || value.peerOperationReceiptDigests.length < 1
+    || new Set(value.peerOperationReceiptDigests).size
+      !== value.peerOperationReceiptDigests.length) {
+    invalid("subject admission continuation peer operations");
+  }
+  for (const receipt of value.peerOperationReceiptDigests) {
+    digest(receipt, "subject admission continuation peer operation");
+  }
+  exactInstant(value.continuedAt, "subject admission continuation time");
+  return freeze(structuredClone(value));
 }
 
 export function phaseReceipt(phase, values) {
@@ -301,6 +536,9 @@ function normalizeEvidence(value) {
   digest(value.subject.leaseDigest, "subject lease digest");
   const leaseIdentity = object(value.subject.leaseIdentity, "subject lease identity");
   digest(value.subject.leaseIdentityDigest, "subject lease identity digest");
+  const deliveryProfile = normalizeCanonicalSquashRecoveryDeliveryProfile(leaseIdentity, {
+    genericSelfHosted: genericRepositorySubject,
+  });
   const leaseIdentityKeys = [
     "schema", "epoch", "sessionId", "device", "scope", "branch",
     "worktreePath", "baseSha", "fenceSha", "pullRequestUrl", "autoDelivery",
@@ -311,7 +549,13 @@ function normalizeEvidence(value) {
     "cloudAuthority", "integration", "taskAuthority",
   ];
   if (genericRepositorySubject) leaseIdentityKeys.push("successorLineage");
-  if (canonicalJson(Object.keys(leaseIdentity)) !== canonicalJson(leaseIdentityKeys)
+  if (deliveryProfile.profile === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE) {
+    leaseIdentityKeys.push("sourceCorrectionSuccessorLineage");
+  }
+  if (deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE) {
+    leaseIdentityKeys.push("admissionContinuation");
+  }
+  if (!exactObjectKeys(leaseIdentity, leaseIdentityKeys)
     || digestValue(leaseIdentity) !== value.subject.leaseIdentityDigest
     || leaseIdentity.schema !== "agentic-writer-lease/v2"
     || !Number.isSafeInteger(leaseIdentity.epoch) || leaseIdentity.epoch < 1
@@ -319,7 +563,6 @@ function normalizeEvidence(value) {
     || leaseIdentity.scope !== value.subject.scope
     || leaseIdentity.branch !== value.subject.branch
     || leaseIdentity.worktreePath !== value.subject.worktreePath
-    || leaseIdentity.autoDelivery !== true || leaseIdentity.runtimeRequired !== true
     || leaseIdentity.ownedDirtRecovery !== null
     || leaseIdentity.pullRequestProjectionRepair !== null
     || leaseIdentity.reviewHeadSha !== null
@@ -339,6 +582,10 @@ function normalizeEvidence(value) {
   object(leaseIdentity.taskAuthority, "subject lease task authority");
   if (genericRepositorySubject) {
     normalizeGenericSuccessorLineage(leaseIdentity.successorLineage, leaseIdentity);
+    normalizeSourceCorrectionSuccessorLineage(
+      leaseIdentity.sourceCorrectionSuccessorLineage ?? null,
+      leaseIdentity,
+    );
   }
   digest(value.subject.taskAuthorityBindingDigest, "subject task binding digest");
   const subjectTaskAuthority = object(
@@ -432,8 +679,13 @@ function normalizeEvidence(value) {
     || value.subject.pullRequest.headSha !== value.subject.reviewedHeadSha) {
     invalid("malformed commit join");
   }
+  const terminalAttributionProfile = deliveryProfile.profile
+    === LEGACY_ADMISSION_CONTINUATION_PROFILE
+    || deliveryProfile.profile === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE;
   if (value.subject.malformedCommit.classification
-    !== "provider-rewritten-nonterminal-attribution") invalid("malformed classification");
+    !== (terminalAttributionProfile
+      ? "provider-rewritten-terminal-attribution-body-mismatch"
+      : "provider-rewritten-nonterminal-attribution")) invalid("malformed classification");
   normalizeChangedEntries(value.subject.changedEntries, "subject changed entries");
   const genericSelfHosted = value.subject.pinTransition === null;
   if (genericRepositorySubject !== genericSelfHosted) {
@@ -469,6 +721,27 @@ function normalizeEvidence(value) {
     || value.subject.sourceCommitSubjects.length < 1
     || value.subject.sourceCommitSubjects.some(subject => !required(subject, "source subject"))) {
     invalid("subject source commits");
+  }
+  if (deliveryProfile.profile === LEGACY_ADMISSION_CONTINUATION_PROFILE) {
+    normalizeLegacySourceCommitProviderActors(
+      value.subject.sourceCommitProviderActors,
+      {
+        sourceCommitSubjects: value.subject.sourceCommitSubjects,
+        fenceSha: leaseIdentity.fenceSha,
+        reviewedHeadSha: value.subject.reviewedHeadSha,
+        mergedBy: value.subject.pullRequest.mergedBy,
+      },
+    );
+    normalizeLegacyPr819Lineage(value, leaseIdentity, deliveryProfile);
+  } else if (deliveryProfile.profile
+    === CLOSED_PR834_STANDARD_TERMINAL_ATTRIBUTION_PROFILE) {
+    normalizeClosedPr834SourceCommitProviderActors(
+      value.subject.sourceCommitProviderActors,
+      value.subject.pullRequest.mergedBy,
+    );
+    normalizeClosedPr834Lineage(value, leaseIdentity);
+  } else if (Object.hasOwn(value.subject, "sourceCommitProviderActors")) {
+    invalid("standard subject provider actor evidence");
   }
   normalizeRunPair(value.subject.checks, {
     label: "subject checks",
@@ -593,6 +866,287 @@ function normalizeMessageFraming(value, label, terminalLf) {
     || value.objectMessageTerminalLf !== terminalLf) invalid(`${label} framing`);
   digest(value.objectMessageSha256, `${label} raw message SHA-256`);
 }
+function normalizeLegacySourceCommitProviderActors(value, {
+  sourceCommitSubjects,
+  fenceSha,
+  reviewedHeadSha,
+  mergedBy,
+}) {
+  if (!Array.isArray(value) || value.length !== sourceCommitSubjects.length
+    || value.length < 1) invalid("legacy subject provider actors");
+  const revisions = [];
+  for (const actor of value) {
+    object(actor, "legacy subject provider actor");
+    if (!exactObjectKeys(actor, ["revision", "authorLogin", "committerLogin"])
+      || actor.authorLogin !== mergedBy || actor.committerLogin !== mergedBy) {
+      invalid("legacy subject provider actor attribution");
+    }
+    sha(actor.revision, "legacy subject provider actor revision");
+    required(actor.authorLogin, "legacy subject provider actor author");
+    required(actor.committerLogin, "legacy subject provider actor committer");
+    revisions.push(actor.revision);
+  }
+  if (new Set(revisions).size !== revisions.length
+    || revisions[0] !== fenceSha
+    || revisions.at(-1) !== reviewedHeadSha) {
+    invalid("legacy subject provider actor revisions");
+  }
+}
+function normalizeClosedPr834SourceCommitProviderActors(value, mergedBy) {
+  if (!Array.isArray(value)
+    || value.length !== CLOSED_PR834_LINEAGE.sourceCommitRevisions.length
+    || mergedBy !== "huijoohwee") {
+    invalid("closed PR834 subject provider actors");
+  }
+  for (const [index, actor] of value.entries()) {
+    object(actor, "closed PR834 subject provider actor");
+    if (!exactObjectKeys(actor, ["revision", "authorLogin", "committerLogin"])
+      || actor.revision !== CLOSED_PR834_LINEAGE.sourceCommitRevisions[index]
+      || actor.authorLogin !== mergedBy || actor.committerLogin !== mergedBy) {
+      invalid("closed PR834 subject provider actor attribution");
+    }
+    sha(actor.revision, "closed PR834 subject provider actor revision");
+  }
+}
+function normalizeClosedPr834Lineage(value, leaseIdentity) {
+  const subject = value.subject;
+  const pullRequest = subject.pullRequest;
+  const malformed = subject.malformedCommit;
+  const refresh = object(subject.protectedRefresh, "closed PR834 protected refresh");
+  const lineage = object(
+    leaseIdentity.sourceCorrectionSuccessorLineage,
+    "closed PR834 source-correction successor lineage",
+  );
+  const repair = object(
+    lineage.sourceCorrectionSuccessorTaskBindingReconciliation,
+    "closed PR834 source-correction repair",
+  );
+  const successor = object(
+    lineage.activePublishTaskAuthoritySuccessor,
+    "closed PR834 active-publish successor",
+  );
+  const predecessor = object(
+    subject.predecessorAuthority,
+    "closed PR834 predecessor authority",
+  );
+  const exact = {
+    repository: subject.repository,
+    controllerRepository: value.controller.repository,
+    controllerTargetRepository: value.controller.targetRepository,
+    pullRequestNumber: pullRequest.number,
+    pullRequestNodeId: pullRequest.nodeId,
+    pullRequestUrl: pullRequest.url,
+    pullRequestHeadBranch: pullRequest.headBranch,
+    pullRequestHeadSha: pullRequest.headSha,
+    pullRequestBaseBranch: pullRequest.baseBranch,
+    pullRequestBaseSha: pullRequest.baseSha,
+    pullRequestMergeSha: pullRequest.mergeSha,
+    pullRequestMergedBy: pullRequest.mergedBy,
+    sessionId: subject.sessionId,
+    device: leaseIdentity.device,
+    leaseEpoch: leaseIdentity.epoch,
+    cloudLeaseEpoch: leaseIdentity.cloudAuthority.leaseEpoch,
+    historicalLeaseEpoch: subject.historicalLeaseEpoch,
+    scope: subject.scope,
+    branch: subject.branch,
+    claimId: subject.claimId,
+    claimDigest: subject.claimDigest,
+    leaseClaimId: leaseIdentity.cloudAuthority.claimId,
+    leaseBaseSha: leaseIdentity.baseSha,
+    leaseFenceSha: leaseIdentity.fenceSha,
+    leasePullRequestUrl: leaseIdentity.pullRequestUrl,
+    leaseDeliveryHeadSha: leaseIdentity.deliveryHeadSha,
+    integrationCommitSha: leaseIdentity.integration.commitSha,
+    integrationTreeSha: leaseIdentity.integration.treeSha,
+    integrationHeadline: leaseIdentity.integration.commitMessage,
+    integrationReceiptDigest: subject.integrationReceiptDigest,
+    writeSetDigest: leaseIdentity.admission.writeSetDigest,
+    manifestDigest: leaseIdentity.admission.manifestDigest,
+    taskBindingDigest: leaseIdentity.taskAuthority.bindingDigest,
+    priorTaskBindingDigest: leaseIdentity.taskAuthority.priorBindingDigest,
+    reviewedHeadSha: subject.reviewedHeadSha,
+    reviewedTreeSha: subject.reviewedTreeSha,
+    expectedHeadline: subject.expectedSquashHeadline,
+    malformedSha: malformed.sha,
+    malformedParentSha: malformed.parentSha,
+    malformedTreeSha: malformed.treeSha,
+    authoredHeadSha: refresh.authoredCommit.sha,
+    authoredTreeSha: refresh.authoredCommit.treeSha,
+    authoredParentSha: refresh.authoredParentSha,
+    reviewedParentShas: refresh.reviewedParentShas,
+    predecessorCurrentClaimId: predecessor.currentClaimId,
+    predecessorClaimId: predecessor.predecessorClaimId,
+    predecessorBaseSha: predecessor.canonicalBaseSha,
+    predecessorFenceSha: predecessor.laneRevision,
+    predecessorLeaseEpoch: predecessor.leaseEpoch,
+    sourceCorrectionPredecessorClaimId: repair.predecessorClaimId,
+    sourceCorrectionSuccessorClaimId: repair.successorClaimId,
+    sourceCorrectionPlanDigest: repair.planDigest,
+    sourceCorrectionReceiptDigest: repair.receiptDigest,
+    successorSourceClaimId: successor.sourceClaimId,
+    successorSourceBaseSha: successor.sourceBaseSha,
+    successorSourceFenceSha: successor.sourceFenceSha,
+    successorReceiptDigest: successor.receiptDigest,
+    changedPaths: subject.changedPaths,
+    sourceCommitSubjects: subject.sourceCommitSubjects,
+    sourceCommitAuthors: subject.sourceCommitAuthors,
+  };
+  const expected = {
+    repository: CLOSED_PR834_LINEAGE.repository,
+    controllerRepository: CLOSED_PR834_LINEAGE.repository,
+    controllerTargetRepository: CLOSED_PR834_LINEAGE.repository,
+    pullRequestNumber: CLOSED_PR834_LINEAGE.pullRequestNumber,
+    pullRequestNodeId: CLOSED_PR834_LINEAGE.pullRequestNodeId,
+    pullRequestUrl: CLOSED_PR834_LINEAGE.pullRequestUrl,
+    pullRequestHeadBranch: CLOSED_PR834_LINEAGE.branch,
+    pullRequestHeadSha: CLOSED_PR834_LINEAGE.reviewedHeadSha,
+    pullRequestBaseBranch: "main",
+    pullRequestBaseSha: CLOSED_PR834_LINEAGE.baseSha,
+    pullRequestMergeSha: CLOSED_PR834_LINEAGE.mergeSha,
+    pullRequestMergedBy: "huijoohwee",
+    sessionId: CLOSED_PR834_LINEAGE.sessionId,
+    device: CLOSED_PR834_LINEAGE.device,
+    leaseEpoch: CLOSED_PR834_LINEAGE.leaseEpoch,
+    cloudLeaseEpoch: CLOSED_PR834_LINEAGE.cloudLeaseEpoch,
+    historicalLeaseEpoch: CLOSED_PR834_LINEAGE.historicalLeaseEpoch,
+    scope: CLOSED_PR834_LINEAGE.scope,
+    branch: CLOSED_PR834_LINEAGE.branch,
+    claimId: CLOSED_PR834_LINEAGE.claimId,
+    claimDigest: CLOSED_PR834_LINEAGE.claimDigest,
+    leaseClaimId: CLOSED_PR834_LINEAGE.claimId,
+    leaseBaseSha: CLOSED_PR834_LINEAGE.baseSha,
+    leaseFenceSha: CLOSED_PR834_LINEAGE.fenceSha,
+    leasePullRequestUrl: CLOSED_PR834_LINEAGE.pullRequestUrl,
+    leaseDeliveryHeadSha: CLOSED_PR834_LINEAGE.reviewedHeadSha,
+    integrationCommitSha: CLOSED_PR834_LINEAGE.authoredHeadSha,
+    integrationTreeSha: CLOSED_PR834_LINEAGE.authoredTreeSha,
+    integrationHeadline: CLOSED_PR834_LINEAGE.headline,
+    integrationReceiptDigest: CLOSED_PR834_LINEAGE.integrationReceiptDigest,
+    writeSetDigest: CLOSED_PR834_LINEAGE.writeSetDigest,
+    manifestDigest: CLOSED_PR834_LINEAGE.manifestDigest,
+    taskBindingDigest: CLOSED_PR834_LINEAGE.taskBindingDigest,
+    priorTaskBindingDigest: CLOSED_PR834_LINEAGE.priorTaskBindingDigest,
+    reviewedHeadSha: CLOSED_PR834_LINEAGE.reviewedHeadSha,
+    reviewedTreeSha: CLOSED_PR834_LINEAGE.reviewedTreeSha,
+    expectedHeadline: CLOSED_PR834_LINEAGE.headline,
+    malformedSha: CLOSED_PR834_LINEAGE.mergeSha,
+    malformedParentSha: CLOSED_PR834_LINEAGE.baseSha,
+    malformedTreeSha: CLOSED_PR834_LINEAGE.reviewedTreeSha,
+    authoredHeadSha: CLOSED_PR834_LINEAGE.authoredHeadSha,
+    authoredTreeSha: CLOSED_PR834_LINEAGE.authoredTreeSha,
+    authoredParentSha: CLOSED_PR834_LINEAGE.authoredParentSha,
+    reviewedParentShas: [
+      CLOSED_PR834_LINEAGE.authoredHeadSha,
+      CLOSED_PR834_LINEAGE.baseSha,
+    ],
+    predecessorCurrentClaimId: CLOSED_PR834_LINEAGE.claimId,
+    predecessorClaimId: CLOSED_PR834_LINEAGE.predecessorClaimId,
+    predecessorBaseSha: CLOSED_PR834_LINEAGE.predecessorBaseSha,
+    predecessorFenceSha: CLOSED_PR834_LINEAGE.predecessorFenceSha,
+    predecessorLeaseEpoch: CLOSED_PR834_LINEAGE.historicalLeaseEpoch,
+    sourceCorrectionPredecessorClaimId:
+      CLOSED_PR834_LINEAGE.sourceCorrectionPredecessorClaimId,
+    sourceCorrectionSuccessorClaimId: CLOSED_PR834_LINEAGE.predecessorClaimId,
+    sourceCorrectionPlanDigest: CLOSED_PR834_LINEAGE.sourceCorrectionPlanDigest,
+    sourceCorrectionReceiptDigest: CLOSED_PR834_LINEAGE.sourceCorrectionReceiptDigest,
+    successorSourceClaimId: CLOSED_PR834_LINEAGE.predecessorClaimId,
+    successorSourceBaseSha: CLOSED_PR834_LINEAGE.predecessorBaseSha,
+    successorSourceFenceSha: CLOSED_PR834_LINEAGE.predecessorFenceSha,
+    successorReceiptDigest: CLOSED_PR834_LINEAGE.successorReceiptDigest,
+    changedPaths: [...CLOSED_PR834_LINEAGE.changedPaths],
+    sourceCommitSubjects: [...CLOSED_PR834_LINEAGE.sourceCommitSubjects],
+    sourceCommitAuthors: [{
+      name: "huijoohwee",
+      email: "8945812+huijoohwee@users.noreply.github.com",
+    }],
+  };
+  if (canonicalJson(exact) !== canonicalJson(expected)) {
+    invalid("closed PR834 lineage");
+  }
+}
+function normalizeLegacyPr819Lineage(value, leaseIdentity, deliveryProfile) {
+  const subject = value.subject;
+  const pullRequest = subject.pullRequest;
+  const malformed = subject.malformedCommit;
+  const continuation = deliveryProfile.admissionContinuation;
+  const exact = {
+    repository: subject.repository,
+    controllerRepository: value.controller.repository,
+    controllerTargetRepository: value.controller.targetRepository,
+    pullRequestNumber: pullRequest.number,
+    pullRequestNodeId: pullRequest.nodeId,
+    pullRequestUrl: pullRequest.url,
+    pullRequestHeadBranch: pullRequest.headBranch,
+    pullRequestHeadSha: pullRequest.headSha,
+    pullRequestBaseBranch: pullRequest.baseBranch,
+    pullRequestBaseSha: pullRequest.baseSha,
+    pullRequestMergeSha: pullRequest.mergeSha,
+    sessionId: subject.sessionId,
+    device: leaseIdentity.device,
+    leaseEpoch: leaseIdentity.epoch,
+    scope: subject.scope,
+    branch: subject.branch,
+    claimId: subject.claimId,
+    leaseClaimId: leaseIdentity.cloudAuthority.claimId,
+    leaseBaseSha: leaseIdentity.baseSha,
+    leaseFenceSha: leaseIdentity.fenceSha,
+    fenceTreeSha: continuation.candidateTreeSha,
+    leasePullRequestUrl: leaseIdentity.pullRequestUrl,
+    leaseDeliveryHeadSha: leaseIdentity.deliveryHeadSha,
+    integrationCommitSha: leaseIdentity.integration.commitSha,
+    integrationTreeSha: leaseIdentity.integration.treeSha,
+    integrationHeadline: leaseIdentity.integration.commitMessage,
+    reviewedHeadSha: subject.reviewedHeadSha,
+    reviewedTreeSha: subject.reviewedTreeSha,
+    expectedHeadline: subject.expectedSquashHeadline,
+    malformedSha: malformed.sha,
+    malformedParentSha: malformed.parentSha,
+    malformedTreeSha: malformed.treeSha,
+    continuationReceiptDigest: continuation.receiptDigest,
+    admissionContinuationReceiptDigest:
+      leaseIdentity.admission.continuationReceiptDigest,
+  };
+  const expected = {
+    repository: LEGACY_PR819_LINEAGE.repository,
+    controllerRepository: LEGACY_PR819_LINEAGE.repository,
+    controllerTargetRepository: LEGACY_PR819_LINEAGE.repository,
+    pullRequestNumber: LEGACY_PR819_LINEAGE.pullRequestNumber,
+    pullRequestNodeId: LEGACY_PR819_LINEAGE.pullRequestNodeId,
+    pullRequestUrl: LEGACY_PR819_LINEAGE.pullRequestUrl,
+    pullRequestHeadBranch: LEGACY_PR819_LINEAGE.branch,
+    pullRequestHeadSha: LEGACY_PR819_LINEAGE.reviewedHeadSha,
+    pullRequestBaseBranch: "main",
+    pullRequestBaseSha: LEGACY_PR819_LINEAGE.baseSha,
+    pullRequestMergeSha: LEGACY_PR819_LINEAGE.mergeSha,
+    sessionId: LEGACY_PR819_LINEAGE.sessionId,
+    device: LEGACY_PR819_LINEAGE.device,
+    leaseEpoch: LEGACY_PR819_LINEAGE.leaseEpoch,
+    scope: LEGACY_PR819_LINEAGE.scope,
+    branch: LEGACY_PR819_LINEAGE.branch,
+    claimId: LEGACY_PR819_LINEAGE.claimId,
+    leaseClaimId: LEGACY_PR819_LINEAGE.claimId,
+    leaseBaseSha: LEGACY_PR819_LINEAGE.baseSha,
+    leaseFenceSha: LEGACY_PR819_LINEAGE.fenceSha,
+    fenceTreeSha: LEGACY_PR819_LINEAGE.fenceTreeSha,
+    leasePullRequestUrl: LEGACY_PR819_LINEAGE.pullRequestUrl,
+    leaseDeliveryHeadSha: LEGACY_PR819_LINEAGE.reviewedHeadSha,
+    integrationCommitSha: LEGACY_PR819_LINEAGE.reviewedHeadSha,
+    integrationTreeSha: LEGACY_PR819_LINEAGE.reviewedTreeSha,
+    integrationHeadline: LEGACY_PR819_LINEAGE.headline,
+    reviewedHeadSha: LEGACY_PR819_LINEAGE.reviewedHeadSha,
+    reviewedTreeSha: LEGACY_PR819_LINEAGE.reviewedTreeSha,
+    expectedHeadline: LEGACY_PR819_LINEAGE.headline,
+    malformedSha: LEGACY_PR819_LINEAGE.mergeSha,
+    malformedParentSha: LEGACY_PR819_LINEAGE.baseSha,
+    malformedTreeSha: LEGACY_PR819_LINEAGE.reviewedTreeSha,
+    continuationReceiptDigest: LEGACY_PR819_LINEAGE.continuationReceiptDigest,
+    admissionContinuationReceiptDigest:
+      LEGACY_PR819_LINEAGE.continuationReceiptDigest,
+  };
+  if (canonicalJson(exact) !== canonicalJson(expected)) {
+    invalid("legacy PR819 lineage");
+  }
+}
 function normalizeChangedEntries(value, label) {
   if (!Array.isArray(value)) invalid(label);
   for (const entry of value) {
@@ -606,6 +1160,7 @@ function normalizeChangedEntries(value, label) {
 }
 function normalizeGenericSubjectChangeSet(value, leaseIdentity) {
   const subject = value.subject;
+  const activeSuccessorLineage = genericActivePublishSuccessorLineage(leaseIdentity);
   if (subject.repository !== value.controller.repository
     || value.controller.targetRepository !== subject.repository) {
     invalid("generic subject repository boundary");
@@ -642,9 +1197,9 @@ function normalizeGenericSubjectChangeSet(value, leaseIdentity) {
   if (!Number.isSafeInteger(subject.historicalLeaseEpoch)
     || subject.historicalLeaseEpoch < 1
     || subject.historicalLeaseEpoch > leaseIdentity.cloudAuthority.leaseEpoch
-    || (leaseIdentity.successorLineage === null
+    || (activeSuccessorLineage === null
       && subject.historicalLeaseEpoch !== leaseIdentity.cloudAuthority.leaseEpoch)
-    || (leaseIdentity.successorLineage !== null
+    || (activeSuccessorLineage !== null
       && subject.historicalLeaseEpoch !== leaseIdentity.cloudAuthority.leaseEpoch - 1)) {
     invalid("generic historical attribution epoch");
   }
@@ -653,7 +1208,7 @@ function normalizeGenericSubjectChangeSet(value, leaseIdentity) {
   }
 }
 function normalizeGenericPredecessorAuthority(value, { subject, leaseIdentity }) {
-  const lineage = leaseIdentity.successorLineage;
+  const lineage = genericActivePublishSuccessorLineage(leaseIdentity);
   if (lineage === null) {
     if (value !== null) invalid("generic predecessor authority absence");
     return;
@@ -681,12 +1236,13 @@ function normalizeGenericPredecessorAuthority(value, { subject, leaseIdentity })
 }
 function normalizeGenericProtectedRefresh(value, { subject, leaseIdentity }) {
   const integration = leaseIdentity.integration;
+  const successorLineage = genericActivePublishSuccessorLineage(leaseIdentity);
   if (value === null) {
-    return leaseIdentity.successorLineage === null
+    return successorLineage === null
       && integration.commitSha === subject.reviewedHeadSha
       && integration.treeSha === subject.reviewedTreeSha;
   }
-  if (leaseIdentity.successorLineage === null) {
+  if (successorLineage === null) {
     invalid("generic protected refresh successor lineage");
   }
   object(value, "generic protected refresh");
@@ -705,7 +1261,7 @@ function normalizeGenericProtectedRefresh(value, { subject, leaseIdentity }) {
       !== canonicalJson([integration.commitSha, leaseIdentity.baseSha])) {
     invalid("generic protected refresh topology");
   }
-  if (value.authoredParentSha !== leaseIdentity.successorLineage
+  if (value.authoredParentSha !== successorLineage
     .activePublishTaskAuthoritySuccessor.sourceFenceSha) {
     invalid("generic protected refresh successor join");
   }
@@ -714,6 +1270,75 @@ function normalizeGenericProtectedRefresh(value, { subject, leaseIdentity }) {
     invalid("generic protected refresh patch");
   }
   return true;
+}
+function genericActivePublishSuccessorLineage(leaseIdentity) {
+  const ordinary = leaseIdentity.successorLineage ?? null;
+  const sourceCorrection = leaseIdentity.sourceCorrectionSuccessorLineage ?? null;
+  if (ordinary !== null && sourceCorrection !== null) {
+    invalid("generic successor lineage variants");
+  }
+  return ordinary ?? sourceCorrection;
+}
+function normalizeSourceCorrectionSuccessorLineage(value, leaseIdentity) {
+  if (value === null) return;
+  object(value, "source-correction successor lineage");
+  if (leaseIdentity.successorLineage !== null
+    || !exactObjectKeys(value, [
+      "schema", "sourceCorrectionSuccessorTaskBindingReconciliation",
+      "activePublishTaskAuthoritySuccessor", "activePublishSuccessorIntent",
+    ])
+    || value.schema !== SOURCE_CORRECTION_SUCCESSOR_LINEAGE_SCHEMA
+    || value.activePublishSuccessorIntent !== null) {
+    invalid("source-correction successor lineage keys");
+  }
+  const repair = object(
+    value.sourceCorrectionSuccessorTaskBindingReconciliation,
+    "source-correction task-binding repair",
+  );
+  let normalizedRepair;
+  try {
+    normalizedRepair = normalizeSourceCorrectionTaskBindingRepair(repair);
+  } catch {
+    invalid("source-correction task-binding repair normalization");
+  }
+  if (canonicalJson(normalizedRepair) !== canonicalJson(repair)) {
+    invalid("source-correction task-binding repair normalization");
+  }
+  const successor = object(
+    value.activePublishTaskAuthoritySuccessor,
+    "source-correction task-authority successor",
+  );
+  if (!exactObjectKeys(successor, [
+    "boundAt", "branch", "cloudOperationReceiptDigest",
+    "cloudVerificationReceiptDigest", "epoch", "receiptDigest", "schema",
+    "sourceBaseSha", "sourceBindingDigest", "sourceClaimId", "sourceFenceSha",
+    "targetBaseSha", "targetBindingDigest", "targetClaimId", "targetFenceSha",
+  ])
+    || successor.schema !== "agentic-active-publish-task-authority-successor-receipt/v1"
+    || successor.branch !== leaseIdentity.branch
+    || successor.epoch !== leaseIdentity.epoch
+    || successor.targetBaseSha !== leaseIdentity.baseSha
+    || successor.targetFenceSha !== leaseIdentity.fenceSha
+    || successor.targetFenceSha !== leaseIdentity.deliveryHeadSha
+    || successor.targetClaimId !== leaseIdentity.cloudAuthority.claimId
+    || successor.sourceBindingDigest !== leaseIdentity.taskAuthority.priorBindingDigest
+    || successor.targetBindingDigest !== leaseIdentity.taskAuthority.bindingDigest
+    || repair.branch !== leaseIdentity.branch
+    || repair.successorClaimId !== successor.sourceClaimId
+    || repair.targetBindingDigest !== successor.sourceBindingDigest) {
+    invalid("source-correction successor lineage join");
+  }
+  instant(successor.boundAt, "source-correction successor time");
+  for (const name of [
+    "sourceClaimId", "targetClaimId", "sourceBindingDigest", "targetBindingDigest",
+    "cloudOperationReceiptDigest", "cloudVerificationReceiptDigest", "receiptDigest",
+  ]) digest(successor[name], `source-correction successor ${name}`);
+  for (const name of [
+    "sourceBaseSha", "sourceFenceSha", "targetBaseSha", "targetFenceSha",
+  ]) sha(successor[name], `source-correction successor ${name}`);
+  if (successor.receiptDigest !== digestValue(Object.fromEntries(
+    Object.entries(successor).filter(([name]) => name !== "receiptDigest"),
+  ))) invalid("source-correction successor receipt seal");
 }
 function normalizeGenericSuccessorLineage(value, leaseIdentity) {
   if (value === null) return;
@@ -1048,7 +1673,11 @@ function normalizeState(value, plan) {
   if (value.phase === "complete") {
     const prefix = journalForPrefix(plan, receipts, "verified");
     const expectedReceipt = buildReceipt(prefix);
-    if (normalizeReceipt(receipts.complete.receipt).receiptDigest
+    if (normalizeReceipt(receipts.complete.receipt, {
+      expectedRuntime: plan.evidence.subject.leaseIdentity.runtimeRequired
+        ? "canonical"
+        : "none",
+    }).receiptDigest
       !== expectedReceipt.receiptDigest) invalid("complete receipt join");
   }
   return freeze({ phase: value.phase, receipts: freeze(receipts) });
@@ -1335,5 +1964,10 @@ function digest(value, label) { if (!DIGEST.test(String(value || ""))) invalid(l
 function sha(value, label) { if (!SHA.test(String(value || ""))) invalid(label); return value; }
 function repository(value, label) { if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(String(value || ""))) invalid(label); return value; }
 function instant(value, label) { if (!Number.isFinite(Date.parse(String(value || "")))) invalid(label); return value; }
+function exactInstant(value, label) {
+  instant(value, label);
+  if (new Date(Date.parse(value)).toISOString() !== value) invalid(label);
+  return value;
+}
 function invalid(label) { throw new Error(`Canonical squash attribution recovery ${label} is invalid.`); }
 function freeze(value) { return Object.freeze(value); }

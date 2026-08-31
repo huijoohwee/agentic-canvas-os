@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6609,
-  "headDigest": "7b26b181de73d55fd444e0cdc4bde0e3b71e8a1419e9e877a7e021769962440b",
+  "sequence": 6610,
+  "headDigest": "0245036501a9c24f12a5aac7c1ae55bb445bdea36ad87adc2ad7b2c91c3744a5",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -335450,6 +335450,56 @@
       },
       "claimDigest": "3f446cdc9aa6db204514f4f1d0ea40ee7f8585ac3a26c87a902100f88c781cf7",
       "digest": "7b26b181de73d55fd444e0cdc4bde0e3b71e8a1419e9e877a7e021769962440b"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6610,
+      "parentDigest": "7b26b181de73d55fd444e0cdc4bde0e3b71e8a1419e9e877a7e021769962440b",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "3a238d3f17b5ea6f51aa367c8959cbce88b05c530e0780d6e16828d309a3a190",
+      "idempotencyKey": "d3c6539c71899976ba93d00ea313b1c41fcc820df477d77c15f26774d94515e6",
+      "requestDigest": "f7279c816358c09586304be6e5dc69682a9f130cbfb26531d8d13321ec81a134",
+      "evaluationTime": "2026-08-31T05:44:55.000Z",
+      "claimCore": {
+        "claimId": "3a238d3f17b5ea6f51aa367c8959cbce88b05c530e0780d6e16828d309a3a190",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:75652a1ce55bc6263433f7863d95632ee861eea0919e8107a396828d27964d7d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:22ccfdb8f80dd830c909670e91143a2f539a48310959bf32873840051d2821e7",
+        "canonicalBaseRevision": "2cfd12cab616a033e78b9354d79992fdc5612d97",
+        "declaredWriteScope": [
+          "path:__tests__/provisioned-start-admission-recovery-cli.test.mjs",
+          "path:__tests__/provisioned-start-admission-recovery-contract.test.mjs",
+          "path:__tests__/provisioned-start-admission-recovery-controller.test.mjs",
+          "path:__tests__/provisioned-start-admission-recovery-real-adapter.test.mjs",
+          "path:__tests__/provisioned-start-admission-recovery-repository-adapter.test.mjs",
+          "path:__tests__/provisioned-start-cloud-authority-subject.test.mjs",
+          "path:docs/PROVISIONED-START-ADMISSION-RECOVERY.md",
+          "path:scripts/provisioned-start-admission-recovery-contract.mjs",
+          "path:scripts/provisioned-start-admission-recovery-controller.mjs",
+          "path:scripts/provisioned-start-admission-recovery-repository-adapter.mjs",
+          "path:scripts/provisioned-start-admission-recovery-store.mjs",
+          "path:scripts/provisioned-start-cloud-authority-subject.mjs",
+          "semantic:provisioned-start-pre-bind-descendant-recovery"
+        ],
+        "writeSetDigest": "fce232b873199d8b3a2b7faa5d745c18cdbcf6ff7089c0ed1da07ddb37771951",
+        "laneRevision": "ecb97f0c250f92a5c32e9e4306ce95f1626cf0c9",
+        "leaseEpoch": 1,
+        "transitionCounter": 3,
+        "heartbeatCounter": 1,
+        "state": "current",
+        "expiresAt": "2026-09-01T05:44:55.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBjuaEw",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "841c3b2e4cbe9b2fc47f59985806b3d9cdf8541e3bce50a3c750b8ca9cebe25b",
+      "digest": "0245036501a9c24f12a5aac7c1ae55bb445bdea36ad87adc2ad7b2c91c3744a5"
     }
   ]
 }

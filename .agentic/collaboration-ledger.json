@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6678,
-  "headDigest": "0856e79a21dfc3bbe6f4ac4c39a37f335bd9289078904c3ffedb1a636b9c3d38",
+  "sequence": 6679,
+  "headDigest": "c102c0a61544a7f5b12342fb12c7cf7fe6c93df6a59c663506451ee5185953dc",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -339031,6 +339031,54 @@
       },
       "claimDigest": "93a973385cb335cb13dd27944bcc1b607c80c7e129f85c984b83951120bad8cb",
       "digest": "0856e79a21dfc3bbe6f4ac4c39a37f335bd9289078904c3ffedb1a636b9c3d38"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6679,
+      "parentDigest": "0856e79a21dfc3bbe6f4ac4c39a37f335bd9289078904c3ffedb1a636b9c3d38",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "aa3d5a2352a7cdccadc17c71123858879993500b1b735da842bf44d183add745",
+      "idempotencyKey": "425e9272d6c162415c6783fef925204f51ace966f661c21646b5ed308c7b692e",
+      "requestDigest": "bc7c85b9379bf16ac8bf78fb7ab91260aa28fc61ae3d550552af2a54a31da440",
+      "evaluationTime": "2026-08-31T10:41:11.000Z",
+      "claimCore": {
+        "claimId": "aa3d5a2352a7cdccadc17c71123858879993500b1b735da842bf44d183add745",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:033c3f76d1e731bcf65e4d74563037f967375933db89b7656a621a21a000aa8e",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:b50247865c93c0c74b63f53290a4b174f5aa042b92b3a3fec3f6c30080acbef1",
+        "canonicalBaseRevision": "bf7a41340a2c1844151ac032287d4c2432622de3",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-squash-batch-terminalizer-v2.test.mjs",
+          "path:docs/CANONICAL-SQUASH-BATCH-TERMINALIZER-V2.md",
+          "path:scripts/canonical-squash-batch-terminalizer-v2-contract.mjs",
+          "path:scripts/canonical-squash-batch-terminalizer-v2-controller.mjs",
+          "path:scripts/canonical-squash-batch-terminalizer-v2-repository-adapter.mjs",
+          "path:scripts/canonical-squash-batch-terminalizer-v2.mjs",
+          "semantic:canonical-squash-batch-terminalizer-v2"
+        ],
+        "writeSetDigest": "473f0bf3f1a2d171bbb91d1ee0c0fabae2202c36b2f51cf6b720ce0db7948d9c",
+        "laneRevision": "97df0afc58e5cfcdf1e0056031dc41f24d3b07b8",
+        "leaseEpoch": 1,
+        "transitionCounter": 6,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-09-01T10:35:31.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBjCzbQ",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "recovery": {
+          "evidenceDigest": "af9d0f89201eaf28cf59cf29b72085990bd998f175810dbd407098ab98426ade",
+          "recoveredAt": "2026-08-31T10:35:31.000Z"
+        }
+      },
+      "claimDigest": "ecfdc06c35c518ec4cf4a540ffb29093ef3cab82266f125a26a09667b10c62cc",
+      "digest": "c102c0a61544a7f5b12342fb12c7cf7fe6c93df6a59c663506451ee5185953dc"
     }
   ]
 }

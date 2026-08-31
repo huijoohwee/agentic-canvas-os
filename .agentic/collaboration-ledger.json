@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6559,
-  "headDigest": "e025edc105f6f85a084b5101c62c42d859566e1786e5bc5f6eb4eb3cea1db5ba",
+  "sequence": 6560,
+  "headDigest": "62eb7bf134f1fe70346969d1e70456928d246050476da1e28a1935800b85adfa",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -333029,6 +333029,56 @@
       },
       "claimDigest": "303d5c30ef271743fb3b5c2711091864621e455e65035909ab57316142b86035",
       "digest": "e025edc105f6f85a084b5101c62c42d859566e1786e5bc5f6eb4eb3cea1db5ba"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6560,
+      "parentDigest": "e025edc105f6f85a084b5101c62c42d859566e1786e5bc5f6eb4eb3cea1db5ba",
+      "action": "continue",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "dbcc850b91c3c0e0eef47fe5a7096df039600687c32bc3708daadf52e3d434ee",
+      "idempotencyKey": "c10d0f7f60145aaef10e3efec79e4852f819ef21071476abb0b33273b8fffcac",
+      "requestDigest": "01401c8a9142ce5042a14ad9206420f9e496796e42faab19e051d3984246f6c5",
+      "evaluationTime": "2026-08-31T03:38:46.000Z",
+      "claimCore": {
+        "claimId": "dbcc850b91c3c0e0eef47fe5a7096df039600687c32bc3708daadf52e3d434ee",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:667356942c082a29e5aac7941b2c6c5abaa94c44d48187302400f6a3668fa0b3",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:0dffcd3b3bd57c5a36be10b593548cd9b5d97f111cb9abe3c8bd136229cd1c1f",
+        "canonicalBaseRevision": "eca6a90ae8f98258d5296e394e09de9071b55058",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-untracked-claim-only-admission-recovery.test.mjs",
+          "path:__tests__/repository-validation-adapter.test.mjs",
+          "path:docs/CANONICAL-UNTRACKED-CLAIM-ONLY-ADMISSION-RECOVERY.md",
+          "path:docs/REPOSITORY-VALIDATION-ADAPTER.md",
+          "path:scripts/canonical-untracked-claim-only-admission-recovery-contract.mjs",
+          "path:scripts/canonical-untracked-claim-only-admission-recovery-controller.mjs",
+          "path:scripts/canonical-untracked-claim-only-admission-recovery-evidence.mjs",
+          "path:scripts/canonical-untracked-claim-only-admission-recovery-repository-adapter.mjs",
+          "path:scripts/canonical-untracked-claim-only-admission-recovery-store.mjs",
+          "path:scripts/canonical-untracked-claim-only-admission-recovery.mjs",
+          "path:scripts/repository-validation-adapter.mjs",
+          "semantic:kiro-admission-validation-primitives"
+        ],
+        "writeSetDigest": "95ca67895914d8daba9927d230079a9542a004e01afc665fa99cad19d29802c9",
+        "laneRevision": "eca6a90ae8f98258d5296e394e09de9071b55058",
+        "leaseEpoch": 2,
+        "transitionCounter": 2,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T04:08:46.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": "930d0adedb3ad32f169b61b9f386ac4b975517747b0cd9ce20d13ce6550e443c",
+        "eligibleSince": "2026-08-31T03:35:30.000Z",
+        "handoff": null,
+        "release": null,
+        "promotedAt": "2026-08-31T03:38:46.000Z"
+      },
+      "claimDigest": "62e1d6a53a3b89b3aa4a8cb93ca78ef326b9fcd72c296f52bc7cdd6ef69b7001",
+      "digest": "62eb7bf134f1fe70346969d1e70456928d246050476da1e28a1935800b85adfa"
     }
   ]
 }

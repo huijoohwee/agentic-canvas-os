@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6682,
-  "headDigest": "0bd9ec2f0941c45ba205649710cf87b97555866619d765776146d1d8aea28de1",
+  "sequence": 6683,
+  "headDigest": "023cde350796a513d0ec779a7c67d3d3732e503f86442485c5e9200ed02826a3",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -339255,6 +339255,47 @@
       },
       "claimDigest": "801f409b75088de32ed8e2141c88d3c95f3c2a7c23fa92e6d1b04a572e544c44",
       "digest": "0bd9ec2f0941c45ba205649710cf87b97555866619d765776146d1d8aea28de1"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6683,
+      "parentDigest": "0bd9ec2f0941c45ba205649710cf87b97555866619d765776146d1d8aea28de1",
+      "action": "claim",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "b52858b1d27dbb40b809d4abe481af7d7a9ac1d73b1ab10555439cefbe635ffe",
+      "idempotencyKey": "877dbe275be590c6f4aadd23a9513d0a90eda81549f7c4bf4ca268b3dca016da",
+      "requestDigest": "23b6ba776cafd41c7764007ed6ffecde51e9a5eb4125eb9f6170a8746da97266",
+      "evaluationTime": "2026-08-31T11:41:04.000Z",
+      "claimCore": {
+        "claimId": "b52858b1d27dbb40b809d4abe481af7d7a9ac1d73b1ab10555439cefbe635ffe",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:f7c5c694f024ed25783c3c8ee600297a8b2e1e09f7c74010fd5609d74693e665",
+        "sessionId": "session:20e1e541841200ea402b4550d4a2d81df452c50b4429df32d01d72267bcbb79f",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:38e3c6e6dac8a161494719ed7a13553165fba2811e70a40565d941f5c4b87e9f",
+        "canonicalBaseRevision": "b015b3828c863193bafe208483ffef3488d1ab99",
+        "declaredWriteScope": [
+          "path:__tests__/canonical-squash-batch-terminalizer-v2.test.mjs",
+          "path:docs/CANONICAL-SQUASH-BATCH-TERMINALIZER-V2.md",
+          "path:scripts/canonical-squash-batch-terminalizer-v2-repository-adapter.mjs",
+          "semantic:batch-terminalizer-completed-bridge-proof"
+        ],
+        "writeSetDigest": "ca34759f64f79943e23af61240d5741e56f87fccacc59b20665fed8688f49ca0",
+        "laneRevision": "b015b3828c863193bafe208483ffef3488d1ab99",
+        "leaseEpoch": 1,
+        "transitionCounter": 1,
+        "heartbeatCounter": 0,
+        "state": "current",
+        "expiresAt": "2026-08-31T12:41:04.000Z",
+        "evidenceDigest": null,
+        "reviewRequestId": null,
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null
+      },
+      "claimDigest": "28d3ce0950932200e982560653529448a462b190fb4bbf5a956d7613a3a67f49",
+      "digest": "023cde350796a513d0ec779a7c67d3d3732e503f86442485c5e9200ed02826a3"
     }
   ]
 }

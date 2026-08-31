@@ -28,10 +28,11 @@ function common(value) {
     `--target-manifest=${value.targetManifest}`, `--owner-stop-receipt=${value.ownerStop}`];
 }
 
-test("plan is read-only and writes one private external plan", async () => {
+test("plan is read-only, task-bound, and writes one private external plan", async () => {
   const value = fixture(), output = path.join(path.dirname(value.planFile), "planned.json");
   const calls = [];
-  const result = await main(["plan", ...common(value), `--output=${output}`], {
+  const result = await main(["plan", ...common(value),
+    `--task-authority=${value.taskAuthority}`, `--output=${output}`], {
     controllerRoot: value.controllerRoot,
     createAdapter: options => { calls.push(["adapter", options]); return Object.freeze({}); },
     createController: adapter => ({ plan: async () => {
@@ -43,13 +44,20 @@ test("plan is read-only and writes one private external plan", async () => {
   assert.equal(result.exactAuthorization, AUTHORIZATION);
   assert.equal(statSync(output).mode & 0o777, 0o600);
   assert.equal(JSON.parse(readFileSync(output, "utf8")).planDigest, DIGEST);
-  assert.equal(calls[0][1].taskAuthorityFile, null);
+  assert.equal(calls[0][1].taskAuthorityFile, value.taskAuthority);
   assert.deepEqual(calls.map(item => item[0]), ["adapter", "plan"]);
 
   await assert.rejects(
     main(["plan", ...common(value), `--output=${path.join(path.dirname(output), "wrong.json")}`,
       `--authorization=${AUTHORIZATION}`], { controllerRoot: value.controllerRoot }),
     /Unsupported --authorization/u,
+  );
+  await assert.rejects(
+    main(["plan", ...common(value),
+      `--output=${path.join(path.dirname(output), "missing-cap.json")}`], {
+      controllerRoot: value.controllerRoot,
+    }),
+    /--task-authority=<value> is required/u,
   );
 });
 

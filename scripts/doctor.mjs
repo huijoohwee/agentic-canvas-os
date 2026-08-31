@@ -88,6 +88,7 @@ async function main() {
     console.log(`${prefix}  ${check.label}${result.detail ? ` (${result.detail})` : ""}`);
     for (const finding of result.findings || []) {
       console.log(`      - ${finding.code}: ${finding.summary}`);
+      printFindingContext(finding);
       if (finding.action) console.log(`        action: ${finding.action}`);
     }
     if (!result.ok) {
@@ -209,6 +210,29 @@ function warn(detail = "") {
 
 function fail(detail = "") {
   return { ok: false, level: "FAIL", detail };
+}
+
+function printFindingContext(finding) {
+  if (finding.pullRequestUrl) {
+    console.log(`        pr: ${finding.pullRequestUrl}`);
+  }
+  if (finding.sessionId || finding.leaseEpoch !== null) {
+    const session = finding.sessionId ? `session ${finding.sessionId}` : "session unknown";
+    const epoch = finding.leaseEpoch !== null ? `, epoch ${finding.leaseEpoch}` : "";
+    console.log(`        lease: ${session}${epoch}`);
+  }
+  if (finding.claimId || finding.transitionCounter !== null || finding.workItemId) {
+    const claim = finding.claimId ? `claim ${shortId(finding.claimId)}` : "claim unknown";
+    const transition = finding.transitionCounter !== null
+      ? `, transition ${finding.transitionCounter}`
+      : "";
+    const workItem = finding.workItemId ? `, work item ${shortId(finding.workItemId)}` : "";
+    console.log(`        cloud: ${claim}${transition}${workItem}`);
+  }
+}
+
+function shortId(value) {
+  return String(value || "").slice(0, 12);
 }
 
 await main();

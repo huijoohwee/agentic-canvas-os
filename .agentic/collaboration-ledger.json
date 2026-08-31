@@ -1,8 +1,8 @@
 {
   "schema": "agentic-cloud-collaboration-ledger/v1",
   "ledgerRepositoryId": "github-repository:R_kgDOSr5-fA",
-  "sequence": 6646,
-  "headDigest": "7a53fe62a2a59e55fef92e49bfb1b2459a49284abf66de52a80b744c70a9724d",
+  "sequence": 6647,
+  "headDigest": "eaf2833dd9dbce4292848a14911cb5d1eee30bffcb859d33c97d6df3089fcb74",
   "entries": [
     {
       "schema": "agentic-cloud-collaboration-entry/v1",
@@ -337486,6 +337486,60 @@
       },
       "claimDigest": "fb6ef50ca691e2df821de3e0035f0480da4da54258ed267af4c1337c927e858d",
       "digest": "7a53fe62a2a59e55fef92e49bfb1b2459a49284abf66de52a80b744c70a9724d"
+    },
+    {
+      "schema": "agentic-cloud-collaboration-entry/v2",
+      "sequence": 6647,
+      "parentDigest": "7a53fe62a2a59e55fef92e49bfb1b2459a49284abf66de52a80b744c70a9724d",
+      "action": "integrate",
+      "repositoryId": "github-repository:R_kgDOSr5-fA",
+      "claimId": "cb2915f6add03092013c941616c0ebfcaefeb180c450065627f8a8a8bffc861e",
+      "idempotencyKey": "0c5912847d852415fe75d8169101367276b01fd85d69ace823c09adb97c96915",
+      "requestDigest": "c0f66ea225992e0aca3f102d2efdd9902474c62c7c562e4063b25d3030dbedf6",
+      "evaluationTime": "2026-08-31T07:48:57.000Z",
+      "claimCore": {
+        "claimId": "cb2915f6add03092013c941616c0ebfcaefeb180c450065627f8a8a8bffc861e",
+        "actorId": "github-user:8945812",
+        "deviceId": "device:8a512c9c47c33bb6cf33c287df6a6b2c98ccda58553f59703d9de970381be195",
+        "sessionId": "session:75652a1ce55bc6263433f7863d95632ee861eea0919e8107a396828d27964d7d",
+        "repositoryId": "github-repository:R_kgDOSr5-fA",
+        "workItemId": "work-item:15299c4042fbf2b8fb50f07ed96dd73c570349bf92ea0aac5bc7cf95dc1c993e",
+        "canonicalBaseRevision": "8e181b5d7d750a5fc527e2e25d25160a73dd6f61",
+        "declaredWriteScope": [
+          "path:__tests__/active-dirty-scope-expansion-complete-intent-supersession.test.mjs",
+          "path:docs/ACTIVE-DIRTY-SCOPE-EXPANSION-COMPLETE-INTENT-SUPERSESSION.md",
+          "path:scripts/active-dirty-scope-expansion-complete-intent-supersession-contract.mjs",
+          "path:scripts/active-dirty-scope-expansion-complete-intent-supersession-repository-adapter.mjs",
+          "path:scripts/active-dirty-scope-expansion-complete-intent-supersession.mjs",
+          "semantic:completed-expansion-intent-supersession"
+        ],
+        "writeSetDigest": "a119486891dcb1fe942ad59e9336986cca1ebb08baec4f6ab316b26a4856db58",
+        "laneRevision": "aaeb0ee19613e098c90c01e31811c8b2ea19b094",
+        "leaseEpoch": 1,
+        "transitionCounter": 5,
+        "heartbeatCounter": 0,
+        "state": "integrated-preserved",
+        "expiresAt": "2026-08-31T14:57:59.000Z",
+        "evidenceDigest": "468d4789bde8d4acf3ac82ee0b4e772dd2a2afb2f06a3fd8919ce1c252046100",
+        "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBkJqZg",
+        "predecessorClaimId": null,
+        "eligibleSince": null,
+        "handoff": null,
+        "release": null,
+        "integration": {
+          "candidateRevision": "aaeb0ee19613e098c90c01e31811c8b2ea19b094",
+          "reviewRequestId": "github-pull-request:PR_kwDOSr5-fM8AAAABBkJqZg",
+          "focusedEvidenceDigest": "468d4789bde8d4acf3ac82ee0b4e772dd2a2afb2f06a3fd8919ce1c252046100",
+          "dependencyClosureDigest": "5fd31da05c05cee8e72c92081b845f2a014c0d4bb62af8402a80ebbeee9ccc1a",
+          "namedChecksDigest": "c093e211a8d88b049b08eabc6feb029a4c9f1d8a262f1980a28ee4a8b7159e30",
+          "handoffEvidenceDigest": "5712bbf4c2fbf4a5a031277b2d9237843e50c6c86e712e8e8376698c3126415c",
+          "operatorDecisionDigest": "e93d4c4f43691c6a259961672473dd5d96045e5965ae067ee9460a8ca9829ebf",
+          "integrationIntentDigest": "73d4b2625e3df620a0f2e59b7cb2927be9d34c1ec29641c8080113ac79abd48f",
+          "integratedAt": "2026-08-31T07:48:57.000Z"
+        }
+      },
+      "claimDigest": "2d391bdc908b0faf18c28538be19351f8a71ac4ea05cef4607ac7def90b01b3c",
+      "digest": "eaf2833dd9dbce4292848a14911cb5d1eee30bffcb859d33c97d6df3089fcb74"
     }
   ]
 }

@@ -155,6 +155,38 @@ test("binds the successor to incorporated protected main without rewriting the r
   assert.equal(normalizeExpiredCommittedScopeExpansionPlan(plan).planDigest, plan.planDigest);
 });
 
+test("accepts only a sealed protected-main advance disjoint from the widened scope", () => {
+  const input = fixture();
+  input.protectedMainIncorporationProof = disjointProof(["scripts/controller-repair.mjs"]);
+  const plan = buildExpiredCommittedScopeExpansionPlan(input);
+  assert.equal(
+    plan.protectedMainIncorporationProof.schema,
+    "agentic-protected-main-disjoint-fence-advance/v1",
+  );
+  assert.equal(resolveExpiredCommittedSuccessorCanonicalBase(plan), protectedMainSha);
+
+  const overlapping = fixture();
+  overlapping.protectedMainIncorporationProof = disjointProof(["docs/runtime.md"]);
+  assert.throws(
+    () => buildExpiredCommittedScopeExpansionPlan(overlapping),
+    /Protected-main incorporation proof is invalid/u,
+  );
+
+  const forged = structuredClone(plan);
+  forged.protectedMainIncorporationProof.overlap = "unknown";
+  assert.throws(
+    () => normalizeExpiredCommittedScopeExpansionPlan(forged),
+    /Protected-main incorporation proof is invalid/u,
+  );
+
+  const detachedFence = structuredClone(plan);
+  detachedFence.protectedMainIncorporationProof.sourceBaseAncestorOfFence = false;
+  assert.throws(
+    () => normalizeExpiredCommittedScopeExpansionPlan(detachedFence),
+    /Protected-main incorporation proof is invalid/u,
+  );
+});
+
 test("retires the predecessor at its fenced cloud identity, not the unpublished child", () => {
   const input = fixture();
   const plan = buildExpiredCommittedScopeExpansionPlan(input);
@@ -244,9 +276,30 @@ function proof() {
     fenceSha,
     fenceTreeSha: "8".repeat(40),
     sourceBaseAncestorOfProtectedMain: true,
+    sourceBaseAncestorOfFence: true,
     protectedMainAncestorOfFence: true,
     protectedMainChangedPaths: ["src/protected-main.ts"],
     protectedMainChangedPathsDigest: digestValue(["src/protected-main.ts"]),
+  };
+  return { ...core, evidenceDigest: digestValue(core) };
+}
+
+function disjointProof(changedPaths) {
+  const core = {
+    schema: "agentic-protected-main-disjoint-fence-advance/v1",
+    sourceBaseSha,
+    protectedMainSha,
+    protectedMainTreeSha: "7".repeat(40),
+    fenceSha,
+    fenceTreeSha: "8".repeat(40),
+    sourceBaseAncestorOfProtectedMain: true,
+    sourceBaseAncestorOfFence: true,
+    protectedMainAncestorOfFence: false,
+    protectedMainChangedPaths: changedPaths,
+    protectedMainChangedPathsDigest: digestValue(changedPaths),
+    targetDeclaredWriteSet: targetWriteSet,
+    targetWriteSetDigest: digestValue(targetWriteSet),
+    overlap: "none",
   };
   return { ...core, evidenceDigest: digestValue(core) };
 }

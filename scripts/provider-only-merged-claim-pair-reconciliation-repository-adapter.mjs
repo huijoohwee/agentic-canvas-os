@@ -516,6 +516,18 @@ async function readCompletePullRequestPaths(github, repo, pullNumber) {
   }
   throw new Error("Pull-request files exceed the complete pagination bound.");
 }
+export async function readCompareChangedPaths(github, repo, compare, label) {
+  requireCompleteCompare(compare, label);
+  const paths = [];
+  for (const commit of compare.commits) {
+    paths.push(...await readCompleteGitHubCommitPaths(
+      github,
+      repo,
+      sha(commit?.sha, `${label} commit SHA`),
+    ));
+  }
+  return [...new Set(paths)].sort();
+}
 function requireCompleteCompare(value, label) { if (!Array.isArray(value.commits)
   || value.total_commits !== value.commits.length) throw new Error(`${label} is truncated.`); }
 function isAncestorCompare(value) { return ["ahead", "identical"].includes(value.status); }

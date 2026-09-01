@@ -66,6 +66,7 @@ test("fails closed when provider merge, path, protection, or required-check proo
     raw => { raw.provider.mergeCommit.parents[0] = sha("wrong-squash-parent"); },
     raw => { raw.provider.changedPaths.mergeCommit = ["outside/runtime.mjs"]; },
     raw => { raw.provider.protectedMainPaths[0].objectSha = "x".repeat(40); },
+    raw => { raw.provider.protectedAdvanceChangedPaths = ["src/runtime/index.mjs"]; },
     raw => { raw.provider.protection.liveRequiredChecks[0].source = "ruleset"; },
     raw => {
       raw.provider.checkRuns.find(run => run.headSha === raw.provider.mergeCommit.sha).conclusion = "FAILURE";
@@ -184,6 +185,47 @@ test("inventory digests are order-stable and relevance includes overlap and line
     [raw.cloud.source.claimId, raw.cloud.waiter.claimId, overlapping.claimId, successor.claimId].sort(),
   );
 });
+
+test("accepts an unrelated valid legacy-v1 claim without weakening the v2 pair", () => {
+  const raw = providerOnlyEvidenceFixture();
+  const legacy = additionalClaim(raw.cloud.source, {
+    workItemId: "work-item:legacy-unrelated",
+    leaseEpoch: 3,
+    declaredWriteScope: ["path:docs/legacy-unrelated"],
+    predecessorClaimId: null,
+    identitySchema: "agentic-cloud-collaboration-entry/v1",
+  });
+  delete legacy.entrySchema;
+  delete legacy.claimIdentitySchema;
+  raw.cloud.currentClaims.push(legacy);
+  assert.doesNotThrow(() => buildProviderOnlyMergedClaimPairReconciliationEvidence(raw));
+});
+
+test("does not require a currently enforced check to exist retroactively", () => {
+  const raw = providerOnlyEvidenceFixture();
+  raw.provider.protection.enrollment.classicRequiredChecks.push("Later Required Check");
+  raw.provider.protection.enrollment.requiredCiContexts.push("Later Required Check");
+  raw.provider.protection.liveRequiredChecks.push({
+    context: "Later Required Check", appId: 15368, source: "classic", strict: false,
+  });
+  const { contentDigest: _contentDigest, semanticDigest: _semanticDigest, ...semantic } =
+    raw.provider.protection.enrollment;
+  raw.provider.protection.enrollment.semanticDigest = digestValue(semantic);
+  assert.doesNotThrow(() => buildProviderOnlyMergedClaimPairReconciliationEvidence(raw));
+});
+
+test("accepts an expired projected-current source when provider proof supplies review evidence", () => {
+  const raw = providerOnlyEvidenceFixture();
+  raw.cloud.source.recordedState = "current";
+  raw.cloud.source.evidenceDigest = null;
+  raw.cloud.sourceLineage.at(-1).recordedState = "current";
+  const currentSource = raw.cloud.currentClaims.find(
+    claim => claim.claimId === raw.cloud.source.claimId,
+  );
+  currentSource.recordedState = "current";
+  currentSource.evidenceDigest = null;
+  assert.doesNotThrow(() => buildProviderOnlyMergedClaimPairReconciliationEvidence(raw));
+});
 }
 
 export function providerOnlyEvidenceFixture() {
@@ -301,6 +343,7 @@ export function providerOnlyEvidenceFixture() {
       plannedProtectedMainIsAncestorOfProtectedMain: true,
       mergePathObjects: [{ path: "src/runtime/index.mjs", type: "file", objectSha: sha("main-file") }],
       protectedMainPaths: [{ path: "src/runtime/index.mjs", type: "file", objectSha: sha("main-file") }],
+      protectedAdvanceChangedPaths: [],
       mergeCommitIsAncestorOfProtectedMain: true,
       changedPaths: {
         pullRequest: ["src/runtime/index.mjs"], mergeCommit: ["src/runtime/index.mjs"],
@@ -359,22 +402,28 @@ function additionalRelevantClaim(source) {
 
 function additionalClaim(source, {
   workItemId, leaseEpoch, declaredWriteScope: rawScope, predecessorClaimId,
+  identitySchema = "agentic-cloud-collaboration-entry/v2",
 }) {
   const declaredWriteScope = normalizeWriteSet(rawScope);
   const writeSetDigest = digestValue(declaredWriteScope);
-  const claimId = digestValue({
+  const identity = {
     actorId: source.actorId,
     canonicalBaseRevision: source.canonicalBaseRevision,
     leaseEpoch,
     repositoryId: source.repositoryId,
     workItemId,
     writeSetDigest,
-  });
+  };
+  if (identitySchema === "agentic-cloud-collaboration-entry/v1") {
+    identity.deviceId = source.deviceId;
+    identity.sessionId = source.sessionId;
+  }
+  const claimId = digestValue(identity);
   return {
     ...structuredClone(source), claimId, claimDigest: digest(`fence-${claimId}`),
     transitionDigest: digest(`transition-${claimId}`),
     operationReceiptDigest: digest(`receipt-${claimId}`),
     workItemId, declaredWriteScope, writeSetDigest, leaseEpoch,
-    predecessorClaimId,
+    predecessorClaimId, entrySchema: identitySchema, claimIdentitySchema: identitySchema,
   };
 }

@@ -14,6 +14,8 @@ export const PROVIDER_ONLY_MERGED_CLAIM_PAIR_RECONCILIATION_RUNTIME_PATHS = Obje
 
 const SHA = /^[0-9a-f]{40}$/u;
 const DIGEST = /^[0-9a-f]{64}$/u;
+const CLAIM_ENTRY_V1 = "agentic-cloud-collaboration-entry/v1";
+const CLAIM_ENTRY_V2 = "agentic-cloud-collaboration-entry/v2";
 export function buildProviderOnlyMergedClaimPairReconciliationEvidence(input) {
   object(input, "Provider-only reconciliation evidence input");
   return assemble({
@@ -177,7 +179,19 @@ function normalizeCloud(value) {
 function normalizeClaim(value, label = "cloud claim") {
   object(value, label);
   const declaredWriteScope = Object.freeze(normalizeWriteSet(value.declaredWriteScope));
+  const suppliedEntrySchema = value.entrySchema == null
+    ? null : text(value.entrySchema, `${label} entry schema`);
+  const suppliedIdentitySchema = value.claimIdentitySchema == null
+    ? null : text(value.claimIdentitySchema, `${label} claim identity schema`);
+  if ((suppliedEntrySchema && ![CLAIM_ENTRY_V1, CLAIM_ENTRY_V2].includes(suppliedEntrySchema))
+    || (suppliedIdentitySchema && ![CLAIM_ENTRY_V1, CLAIM_ENTRY_V2].includes(suppliedIdentitySchema))
+    || (suppliedEntrySchema && suppliedIdentitySchema
+      && suppliedEntrySchema !== suppliedIdentitySchema)) {
+    throw new Error(`${label} has an unsupported or mismatched claim identity schema.`);
+  }
   const normalized = {
+    entrySchema: suppliedEntrySchema,
+    claimIdentitySchema: suppliedIdentitySchema,
     claimId: digest(value.claimId, `${label} ID`),
     claimDigest: digest(value.claimDigest ?? value.fenceRevision, `${label} digest`),
     transitionDigest: digest(value.transitionDigest, `${label} transition digest`),
@@ -205,17 +219,32 @@ function normalizeClaim(value, label = "cloud claim") {
     integration: jsonValue(value.integration ?? null, `${label} integration`),
     retirement: jsonValue(value.retirement ?? null, `${label} retirement`),
   };
-  if (normalized.writeSetDigest !== digestValue(declaredWriteScope)
-    || normalized.claimId !== digestValue({
+  const v2Identity = {
       actorId: normalized.actorId,
       canonicalBaseRevision: normalized.canonicalBaseRevision,
       leaseEpoch: normalized.leaseEpoch,
       repositoryId: normalized.repositoryId,
       workItemId: normalized.workItemId,
       writeSetDigest: normalized.writeSetDigest,
-    })) {
-    throw new Error(`${label} has an invalid v2 write-set or claim identity digest.`);
+  };
+  const v1Identity = {
+    ...v2Identity,
+    deviceId: normalized.deviceId,
+    sessionId: normalized.sessionId,
+  };
+  const inferredSchemas = [
+    [CLAIM_ENTRY_V1, v1Identity],
+    [CLAIM_ENTRY_V2, v2Identity],
+  ].filter(([, identity]) => normalized.claimId === digestValue(identity))
+    .map(([schema]) => schema);
+  const inferredSchema = inferredSchemas.length === 1 ? inferredSchemas[0] : null;
+  const requiredSchema = suppliedIdentitySchema ?? suppliedEntrySchema ?? inferredSchema;
+  if (normalized.writeSetDigest !== digestValue(declaredWriteScope)
+    || !inferredSchema || requiredSchema !== inferredSchema) {
+    throw new Error(`${label} has an invalid write-set or claim identity digest.`);
   }
+  normalized.entrySchema = inferredSchema;
+  normalized.claimIdentitySchema = inferredSchema;
   return deepFreeze(normalized);
 }
 function normalizeClaims(values) {
@@ -265,6 +294,19 @@ function normalizeProvider(value) {
   const requiredCheckWitnesses = projectRequiredCheckWitnesses(
     protection, checkRuns, [headCommit.sha, mergeCommit.sha],
   );
+  const mergePathObjects = Object.freeze(normalizePathObjects(value.mergePathObjects, "merge path"));
+  const protectedAdvanceChangedPaths = Object.freeze(array(
+    value.protectedAdvanceChangedPaths,
+    "protected-main advancement paths",
+  ).map(item => relativePath(item, "protected-main advancement path")).sort());
+  unique(protectedAdvanceChangedPaths, "protected-main advancement paths");
+  if (protectedAdvanceChangedPaths.some(changedPath => changedPaths.pullRequest.includes(changedPath))) {
+    throw new Error("Protected main advanced through a source path.");
+  }
+  const protectedMainPaths = value.protectedMainPaths == null
+    ? mergePathObjects
+    : Object.freeze(array(value.protectedMainPaths, "protected-main path objects").length === 0
+      ? [] : normalizePathObjects(value.protectedMainPaths, "protected-main path"));
   return deepFreeze({
     provider: text(value.provider, "provider"),
     repository: repository(value.repository, "provider repository"),
@@ -278,11 +320,9 @@ function normalizeProvider(value) {
     plannedProtectedMainSha: sha(value.plannedProtectedMainSha, "planned protected main"),
     plannedProtectedMainIsAncestorOfProtectedMain:
       value.plannedProtectedMainIsAncestorOfProtectedMain,
-    mergePathObjects: Object.freeze(normalizePathObjects(value.mergePathObjects, "merge path")),
-    protectedMainPaths: Object.freeze(array(
-      value.protectedMainPaths,
-      "protected-main path objects",
-    ).length === 0 ? [] : normalizePathObjects(value.protectedMainPaths, "protected-main path")),
+    mergePathObjects,
+    protectedMainPaths,
+    protectedAdvanceChangedPaths,
     mergeCommitIsAncestorOfProtectedMain: value.mergeCommitIsAncestorOfProtectedMain,
     changedPaths: deepFreeze(changedPaths),
     protection: deepFreeze({ ...protection, requiredCheckWitnesses }),
@@ -430,9 +470,15 @@ function normalizeLocal(value) {
 function assertPair(source, waiter) {
   const same = ["actorId", "deviceId", "sessionId", "repositoryId", "workItemId",
     "canonicalBaseRevision", "laneRevision", "writeSetDigest"];
-  if (source.state !== "dormant-preserved" || source.recordedState !== "reviewed"
+  if (source.entrySchema !== CLAIM_ENTRY_V2 || source.claimIdentitySchema !== CLAIM_ENTRY_V2
+    || waiter.entrySchema !== CLAIM_ENTRY_V2 || waiter.claimIdentitySchema !== CLAIM_ENTRY_V2) {
+    throw new Error("Provider-only reconciliation requires an exact v2 source/waiter pair.");
+  }
+  const reviewedSource = source.recordedState === "reviewed" && Boolean(source.evidenceDigest);
+  const projectedSource = source.recordedState === "current" && source.evidenceDigest === null;
+  if (source.state !== "dormant-preserved" || (!reviewedSource && !projectedSource)
     || source.writeAuthority !== false || source.scopeReserved !== true
-    || !source.reviewRequestId || !source.evidenceDigest || source.integration !== null
+    || !source.reviewRequestId || source.integration !== null
     || source.integrationReceiptDigest !== null) {
     throw new Error("Source must be the exact dormant-preserved reviewed non-integrated claim.");
   }
@@ -535,8 +581,12 @@ function assertProtectionAndChecks(provider) {
       check.context === context && check.source === "ruleset" && check.strict === true
     ))) throw new Error(`Ruleset required check ${context} is not strict live-enforced.`);
   }
-  if (provider.protection.requiredCheckWitnesses.length
-    !== (enrollment.classicRequiredChecks.length + enrollment.rulesetRequiredChecks.length) * 2) {
+  const witnessedContexts = [...new Set(
+    provider.protection.requiredCheckWitnesses.map(witness => witness.context),
+  )];
+  if (witnessedContexts.length === 0
+    || provider.protection.requiredCheckWitnesses.length !== witnessedContexts.length * 2
+    || witnessedContexts.some(context => !enrolled.includes(context))) {
     throw new Error("Required-check witnesses do not cover both reviewed revisions.");
   }
 }
@@ -545,8 +595,15 @@ function projectRequiredCheckWitnesses(protection, runs, revisions) {
   const { enrollment, liveRequiredChecks } = protection;
   const requirements = [...enrollment.classicRequiredChecks.map(context => ({ context, source: "classic" })),
     ...enrollment.rulesetRequiredChecks.map(context => ({ context, source: "ruleset" }))];
+  const historicallyWitnessed = requirements.filter(requirement => revisions.every(revision => (
+    runs.some(item => item.name === requirement.context && item.headSha === revision
+      && item.status === "COMPLETED" && item.conclusion === "SUCCESS")
+  )));
+  if (historicallyWitnessed.length === 0) {
+    throw new Error("No live-enforced enrolled check has success on both reviewed revisions.");
+  }
   const witnesses = [];
-  for (const revision of revisions) for (const requirement of requirements) {
+  for (const revision of revisions) for (const requirement of historicallyWitnessed) {
     const live = liveRequiredChecks.find(check => check.context === requirement.context
       && check.source === requirement.source && (check.source !== "ruleset" || check.strict === true));
     if (!live) throw new Error(`${requirement.source} required check ${requirement.context} is not live-enforced.`);

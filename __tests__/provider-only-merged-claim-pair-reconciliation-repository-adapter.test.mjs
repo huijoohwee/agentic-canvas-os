@@ -22,6 +22,7 @@ import {
   createProviderOnlyMergedClaimPairReconciliationAdapter,
   createProviderOnlyMergedClaimPairReconciliationCloudActions,
   providerOnlyMergedClaimPairPhaseEntry,
+  readCompareChangedPaths,
   readHistoricalDeliveryController,
   readProviderOnlyMergedClaimPairEnrollment,
   readProviderOnlyMergedClaimPairLocalAbsence,
@@ -33,6 +34,30 @@ const methodNames = [
   "withEntrypointFence", "readSourceEvidence", "readPlan", "writePlan", "readIntent", "writeIntent", "observePhase",
   "verifyFreshSource", "retireWaiter", "recoverSource", "integrateSource", "retireSource", "verifyTerminal",
 ];
+test("compare changed paths are complete across every compared commit", async () => {
+  const first = "1".repeat(40);
+  const second = "2".repeat(40);
+  const calls = [];
+  const github = async endpoint => {
+    calls.push(endpoint);
+    if (endpoint.includes(`/commits/${first}?`)) return {
+      files: [{ filename: "scripts/z.mjs" }, { filename: "scripts/a.mjs" }],
+    };
+    if (endpoint.includes(`/commits/${second}?`)) return {
+      files: [{ filename: "scripts/a.mjs" }, { filename: "docs/b.md" }],
+    };
+    throw new Error(`Unexpected endpoint ${endpoint}`);
+  };
+  assert.deepEqual(await readCompareChangedPaths(github, "owner/repo", {
+    total_commits: 2,
+    commits: [{ sha: first }, { sha: second }],
+  }, "protected advance"), ["docs/b.md", "scripts/a.mjs", "scripts/z.mjs"]);
+  assert.equal(calls.length, 2);
+  await assert.rejects(readCompareChangedPaths(github, "owner/repo", {
+    total_commits: 2,
+    commits: [{ sha: first }],
+  }, "protected advance"), /protected advance is truncated/iu);
+});
 test("repository adapter requires and freezes every closed-sequence seam", () => {
   for (let count = 0; count < methodNames.length; count += 1) {
     const methods = Object.fromEntries(methodNames.slice(0, count).map(name => [name, () => {}]));

@@ -6,13 +6,13 @@ date: "2026-08-30"
 lang: "en-US"
 schema: "agentic-canonical-untracked-relocation-contract/v1"
 frontmatter_contract: "required"
-status: "foundation-tested-execution-fenced"
-authority: "read-only exact-plan preparation for preservation-backed canonical untracked bytes"
+status: "controller-tested-execution-available"
+authority: "exact-authorized preservation-backed canonical untracked relocation"
 runtime_scope: "canonical-untracked-retention recovery packages, task-bound local leases, current cloud authority, atomic filesystem transaction primitives, recoverable source quarantine, and content-bound receipts"
-runtime_claim: "planning is read-only; public execution remains fail-closed until the two-sided heartbeat and relocation registry-intent owner is installed"
-runtime_owner: "../scripts/canonical-untracked-relocation-contract.mjs; ../scripts/canonical-untracked-relocation-transaction.mjs; ../scripts/canonical-untracked-relocation-repository-adapter.mjs; ../scripts/canonical-untracked-relocation.mjs; ../scripts/collaboration-gate.mjs"
-runtime_proof: "../__tests__/canonical-untracked-relocation.test.mjs; ../__tests__/scoped-lane-bootstrap-canonical-dirty-main.test.mjs"
-publish_policy: "Dev planning and transaction foundation; no relocation, Production, or deployment authority"
+runtime_claim: "planning is read-only; exact-authorized execution is mutually fenced against heartbeat transitions by durable writer-registry intents"
+runtime_owner: "../scripts/canonical-untracked-relocation-contract.mjs; ../scripts/canonical-untracked-relocation-transaction.mjs; ../scripts/canonical-untracked-relocation-registry.mjs; ../scripts/canonical-untracked-relocation-repository-adapter.mjs; ../scripts/canonical-untracked-relocation.mjs; ../scripts/collaboration-gate.mjs"
+runtime_proof: "../__tests__/canonical-untracked-relocation.test.mjs; ../__tests__/canonical-untracked-relocation-registry.test.mjs; ../__tests__/writer-lease-registry-cas.test.mjs; ../__tests__/device-heartbeat-scope-expansion-fence.test.mjs; ../__tests__/scoped-lane-bootstrap-canonical-dirty-main.test.mjs"
+publish_policy: "Dev exact-authorized relocation controller; no commit, review, integration, Production, or deployment authority"
 ---
 
 # Canonical Untracked Relocation
@@ -65,11 +65,10 @@ npm run workspace:canonical-untracked-relocation -- plan \
   --output="$EXTERNAL_PLAN" --json
 ```
 
-The `execute` surface is deliberately fenced in this foundation release. It
-rejects before repository effects until the writer-lease registry atomically
-coordinates both pending heartbeat attempts and active relocation attempts.
-After that owner is installed, execution will additionally require the plan's
-literal `exactAuthorization` value:
+The `execute` surface persists an active writer-registry relocation intent
+before refreshing cloud and repository authority or performing filesystem
+effects. It additionally requires the plan's literal `exactAuthorization`
+value:
 
 ```sh
 npm run workspace:canonical-untracked-relocation -- execute \
@@ -84,8 +83,8 @@ npm run workspace:canonical-untracked-relocation -- execute \
 ```
 
 Generic approval text cannot substitute for the literal digest-bound
-authorization, and exact authorization cannot substitute for the missing
-two-sided registry intent.
+authorization. The built-in registry owner cannot be disabled by the public
+command; dependency injection remains available only to bounded tests.
 
 ## Transaction and recovery
 
@@ -102,11 +101,16 @@ layout.
 
 Recovery files are copied and fsynced into a unique temporary stage. Only a
 complete, rehashed stage is atomically published as the canonical stage; a
-partial predecessor is retained as transaction residue and never reused. Task,
-cloud, lease, manifest, fence, and expiry evidence is refreshed immediately
-before effects. Lock order is source slot, writer registry, then recoverable,
-owner-bound native Git index/HEAD/ref locks plus the linked-worktree `locked`
-marker on the native files-ref backend. Exact dead owners are recoverable;
+partial predecessor is retained as transaction residue and never reused. Under
+the source slot, an exact read-only task-capability, manifest, lease, and cloud-
+authority preflight runs before the active registry intent is persisted, so a
+rejected or revoked execution proof leaves registry bytes and revision
+unchanged. The same evidence is refreshed after intent persistence and
+immediately before effects. Lock order is source slot, a short registry-intent
+CAS, the action's writer registry fence, then recoverable, owner-bound native Git
+index/HEAD/ref locks plus the linked-worktree `locked` marker on the native
+files-ref backend. The action fence remains held through the durable filesystem
+receipt and terminal registry projection. Exact dead owners are recoverable;
 live, malformed, ambiguous, or foreign owners fail closed. The marker blocks
 ordinary and single-force worktree removal; double-force or out-of-band removal
 is not claimed as excluded and instead leaves recovery bytes authoritative.
@@ -135,12 +139,28 @@ new intent directory is parent-fsynced before effects. Every other state
 combination blocks. Thus an interruption preserves at least the original
 package plus either source or quarantine bytes.
 
-The remaining production gate is intentionally explicit: a heartbeat must
-persist its pending registry intent before any cloud transition, and relocation
-must persist an active mutually-exclusive registry intent before its final
-cloud verification. Heartbeat projection and relocation receipt publication
-must terminalize their own intent in the same local CAS. Until that owner ships,
-the public executor does not call the filesystem transaction.
+The writer registry retains one validated relocation record per target branch.
+An active relocation excludes pending heartbeat transitions, and a pending
+heartbeat excludes a relocation start. Relocation also refuses to start across
+a nonterminal scope expansion or active owned-dirt recovery. Exact replay
+reuses the same active record. After the filesystem receipt is durably
+published, one CAS changes the record to `complete` and binds the effect-intent
+digest, canonical receipt, and the unchanged target lease and cloud-authority
+counters. If the process loses
+that final CAS response, replay validates the terminal filesystem state and
+only terminalizes the registry record. Once the record is complete, a later
+legitimate heartbeat may advance the lease; exact original-plan replay remains
+read-only, skips the pre-begin mutation-authority preflight, and returns the
+validated durable receipt without reusing stale mutation authority.
+
+An error can change an active record to `aborted` only while the source slot is
+still held and a sealed no-effect proof finds the complete canonical source,
+an absent target, an absent quarantine, and no effect intent. A target rename,
+effect intent, source drift, malformed journal, or ambiguous directory state
+keeps the relocation active and therefore keeps heartbeat mutation fenced.
+Terminal records remain validated tombstones; a later exact operation may
+replace one bounded terminal slot, while malformed or active foreign records
+always fail closed.
 
 ## Root-source bootstrap correction
 

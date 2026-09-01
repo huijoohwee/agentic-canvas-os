@@ -1,7 +1,9 @@
 // Responsibility: Apply exact writer-lease registry projections under one cooperative CAS lock.
-import { existsSync, lstatSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
+import {
+  closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, renameSync,
+  unlinkSync, writeFileSync,
+} from "node:fs";
 import path from "node:path";
-
 import { digestValue } from "./cloud-collaboration-primitives.mjs";
 import {
   WRITER_LEASE_REGISTRY_SCHEMA,
@@ -9,22 +11,35 @@ import {
 } from "./writer-lease-lib.mjs";
 import { validateCompletedActiveOwnedDirtRecoveryIntent }
   from "./active-owned-dirt-recovery-contract.mjs";
-
-export const SCOPE_EXPANSION_INTENT_SCHEMA =
-  "agentic-active-dirty-scope-expansion-intent/v1";
-
+import {
+  SCOPE_EXPANSION_INTENT_SCHEMA,
+  assertCompletedScopeExpansionProjection,
+  assertExpectedWriterLease,
+  assertHeartbeatTerminalCurrent,
+  assertWriterLeaseMutationIntentAvailability,
+  boundedWriterLeaseExpiry,
+  completedScopeExpansionHeartbeatBridgeDigest,
+  completeHeartbeatMutationIntent,
+  createHeartbeatMutationIntent,
+  createScopeExpansionTombstone,
+  normalizeScopeExpansionIntent,
+  normalizeScopeExpansionPlan,
+  normalizeScopeExpansionTombstone,
+  requireCompletedScopeExpansionIntent,
+  snapshotScopeExpansionPlan,
+  withHeartbeatMutationIntent,
+  withScopeExpansionIntent,
+} from "./writer-lease-registry-intents.mjs";
+export { SCOPE_EXPANSION_INTENT_SCHEMA, assertCompletedScopeExpansionProjection };
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/u;
-
 export function writerLeaseDigest(lease) {
   requireLease(lease);
   return digestValue(lease);
 }
-
 export function readScopeExpansionIntent({ leaseStore, branch }) {
   const registry = requireRegistry(leaseStore.readRegistry());
-  return normalizeIntent(registry.scopeExpansionIntents?.[branch] ?? null);
+  return normalizeScopeExpansionIntent(registry.scopeExpansionIntents?.[branch] ?? null);
 }
-
 export function beginScopeExpansionIntent({
   leaseStore,
   branch,
@@ -32,14 +47,18 @@ export function beginScopeExpansionIntent({
   expectedClaimId,
   plan,
 }) {
-  const normalizedPlan = normalizePlan(plan);
+  const normalizedPlan = normalizeScopeExpansionPlan(plan);
   return mutateRegistry({
     leaseStore,
     branch,
     expectedLeaseDigest,
     expectedClaimId,
     action: ({ registry, lease }) => {
-      const existing = normalizeIntent(registry.scopeExpansionIntents?.[branch] ?? null);
+      assertWriterLeaseMutationIntentAvailability({
+        registry, branch, operation: "scope-expansion",
+      });
+      const existing = normalizeScopeExpansionIntent(
+        registry.scopeExpansionIntents?.[branch] ?? null);
       if (existing) {
         if (existing.planDigest !== normalizedPlan.planDigest) {
           throw new Error("A different scope-expansion intent already fences this branch.");
@@ -62,10 +81,10 @@ export function beginScopeExpansionIntent({
         targetCanonicalBaseSha: normalizedPlan.targetCanonicalBaseSha,
         targetReviewRequestId: null,
         completedReceiptDigest: null,
-        planSnapshot: snapshotPlan(plan),
+        planSnapshot: snapshotScopeExpansionPlan(plan),
       });
       return {
-        registry: withIntent(registry, branch, intent),
+        registry: withScopeExpansionIntent(registry, branch, intent),
         lease,
         intent,
         changed: true,
@@ -73,7 +92,6 @@ export function beginScopeExpansionIntent({
     },
   });
 }
-
 export function advanceScopeExpansionIntent({
   leaseStore,
   branch,
@@ -88,18 +106,19 @@ export function advanceScopeExpansionIntent({
     expectedLeaseDigest,
     expectedClaimId,
     action: ({ registry, lease }) => {
-      const current = normalizeIntent(registry.scopeExpansionIntents?.[branch] ?? null);
+      const current = normalizeScopeExpansionIntent(
+        registry.scopeExpansionIntents?.[branch] ?? null);
       if (!current || current.planDigest !== requiredDigest(expectedPlanDigest, "plan digest")) {
         throw new Error("Scope-expansion intent is missing or belongs to another plan.");
       }
-      const next = normalizeIntent({
+      const next = normalizeScopeExpansionIntent({
         ...current,
         ...values,
         branch,
         schema: SCOPE_EXPANSION_INTENT_SCHEMA,
       });
       return {
-        registry: withIntent(registry, branch, next),
+        registry: withScopeExpansionIntent(registry, branch, next),
         lease,
         intent: next,
         changed: digestValue(current) !== digestValue(next),
@@ -107,7 +126,63 @@ export function advanceScopeExpansionIntent({
     },
   });
 }
-
+export function rolloverCompletedScopeExpansionIntent({
+  leaseStore,
+  branch,
+  expectedLeaseDigest,
+  expectedClaimId,
+  targetManifestDigest,
+  targetWriteSetDigest,
+}) {
+  const requestedManifest = requiredDigest(targetManifestDigest, "target manifest digest");
+  const requestedWriteSet = requiredDigest(targetWriteSetDigest, "target write-set digest");
+  return mutateRegistry({
+    leaseStore,
+    branch,
+    expectedLeaseDigest,
+    expectedClaimId,
+    action: ({ registry, lease }) => {
+      assertWriterLeaseMutationIntentAvailability({
+        registry, branch, operation: "scope-expansion",
+      });
+      const archived = registry.lastCompletedScopeExpansionIntents?.[branch] ?? null;
+      if (archived) normalizeScopeExpansionTombstone(archived);
+      const current = normalizeScopeExpansionIntent(
+        registry.scopeExpansionIntents?.[branch] ?? null);
+      const sameTarget = current?.targetManifestDigest === requestedManifest
+        && current?.targetWriteSetDigest === requestedWriteSet;
+      const completed = current?.status === "complete"
+        ? assertCompletedScopeExpansionProjection({
+          intent: current, lease, expectedLeaseDigest, expectedClaimId,
+        }) : null;
+      if (!current || sameTarget) {
+        return {
+          registry, lease, intent: current, archive: archived,
+          output: { changed: false }, changed: false,
+        };
+      }
+      const tombstone = createScopeExpansionTombstone(
+        completed || requireCompletedScopeExpansionIntent(current));
+      const scopeExpansionIntents = { ...(registry.scopeExpansionIntents || {}) };
+      delete scopeExpansionIntents[branch];
+      return {
+        registry: {
+          ...registry,
+          scopeExpansionIntents,
+          lastCompletedScopeExpansionIntents: {
+            ...(registry.lastCompletedScopeExpansionIntents || {}),
+            [branch]: tombstone,
+          },
+        },
+        lease,
+        intent: null,
+        archive: tombstone,
+        output: { changed: true },
+        changed: true,
+      };
+    },
+  });
+}
 export function casWriterLeaseProjection({
   leaseStore,
   branch,
@@ -118,7 +193,7 @@ export function casWriterLeaseProjection({
 }) {
   if (typeof leaseStore?.withRegistryLock !== "function" || !leaseStore.statePath) {
     const lease = leaseStore.verify({ branch });
-    assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId });
+    assertExpectedWriterLease({ lease, expectedLeaseDigest, expectedClaimId });
     return Object.freeze({
       lease: leaseStore.annotate({
         sessionId: lease.sessionId,
@@ -135,8 +210,17 @@ export function casWriterLeaseProjection({
     expectedLeaseDigest,
     expectedClaimId,
     action: ({ registry, lease }) => {
-      const intent = normalizeIntent(registry.scopeExpansionIntents?.[branch] ?? null);
-      if (requireNoActiveIntent) {
+      const intent = normalizeScopeExpansionIntent(
+        registry.scopeExpansionIntents?.[branch] ?? null);
+      const operationIntents = assertWriterLeaseMutationIntentAvailability({
+        registry, branch, operation: "heartbeat",
+      });
+      const heartbeatIntent = operationIntents.heartbeat;
+      if (heartbeatIntent?.status === "active") {
+        assertHeartbeatAttemptSource({
+          intent: heartbeatIntent, lease, expectedLeaseDigest, expectedClaimId,
+        });
+      } else if (requireNoActiveIntent) {
         assertHeartbeatIntentAllows({
           intent,
           recoveryIntent: recoveryFenceIntent(registry, branch),
@@ -146,19 +230,32 @@ export function casWriterLeaseProjection({
       }
       const next = { ...lease, ...values, schema: WRITER_LEASE_SCHEMA };
       requireLease(next);
+      if (heartbeatIntent?.status === "active") {
+        const { cloudAuthority: _sourceAuthority, ...sourceLeaseSubject } = lease;
+        const { cloudAuthority: _targetAuthority, ...targetLeaseSubject } = next;
+        if (digestValue(sourceLeaseSubject) !== digestValue(targetLeaseSubject)) {
+          throw new Error("Heartbeat C2 projection changed the non-cloud C1 lease subject.");
+        }
+      }
+      const completedHeartbeat = heartbeatIntent?.status === "active"
+        ? completeHeartbeatMutationIntent({ intent: heartbeatIntent, targetLease: next })
+        : heartbeatIntent;
+      const projectedRegistry = completedHeartbeat?.status === "complete"
+        ? withHeartbeatMutationIntent(registry, branch, completedHeartbeat)
+        : registry;
       return {
         registry: {
-          ...registry,
-          leases: { ...registry.leases, [branch]: next },
+          ...projectedRegistry,
+          leases: { ...projectedRegistry.leases, [branch]: next },
         },
         lease: next,
         intent,
+        heartbeatIntent: completedHeartbeat,
         changed: true,
       };
     },
   });
 }
-
 export function heartbeatWriterLeaseProjection({
   leaseStore,
   branch,
@@ -170,7 +267,7 @@ export function heartbeatWriterLeaseProjection({
 }) {
   if (typeof leaseStore?.withRegistryLock !== "function" || !leaseStore.statePath) {
     const lease = leaseStore.verify({ branch });
-    assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId });
+    assertExpectedWriterLease({ lease, expectedLeaseDigest, expectedClaimId });
     return leaseStore.heartbeat({
       sessionId: lease.sessionId,
       branch,
@@ -187,11 +284,10 @@ export function heartbeatWriterLeaseProjection({
     requireNoActiveIntent: true,
     values: {
       heartbeatAt: instant.toISOString(),
-      expiresAt: boundedExpiry({ now: instant, ttlMs, expiresAtCap }),
+      expiresAt: boundedWriterLeaseExpiry({ now: instant, ttlMs, expiresAtCap }),
     },
   }).lease;
 }
-
 export function assertHeartbeatScopeExpansionFence({
   leaseStore,
   branch,
@@ -204,9 +300,13 @@ export function assertHeartbeatScopeExpansionFence({
   return leaseStore.withRegistryLock((registry) => {
     const normalized = requireRegistry(registry);
     const lease = normalized.leases?.[branch];
-    assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId });
+    assertExpectedWriterLease({ lease, expectedLeaseDigest, expectedClaimId });
+    assertWriterLeaseMutationIntentAvailability({
+      registry: normalized, branch, operation: "heartbeat",
+    });
     assertHeartbeatIntentAllows({
-      intent: normalizeIntent(normalized.scopeExpansionIntents?.[branch] ?? null),
+      intent: normalizeScopeExpansionIntent(
+        normalized.scopeExpansionIntents?.[branch] ?? null),
       recoveryIntent: recoveryFenceIntent(normalized, branch),
       expectedClaimId,
       expectedLeaseDigest,
@@ -214,10 +314,74 @@ export function assertHeartbeatScopeExpansionFence({
     return lease;
   });
 }
-
-export const assertHeartbeatMutationIntentFence =
-  assertHeartbeatScopeExpansionFence;
-
+export function assertHeartbeatMutationIntentFence({
+  leaseStore,
+  branch,
+  expectedLeaseDigest,
+  expectedClaimId,
+}) {
+  if (typeof leaseStore?.withRegistryLock !== "function" || !leaseStore.statePath) {
+    return assertHeartbeatScopeExpansionFence({
+      leaseStore, branch, expectedLeaseDigest, expectedClaimId,
+    });
+  }
+  return mutateRegistry({
+    leaseStore,
+    branch,
+    expectedLeaseDigest,
+    expectedClaimId,
+    action: ({ registry, lease }) => {
+      const operationIntents = assertWriterLeaseMutationIntentAvailability({
+        registry, branch, operation: "heartbeat",
+      });
+      assertHeartbeatIntentAllows({
+        intent: normalizeScopeExpansionIntent(
+          registry.scopeExpansionIntents?.[branch] ?? null),
+        recoveryIntent: recoveryFenceIntent(registry, branch),
+        expectedClaimId,
+        expectedLeaseDigest,
+      });
+      const existing = operationIntents.heartbeat;
+      let predecessorIntentDigest = existing?.predecessorIntentDigest || null;
+      let predecessorBridgeDigest = existing?.predecessorBridgeDigest || null;
+      if (existing?.status === "complete") {
+        predecessorIntentDigest = existing.intentDigest;
+        try {
+          assertHeartbeatTerminalCurrent({ intent: existing, lease });
+          predecessorBridgeDigest = null;
+        } catch {
+          predecessorBridgeDigest = completedScopeExpansionHeartbeatBridgeDigest({
+            heartbeatIntent: existing, scopeExpansionIntent: operationIntents.expansion,
+            lease, expectedLeaseDigest, expectedClaimId,
+          });
+        }
+      }
+      const proposed = createHeartbeatMutationIntent({
+        branch,
+        sourceLeaseDigest: expectedLeaseDigest,
+        sourceClaimId: expectedClaimId,
+        sourceAuthoritySnapshot: lease.cloudAuthority,
+        predecessorIntentDigest,
+        predecessorBridgeDigest,
+      });
+      if (existing?.status === "active") {
+        assertHeartbeatAttemptSource({
+          intent: existing, lease, expectedLeaseDigest, expectedClaimId,
+        });
+        if (existing.intentDigest !== proposed.intentDigest) {
+          throw new Error("Active heartbeat mutation intent belongs to another C1 authority.");
+        }
+        return { registry, lease, heartbeatIntent: existing, changed: false };
+      }
+      return {
+        registry: withHeartbeatMutationIntent(registry, branch, proposed),
+        lease,
+        heartbeatIntent: proposed,
+        changed: true,
+      };
+    },
+  });
+}
 export function withHeartbeatProjectionFence({
   leaseStore,
   branch,
@@ -232,9 +396,13 @@ export function withHeartbeatProjectionFence({
   return leaseStore.withRegistryLock((registry) => {
     const normalized = requireRegistry(registry);
     const lease = normalized.leases?.[branch];
-    assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId });
+    assertExpectedWriterLease({ lease, expectedLeaseDigest, expectedClaimId });
+    assertWriterLeaseMutationIntentAvailability({
+      registry: normalized, branch, operation: "heartbeat",
+    });
     assertHeartbeatIntentAllows({
-      intent: normalizeIntent(normalized.scopeExpansionIntents?.[branch] ?? null),
+      intent: normalizeScopeExpansionIntent(
+        normalized.scopeExpansionIntents?.[branch] ?? null),
       recoveryIntent: recoveryFenceIntent(normalized, branch),
       expectedClaimId,
       expectedLeaseDigest,
@@ -242,7 +410,6 @@ export function withHeartbeatProjectionFence({
     return action();
   });
 }
-
 export function assertExpansionIntentCurrent({
   leaseStore,
   branch,
@@ -261,7 +428,6 @@ export function assertExpansionIntentCurrent({
   }
   return intent;
 }
-
 export function mutateWriterLeaseRegistry({
   leaseStore,
   branch,
@@ -275,7 +441,7 @@ export function mutateWriterLeaseRegistry({
   return leaseStore.withRegistryLock((registry) => {
     const normalized = requireRegistry(registry);
     const lease = normalized.leases?.[branch];
-    assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId });
+    assertExpectedWriterLease({ lease, expectedLeaseDigest, expectedClaimId });
     const result = action({ registry: normalized, lease });
     if (!result?.registry || !result.lease) {
       throw new Error("Writer-lease registry CAS action returned no exact projection.");
@@ -288,13 +454,14 @@ export function mutateWriterLeaseRegistry({
     return Object.freeze({
       lease: result.lease,
       intent: result.intent ?? null,
+      heartbeatIntent: result.heartbeatIntent ?? null,
+      archive: result.archive ?? null,
       registryRevision: Number(normalized.revision || 0) + (result.changed ? 1 : 0),
+      ...(result.output || {}),
     });
   });
 }
-
 const mutateRegistry = mutateWriterLeaseRegistry;
-
 function writeRegistryCas({ statePath, expectedRegistry, nextRegistry }) {
   const normalized = requireRegistry(nextRegistry);
   const next = {
@@ -307,36 +474,22 @@ function writeRegistryCas({ statePath, expectedRegistry, nextRegistry }) {
   mkdirSync(root, { recursive: true });
   requireRegularRegistryPath(statePath);
   const temporary = `${statePath}.${process.pid}.${Date.now()}.writer-lease-cas.tmp`;
-  writeFileSync(temporary, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
-  renameSync(temporary, statePath);
-}
-
-function withIntent(registry, branch, intent) {
-  return {
-    ...registry,
-    scopeExpansionIntents: {
-      ...(registry.scopeExpansionIntents || {}),
-      [branch]: intent,
-    },
-  };
-}
-
-function assertExpectedLease({ lease, expectedLeaseDigest, expectedClaimId }) {
-  requireLease(lease);
-  if (writerLeaseDigest(lease) !== requiredDigest(expectedLeaseDigest, "expected lease digest")) {
-    throw new Error("Writer lease changed before scope-expansion CAS or active-owned-dirt recovery CAS.");
-  }
-  const normalizedExpectedClaimId = expectedClaimId === null
-    ? null
-    : requiredDigest(expectedClaimId, "expected claim ID");
-  const claimMatches = normalizedExpectedClaimId === null
-    ? lease.cloudAuthority === null || lease.cloudAuthority === undefined
-    : lease.cloudAuthority?.claimId === normalizedExpectedClaimId;
-  if (!claimMatches) {
-    throw new Error("Writer lease claim changed before scope-expansion CAS or active-owned-dirt recovery CAS.");
+  try {
+    writeFileSync(temporary, `${JSON.stringify(next, null, 2)}\n`, {
+      flag: "wx", mode: 0o600,
+    });
+    syncPath(temporary);
+    renameSync(temporary, statePath);
+    syncPath(root);
+  } catch (error) {
+    if (existsSync(temporary)) unlinkSync(temporary);
+    throw error;
   }
 }
-
+function syncPath(target) {
+  const descriptor = openSync(target, "r");
+  try { fsyncSync(descriptor); } finally { closeSync(descriptor); }
+}
 function assertHeartbeatIntentAllows({
   intent,
   recoveryIntent = null,
@@ -355,7 +508,14 @@ function assertHeartbeatIntentAllows({
   if (intent.targetClaimId && intent.targetClaimId === expectedClaimId) return;
   throw new Error("Another scope-expansion intent owns this branch projection.");
 }
-
+function assertHeartbeatAttemptSource({ intent, lease, expectedLeaseDigest, expectedClaimId }) {
+  if (intent.branch !== lease.branch
+    || intent.sourceLeaseDigest !== expectedLeaseDigest
+    || intent.sourceClaimId !== expectedClaimId
+    || intent.sourceAuthorityDigest !== digestValue(lease.cloudAuthority)) {
+    throw new Error("Active heartbeat mutation intent changed its exact C1 authority subject.");
+  }
+}
 function recoveryFenceIntent(registry, branch) {
   const value = registry.activeOwnedDirtRecoveryIntents?.[branch] ?? null;
   if (value === null || value === undefined) return null;
@@ -369,120 +529,6 @@ function recoveryFenceIntent(registry, branch) {
   }
   return value;
 }
-
-function normalizeIntent(value) {
-  if (value === null || value === undefined) return null;
-  if (!value || typeof value !== "object" || Array.isArray(value)
-    || value.schema !== SCOPE_EXPANSION_INTENT_SCHEMA
-    || !["intent", "waiting-successor", "source-retired", "promoted", "successor-bound", "local-cas", "pr-marker", "complete"].includes(value.status)
-    || typeof value.branch !== "string" || !value.branch
-    || !DIGEST_PATTERN.test(String(value.sourceLeaseDigest || ""))
-    || !DIGEST_PATTERN.test(String(value.sourceClaimId || ""))
-    || !/^[0-9a-f]{40}$/u.test(String(value.sourceFenceSha || ""))
-    || !DIGEST_PATTERN.test(String(value.targetWriteSetDigest || ""))
-    || !DIGEST_PATTERN.test(String(value.targetManifestDigest || ""))
-    || !DIGEST_PATTERN.test(String(value.planDigest || ""))
-    || !Number.isInteger(value.targetLeaseEpoch) || value.targetLeaseEpoch !== 1
-    || !/^[0-9a-f]{40}$/u.test(String(value.targetCanonicalBaseSha || ""))
-  ) {
-    throw new Error("Scope-expansion intent is malformed.");
-  }
-  for (const key of [
-    "targetClaimId",
-    "targetClaimDigest",
-    "completedReceiptDigest",
-    "waitingReceiptDigest",
-    "sourceRetirementReceiptDigest",
-    "promotedReceiptDigest",
-    "boundReceiptDigest",
-    "localProjectionReceiptDigest",
-    "pullRequestProjectionReceiptDigest",
-    "finalReceiptDigest",
-  ]) {
-    if (value[key] !== null && value[key] !== undefined && !DIGEST_PATTERN.test(String(value[key]))) {
-      throw new Error(`Scope-expansion intent ${key} is malformed.`);
-    }
-  }
-  if (value.targetReviewRequestId !== null && value.targetReviewRequestId !== undefined
-    && (typeof value.targetReviewRequestId !== "string" || !value.targetReviewRequestId)) {
-    throw new Error("Scope-expansion intent review request is malformed.");
-  }
-  const planSnapshot = snapshotPlan(value.planSnapshot);
-  if (planSnapshot.planDigest !== value.planDigest) {
-    throw new Error("Scope-expansion intent plan snapshot is inconsistent.");
-  }
-  const snapshots = {
-    waiting: normalizeSnapshot(value.waiting, "waiting successor"),
-    promoted: normalizeSnapshot(value.promoted, "promoted successor"),
-    boundAuthority: normalizeSnapshot(value.boundAuthority, "bound successor authority"),
-    localProjection: normalizeSnapshot(value.localProjection, "local projection"),
-    pullRequestProjection: normalizeSnapshot(value.pullRequestProjection, "pull-request projection"),
-  };
-  return Object.freeze({
-    schema: SCOPE_EXPANSION_INTENT_SCHEMA,
-    status: value.status,
-    branch: value.branch,
-    sourceLeaseDigest: value.sourceLeaseDigest,
-    sourceClaimId: value.sourceClaimId,
-    sourceFenceSha: value.sourceFenceSha,
-    targetWriteSetDigest: value.targetWriteSetDigest,
-    targetManifestDigest: value.targetManifestDigest,
-    planDigest: value.planDigest,
-    targetClaimId: value.targetClaimId || null,
-    targetClaimDigest: value.targetClaimDigest || null,
-    targetLeaseEpoch: value.targetLeaseEpoch,
-    targetCanonicalBaseSha: value.targetCanonicalBaseSha,
-    targetReviewRequestId: value.targetReviewRequestId || null,
-    completedReceiptDigest: value.completedReceiptDigest || null,
-    waiting: snapshots.waiting,
-    waitingReceiptDigest: value.waitingReceiptDigest || null,
-    sourceRetirementReceiptDigest: value.sourceRetirementReceiptDigest || null,
-    promoted: snapshots.promoted,
-    promotedReceiptDigest: value.promotedReceiptDigest || null,
-    boundAuthority: snapshots.boundAuthority,
-    boundReceiptDigest: value.boundReceiptDigest || null,
-    localProjection: snapshots.localProjection,
-    localProjectionReceiptDigest: value.localProjectionReceiptDigest || null,
-    pullRequestProjection: snapshots.pullRequestProjection,
-    pullRequestProjectionReceiptDigest: value.pullRequestProjectionReceiptDigest || null,
-    finalReceiptDigest: value.finalReceiptDigest || null,
-    planSnapshot,
-  });
-}
-
-function normalizeSnapshot(value, label) {
-  if (value === null || value === undefined) return null;
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`Scope-expansion intent ${label} is malformed.`);
-  }
-  const serialized = JSON.stringify(value);
-  if (serialized.length > 65_536) {
-    throw new Error(`Scope-expansion intent ${label} is too large.`);
-  }
-  return Object.freeze(JSON.parse(serialized));
-}
-
-function normalizePlan(value) {
-  if (!value || typeof value !== "object") throw new Error("Scope-expansion plan is required.");
-  return {
-    planDigest: requiredDigest(value.planDigest, "plan digest"),
-    targetWriteSetDigest: requiredDigest(value.targetWriteSetDigest, "target write-set digest"),
-    targetManifestDigest: requiredDigest(value.targetManifestDigest, "target manifest digest"),
-    targetCanonicalBaseSha: requiredSha(value.targetCanonicalBaseSha, "target canonical base SHA"),
-  };
-}
-
-function snapshotPlan(value) {
-  if (!value || typeof value !== "object") {
-    throw new Error("Scope-expansion intent plan snapshot is required.");
-  }
-  const { planDigest, ...core } = value;
-  if (!DIGEST_PATTERN.test(String(planDigest || "")) || digestValue(core) !== planDigest) {
-    throw new Error("Scope-expansion intent plan snapshot digest is invalid.");
-  }
-  return Object.freeze({ ...core, planDigest });
-}
-
 function requireRegistry(registry) {
   if (registry?.schema !== WRITER_LEASE_REGISTRY_SCHEMA
     || !registry.leases || typeof registry.leases !== "object"
@@ -496,7 +542,6 @@ function requireRegistry(registry) {
   }
   return registry;
 }
-
 function requireRegularRegistryPath(statePath) {
   if (!existsSync(statePath)) return;
   const stat = lstatSync(statePath);
@@ -504,35 +549,17 @@ function requireRegularRegistryPath(statePath) {
     throw new Error("Writer-lease registry must be a regular non-symlink file.");
   }
 }
-
 function requireLease(lease) {
   if (lease?.schema !== WRITER_LEASE_SCHEMA || typeof lease.branch !== "string") {
     throw new Error("Writer lease is malformed.");
   }
   return lease;
 }
-
 function requiredDigest(value, label) {
   if (!DIGEST_PATTERN.test(String(value || ""))) throw new Error(`${label} must be a SHA-256 digest.`);
   return String(value);
 }
-
 function requiredSha(value, label) {
   if (!/^[0-9a-f]{40}$/u.test(String(value || ""))) throw new Error(`${label} must be a SHA.`);
   return String(value);
-}
-
-function boundedExpiry({ now, ttlMs, expiresAtCap }) {
-  const instant = now instanceof Date ? now : new Date(now);
-  const ttl = Number(ttlMs);
-  if (!Number.isFinite(instant.getTime()) || !Number.isFinite(ttl) || ttl < 60_000 || ttl > 86_400_000) {
-    throw new Error("Writer-lease heartbeat projection has an invalid TTL.");
-  }
-  const cap = expiresAtCap === null || expiresAtCap === undefined
-    ? null
-    : Date.parse(expiresAtCap);
-  if (cap !== null && (!Number.isFinite(cap) || cap - instant.getTime() < 60_000)) {
-    throw new Error("Writer-lease heartbeat projection cloud expiry cap is invalid.");
-  }
-  return new Date(Math.min(instant.getTime() + Math.floor(ttl), cap ?? Infinity)).toISOString();
 }

@@ -464,11 +464,17 @@ export function validateClaimOnlyRetirementTerminal({
       integrationReceiptDigest: null, retiredAt: entry?.evaluationTime,
     }
   };
+  const comparableCore = {
+    ...entry?.claimCore,
+    canonicalDescendantProof: entry?.claimCore?.canonicalDescendantProof ?? null,
+    recovery: entry?.claimCore?.recovery ?? null,
+    integration: entry?.claimCore?.integration ?? null,
+  };
   if (!entry || entry.schema !== ENTRY_SCHEMA || entry.action !== "retire"
     || entry.repositoryId !== claim.repositoryId || entry.claimId !== claim.claimId
     || entry.idempotencyKey !== digestValue(operationKey)
     || entry.requestDigest !== requestDigest
-    || canonicalJson(entry.claimCore) !== canonicalJson(expectedCore)
+    || canonicalJson(comparableCore) !== canonicalJson(expectedCore)
     || entry.claimDigest !== digestValue(entry.claimCore)) {
     throw new Error("Claim-only retirement terminal semantics are invalid.");
   }

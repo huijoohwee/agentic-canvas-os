@@ -109,9 +109,23 @@ async function execute(adapter, initial) {
   if (journal.state.phase === effectPhase) {
     const verified = object(await adapter.verifyTerminal({ plan, journal }),
       "terminal verification");
-    const effectDigest = waitingBridgeEffectDigest(journal.state.receipts[effectPhase]);
+    const effectReceipt = journal.state.receipts[effectPhase];
+    const effectDigest = waitingBridgeEffectDigest(effectReceipt);
     if (verified.effectDigest !== effectDigest) {
       throw new Error("Fresh terminal verification does not join the sealed cloud effect.");
+    }
+    const verifiedAdvanceReceipt = verified.protectedAdvanceReceipt;
+    const sealedAdvanceReceipt = effectReceipt.protectedAdvanceReceipt;
+    if ((verifiedAdvanceReceipt === undefined) !== (sealedAdvanceReceipt === undefined)) {
+      throw new Error(
+        "Fresh terminal verification does not preserve protected-advance receipt presence.",
+      );
+    }
+    if (sealedAdvanceReceipt !== undefined
+      && canonicalJson(verifiedAdvanceReceipt) !== canonicalJson(sealedAdvanceReceipt)) {
+      throw new Error(
+        "Fresh terminal verification does not join the sealed protected-advance receipt.",
+      );
     }
     journal = await advance(adapter, journal, "verified", {
       operationKey: waitingBridgeOperationKey(plan, "verified"),
@@ -120,6 +134,8 @@ async function execute(adapter, initial) {
         "terminal relevant digest"),
       preservationDigest: requireDigest(verified.preservationDigest,
         "terminal preservation digest"),
+      ...(sealedAdvanceReceipt !== undefined
+        ? { protectedAdvanceReceipt: sealedAdvanceReceipt } : {}),
     });
   }
 

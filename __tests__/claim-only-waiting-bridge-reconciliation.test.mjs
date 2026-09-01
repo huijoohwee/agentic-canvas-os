@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   BRIDGE_RETIREMENT_OPERATION, SUCCESSOR_PROMOTION_OPERATION,
-  bridgeRetirementRequestDigest, buildBridgeRetirementPlan,
-  buildExistingSuccessorPromotionPlan,
+  advanceWaitingBridgeJournal, bridgeRetirementRequestDigest,
+  buildBridgeRetirementPlan, buildExistingSuccessorPromotionPlan,
+  buildWaitingBridgeResult, createWaitingBridgeJournal,
+  startWaitingBridgeJournal,
   successorPromotionEntryRequestDigest, waitingBridgeEffectDigest,
   waitingBridgeOperationKey, waitingBridgePreservationDigest,
   waitingBridgeTerminalRelevantDigest,
@@ -22,6 +24,11 @@ import { canonicalJson, digestValue }
   from "../scripts/cloud-collaboration-primitives.mjs";
 import { claimOnlyOperationReceiptForEntry as operationReceipt }
   from "../scripts/claim-only-partial-start-retirement-store.mjs";
+import {
+  buildWaitingBridgeProtectedAdvancePlan,
+  buildWaitingBridgeProtectedAdvanceReceipt,
+  captureWaitingBridgeProtectedAdvance,
+} from "../scripts/claim-only-waiting-bridge-protected-advance.mjs";
 
 const D = value => digestValue(String(value));
 const SHA = character => character.repeat(40);
@@ -227,6 +234,56 @@ test("response loss after either mutation adopts exact history with a stable res
   assert.equal(promoted.resultDigest, directPromotion.resultDigest);
   assert.equal(lost.journal(SUCCESSOR_PROMOTION_OPERATION)
     .state.receipts["successor-promoted"].disposition, "adopted-response-loss");
+});
+
+test("protected-advance receipt survives retirement completion and Phase A", () => {
+  const fixture = protectedAdvanceIntegrationFixture();
+  const values = {
+    ...bridgeValues(fixture.retirementPlan, true),
+    protectedAdvanceReceipt: fixture.receipt,
+  };
+  values.effectDigest = waitingBridgeEffectDigest(values);
+  let journal = advanceWaitingBridgeJournal(
+    fixture.journal, "bridge-retired", values,
+  );
+  assert.deepEqual(
+    journal.state.receipts["bridge-retired"].protectedAdvanceReceipt,
+    fixture.receipt,
+  );
+  assert.throws(() => advanceWaitingBridgeJournal(journal, "verified", {
+    operationKey: waitingBridgeOperationKey(fixture.retirementPlan, "verified"),
+    effectDigest: values.effectDigest,
+    terminalRelevantDigest: waitingBridgeTerminalRelevantDigest(
+      fixture.retirementPlan, values,
+    ),
+    preservationDigest: fixture.receipt.currentPreservationDigest,
+  }), /protected-advance presence/u);
+
+  journal = advanceWaitingBridgeJournal(journal, "verified", {
+    operationKey: waitingBridgeOperationKey(fixture.retirementPlan, "verified"),
+    effectDigest: values.effectDigest,
+    terminalRelevantDigest: waitingBridgeTerminalRelevantDigest(
+      fixture.retirementPlan, values,
+    ),
+    preservationDigest: fixture.receipt.currentPreservationDigest,
+    protectedAdvanceReceipt: fixture.receipt,
+  });
+  const result = buildWaitingBridgeResult(journal);
+  assert.equal(result.preservationDigest, fixture.receipt.currentPreservationDigest);
+  assert.deepEqual(result.protectedAdvanceReceipt, fixture.receipt);
+  journal = advanceWaitingBridgeJournal(journal, "complete", {
+    operationKey: waitingBridgeOperationKey(fixture.retirementPlan, "complete"),
+    result,
+  });
+  const completed = journal.state.receipts.complete.result;
+  const evidence = protectedPromotionEvidence(fixture, completed);
+  const promotionPlan = buildExistingSuccessorPromotionPlan(evidence);
+  assert.deepEqual(
+    promotionPlan.evidence.phaseA.protectedAdvanceReceipt, fixture.receipt,
+  );
+  assert.throws(() => buildExistingSuccessorPromotionPlan(mutate(evidence, value => {
+    delete value.phaseA.protectedAdvanceReceipt;
+  })), /protected-advance receipt presence\/join/u);
 });
 
 test("promotion rejects priority, Phase A, and semantic request drift", async () => {
@@ -440,6 +497,132 @@ test("direct-successor topology admits only exact unassociated retired siblings"
     providerAssociations: claimId => claimId === retired.claim.claimId ? [{}] : [],
   }), /terminal direct-successor association/u);
 });
+
+function protectedAdvanceIntegrationFixture() {
+  const retirementPlan = buildBridgeRetirementPlan(retirementEvidence());
+  let journal = startWaitingBridgeJournal(
+    createWaitingBridgeJournal(retirementPlan), retirementPlan.exactAuthorization,
+  );
+  journal = advanceWaitingBridgeJournal(journal, "prepared", {
+    operationKey: waitingBridgeOperationKey(retirementPlan, "prepared"),
+    stableFrameDigest: D("protected-advance-stable-frame"),
+  });
+  const effectOperationKey = waitingBridgeOperationKey(
+    retirementPlan, "bridge-retired",
+  );
+  const requestDigest = bridgeRetirementRequestDigest(retirementPlan);
+  const intent = {
+    operationKey: waitingBridgeOperationKey(retirementPlan, "retirement-intent"),
+    effectOperationKey,
+    claimId: BRIDGE,
+    expectedFenceRevision: retirementPlan.evidence.bridge.claimDigest,
+    expectedTransitionCounter: 1,
+    requestDigest,
+  };
+  journal = advanceWaitingBridgeJournal(journal, "retirement-intent", {
+    ...intent,
+    intentDigest: digestValue({
+      operationKey: effectOperationKey,
+      claimId: BRIDGE,
+      expectedFenceRevision: intent.expectedFenceRevision,
+      expectedTransitionCounter: 1,
+      requestDigest,
+    }),
+  });
+  const evidence = retirementPlan.evidence;
+  const currentFrame = {
+    schema: "agentic-claim-only-waiting-bridge-protected-advance-frame/v1",
+    ...Object.fromEntries([
+      "repository", "anchor", "bridge", "successor", "anchorEntry", "bridgeEntry",
+      "successorEntry", "anchorLineageCount", "successorLineageCount", "associations",
+      "directSuccessorTopology", "topology",
+    ].map(key => [key, structuredClone(evidence[key])])),
+    controller: {
+      ...structuredClone(evidence.controller), headSha: SHA("b"),
+      originMainSha: SHA("b"), remoteMainSha: SHA("b"),
+      runtimeDigest: D("protected-advance-current-runtime"),
+    },
+    canonical: { ...structuredClone(evidence.canonical), mainSha: SHA("b") },
+    bridgeLineageCount: evidence.bridgeLineageCount + 1,
+    preservation: {
+      gitRefsDigest: D("protected-current-refs"),
+      gitWorktreesDigest: D("protected-current-worktrees"),
+      registryDigest: D("protected-current-registry"),
+      providerDigest: D("protected-current-provider"),
+      associationDigest: digestValue(evidence.associations),
+    },
+    bridgeTerminalEntry: phaseARetirementEntry(retirementPlan),
+  };
+  const protectedAdvance = captureWaitingBridgeProtectedAdvance({
+    journal,
+    currentFrame,
+    gitText: argumentsList => {
+      if (argumentsList[0] === "merge-base" && argumentsList[1] === "--is-ancestor") {
+        return "";
+      }
+      if (argumentsList[0] === "merge-base") return `${SHA("a")}\n`;
+      if (argumentsList[0] === "rev-parse") {
+        return argumentsList[1].startsWith(SHA("a")) ? SHA("c") : SHA("d");
+      }
+      if (argumentsList[0] === "diff") return "scripts/controller-repair.mjs\0";
+      throw new Error(`Unexpected protected Git read: ${argumentsList.join(" ")}`);
+    },
+  });
+  const protectedPlan = buildWaitingBridgeProtectedAdvancePlan({
+    journal, currentFrame, protectedAdvance,
+  });
+  const receipt = buildWaitingBridgeProtectedAdvanceReceipt({
+    plan: protectedPlan,
+    authorization: protectedPlan.exactAuthorization,
+    currentFrame,
+  });
+  return { retirementPlan, journal, currentFrame, receipt };
+}
+
+function protectedPromotionEvidence(fixture, result) {
+  const evidence = structuredClone(fixture.retirementPlan.evidence);
+  return {
+    ...evidence,
+    schema: "agentic-claim-only-existing-successor-promotion-evidence/v1",
+    observedAt: T4,
+    repository: fixture.currentFrame.repository,
+    controller: fixture.currentFrame.controller,
+    canonical: fixture.currentFrame.canonical,
+    anchor: fixture.currentFrame.anchor,
+    bridge: fixture.currentFrame.bridge,
+    successor: fixture.currentFrame.successor,
+    anchorEntry: fixture.currentFrame.anchorEntry,
+    bridgeEntry: fixture.currentFrame.bridgeEntry,
+    successorEntry: fixture.currentFrame.successorEntry,
+    anchorLineageCount: fixture.currentFrame.anchorLineageCount,
+    bridgeLineageCount: fixture.currentFrame.bridgeLineageCount,
+    successorLineageCount: fixture.currentFrame.successorLineageCount,
+    associations: fixture.currentFrame.associations,
+    preservation: fixture.currentFrame.preservation,
+    directSuccessorTopology: fixture.currentFrame.directSuccessorTopology,
+    topology: fixture.currentFrame.topology,
+    bridgeCurrentCount: 0,
+    ttlSeconds: 1_800,
+    priority: {
+      reservedOverlapClaimIds: [],
+      eligibleWaiting: [{
+        claimId: SUCCESSOR,
+        eligibleSince: evidence.successor.eligibleSince,
+        ledgerSequence: evidence.successorEntry.sequence,
+      }],
+      selectedClaimId: SUCCESSOR,
+      successorLedgerSequence: evidence.successorEntry.sequence,
+    },
+    phaseA: {
+      plan: fixture.retirementPlan,
+      result,
+      resultDigest: result.resultDigest,
+      bridgeRetirementEntry: fixture.currentFrame.bridgeTerminalEntry,
+      effectDigest: result.effectDigest,
+      protectedAdvanceReceipt: fixture.receipt,
+    },
+  };
+}
 
 function harness({ loseRetirementResponse = false } = {}) {
   const journals = new Map();

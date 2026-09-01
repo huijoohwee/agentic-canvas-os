@@ -13,7 +13,6 @@ runtime_claim: "bounded deterministic monitoring can wake an independent control
 runtime_proof: "__tests__/lifecycle-monitor-contract.test.mjs; __tests__/lifecycle-monitor-controller.test.mjs; __tests__/lifecycle-monitor-cli.test.mjs"
 publish_policy: "protected green main authorizes Dev integration only; Production requires exact-candidate human authorization"
 source_docs:
-  - "ADAPTIVE-CLAIM-RECOVERY.md"
   - "CANONICAL-LIFECYCLE.md"
   - "HARNESS-CONTRACTS.md"
 ---

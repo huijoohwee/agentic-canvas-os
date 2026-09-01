@@ -168,8 +168,8 @@ Success must emit `completedBranch`, `pullRequestUrl`, `mergeCommitSha`,
 
 Restart or reload the local application from `mainSha` and rerun the original
 browser failure path. Git evidence without matching runtime identity and browser
-acceptance is integration evidence, not task completion. Use `device:park` only
-for an explicitly paused or blocked task. Do not mutate Prod or Cloudflare
+acceptance is integration evidence, not task completion. Preserve an explicitly
+paused or blocked ADLC lane without changing its identity. Do not mutate Prod or Cloudflare
 without separate operator authorization.
 
 ### Immutable Pair Manifest Compliance
@@ -428,19 +428,28 @@ Choose the subset matching touched owners. Do not run broader suites unless the 
 
 ## Agentic OS VCC Checks
 
-Run the focused writer-coordination proof before any broader docs or build check:
+Run the focused ADLC consumer proof before broader checks:
 
 ```sh
-node --test __tests__/writer-lease-lib.test.mjs __tests__/repository-guards.test.mjs __tests__/device-branch-lib.test.mjs
+node --test __tests__/adlc-compatibility.test.mjs __tests__/adlc-ci-contract.test.mjs __tests__/repository-guards.test.mjs
+npm run authored-line-budget:check
+npm run frontmatter-runtime:check
+npm run frontmatter-dictionary:check
+npm run dictionary-catalog:check
 ```
-The proof must show the protected remote collaboration ledger admits at most one same-parent transition, rejects overlapping normalized writes, advances epochs after server-time expiry, replays exact idempotency keys, binds immutable repository/actor/PR/head identity, updates its ref only with `force: false`, and treats local leases and pull-request markers as projections. `npm run collaboration:cloud:check` proves the reducer and GitHub adapter without claiming live authority; live readiness additionally requires the ledger ref, deletion/non-fast-forward ruleset, app-bound `cloud-collaboration` check, and claim/verify/release receipts. `node --test __tests__/worktree-lifecycle.test.mjs __tests__/device-integrate.test.mjs` must still prove attributed post-baseline untracked paths remain in their physical owning lane while canonical or unattributed dirt fails closed, exact completed worktree removal yields an unchanged `agentic-worktree-cleanup-result/v1` receipt whose Git common directory, repository-derived container roots, preserved branch, and recomputed operation identity agree, and nonrecursive managed-parent cleanup identity-pins and immediately revalidates derived directories under the cooperative registry lock, retains observed drift, and claims no atomic immunity after its final check. The consumer permits one same-command retry only for absent or unparseable synchronous child stdout; thrown, nonzero, and parseable-invalid results are not retried, and this is neither top-level lost-final-stdout recovery nor canonical-root device replay. `npm run worktree:lifecycle:cleanup-empty -- --repository="[canonical repository root]"` is a one-time orphan-container maintenance command, not provider, integration, branch, or deployment authority.
+
+The proof must keep branch/pull-request identity separate from local observation,
+require exact integration proof before exact clean retirement, and preserve every
+dirty or untracked byte. `budgets` is the protected repository-contract context;
+the old policy-runtime context is only a temporary no-gap bridge while remote
+protection migrates.
 
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
 | Automated collaboration and runtime identity | `npm run collaboration:gate` exits zero after focused checks and isolated owner/guest/worker proof; the result reports at least two active peers, remote document propagation, two distinct runtime identities, one common digest, identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs, and `fresh` hydration within two attempts. Physical devices and JSON exports are not required. |
 | Canonical local runtime | `turn:end` reports `ready` only when clean exact protected `main` revisions, private-token process ownership, fixed Apex/storage listeners, and direct plus proxied HTTP probes agree; `runtime:local:stop` refuses unrelated processes. |
-| Cloud writer coordination and Agentic SDLC conformance | `npm run collaboration:cloud:check` proves canonical encoding, bounded history, normalized overlap, server-time expiry, idempotent replay, non-forced CAS, bootstrap/race recovery, exact actor/repository/PR/head binding, and secret/path-safe public output; live runtime readiness separately joins the protected ledger ref, ruleset, app-bound check, and claim/verify/release receipts. Focused local writer-lease and worktree-lifecycle tests remain projection and authored-state preservation proof. `npm run agentic-sdlc:check` proves the canonical run evaluator; `npm run agentic-sdlc:source:check` binds the protected guideline revision/digests/Rule IDs, and `npm run agentic-sdlc:verify -- --run <explicit-run.json>` exits zero only for a runtime-ready artifact. Every command keeps the Deploy Boundary closed. |
+| ADLC lifecycle | `npm run doctor`, `npm run status`, and the focused ADLC compatibility tests prove observational state, exact integration proof, and exact clean retirement without granting Production or deployment authority. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |

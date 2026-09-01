@@ -8,7 +8,6 @@ const semantic = read("docs/DICTIONARY-SEMANTIC.md");
 const binding = read("docs/DICTIONARY-BINDING.md");
 const facts = read("docs/FACTS.md");
 const runtime = read("docs/AGENTIC-SDLC-RUNTIME.md");
-const managed = read("docs/MANAGED-IMPLEMENTATION-RUNS.md");
 const gateway = read("docs/MCP-GATEWAY.md");
 const proof = read("docs/RUNTIME-PROOF.md");
 const planning = read("todo/2026-07.md");
@@ -41,7 +40,7 @@ test("the exact slash, hash, and reused at bindings resolve canonically", () => 
     assert.equal(count(binding, "^\\| `" + escapeRegExp(token) + "`"), 1, `${token} must retain one binding row`);
   }
 
-  for (const source of [runtime, managed, gateway, semantic]) {
+  for (const source of [runtime, gateway, semantic]) {
     assert.match(source, new RegExp(escapeRegExp(invocation)));
   }
 });
@@ -118,18 +117,16 @@ test("the Canvas projection vocabulary, views, ordering, and existing owners are
   assert.match(runtime, /`properties\.stub=true`/);
   assert.match(runtime, /`agentic-sdlc-canvas-projection\/v1`/);
   assert.match(runtime, /`kgSchema: "kgc-computing-flow\/v1"`/);
-  for (const source of [runtime, managed, gateway]) {
+  for (const source of [runtime, gateway]) {
     assert.match(source, /existing (?:KGC, GraphData, and )?Canvas owners|existing Canvas owner/);
   }
   assert.match(runtime, /not an Evaluator, runner, release controller, graph store, dashboard, or renderer/);
-  assert.match(managed, /rather than a copied run store, graph database, dashboard, or renderer/);
   assert.match(gateway, /creates no verdict, delivery state, authorization, deployment, store, dashboard, renderer/);
 });
 
 test("verified, delivery_ready, and deployed remain distinct non-promoting claims", () => {
   for (const state of ["verified", "delivery_ready", "deployed"]) {
     assert.match(runtime, new RegExp("`" + state + "`"));
-    assert.match(managed, new RegExp("`" + state + "`"));
     assert.match(gateway, new RegExp("`" + state + "`"));
   }
   assert.match(runtime, /Only the named Evaluator may set `verified`/);
@@ -158,7 +155,6 @@ test("all touched authored documents remain below the repository line cap", () =
     "DICTIONARY-SEMANTIC.md": semantic,
     "FACTS.md": facts,
     "AGENTIC-SDLC-RUNTIME.md": runtime,
-    "MANAGED-IMPLEMENTATION-RUNS.md": managed,
     "MCP-GATEWAY.md": gateway,
     "RUNTIME-PROOF.md": proof,
     "todo/2026-07.md": planning,

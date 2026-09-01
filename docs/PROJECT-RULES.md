@@ -51,28 +51,15 @@ document can express the same contract.
 
 ## Agentic Orchestration Layer
 
-- Repository-specific orchestration such as `device:start`, `device:review`,
-  `device:park`, `device:integrate`, leases, and runtime receipts is additive
-  only. It may coordinate work, but it never replaces GitHub branch protection
-  or pull-request authority.
-- In the root-source `agentic-canvas-os` repository, fresh `device:start`
-  claims must originate from the provisioned scoped-lane admission path with
-  current cloud authority. Do not allow new local-only task lanes there; fail
-  closed before lease mutation and route startup through the repository-owned
-  admission flow instead. A pre-existing local-only root-source lane may enter
-  cloud authority only through the repository-owned `device:review`
-  re-admission path that derives its exact committed write scope.
-- Repository-owned diagnostics must surface expiring lane authority, branch or
-  projection drift, and incomplete pull-request projection repair before those
-  lanes become unrecoverable residue. Prefer a shared ACOS doctor/audit command
-  over ad hoc local inspection.
-- Orchestration must not downgrade or hide overlapping remote ownership. If the
-  cloud contract reports an overlapping live claim, local automation stops and
-  surfaces the upstream conflict instead of patching around it in one device,
-  IDE, or session.
-- Orchestration must normalize declared scope ownership to actual publish paths.
-  It may not treat two lanes as independent when they can still publish
-  different revisions for the same path.
+- `agentic-os` ADLC is the single lifecycle owner. Start with `npm run lane --
+  <scope>`, publish with `npm run land`, observe with `npm run status`, and retire
+  only integration-proven clean lanes with `npm run reap -- --apply`.
+- The remotely addressable branch and pull request are the shared claim. Local
+  records and compatibility shims are observations; they never replace GitHub
+  branch protection, exact required checks, or pull-request authority.
+- Diagnostics surface branch, worktree, provider, check, and integration drift.
+  Dirty or ambiguous bytes are preserved and named instead of adopted, hidden,
+  restacked for ordering, or converted into inferred authority.
 - Local hooks and orchestration should distinguish commit-time authoring from
   protected publication. If work appears on canonical `main`, preserve the
   bytes and route them into a task lane; do not emit a generic "trying to
@@ -169,7 +156,9 @@ that bind every session and tool.
 ## Post-Task
 
 - Update cross-repo and API docs when the change affects them.
-- End every implementation turn in one of two repository-owned states only: completed lane or worktree payload integrated into protected `origin/main` with the canonical checkout parked cleanly there, or incomplete work preserved through `npm run device:park` with canonical `main` still clean and exact.
+- End every implementation turn with completed work integrated and exactly
+  retired, or incomplete work preserved in its existing ADLC lane with canonical
+  `main` untouched.
 - Never report a task complete while its fix is dirty, stashed, branch-only, in
   an open pull request, absent from `origin/main`, or unverified on the local
   runtime started from that exact Dev `main` SHA.
@@ -185,8 +174,7 @@ that bind every session and tool.
   and storage listeners, and all HTTP probes. Foreign parallel residue may be
   tolerated only when it is explicitly classified as non-blocking. The command
   must fail closed without stopping an unrelated listener.
-- Use `npm run device:park` only for work explicitly reported as paused or
-  blocked. Parking preserves work but never satisfies completion.
+- A preserved open lane never satisfies completion.
 - Audit the task worktree at every chat, session, or thread end. Remove it only
   through `worktree:lifecycle:cleanup` after the runtime classifies it as clean,
   detached at exact `origin/main`, and explicitly completed. Retain active,

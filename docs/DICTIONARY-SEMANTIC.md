@@ -21,7 +21,6 @@ source_docs:
   - "AGENT-TEAM.md"
   - "AGENTIC-SDLC-RUNTIME.md"
   - "MANAGED-IMPLEMENTATION-RUNS.md"
-  - "CLOUD-COLLABORATION.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
   - "docs/documents/git-guidelines.md"
@@ -153,7 +152,6 @@ dictionary_entries:
   - "#profile-handoff"
   - "#worker-process"
   - "#multi-agent-collaboration"
-  - "#cloud-collaboration"
   - "#coordination-scheduler"
   - "#goal-completion"
   - "#managed-implementation-run"
@@ -326,7 +324,6 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#profile-handoff` | Explicit row-level transfer between named agent profiles. | One worker pauses, delegates, resumes, or requests review from another profile. | Handoff row names source profile, target profile, context refs, blockers, acceptance, and resume state. |
 | `#worker-process` | Full OS process worker with its own identity and runtime state. | Work should run outside fragile in-process subagent swarms. | Worker profile, command, cwd, proof, and cleanup boundary are explicit. |
 | `#multi-agent-collaboration` | Durable collaboration through shared rows rather than transient subagents. | Several named profiles coordinate through board state. | Every task and handoff is readable/writable as rows, with no hidden process memory as SSOT. |
-| `#cloud-collaboration` | Protected remote claim authority for concurrent browser, cloud-agent, mobile-browser, and intermittently connected local authoring surfaces. | More than one device or session may publish work to shared source-control state. | One append-only remote ledger, normalized disjoint write sets, non-forced compare-and-swap, server-time expiry, idempotent receipts, protected exact-head verification, and no local or queue-derived lock authority are proven. |
 | `#managed-implementation-run` | Durable work-item-oriented autonomous implementation with isolated source mutation and team-visible control. | A project task should proceed through configured execution, bounded verification, pause/cancel/retry/review controls, and evidence without continuous agent supervision. | One versioned run ledger, safe fenced task worktree, configured runner, bounded attempts and time, exact review head, and `delivery_ready` default are proven; ACOS `review_ready` is distinct and automatic merge/deploy remain absent. |
 | `#agentic-sdlc-observability` | Deterministic read-only projection of one immutable Agentic SDLC ledger into end-to-end execution, evidence, budget, gate, checkpoint, and release-receipt graph context. | `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` requests a local observation of one exact run and ledger revision. | Exact receipt schema and digest, stable node and edge identities, source-backed GraphData and KGC Markdown, existing Canvas ownership, typed separation of `verified`, `delivery_ready`, and `deployed`, cache identity, zero model/network/token/cost evidence, and a closed Dev-only deploy boundary are explicit. |
 | `#application-composition` | Exact versioned component and interface composition for agent and LLM applications. | An application joins agent, model, tool, workflow, memory, guardrail, or integration components without absorbing their runtimes. | Exact source and component revisions, interface and schema digests, negotiated capabilities, runtime owners, one immutable plan digest, a deterministic dependency DAG, and explicit non-mutating migration diagnostics are present before execution. |

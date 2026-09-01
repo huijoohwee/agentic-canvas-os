@@ -25,6 +25,7 @@ import {
 import { normalizeDeclaredWriteScopeManifest } from "./scoped-lane-admission-lib.mjs";
 import { assertAdmissionMutationAuthority } from "./scoped-lane-admission-state.mjs";
 import { verifyAdmissionCloudAuthority } from "./scoped-lane-cloud-authority.mjs";
+import { withCanonicalUntrackedRelocationRegistryIntent } from "./canonical-untracked-relocation-registry.mjs";
 import { withRecoverableGitMutationFence } from "./collaboration-gate.mjs";
 import { authorizeTaskBoundLeaseMutation } from "./task-bound-lane-authority-store.mjs";
 import { createWriterLeaseStore } from "./writer-lease-lib.mjs";
@@ -34,25 +35,26 @@ export function planCanonicalUntrackedRelocation(input, dependencies = {}) { ret
 export async function executeCanonicalUntrackedRelocation(input, dependencies = {}) {
   const plan = assertCanonicalUntrackedRelocationAuthorization(
     { plan: input.plan, authorization: input.authorization });
-  const withIntent = dependencies.withRelocationMutationIntent;
-  if (typeof withIntent !== "function") {
-    throw new Error("Canonical-untracked relocation execution requires the two-sided registry mutation-intent owner.");
+  if (!dependencies.withRelocationMutationIntent && !input.sessionId) {
+    throw new Error("Canonical-untracked relocation execution requires the two-sided registry mutation-intent owner input.");
   }
-  return withIntent({ plan, input,
-    action: () => executeRelocationWithinIntent({ input, plan, dependencies }) });
+  const withIntent = dependencies.withRelocationMutationIntent || withCanonicalUntrackedRelocationRegistryIntent;
+  return executeRelocationWithinIntent({ input, plan, dependencies, withIntent });
 }
-function executeRelocationWithinIntent({ input, plan, dependencies }) {
+function executeRelocationWithinIntent({ input, plan, dependencies, withIntent }) {
   const source = realDirectory(plan.evidence.source.worktree, "source worktree");
   if (commonGitDirectory(source) !== plan.evidence.source.commonDirectory) {
     throw new Error("Canonical-untracked relocation source common directory drifted.");
   }
-  return withCanonicalUntrackedRelocationLock({
-    plan,
+  return withCanonicalUntrackedRelocationLock({ plan,
     now: () => now(dependencies),
-    action: async () => executeLockedRelocation({ input, plan, dependencies }),
+    action: async () => withIntent({ plan, input,
+      preflight: () => inspectExecutionState({ ...input, plan }, dependencies),
+      action: ({ registry } = {}) => executeLockedRelocation(
+        { input, plan, dependencies, heldRegistry: registry }) }),
   });
 }
-function executeLockedRelocation({ input, plan, dependencies }) {
+function executeLockedRelocation({ input, plan, dependencies, heldRegistry }) {
   const replay = inspectReplayState({ ...input, plan }, dependencies);
   const existingReceipt = readCanonicalUntrackedRelocationReceipt(plan);
   if (existingReceipt) {
@@ -83,7 +85,7 @@ function executeLockedRelocation({ input, plan, dependencies }) {
     recoveryDirectory: replay.recovery.recoveryDirectory });
   const inspected = inspectExecutionState({ ...input, plan }, dependencies);
   requireCanonicalUntrackedRelocationEffectDevices({ plan, entries: inspected.entries });
-  return inspected.target.leaseStore.withRegistryLock(registry => withGitMutationFence(plan, () => {
+  const execute = registry => withGitMutationFence(plan, () => {
     const revalidate = () => {
       assertLockedTargetAuthority({ registry, inspected, plan, evaluatedAt: now(dependencies) });
       assertCanonicalUntrackedRelocationLiveRepositoryState({ plan, entries: inspected.entries });
@@ -119,9 +121,9 @@ function executeLockedRelocation({ input, plan, dependencies }) {
       throw new Error("Relocation transaction content digest drifted.");
     }
     return publishReceipt({ plan, entries: inspected.entries, effectIntent });
-  }));
+  });
+  return heldRegistry ? execute(heldRegistry) : inspected.target.leaseStore.withRegistryLock(execute);
 }
-
 function publishReceipt({ plan, entries, effectIntent }) {
   if (!effectIntent?.targetInstallAttempt || !effectIntent?.sourceQuarantineAttempt) {
     throw new Error("Terminal relocation lacks exact per-effect authority lineage.");
@@ -138,7 +140,6 @@ function publishReceipt({ plan, entries, effectIntent }) {
   });
   return writeCanonicalUntrackedRelocationReceipt(plan, receipt);
 }
-
 function assertLockedTargetAuthority({ registry, inspected, plan, evaluatedAt }) {
   const lease = registry?.leases?.[plan.evidence.target.branch];
   const instant = evaluatedAt.getTime();
@@ -595,5 +596,4 @@ function realDirectory(value, label) {
   }
   return realpathSync(target);
 }
-
 function now(dependencies) { return dependencies.now ? dependencies.now() : new Date(); }

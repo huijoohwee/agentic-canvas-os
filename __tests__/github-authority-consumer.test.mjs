@@ -16,8 +16,8 @@ import * as githubTransitionPolicy from 'agentic-os/adapters/github-transition-p
 import { createEffectPlan, encodeEffectPlan } from 'agentic-os/records/completion'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/5c16f240835978df99ccb464def70d8a3fe1f296'
-const INTEGRITY = 'sha512-6iFaVDqLBG/Rq6UloL6/11MqOEhoMCLbeq+TA7/W8XNiuAlReOpW0q/WcchXPme8PUsv+jSdbx1Ide289/LDQw=='
+const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/d3230b5ac8a9e251cbb9f4d30a401d3e7c532c03'
+const INTEGRITY = 'sha512-hnuT1JOAzhkUAfc030dPJjTwAw+aDf34V6RFAtueD+ksuQudYokbz2H6iMeUleERRdAp6J6bA1B2cCYKnQVQmg=='
 const read = relativePath => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
 const digest = relativePath => createHash('sha256')
   .update(fs.readFileSync(path.join(ROOT, relativePath)))

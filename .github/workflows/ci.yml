@@ -149,15 +149,3 @@ jobs:
           npm run frontmatter-runtime:check
           npm run frontmatter-dictionary:check
           npm run dictionary-catalog:check
-
-  conformance:
-    name: agentic-sdlc-policy-runtime
-    needs: budgets
-    if: ${{ always() }}
-    runs-on: ubuntu-slim
-    timeout-minutes: 5
-    steps:
-      - name: Bridge the legacy required context to ADLC budgets
-        env:
-          BUDGETS_RESULT: ${{ needs.budgets.result }}
-        run: test "$BUDGETS_RESULT" = "success"

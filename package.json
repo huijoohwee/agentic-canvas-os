@@ -81,6 +81,7 @@
     "status": "agentic-os status",
     "reap": "agentic-os reap",
     "queue:show": "agentic-os queue show",
+    "autonomy-class": "agentic-os autonomy-class",
     "device:complete": "node ./scripts/device-branch.mjs complete",
     "runtime:local:ensure": "node ./scripts/local-runtime.mjs ensure",
     "runtime:local:status": "node ./scripts/local-runtime.mjs status",
@@ -122,7 +123,7 @@
     "cloudflare:dev": "npm run web:build && wrangler dev"
   },
   "devDependencies": {
-    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/8345c483300c851b55347cbfc2a11d52c717a102",
+    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/6d9be05e2b06b8455e9e8d166f7cd92f084e8c19",
     "ajv": "8.20.0",
     "fast-check": "3.23.2",
     "wrangler": "4.120.0"

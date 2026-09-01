@@ -440,9 +440,8 @@ npm run dictionary-catalog:check
 
 The proof must keep branch/pull-request identity separate from local observation,
 require exact integration proof before exact clean retirement, and preserve every
-dirty or untracked byte. `budgets` is the protected repository-contract context;
-the old policy-runtime context is only a temporary no-gap bridge while remote
-protection migrates.
+dirty or untracked byte. `budgets` is the sole protected bounded
+repository-contract context; the former bridge is retired and absent.
 
 | Capability | Focused check |
 |---|---|

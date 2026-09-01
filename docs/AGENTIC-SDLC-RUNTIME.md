@@ -37,7 +37,7 @@ This runtime ends in the `authoring` lane. A passing result does not merge, mirr
 
 ## Lifecycle Policy-Runtime Boundary
 
-The pinned `agentic-os` ADLC harness owns admission through retirement for this repository. The protected `budgets` context proves the bounded repository contracts; any temporary `agentic-sdlc-policy-runtime` context is only a no-gap bridge to that result and grants no separate lifecycle authority.
+The pinned `agentic-os` ADLC harness owns admission through retirement for this repository. The protected `budgets` context is the sole bounded repository-contract gate; the former bridge is retired and absent and grants no separate lifecycle authority.
 
 Multi-device concurrent cloud collaboration semantics are owned only by that
 pinned source policy. Repository-local device scripts, browser flows, review

@@ -1,4 +1,8 @@
-import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import {
+  digestValue,
+  normalizeWriteSet,
+  writeSetsOverlap,
+} from "./cloud-collaboration-primitives.mjs";
 import { mutateWriterLeaseRegistry, writerLeaseDigest } from "./writer-lease-registry-cas.mjs";
 
 export const PLAN_SCHEMA = "agentic-expired-committed-scope-expansion-plan/v1";
@@ -69,8 +73,11 @@ export function buildExpiredCommittedScopeExpansionPlan({
     targetDeclaredWriteSet: target.declaredWriteSet,
     targetWriteSetDigest: target.writeSetDigest,
     targetManifestDigest: target.manifestDigest,
-    protectedMainIncorporationProof:
-      normalizeProtectedMainIncorporationProof(protectedMainIncorporationProof, lease),
+    protectedMainIncorporationProof: normalizeProtectedMainIncorporationProof(
+      protectedMainIncorporationProof,
+      lease,
+      target.writeSetDigest,
+    ),
     targetCloudLeaseEpoch: 1,
   };
   return Object.freeze({ ...core, planDigest: digestValue(core) });
@@ -119,7 +126,7 @@ export function normalizeExpiredCommittedScopeExpansionPlan(value) {
       normalizeProtectedMainIncorporationProof(value.protectedMainIncorporationProof, {
         baseSha: value.sourceBaseSha,
         fenceSha: value.sourceFenceSha,
-      }),
+      }, value.targetWriteSetDigest),
     targetCloudLeaseEpoch: positiveInteger(value.targetCloudLeaseEpoch, "target cloud epoch"),
   };
   if (core.targetCloudLeaseEpoch !== 1
@@ -228,7 +235,7 @@ export function disposeSupersededScopeExpansionIntent({ registry, lease, plan })
   return intents;
 }
 
-function normalizeProtectedMainIncorporationProof(value, lease) {
+function normalizeProtectedMainIncorporationProof(value, lease, targetWriteSetDigest) {
   const core = {
     schema: value?.schema,
     sourceBaseSha: requiredSha(value?.sourceBaseSha, "proof source base"),
@@ -237,19 +244,37 @@ function normalizeProtectedMainIncorporationProof(value, lease) {
     fenceSha: requiredSha(value?.fenceSha, "proof fence"),
     fenceTreeSha: requiredSha(value?.fenceTreeSha, "proof fence tree"),
     sourceBaseAncestorOfProtectedMain: value?.sourceBaseAncestorOfProtectedMain,
+    sourceBaseAncestorOfFence: value?.sourceBaseAncestorOfFence,
     protectedMainAncestorOfFence: value?.protectedMainAncestorOfFence,
     protectedMainChangedPaths: uniquePaths(value?.protectedMainChangedPaths),
     protectedMainChangedPathsDigest: requiredDigest(
       value?.protectedMainChangedPathsDigest,
       "proof changed-path digest",
     ),
+    ...(value?.schema === "agentic-protected-main-disjoint-fence-advance/v1" ? {
+      targetDeclaredWriteSet: normalizeWriteSet(value?.targetDeclaredWriteSet),
+      targetWriteSetDigest: requiredDigest(value?.targetWriteSetDigest, "proof target write-set digest"),
+      overlap: value?.overlap,
+    } : {}),
   };
-  if (core.schema !== "agentic-protected-main-incorporated-fence/v1"
+  const incorporated = core.schema === "agentic-protected-main-incorporated-fence/v1";
+  const disjointAdvance = core.schema === "agentic-protected-main-disjoint-fence-advance/v1";
+  if ((!incorporated && !disjointAdvance)
     || core.sourceBaseSha !== lease.baseSha || core.fenceSha !== lease.fenceSha
     || core.sourceBaseAncestorOfProtectedMain !== true
-    || core.protectedMainAncestorOfFence !== true
+    || core.sourceBaseAncestorOfFence !== true
+    || (incorporated && core.protectedMainAncestorOfFence !== true)
+    || (disjointAdvance && core.protectedMainAncestorOfFence !== false)
     || core.protectedMainChangedPaths.length === 0
     || core.protectedMainChangedPathsDigest !== digestValue(core.protectedMainChangedPaths)
+    || (disjointAdvance && (
+      core.targetWriteSetDigest !== targetWriteSetDigest
+      || core.targetWriteSetDigest !== digestValue(core.targetDeclaredWriteSet)
+      || core.overlap !== "none"
+      || core.protectedMainChangedPaths.some(candidate => writeSetsOverlap(
+        [`path:${candidate}`], core.targetDeclaredWriteSet,
+      ))
+    ))
     || value.evidenceDigest !== digestValue(core)) {
     throw new Error("Protected-main incorporation proof is invalid.");
   }

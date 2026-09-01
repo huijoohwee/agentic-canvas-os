@@ -52,8 +52,9 @@ document can express the same contract.
 ## Agentic Orchestration Layer
 
 - `agentic-os` ADLC is the single lifecycle owner. Start with `npm run lane --
-  <scope>`, publish with `npm run land`, observe with `npm run status`, and retire
-  only integration-proven clean lanes with `npm run reap -- --apply`.
+  <scope>`, publish with `npm run land`, and observe with `npm run status` and
+  `npm run reap`. ACOS retains every cleanup effect until a target-specific
+  authenticated cleanup receipt authorizes one exact retirement.
 - The remotely addressable branch and pull request are the shared claim. Local
   records and compatibility shims are observations; they never replace GitHub
   branch protection, exact required checks, or pull-request authority.
@@ -162,11 +163,11 @@ that bind every session and tool.
 - Never report a task complete while its fix is dirty, stashed, branch-only, in
   an open pull request, absent from `origin/main`, or unverified on the local
   runtime started from that exact Dev `main` SHA.
-- For completed work, run `npm run device:complete -- --json` only after the
-  protected Dev pull request merges. Require the emitted pull request, merge,
-  and main SHAs; fast-forward the registered main worktree with `npm run sync:live`,
-  then restart the local runtime from that clean `main` and rerun the original
-  acceptance path.
+- For completed work, re-fetch the protected Dev branch and run `npm run reap`
+  as an integration survey. ACOS retains every cleanup effect, so keep the
+  worktree and refs intact until a target-specific authenticated cleanup receipt
+  authorizes one exact retirement; then restart the local runtime from clean
+  `main` and rerun the original acceptance path.
 - Before the final response of every implementation turn, run `npm run turn:end
   -- --repository=<canonical-knowgrph-root> --json`. Runtime-ready may be
   claimed only when its JSON proves exact protected `main` SHAs, no
@@ -175,11 +176,11 @@ that bind every session and tool.
   tolerated only when it is explicitly classified as non-blocking. The command
   must fail closed without stopping an unrelated listener.
 - A preserved open lane never satisfies completion.
-- Audit the task worktree at every chat, session, or thread end. Remove it only
-  through `worktree:lifecycle:cleanup` after the runtime classifies it as clean,
-  detached at exact `origin/main`, and explicitly completed. Retain active,
-  delivery, and parked lanes; fail closed on dirt or ambiguity; preserve task
-  branches and commits unless branch deletion is separately authorized.
+- Audit the task worktree at every chat, session, or thread end. The current
+  ACOS profile makes cleanup ineligible, so retain every worktree, branch, ref,
+  and object; fail closed on dirt or ambiguity. A future target-specific cleanup
+  decision must bind the exact lane, proof, owner, and receipt before it can
+  remove anything.
 - A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.
 - Suggest next steps in `/GitHub/agentic-canvas-os/{docs/TODO.md, todo/}`,
   `/GitHub/knowgrph/docs/`, and

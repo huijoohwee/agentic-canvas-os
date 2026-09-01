@@ -47,7 +47,8 @@ cleanup-eligible.
 
 ## Completion
 
-After protected integration, run `npm run reap` and inspect its proof. Apply
-retirement only for the exact proven lane with
-`npm run reap -- --apply`. Re-run the inventory and prove the target path and
-refs absent. Other dirty or active lanes remain untouched.
+After protected integration, run `npm run reap` and inspect its proof. ACOS's
+committed profile retains every cleanup effect, so no survey result authorizes
+retirement. Keep all paths and refs intact until a target-specific authenticated
+cleanup receipt authorizes one exact lane; other dirty or active lanes remain
+untouched in every case.

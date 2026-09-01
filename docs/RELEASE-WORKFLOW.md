@@ -32,10 +32,12 @@ published head while checks are attached to it.
 3. Re-fetch `origin/main`.
 4. Compute integration proof against the exact published head.
 5. Run `npm run reap` from the canonical checkout.
-6. Only when the survey reports the lane integrated, run
-   `npm run reap -- --apply`.
-7. Prove the exact worktree is absent, the exact local and remote lane refs are
-   retired, and protected `origin/main` contains the integration proof.
+6. ACOS's committed profile retains every cleanup effect, so record the survey
+   as eligibility evidence and preserve the lane.
+7. A later target-specific decision may retire one exact worktree and its refs
+   only after owner-led recovery when needed, protected integration, claim
+   retirement, clean detachment, no-remaining-value proof, target-specific
+   eligibility, and an authenticated cleanup receipt are recorded.
 8. Synchronize a clean canonical checkout by fast-forward. If canonical bytes
    are dirty, reconcile only after every byte is proven target-equivalent or
    preserved by an explicit crash-safe transaction.

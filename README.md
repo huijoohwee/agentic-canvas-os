@@ -164,24 +164,17 @@ canonical runtime is `runtime-ready`. Raw or mismatched listeners remain
 untouched and block the handoff. `runtime:session:status` and
 `runtime:session:stop` provide explicit diagnostics and recovery.
 
-Mandatory completion gate:
+Mandatory completion evidence is separate from cleanup:
 
 ```bash
-npm run device:complete -- --json
+npm run reap
 ```
 
-This fails while work is dirty, stashed, branch-only, or attached to an open
-pull request. After the protected Dev pull request is merged, it verifies the
-merge commit is contained by `origin/main`, detaches the clean task worktree at
-that exact revision, and emits the pull request, merge, and main SHAs. Completion
-first records a durable `completing` cleanup intent, retires only the exact
-restored stash/ref, and records `completed` only after clean detachment; retries
-finish any interrupted phase and accept a later descendant `origin/main`. If the
-exact merged branch lost its local lease record, completion may recover only the
-writer-lease marker preserved in that merged pull request body. Fast-forward
-the registered main worktree separately with `npm run sync:live` before runtime
-acceptance. `device:end` uses the same fail-closed completion gate; use
-`device:park` for paused or blocked work.
+After a protected pull request merges, re-fetch `origin/main` and inspect the
+ADLC integration survey. ACOS currently retains every cleanup effect in its
+committed profile, so the survey is evidence only: it cannot delete a worktree,
+branch, ref, or object. Preserve every lane until a later target-specific ADLC
+profile and authenticated cleanup receipt authorize one exact retirement.
 
 First success check:
 

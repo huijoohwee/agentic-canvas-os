@@ -190,7 +190,7 @@ test("canonical runtime follows the single registered main worktree from a featu
 
 test("canonical runtime retains a valid attention lifecycle report without hiding command failures", () => {
   const report = {
-    schema: "agentic-worktree-lifecycle-report/v1",
+    schema: "agentic-os-worktree-lifecycle-compatibility/v1",
     status: "attention-required",
     worktrees: [],
   };

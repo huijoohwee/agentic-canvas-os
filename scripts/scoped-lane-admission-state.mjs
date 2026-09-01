@@ -3,8 +3,9 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync } from "node:fs";
 import path from "node:path";
 
-import { parseLaneRef } from "agentic-os/src/lane-id.mjs";
-import { load as loadLaneStore } from "agentic-os/src/lane-records.mjs";
+import { loadRepositoryProfile } from "agentic-os/adapters/git";
+import { parseLaneRef } from "agentic-os/compat/lane-id";
+import { load as loadLaneStore } from "agentic-os/compat/lane-records";
 
 import { parseWorktreeRecords } from "./repository-guards.mjs";
 
@@ -20,6 +21,7 @@ export function collectScopedLaneState({
   repository,
   git = runGit,
   readLaneStore = readAgenticLaneStore,
+  readProfile = loadRepositoryProfile,
   pathExists = existsSync,
   pathStat = lstatSync,
 } = {}) {
@@ -28,6 +30,7 @@ export function collectScopedLaneState({
     root,
     git,
     readLaneStore,
+    readProfile,
     pathExists,
     pathStat,
   });
@@ -51,10 +54,11 @@ export function collectScopedLaneState({
   };
 }
 
-function captureLaneState({ root, git, readLaneStore, pathExists, pathStat }) {
+function captureLaneState({ root, git, readLaneStore, readProfile, pathExists, pathStat }) {
   const worktreeRegistry = git(root, ["worktree", "list", "--porcelain", "-z"]);
   const records = parseWorktreeRecords(worktreeRegistry);
-  const canonicalBaseSha = git(root, ["rev-parse", "origin/main"]).trim();
+  const profile = readProfile({ repository: root });
+  const canonicalBaseSha = git(root, ["rev-parse", profile.canonical.remoteRef]).trim();
   const laneStore = normalizeLaneStore(readLaneStore(root));
   const lanes = records.map(record => captureWorktree({
     record,

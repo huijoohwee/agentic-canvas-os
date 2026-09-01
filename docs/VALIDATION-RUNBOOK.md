@@ -150,21 +150,19 @@ The automated contexts model two independent collaboration peers; the gate does 
 
 `AGENTICGRAPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
 
-## Mandatory Completion Gate
+## Mandatory Completion Evidence
 
-After focused validation and protected Dev integration, run from the merged task
-branch:
+After focused validation and protected Dev integration, re-fetch `origin/main`
+and run the read-only ADLC survey from the canonical checkout:
 
 ```bash
-npm run device:complete -- --json
+npm run reap
 ```
 
-The command must fail for dirty or stashed work, branch-only commits, an open or
-auto-merge-pending pull request, a non-`main` pull-request base, a merge commit
-absent from fetched `origin/main`, local-main drift, or a dirty final checkout.
-Success must emit `completedBranch`, `pullRequestUrl`, `mergeCommitSha`,
-`mainSha`, and `"status":"ok"`, with clean local `main` exactly equal to
-`origin/main`.
+ACOS's committed profile retains every cleanup effect. A green check, merged
+pull request, or integration proof does not authorize deleting a worktree,
+branch, ref, or object. Record the exact integration proof and preserve the
+lane until a target-specific authenticated cleanup receipt is available.
 
 Restart or reload the local application from `mainSha` and rerun the original
 browser failure path. Git evidence without matching runtime identity and browser

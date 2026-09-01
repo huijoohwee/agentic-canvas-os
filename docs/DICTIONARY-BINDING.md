@@ -19,7 +19,6 @@ source_docs:
   - "APPLICATION-COMPOSITION.md"
   - "AGENTIC-GRAPH.md"
   - "AGENT-TEAM.md"
-  - "CLOUD-COLLABORATION.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
   - "docs/documents/git-guidelines.md"
@@ -188,8 +187,6 @@ dictionary_entries:
   - "@coordination-plan"
   - "@goal-plan"
   - "@recovery-reference"
-  - "@collaboration-ledger"
-  - "@cloud-claim"
 ---
 <!-- Responsibility: Define canonical binding invocation entries and their authority boundaries. -->
 
@@ -352,11 +349,9 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@payment-event` | One inbound provider settlement callback plus its recorded processing identity. | Existing provider event ingress owner and its event ledger. | Authenticity must be verified before the payload is read, and provider state remains the settlement authority over the payload. |
 | `@payment-record` | The serialized projection of terminal payment records for local audit and receipts. | Existing payment record serializer and its document store. | Deterministic and byte-stable; excludes credentials, card numbers, bank account numbers, buyer email addresses, and provider customer identifiers. |
 | `@payment-readiness` | Per-rail configuration completeness snapshot for the payments capability. | Existing per-rail readiness gate. | Read-only; reports required credential names, presence, pinned version, configured integration model, and terminal sandbox proof without mutating configuration or granting deploy authority. |
-| `@workspace-lane` | One unit of parallel work: one repository plus one registered worktree, its branch, its claimed semantic scope, and its dirty and untracked counts. | `WORKSPACE-PARALLELISM.md` plus the existing worktree registry, writer lease, and lifecycle owners. | Exactly one session owns a lane, one branch is live in at most one worktree, and one semantic scope per repository has one session owner; the binding reads Git state and never stages, resets, cleans, checks out, prunes, or removes anything. |
+| `@workspace-lane` | One unit of parallel work: one repository plus one registered worktree, its branch, its semantic scope, and its dirty and untracked counts. | `WORKSPACE-PARALLELISM.md` plus the ADLC worktree registry and branch identity. | One branch is live in at most one worktree; the binding reads Git state and never stages, resets, cleans, checks out, prunes, removes, or grants authority. |
 | `@coordination-plan` | One immutable set of task ids, declared write sets, dependency ids, priorities, authority states, and digest-bound findings. | Operator-selected external JSON normalized by `scripts/coordination-scheduler-contract.mjs`. | The binding contains no command, secret, lease mutation, approval, or inferred authority; malformed graphs and unscoped global findings fail closed. |
 | `@recovery-reference` | The durable ref that a lane's uncommitted work can be restored from before a permitted destructive operation. | The owning session, recorded as a branch, tag, or workspace bundle. | Must exist and must be durable; `refs/stash` is rejected as anonymous, and no reference can cover untracked paths, which stay unrecoverable and therefore undeletable. |
-| `@collaboration-ledger` | Current protected remote append-only ledger revision for cross-device claim authority. | The exact `agentic/collaboration-ledger` Git ref and its schema-valid content-addressed history. | Read or update only through bounded Git API calls; local files, review labels, workflow queues, branch names, and model output are projections or transport, never authority. |
-| `@cloud-claim` | One current claim digest plus its repository, work item, normalized write set, epoch, fence, expiry, and immutable lane projection. | The current entry in `@collaboration-ledger`. | Stores no token or absolute local path, grants collaboration ownership only, and cannot imply review, integration, release, publication, or deployment authority. |
 
 ## Binding Shape
 

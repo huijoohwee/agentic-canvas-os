@@ -40,6 +40,31 @@ test("doctor passes when no lane expiry or projection drift is present", () => {
   assert.equal(result.findings.length, 0);
 });
 
+test("doctor reads the ADLC compatibility report without inventing lease authority", () => {
+  const result = auditLaneLifecycleRisks({
+    report: {
+      schema: "agentic-os-worktree-lifecycle-compatibility/v1",
+      repository: "/repo",
+      worktrees: [
+        { ...canonical, safe: true },
+        {
+          path: "/repo/tasks/preserved",
+          head: "b".repeat(40),
+          branch: "agent/mac/preserved",
+          state: "blocked-dirty",
+          safe: false,
+        },
+      ],
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.level, "FAIL");
+  assert.equal(result.findings[0].code, "adlc-blocked-dirty");
+  assert.equal(result.findings[0].leaseStatus, null);
+  assert.match(result.findings[0].action, /Preserve its bytes/u);
+});
+
 test("doctor warns for expiring authority and projection repair drift", () => {
   const result = auditLaneLifecycleRisks({
     report: {

@@ -2,21 +2,29 @@ import path from "node:path";
 
 const ACTIVE_LEASE_STATUSES = new Set(["active", "review_ready", "delivery"]);
 const WARNING_EXPIRY_WINDOW_MS = 15 * 60_000;
+const ADLC_COMPATIBILITY_SCHEMA = "agentic-os-worktree-lifecycle-compatibility/v1";
+const LEGACY_LIFECYCLE_SCHEMA = "agentic-worktree-lifecycle-report/v1";
 
 export function auditLaneLifecycleRisks({
   report,
   now = new Date(),
   expiryWarningWindowMs = WARNING_EXPIRY_WINDOW_MS,
 } = {}) {
-  if (report?.schema !== "agentic-worktree-lifecycle-report/v1" || !Array.isArray(report.worktrees)) {
-    throw new Error("Lane lifecycle audit requires an agentic worktree lifecycle report.");
+  if (!report || ![ADLC_COMPATIBILITY_SCHEMA, LEGACY_LIFECYCLE_SCHEMA].includes(report.schema)
+    || !Array.isArray(report.worktrees)) {
+    throw new Error("Lane lifecycle audit requires an ADLC-compatible worktree report.");
   }
-  const findings = report.worktrees.flatMap(worktree => inspectWorktree({
-    repository: report.repository,
-    worktree,
-    now,
-    expiryWarningWindowMs,
-  }));
+  const findings = report.schema === ADLC_COMPATIBILITY_SCHEMA
+    ? report.worktrees.flatMap(worktree => inspectAdlcWorktree({
+      repository: report.repository,
+      worktree,
+    }))
+    : report.worktrees.flatMap(worktree => inspectWorktree({
+      repository: report.repository,
+      worktree,
+      now,
+      expiryWarningWindowMs,
+    }));
   const hasFailure = findings.some(finding => finding.level === "FAIL");
   const hasWarning = findings.some(finding => finding.level === "WARN");
   return Object.freeze({
@@ -25,6 +33,20 @@ export function auditLaneLifecycleRisks({
     detail: findings.length === 0 ? "no lane expiry or projection drift detected" : `${findings.length} finding${findings.length === 1 ? "" : "s"}`,
     findings,
   });
+}
+
+function inspectAdlcWorktree({ repository, worktree }) {
+  if (worktree?.safe === true) return [];
+  const label = path.relative(repository, worktree?.path || "") || ".";
+  const state = worktree?.state || "unknown";
+  const warning = state === "review-required" || state === "review-required-legacy-lane";
+  return [createFinding({
+    level: warning ? "WARN" : "FAIL",
+    code: `adlc-${state}`,
+    worktree,
+    summary: `${label} requires attention in ADLC state ${state}`,
+    action: "Preserve its bytes, inspect npm run status, and change no authority or refs without exact proof.",
+  })];
 }
 
 function inspectWorktree({ repository, worktree, now, expiryWarningWindowMs }) {
@@ -62,7 +84,7 @@ function inspectWorktree({ repository, worktree, now, expiryWarningWindowMs }) {
       code: "pull-request-projection-repair-pending",
       worktree,
       summary: `${label} still carries an in-progress pull-request projection repair marker`,
-      action: `Finish the repair with device:heartbeat --repair-pr-projection from ${worktree.path}.`,
+      action: `Preserve the lane at ${worktree.path} and inspect it with npm run status.`,
     }));
   }
 
@@ -94,7 +116,7 @@ function inspectWorktree({ repository, worktree, now, expiryWarningWindowMs }) {
       code: "lease-expiring-soon",
       worktree,
       summary: `${label} expires in ${formatDuration(remainingMs)} at ${effectiveExpiry.toISOString()}`,
-      action: "Heartbeat, review, park, or hand off this lane before the authority window closes.",
+      action: "Preserve the lane and migrate it to the ADLC branch and pull-request authority model.",
     }));
   }
   return findings;

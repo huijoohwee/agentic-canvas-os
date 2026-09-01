@@ -188,9 +188,9 @@ changing the core:
 
 | Neutral concept | Reference implementation |
 |---|---|
-| Integration Unit ownership | One leased task worktree, semantic scope, branch, source revision, and named focused checks established by `START-WORKFLOW.md`. |
+| Integration Unit ownership | One registered ADLC worktree, semantic scope, branch, source revision, and named focused checks established by `START-WORKFLOW.md`. |
 | Integration Frontier | Fetched protected revision plus the paired application, documentation, catalog, policy, and locked-dependency closure. |
-| Protected integration receipt | The successful, fenced `device:integrate` result and protected checks. |
+| Protected integration receipt | Exact-head protected checks plus ADLC ancestry, Source-Head, patch-identity, or squash-identity proof. |
 | Exact-canonical checks | Checks rerun against fetched protected state, never inferred from a task branch result. |
 | Runtime convergence | The repository-owned canonical runtime handoff and exact visible revision proof required by the lifecycle. |
 | Release frontier | A sealed input to `RELEASE-WORKFLOW.md`; still subject to candidate review and authenticated release authorization. |

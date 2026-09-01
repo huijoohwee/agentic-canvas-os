@@ -9,8 +9,8 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "9d8e6857d6b1956990204f81a913bd7ac9f5ea8dc09bfc82173c5eaa226853bf"
-catalog_entry_count: 425
+catalog_digest: "2aa301248a2020580de1d0cb7ddf318189e5488f735a86725ec558ee08f7641f"
+catalog_entry_count: 416
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "scripts/dictionary-catalog-contract.mjs"
 source_docs:
@@ -25,7 +25,6 @@ source_docs:
   - "VOICE-STUDIO.md"
   - "AGENTIC-SDLC-RUNTIME.md"
   - "MANAGED-IMPLEMENTATION-RUNS.md"
-  - "CLOUD-COLLABORATION.md"
   - "MCP-GATEWAY.md"
   - "WORKSPACE-PARALLELISM.md"
   - "VALIDATION-RUNBOOK.md"
@@ -125,12 +124,6 @@ dictionary_entries:
   - "/instruction.audit"
   - "/instruction.quality-evaluate"
   - "/session.start"
-  - "/collaboration.claim"
-  - "/collaboration.continue"
-  - "/collaboration.integrate"
-  - "/collaboration.retire"
-  - "/collaboration.status"
-  - "/collaboration.verify"
   - "/implementation.run"
   - "/sdlc.observe"
   - "/ecs.session-start"
@@ -297,12 +290,6 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/instruction.audit` | Audit always-on guidance and skill catalog context without model calls or source mutation. | `@instruction-source`, `@local-harness`, `@runtime-proof` | `#instruction-audit`, `#progressive-disclosure`, `#runtime-ready` | Required intent remains present; context budgets, duplicate instructions, embedded procedures, and owner leakage pass with exact zero model cost. |
 | `/instruction.quality-evaluate` | Score recorded or live final answers against the bounded instruction task-quality suite. | `@instruction-eval-suite`, `@runtime-proof`, `@operator` | `#instruction-quality`, `#vcc`, `#runtime-ready` | Every registered case passes required concepts, forbidden-claim screening, and word budgets with explicit candidate provenance and human review. |
 | `/session.start` | Start one conflict-safe Codex build lane from current remote state. | `@operator`, `@working-directory`, `@runtime-proof` | `#multi-agent-collaboration`, `#runtime-ready`, `#vcc` | Remote refs are fetched, the clean registered `main` worktree remains the runtime owner, and one detached registered task worktree claims a unique contract-valid `agent/<device>/<semantic-scope>` branch and branch-bound lease; `.local` remains valid only in the device segment, invalid identity fails before checkout mutation, and Prod or Cloudflare remains unchanged. |
-| `/collaboration.claim` | Reserve one bounded cloud-authoritative write claim before shared mutation. | `@collaboration-ledger`, `@cloud-claim`, `@operator` | `#cloud-collaboration`, `#runtime-ready`, `#vcc` | One non-forced compare-and-swap transition records immutable actor/repository identity, normalized write-set digest, monotonic epoch, server-time expiry, claim digest, and ledger revision; an overlap or stale parent fails before branch, pull-request, or source mutation. |
-| `/collaboration.continue` | Continue one authenticated claim without transferring its immutable authority identity. | `@collaboration-ledger`, `@cloud-claim`, `@runtime-proof` | `#cloud-collaboration`, `#multi-agent-collaboration`, `#runtime-ready` | Projection, renewal, review, preservation, recovery, and deterministic successor promotion remain typed modes of one root continuation; dormant recovery does not depend on an expired local lease. |
-| `/collaboration.integrate` | Record one exact reviewed candidate as integrated-preserved after all explicit evidence joins. | `@collaboration-ledger`, `@cloud-claim`, `@operator`, `@runtime-proof` | `#cloud-collaboration`, `#approval-gate`, `#vcc` | Candidate revision, review identity, focused checks, dependency closure, handoff, operator decision, and integration intent join one immutable typed receipt; this grants no Production or deployment authority. |
-| `/collaboration.retire` | Retire one exact claim while preserving its immutable history and typed receipt joins. | `@collaboration-ledger`, `@cloud-claim`, `@runtime-proof` | `#cloud-collaboration`, `#runtime-ready`, `#truth` | Integrated authority must join its original integration receipt; abandonment, handoff, or supersession remains explicit, and retirement releases the overlap reservation without deleting local or cloud evidence. |
-| `/collaboration.status` | Read current cloud claims without changing the ledger. | `@collaboration-ledger`, `@runtime-proof` | `#cloud-collaboration`, `#truth` | Schema, hash chain, bounded inventory, current statuses, and ledger revision validate with zero source mutation, model calls, polling, or deployment authority. |
-| `/collaboration.verify` | Independently verify cloud claim, projection, fence, expiry, and evidence joins. | `@collaboration-ledger`, `@cloud-claim`, `@runtime-proof` | `#cloud-collaboration`, `#vcc`, `#runtime-ready` | The verifier exits zero only for the exact current repository, branch, head, pull request, normalized write set, claim digest, ledger ancestry, non-expired epoch, and requested readiness layer. |
 | `/implementation.run` | Turn one durable work item into an isolated, managed implementation run through the Knowgrph local MCP supervisor and ACOS lifecycle owner. | `@work-item`, `@implementation-run`, `@sandbox-workspace`, `@runtime-proof`, and `@operator` for mutating start, review, or delivery control | `#managed-implementation-run`, `#multi-agent-collaboration`, `#runtime-ready` | Plan is zero-mutation; start provisions and claims one fenced task worktree; configured execution and bounded verification produce durable evidence; pause, cancel, retry, and review controls are explicit, with retry performing fenced resumption when needed; the run stops `delivery_ready` when ACOS reports `review_ready`, without automatic merge or deploy. |
 | `/sdlc.observe` | Project one immutable local Agentic SDLC ledger receipt into end-to-end execution, evidence, cost, gate, and release-lifecycle graph context through the existing AgenticGraph Canvas owner. | exactly `@implementation-run`, `@canvas`, and `@runtime-proof` | exactly `#agentic-sdlc-observability` | `agenticgraph.agentic_sdlc.observe` returns `agenticgraph-agentic-sdlc-observation/v1` with source identity, typed status and conformance, deterministic GraphData plus KGC Markdown, cache evidence, and zero model, network, token, and cost use; `verified`, `delivery_ready`, and `deployed` remain distinct claims, and no ledger, Canvas source, release state, Prod mirror, or Cloudflare target is mutated. |
 | `/ecs.session-start` | Hydrate one bounded native ECS session from a repository-owned KGC Markdown document. | `@source.frontmatter`, `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#mcp`, `#dev-only` | `agenticgraph.ecs.session_start` validates a safe workspace-relative `.md` path, hydrates registered components and entities deterministically, and returns a private session id plus zero-spend proof without network, Prod, or Cloudflare capability. |

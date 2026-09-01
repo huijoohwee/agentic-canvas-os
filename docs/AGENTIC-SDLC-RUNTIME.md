@@ -37,7 +37,7 @@ This runtime ends in the `authoring` lane. A passing result does not merge, mirr
 
 ## Lifecycle Policy-Runtime Boundary
 
-The separately pinned Agentic SDLC v1.8 lifecycle module defines admission through publication for operational repositories. The protected `agentic-sdlc-policy-runtime` check proves only that this repository resolves the exact guideline source and that its deterministic policy-runtime contracts pass. It does not consume evidence from a managed implementation run or release.
+The pinned `agentic-os` ADLC harness owns admission through retirement for this repository. The protected `budgets` context proves the bounded repository contracts; any temporary `agentic-sdlc-policy-runtime` context is only a no-gap bridge to that result and grants no separate lifecycle authority.
 
 Multi-device concurrent cloud collaboration semantics are owned only by that
 pinned source policy. Repository-local device scripts, browser flows, review

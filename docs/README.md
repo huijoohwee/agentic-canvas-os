@@ -62,8 +62,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `TODO.md` | Bounded planning index | Immutable legacy monthly history, independent `todo-context-record/v2` task files, deterministic projection, and release compliance. |
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
-| `CANONICAL-LIFECYCLE.md` | Provider-neutral release lifecycle | Fenced collaboration, exact Release Frontier, joined integration through rollback receipts, immutable-origin and public transport proof, state reconciliation, publication, and ownership-safe cleanup. |
-| `CLOUD-COLLABORATION.md` | Cloud-authoritative collaboration runtime | Four provider-neutral root operations, unlimited disjoint authorities, one current writer per overlap, waiting successors, dormant preservation, monotonic CAS, and typed receipts. |
+| `CANONICAL-LIFECYCLE.md` | ADLC consumer lifecycle | One pinned `agentic-os` lane state machine, provider-ordered integration, byte-exact proof, and ownership-safe exact retirement. |
 | `INTEGRATION-ORDER.md` | Dependency-ordered integration contract | Immutable per-repository units, cross-repository DAG waves, exact-canonical frontier advancement, dependency receipts, runtime convergence, and release-frontier sealing. |
 | `docs/documents/git-guidelines.md` | Git-layer companion to the execution set | any git stage: session start through cleanup |
 | `UPSTREAM-DEPENDENCY-ADMISSION.md` | Upstream dependency admission runtime | Early source admission, bounded deferral, exact consumer-closure isolation, protected-source-only projection, and disjoint-work continuation. |

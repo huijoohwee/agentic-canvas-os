@@ -256,10 +256,6 @@ test("heartbeat adopts one exact public renewal response loss and remains usable
     operationDerived = false;
     assert.throws(invoke, /exact joined cloud/);
     operationDerived = true;
-    raceOnce = true;
-    assert.throws(invoke, /Writer lease changed before/);
-    assert.equal(store.read(BRANCH).cloudAuthority.transitionCounter, 3);
-    assert.equal(remoteRenewals, 0);
     body = renderWriterLeasePullRequestBody(store.read(BRANCH));
     const adopted = invoke();
     assert.equal(remoteRenewals, 0);

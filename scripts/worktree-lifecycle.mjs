@@ -1,43 +1,55 @@
 #!/usr/bin/env node
 
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadRepositoryProfile } from "agentic-os/adapters/git";
 import {
   dirtyTracked,
-  fetch as fetchRemote,
   headSha,
   repoRoot,
   untrackedPaths,
   worktrees,
-} from "agentic-os/src/git.mjs";
-import { parseLaneRef } from "agentic-os/src/lane-id.mjs";
-import { load as loadLaneStore, remove as removeLaneRecord } from "agentic-os/src/lane-records.mjs";
-import { integrationProof } from "agentic-os/src/patch-identity.mjs";
-import {
-  PROTECTED_REF,
-  retire,
-  staleWorktrees,
-} from "agentic-os/src/worktree.mjs";
+} from "agentic-os/compat/git";
+import { parseLaneRef } from "agentic-os/compat/lane-id";
+import { load as loadLaneStore } from "agentic-os/compat/lane-records";
+import { staleWorktrees } from "agentic-os/compat/worktree";
 
 const SAFE_LANE_STATES = new Set(["planned", "active", "published", "queued", "integrated"]);
+const UNTRACKED_SAMPLE_LIMIT = 32;
 
-export function buildLifecycleReport({ repository } = {}) {
+export function summarizeOwnedPaths(paths, limit = UNTRACKED_SAMPLE_LIMIT) {
+  const normalized = [...new Set((Array.isArray(paths) ? paths : []).map(String))]
+    .sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
+  const digest = createHash("sha256");
+  for (const entry of normalized) digest.update(entry).update("\0");
+  return Object.freeze({
+    count: normalized.length,
+    digest: digest.digest("hex"),
+    sample: normalized.slice(0, limit),
+    truncated: normalized.length > limit,
+  });
+}
+
+export function buildLifecycleReport({ repository, readProfile = loadRepositoryProfile } = {}) {
   const invocationRoot = repoRoot(path.resolve(repository || process.cwd()));
+  const profile = readProfile({ repository: invocationRoot });
   const registered = worktrees(invocationRoot);
-  const canonical = requireCanonicalWorktree(registered);
+  const canonical = requireCanonicalWorktree(registered, profile.canonical.localRef);
   const laneStore = loadLaneStore(canonical.path);
   const worktreeReports = registered.map(entry => inspectRegisteredWorktree({
     entry,
     canonicalPath: canonical.path,
+    canonicalRemoteRef: profile.canonical.remoteRef,
     laneStore,
   }));
   const stale = staleWorktrees(canonical.path).map(entry => entry.path);
   return {
     schema: "agentic-os-worktree-lifecycle-compatibility/v1",
     repository: canonical.path,
-    canonicalSha: headSha(PROTECTED_REF, canonical.path),
+    canonicalSha: headSha(profile.canonical.remoteRef, canonical.path),
     status: stale.length === 0 && worktreeReports.every(item => item.safe)
       ? "ready"
       : "attention-required",
@@ -46,71 +58,7 @@ export function buildLifecycleReport({ repository } = {}) {
   };
 }
 
-export function cleanupIntegratedLane({ repository, target } = {}) {
-  if (!target) throw new Error("ADLC cleanup requires --worktree=<exact-lane-worktree>.");
-  const invocationRoot = repoRoot(path.resolve(repository || process.cwd()));
-  const registered = worktrees(invocationRoot);
-  const canonical = requireCanonicalWorktree(registered);
-  const normalizedTarget = path.resolve(target);
-  const matches = registered.filter(entry => path.resolve(entry.path) === normalizedTarget);
-  if (matches.length !== 1) {
-    throw new Error(`ADLC cleanup requires one registered exact target: ${normalizedTarget}`);
-  }
-  const [candidate] = matches;
-  if (path.resolve(candidate.path) === path.resolve(canonical.path)) {
-    throw new Error("ADLC cleanup refuses the canonical main worktree.");
-  }
-  const identity = parseLaneRef(candidate.branch);
-  if (!identity) {
-    throw new Error(
-      "ADLC cleanup supports only an attached agent/<device>/<scope> lane; "
-        + `received ${candidate.branch || "detached HEAD"}.`,
-    );
-  }
-  if (dirtyTracked(candidate.path) || untrackedPaths(candidate.path).length > 0) {
-    throw new Error(`ADLC cleanup refuses dirty or untracked authored bytes: ${normalizedTarget}`);
-  }
-  const checkedOutHead = headSha("HEAD", candidate.path);
-  const branchHead = headSha(candidate.branch, canonical.path);
-  if (!checkedOutHead || checkedOutHead !== branchHead) {
-    throw new Error(`ADLC cleanup target is not at the exact ${candidate.branch} head.`);
-  }
-
-  fetchRemote("origin", canonical.path);
-  const proof = integrationProof(PROTECTED_REF, candidate.branch, { cwd: canonical.path });
-  if (!proof) {
-    throw new Error(
-      `ADLC cleanup has no integration proof for ${candidate.branch} in ${PROTECTED_REF}.`,
-    );
-  }
-
-  const removed = retire(candidate.branch, { cwd: canonical.path });
-  removeLaneRecord(candidate.branch, canonical.path);
-  const registeredAfter = worktrees(canonical.path)
-    .some(entry => path.resolve(entry.path) === normalizedTarget);
-  const pathPresentAfter = existsSync(normalizedTarget);
-  const branchPresentAfter = Boolean(headSha(`refs/heads/${candidate.branch}`, canonical.path));
-  if (registeredAfter || pathPresentAfter || branchPresentAfter) {
-    throw new Error(`ADLC cleanup did not prove exact local lane retirement: ${normalizedTarget}`);
-  }
-  return {
-    schema: "agentic-os-worktree-cleanup-result/v1",
-    status: "cleaned",
-    repository: canonical.path,
-    canonicalSha: headSha(PROTECTED_REF, canonical.path),
-    target: normalizedTarget,
-    branch: candidate.branch,
-    device: identity.device,
-    scope: identity.scope,
-    proof,
-    removed,
-    registeredAfter: false,
-    pathPresentAfter: false,
-    branchPresentAfter: false,
-  };
-}
-
-function inspectRegisteredWorktree({ entry, canonicalPath, laneStore }) {
+function inspectRegisteredWorktree({ entry, canonicalPath, canonicalRemoteRef, laneStore }) {
   const normalizedPath = path.resolve(entry.path);
   if (!existsSync(normalizedPath)) {
     return {
@@ -121,11 +69,11 @@ function inspectRegisteredWorktree({ entry, canonicalPath, laneStore }) {
     };
   }
   const trackedDirty = dirtyTracked(normalizedPath);
-  const ownedUntracked = untrackedPaths(normalizedPath);
+  const ownedUntracked = summarizeOwnedPaths(untrackedPaths(normalizedPath));
   const head = headSha("HEAD", normalizedPath);
   if (normalizedPath === path.resolve(canonicalPath)) {
-    const canonicalSha = headSha(PROTECTED_REF, canonicalPath);
-    const safe = !trackedDirty && ownedUntracked.length === 0 && head === canonicalSha;
+    const canonicalSha = headSha(canonicalRemoteRef, canonicalPath);
+    const safe = !trackedDirty && ownedUntracked.count === 0 && head === canonicalSha;
     return {
       path: normalizedPath,
       head,
@@ -150,13 +98,13 @@ function inspectRegisteredWorktree({ entry, canonicalPath, laneStore }) {
   }
   const recordedState = laneStore.lanes?.[entry.branch]?.state || "active";
   const safe = !trackedDirty
-    && ownedUntracked.length === 0
+    && ownedUntracked.count === 0
     && SAFE_LANE_STATES.has(recordedState);
   return {
     path: normalizedPath,
     head,
     branch: entry.branch,
-    state: safe ? recordedState : trackedDirty || ownedUntracked.length > 0
+    state: safe ? recordedState : trackedDirty || ownedUntracked.count > 0
       ? "blocked-dirty"
       : "review-required",
     safe,
@@ -171,10 +119,11 @@ function inspectRegisteredWorktree({ entry, canonicalPath, laneStore }) {
   };
 }
 
-function requireCanonicalWorktree(registered) {
-  const matches = registered.filter(entry => entry.branch === "main");
+function requireCanonicalWorktree(registered, canonicalLocalRef) {
+  const expectedBranch = String(canonicalLocalRef || "").replace(/^refs\/heads\//u, "");
+  const matches = registered.filter(entry => entry.branch === expectedBranch);
   if (matches.length !== 1) {
-    throw new Error(`ADLC requires one registered main worktree; found ${matches.length}.`);
+    throw new Error(`ADLC requires one registered ${expectedBranch || "canonical"} worktree; found ${matches.length}.`);
   }
   return matches[0];
 }
@@ -185,8 +134,7 @@ function readOption(args, name) {
 }
 
 function usage() {
-  return "Usage: worktree-lifecycle.mjs check [--repository=<path>] "
-    + "| cleanup --repository=<path> --worktree=<exact-lane-worktree>";
+  return "Usage: worktree-lifecycle.mjs check [--repository=<path>]";
 }
 
 function main(args = process.argv.slice(2)) {
@@ -196,18 +144,6 @@ function main(args = process.argv.slice(2)) {
     const report = buildLifecycleReport({ repository });
     console.log(JSON.stringify(report));
     return report.status === "ready" ? 0 : 1;
-  }
-  if (command === "cleanup") {
-    console.log(JSON.stringify(cleanupIntegratedLane({
-      repository,
-      target: readOption(options, "worktree"),
-    })));
-    return 0;
-  }
-  if (command === "cleanup-empty") {
-    throw new Error(
-      "Unsupported legacy command cleanup-empty: ADLC reaps only an exact integration-proven lane.",
-    );
   }
   throw new Error(usage());
 }

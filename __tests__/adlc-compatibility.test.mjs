@@ -1,55 +1,63 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import os from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { completeDeviceLane } from "../scripts/device-branch.mjs";
 import { collectScopedLaneState } from "../scripts/scoped-lane-admission-state.mjs";
-import { buildLifecycleReport } from "../scripts/worktree-lifecycle.mjs";
+import { summarizeOwnedPaths } from "../scripts/worktree-lifecycle.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHA = "a".repeat(40);
+const PROFILE = Object.freeze({
+  canonical: Object.freeze({
+    localRef: "refs/heads/main",
+    remoteRef: "refs/remotes/origin/main",
+  }),
+});
 
-test("autonomy classification delegates to the integrated agentic-os implementation", () => {
+test("ACOS pins the reviewed agentic-os compatibility contract", () => {
   const packageJson = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8"));
-  assert.equal(packageJson.scripts["autonomy-class"], "agentic-os autonomy-class");
   assert.equal(
     packageJson.devDependencies["agentic-os"],
-    "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/6d9be05e2b06b8455e9e8d166f7cd92f084e8c19",
+    "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/ba38c37bfb8b9e97ac392f89b36a334909f358ca",
   );
+  assert.equal(packageJson.scripts["autonomy-class"], "agentic-os autonomy-class");
   assert.equal(existsSync(path.join(ROOT, "scripts", "autonomy-class.mjs")), false);
   assert.equal(existsSync(path.join(ROOT, "__tests__", "autonomy-class.test.mjs")), false);
 });
 
-test("compatibility entrypoints import no deleted ACOS lifecycle implementation", () => {
-  const relativeImports = /from\s+["']\.\/([^"']+)["']/gu;
-  const allowedRelativeImports = new Set(["repository-guards.mjs", "worktree-lifecycle.mjs"]);
-  for (const relativePath of [
+test("compatibility projections are observation-only and have no private imports", () => {
+  const sources = [
     "scripts/worktree-lifecycle.mjs",
-    "scripts/device-branch.mjs",
     "scripts/scoped-lane-admission-state.mjs",
-    "scripts/repository-guards.mjs",
-  ]) {
-    const source = readFileSync(path.join(ROOT, relativePath), "utf8");
-    const imports = [...source.matchAll(relativeImports)].map(match => match[1]);
-    assert.deepEqual(
-      imports.filter(candidate => !allowedRelativeImports.has(candidate)),
-      [],
-      relativePath,
-    );
-  }
+  ].map(relativePath => readFileSync(path.join(ROOT, relativePath), "utf8"));
+  for (const source of sources) assert.doesNotMatch(source, /agentic-os\/src\//u);
+  assert.match(sources[0], /agentic-os\/adapters\/git/u);
+  assert.match(sources[0], /agentic-os\/compat\//u);
+  assert.match(sources[1], /agentic-os\/adapters\/git/u);
+  assert.match(sources[1], /agentic-os\/compat\//u);
+  assert.doesNotMatch(sources[0], /cleanupIntegratedLane|\bretire\b|\bremoveLaneRecord\b/u);
 });
 
-test("lane-state compatibility exposes honest ADLC identity and no writer lease", () => {
+test("legacy cleanup aliases are removed while the profile retains every cleanup effect", () => {
+  const packageJson = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8"));
+  assert.equal(Object.hasOwn(packageJson.scripts, "device:complete"), false);
+  assert.equal(Object.hasOwn(packageJson.scripts, "worktree:lifecycle:cleanup"), false);
+  assert.equal(existsSync(path.join(ROOT, "scripts", "device-branch.mjs")), false);
+  const profile = JSON.parse(readFileSync(path.join(ROOT, ".agentic-os.json"), "utf8"));
+  assert.ok(Object.values(profile.cleanup).every(effect => effect === "retain"));
+});
+
+test("lifecycle observation bounds owned-path output without concealing its digest", () => {
+  const summary = summarizeOwnedPaths(["z", "a", "z", "b"], 2);
+  assert.deepEqual(summary.sample, ["a", "b"]);
+  assert.equal(summary.count, 3);
+  assert.equal(summary.truncated, true);
+  assert.match(summary.digest, /^[0-9a-f]{64}$/u);
+});
+
+test("lane-state compatibility derives canonical identity from the ADLC profile", () => {
   const repository = "/repo";
   const lanePath = "/tasks/device--scope";
   const laneHead = "b".repeat(40);
@@ -65,7 +73,7 @@ test("lane-state compatibility exposes honest ADLC identity and no writer lease"
   const git = (cwd, args) => {
     const command = args.join(" ");
     if (command === "worktree list --porcelain -z") return porcelain;
-    if (command === "rev-parse origin/main") return SHA;
+    if (command === "rev-parse refs/remotes/origin/main") return SHA;
     if (command === "status --porcelain=v1 -z --untracked-files=all") return "";
     if (command === "ls-files --stage -z") return "";
     if (command === "ls-files --modified --deleted --others --exclude-standard -z") return "";
@@ -77,6 +85,7 @@ test("lane-state compatibility exposes honest ADLC identity and no writer lease"
   const result = collectScopedLaneState({
     repository,
     git,
+    readProfile: () => PROFILE,
     readLaneStore: () => ({
       schema: "agentic-os/lanes/v1",
       lanes: {
@@ -100,72 +109,3 @@ test("lane-state compatibility exposes honest ADLC identity and no writer lease"
     state: "queued",
   });
 });
-
-test("device complete retires only a clean lane with ADLC integration proof", () => {
-  const fixture = mkdtempSync(path.join(os.tmpdir(), "acos-adlc-compat-"));
-  const remote = path.join(fixture, "origin.git");
-  const canonical = path.join(fixture, "repository");
-  const target = path.join(fixture, "lane");
-  const branch = "agent/test-device/compat-cleanup";
-  try {
-    git(fixture, ["init", "--bare", remote]);
-    git(remote, ["symbolic-ref", "HEAD", "refs/heads/main"]);
-    git(fixture, ["clone", remote, canonical]);
-    writeFileSync(path.join(canonical, "README.md"), "fixture\n");
-    git(canonical, ["add", "README.md"]);
-    commit(canonical, "test: initialize fixture");
-    git(canonical, ["push", "--set-upstream", "origin", "main"]);
-
-    git(canonical, ["worktree", "add", "-b", branch, target]);
-    writeFileSync(path.join(target, "lane.txt"), "lane\n");
-    git(target, ["add", "lane.txt"]);
-    commit(target, "test: lane change");
-    const laneHead = git(target, ["rev-parse", "HEAD"]);
-    git(target, ["push", "--set-upstream", "origin", branch]);
-
-    commit(canonical, "test: integrate lane", ["--allow-empty", "-m", `Source-Head: ${laneHead}`]);
-    git(canonical, ["push", "origin", "main"]);
-    assert.equal(buildLifecycleReport({ repository: target }).status, "ready");
-
-    const result = completeDeviceLane({ repository: target });
-    assert.equal(result.status, "ok");
-    assert.equal(result.completedBranch, branch);
-    assert.equal(result.integrationProof.kind, "source-head-trailer");
-    assert.equal(result.cleanup.registeredAfter, false);
-    assert.equal(result.cleanup.pathPresentAfter, false);
-    assert.equal(result.cleanup.branchPresentAfter, false);
-    assert.equal(existsSync(target), false);
-    assert.equal(git(canonical, ["branch", "--list", branch]), "");
-
-    const script = path.join(ROOT, "scripts/device-branch.mjs");
-    const unsupported = spawnSync(process.execPath, [script, "start"], {
-      cwd: canonical,
-      encoding: "utf8",
-    });
-    assert.equal(unsupported.status, 1);
-    assert.match(unsupported.stderr, /Unsupported legacy device command start/u);
-  } finally {
-    rmSync(fixture, { recursive: true, force: true });
-  }
-});
-
-function git(cwd, args) {
-  return execFileSync("git", args, {
-    cwd,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
-}
-
-function commit(cwd, subject, extra = []) {
-  git(cwd, [
-    "-c",
-    "user.name=Fixture",
-    "-c",
-    "user.email=fixture@example.test",
-    "commit",
-    "-m",
-    subject,
-    ...extra,
-  ]);
-}

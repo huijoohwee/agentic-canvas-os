@@ -25,10 +25,13 @@ test('canonical lifecycle delegates one guarded lane state machine to the pinned
   assert.match(lifecycle, /queued lane is never author-restacked for ordering/)
   assert.match(lifecycle, /ancestry, a byte-exact `Source-Head` trailer,\s+patch identity, or squash identity/)
   assert.match(lifecycle, /green check or closed pull request alone\s+is not integration proof/)
-  assert.match(lifecycle, /removes only the exact clean registered\s+worktree and exact branch and refuses owned untracked paths/)
+  assert.match(lifecycle, /Proof establishes cleanup eligibility but never grants cleanup authority/)
+  assert.match(lifecycle, /committed profile retains every cleanup effect/)
+  assert.match(lifecycle, /owner-led\s+recovery when needed, protected integration proof, claim retirement, clean\s+detachment, no-remaining-value proof, target-specific eligibility, and an\s+authenticated cleanup receipt/)
   assert.match(lifecycle, /Dirty, untracked, ambiguous, or concurrently owned bytes are preserved/)
   assert.match(lifecycle, /No\s+stash, reset, force checkout, force push, broad prune, or inferred ownership/)
-  assert.match(lifecycle, /compatibility shims[\s\S]*do not recreate legacy\s+writer authority/)
+  assert.match(lifecycle, /observation-only\s+compatibility shims[\s\S]*do not recreate writer or cleanup authority/)
+  assert.doesNotMatch(lifecycle, /npm run reap -- --apply/)
   assert.doesNotMatch(lifecycle, /canonical-runtime-lifecycle\/v7|Durable Owner Coordination SSOT/)
   assert.ok(lifecycle.trimEnd().split('\n').length < 600)
 })
@@ -54,7 +57,7 @@ test('start workflow preserves user bytes while resolving bounded mechanical wor
   assert.ok(startWorkflow.trimEnd().split('\n').length < 600)
 })
 
-test('release workflow requires exact-head integration proof before exact retirement', () => {
+test('release workflow requires exact-head integration proof before retained cleanup eligibility', () => {
   assert.match(releaseWorkflow, /exact clean task worktree after its bounded checks pass/)
   assert.match(releaseWorkflow, /`land` pushes the lane, creates or reuses its pull request, records a\s+byte-exact `Source-Head` trailer, and hands ordering to the provider/)
   assert.match(releaseWorkflow, /Do not\s+direct-push `main`, raw-merge locally, repeatedly restack, or rewrite the\s+published head while checks are attached to it/)
@@ -64,10 +67,11 @@ test('release workflow requires exact-head integration proof before exact retire
     /Re-fetch `origin\/main`/,
     /Compute integration proof against the exact published head/,
     /Run `npm run reap` from the canonical checkout/,
-    /survey reports the lane integrated, run\s+`npm run reap -- --apply`/,
-    /exact worktree is absent, the exact local and remote lane refs are\s+retired/,
+    /committed profile retains every cleanup effect, so record the survey\s+as eligibility evidence and preserve the lane/,
+    /target-specific decision may retire one exact worktree and its refs\s+only after owner-led recovery when needed, protected integration, claim\s+retirement, clean detachment, no-remaining-value proof, target-specific\s+eligibility, and an authenticated cleanup receipt are recorded/,
     /Synchronize a clean canonical checkout by fast-forward/,
   ]) assert.match(releaseWorkflow, orderedStep)
+  assert.doesNotMatch(releaseWorkflow, /npm run reap -- --apply/)
   assert.match(releaseWorkflow, /If canonical bytes\s+are dirty, reconcile only after every byte is proven target-equivalent or\s+preserved by an explicit crash-safe transaction/)
   assert.match(releaseWorkflow, /merge commit, green check, clean worktree, or HTTP response is never a\s+substitute for the other receipts/)
   assert.match(releaseWorkflow, /Derive all available operands, surface all missing inputs at once, and validate\s+local constraints before provider mutation/)

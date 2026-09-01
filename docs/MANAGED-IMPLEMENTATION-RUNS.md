@@ -21,11 +21,12 @@ npm run lane -- <scope>
 # author and commit in the printed worktree
 npm run land
 # after protected integration, from canonical main
-npm run reap -- --apply
+npm run reap
 ```
 
 Scenario-specific recovery commands, writer-lease renewal, projection repair,
 and one-off lifecycle modules are retired. If a lane is wrong, preserve its
 bytes and either correct it within the same published identity before queueing
 or open an explicitly new lane. See `START-WORKFLOW.md` and
-`RELEASE-WORKFLOW.md`.
+`RELEASE-WORKFLOW.md`. ACOS's committed profile retains every cleanup effect,
+so this survey records eligibility evidence and preserves the lane.

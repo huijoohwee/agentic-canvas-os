@@ -41,11 +41,22 @@ controller/adapter/evidence/store family for one incident is forbidden.
 - Integration is computed from ancestry, a byte-exact `Source-Head` trailer,
   patch identity, or squash identity. A green check or closed pull request alone
   is not integration proof.
-- Retirement follows proof. It removes only the exact clean registered
-  worktree and exact branch and refuses owned untracked paths.
+- Proof establishes cleanup eligibility but never grants cleanup authority.
+  ACOS's committed profile retains every cleanup effect, so all worktrees,
+  branches, refs, and objects remain preserved until a target-specific
+  authenticated cleanup receipt authorizes one exact retirement.
 - Dirty, untracked, ambiguous, or concurrently owned bytes are preserved. No
   stash, reset, force checkout, force push, broad prune, or inferred ownership
   is an ADLC recovery operation.
+
+## Future Cleanup Authorization
+
+The current ACOS profile is retention-only. A later target-specific decision
+may authorize one exact cleanup effect only after the record binds owner-led
+recovery when needed, protected integration proof, claim retirement, clean
+detachment, no-remaining-value proof, target-specific eligibility, and an
+authenticated cleanup receipt. None of those records authorizes a different
+target or effect.
 
 ## Commands
 
@@ -55,12 +66,10 @@ npm run lane -- <scope>
 npm run land
 npm run status
 npm run reap
-npm run reap -- --apply
 npm run queue:show
 ```
 
-The retained `scripts/worktree-lifecycle.mjs`,
-`scripts/device-branch.mjs`, and
-`scripts/scoped-lane-admission-state.mjs` names are compatibility shims. They
-delegate to ADLC or return observational Git state; they do not recreate legacy
-writer authority.
+The retained `scripts/worktree-lifecycle.mjs` and
+`scripts/scoped-lane-admission-state.mjs` names are observation-only
+compatibility shims. They derive canonical identity from the committed ADLC
+profile and do not recreate writer or cleanup authority.

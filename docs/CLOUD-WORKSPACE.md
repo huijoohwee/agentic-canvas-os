@@ -187,7 +187,8 @@ After scoped admission, every placement uses the same lifecycle:
 2. author only inside its printed worktree;
 3. run focused checks and preserve the exact candidate commit;
 4. publish the exact head with `npm run land`; and
-5. retire only after protected integration proof with `npm run reap -- --apply`.
+5. run `npm run reap` after protected integration and preserve the lane because
+   ACOS's committed profile retains every cleanup effect.
 
 When review, CI, or a current-base check fails, the implementing agent resumes
 the exact fenced lane, fixes the source owner, reruns checks, and reviews a new
@@ -196,9 +197,10 @@ never uses a raw merge, direct protected-branch write, unchecked or unowned
 force update, or parity shortcut; the repository-owned exact-CAS
 `--force-with-lease` refresh remains the bounded exception.
 
-Completion requires protected integration, claim retirement, declared
-canonical/runtime reconciliation, and exact-target cleanup as independent
-receipts.
+Completion requires protected integration, declared canonical/runtime
+reconciliation, and a separately recorded cleanup-eligibility result. Exact
+target cleanup remains unavailable until a target-specific profile and
+authenticated receipt authorize it.
 
 ## Offline Boundary
 

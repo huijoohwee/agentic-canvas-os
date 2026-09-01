@@ -82,7 +82,6 @@
     "reap": "agentic-os reap",
     "queue:show": "agentic-os queue show",
     "autonomy-class": "agentic-os autonomy-class",
-    "device:complete": "node ./scripts/device-branch.mjs complete",
     "runtime:local:ensure": "node ./scripts/local-runtime.mjs ensure",
     "runtime:local:status": "node ./scripts/local-runtime.mjs status",
     "runtime:local:stop": "node ./scripts/local-runtime.mjs stop",
@@ -99,7 +98,6 @@
     "history:lifecycle": "node ./scripts/history-lifecycle.mjs",
     "history:lifecycle:check": "node --test __tests__/history-lifecycle-contract.test.mjs __tests__/history-lifecycle-controller.test.mjs __tests__/history-lifecycle-repository-adapter.test.mjs __tests__/history-lifecycle-cli.test.mjs",
     "worktree:lifecycle:check": "node ./scripts/worktree-lifecycle.mjs check",
-    "worktree:lifecycle:cleanup": "node ./scripts/worktree-lifecycle.mjs cleanup",
     "dev": "npm run cloudflare:dev",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",
@@ -123,7 +121,7 @@
     "cloudflare:dev": "npm run web:build && wrangler dev"
   },
   "devDependencies": {
-    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/6d9be05e2b06b8455e9e8d166f7cd92f084e8c19",
+    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/ba38c37bfb8b9e97ac392f89b36a334909f358ca",
     "ajv": "8.20.0",
     "fast-check": "3.23.2",
     "wrangler": "4.120.0"

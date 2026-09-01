@@ -157,7 +157,10 @@ export function parseLifecycleCommandResult(result) {
   } catch {
     throw new Error("Worktree lifecycle command returned invalid JSON.");
   }
-  if (report?.schema !== "agentic-worktree-lifecycle-report/v1" ||
+  if (![
+    "agentic-os-worktree-lifecycle-compatibility/v1",
+    "agentic-worktree-lifecycle-report/v1",
+  ].includes(report?.schema) ||
       !["ready", "attention-required"].includes(report.status)) {
     throw new Error("Worktree lifecycle command returned an unsupported report.");
   }

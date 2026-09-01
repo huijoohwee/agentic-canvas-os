@@ -94,7 +94,7 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 |---|---|---|---:|
 | Local stdio MCP | Richest local/dev tool surface | Local workstation | 0 for discovery |
 | Pages HTTP MCP | Read-only public discovery and source fetch | Cloudflare Pages | 0 for discovery |
-| Browser WebMCP | In-page inspection and local browser surface | Browser session | 0 for discovery |
+| Browser WebMCP | In-page inspection and local browser surface, bound to `@webmcp-surface` and `#webmcp` for its recorded W3C Model Context API revision | Browser session | 0 for discovery |
 | MainPanel MCP | Browser-local readiness and non-secret setup view for Knowgrph-owned and external tool servers | Browser session | 0 for discovery |
 | Cloudflare McpAgent | Approval-gated control-plane orchestration where deployed | Cloudflare Worker | 0 for discovery; spend only behind gates |
 | External provider MCP | Federated third-party tool surface registered as one transport, never absorbed into a proxy tier | Provider-operated | 0 for discovery; mutating tools require human confirmation plus the existing approval gate |

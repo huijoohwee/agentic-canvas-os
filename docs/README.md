@@ -36,6 +36,7 @@ the smallest set of docs needed for the task.
 
 Recommended reading order:
 
+0. [`SYSTEM-PROMPT-RUNTIME.md`](./SYSTEM-PROMPT-RUNTIME.md) as the always-on harness header for every session.
 1. [`PROJECT-RULES.md`](./PROJECT-RULES.md) for project-wide engineering and session-closeout rules.
 2. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and the registered multi-worktree rule.
 3. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused checks and release gates.
@@ -50,6 +51,9 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 
 | File | Role | Use |
 |---|---|---|
+| `SYSTEM-PROMPT-RUNTIME.md` | Always-on harness header | Under 1000 bytes of scope, principles, priorities, constraints, workflow routes, and decision framework; loaded every session and enforced by `docs:check`. |
+| `GOAL-COMPLETION-RUNTIME.md` | Adaptive non-blocking advance decision | Outcome-weighted dispatch order over the coordination scheduler, blocker locality to dependents, fail-closed gates, and one digest-bound advance receipt; owns no readiness, dispatch, or authority. |
+| `AUTONOMOUS-GOAL-PURSUIT.md` | Operator-interaction economy | One-shot input completeness, internal operand derivation, earliest-point validation, late binding, environment-before-verdict, and decision-only escalation; relaxes no ownership, fence, approval, or deploy gate. |
 | `PROJECT-RULES.md` | Repository-wide engineering rules | Neutral code hygiene, validation, and session-end behavior shared across devices and tools. |
 | `SOUL.md` | Durable identity layer | Agent identity, voice, prompt slot 1 contract, personality overlay boundary, and hardcoded-default replacement rules. |
 | `FACTS.md` | Shared truth layer | Stable facts, precedence, direct `/`, `#`, and `@` definitions, deploy boundary truth, context-file and context-reference facts, tool/toolset facts, Tool Gateway and Tool Search facts, MoA facts, learning-loop facts, stateful orchestration facts, and long-horizon SuperAgent facts. |
@@ -58,8 +62,7 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `TODO.md` | Bounded planning index | Immutable legacy monthly history, independent `todo-context-record/v2` task files, deterministic projection, and release compliance. |
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
-| `CANONICAL-LIFECYCLE.md` | Provider-neutral release lifecycle | Fenced collaboration, exact Release Frontier, joined integration through rollback receipts, immutable-origin and public transport proof, state reconciliation, publication, and ownership-safe cleanup. |
-| `CLOUD-COLLABORATION.md` | Cloud-authoritative collaboration runtime | Four provider-neutral root operations, unlimited disjoint authorities, one current writer per overlap, waiting successors, dormant preservation, monotonic CAS, and typed receipts. |
+| `CANONICAL-LIFECYCLE.md` | ADLC consumer lifecycle | One pinned `agentic-os` lane state machine, provider-ordered integration, byte-exact proof, and ownership-safe exact retirement. |
 | `INTEGRATION-ORDER.md` | Dependency-ordered integration contract | Immutable per-repository units, cross-repository DAG waves, exact-canonical frontier advancement, dependency receipts, runtime convergence, and release-frontier sealing. |
 | `docs/documents/git-guidelines.md` | Git-layer companion to the execution set | any git stage: session start through cleanup |
 | `UPSTREAM-DEPENDENCY-ADMISSION.md` | Upstream dependency admission runtime | Early source admission, bounded deferral, exact consumer-closure isolation, protected-source-only projection, and disjoint-work continuation. |

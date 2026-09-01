@@ -12,7 +12,6 @@ import path from "node:path";
 import test from "node:test";
 
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
-import { refreshTaskBranchFromMain } from "../scripts/device-integrate-lib.mjs";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const liveSyncPath = path.join(repositoryRoot, "scripts", "live-sync.mjs");
@@ -173,91 +172,4 @@ test("live sync rechecks a current canonical checkout before issuing its receipt
   assert.equal(receipt.integratedSha, originSha);
   assert.equal(commands.filter(args => args.join(" ") === "rev-parse HEAD").length, 2);
   assert.equal(commands.filter(args => args.join(" ") === "status --porcelain").length, 2);
-});
-
-test("task-branch refresh pins both parents, verifies the merge tree, and reports paths without rename folding", () => {
-  const preMergeHeadSha = "1".repeat(40);
-  const targetMainSha = "2".repeat(40);
-  const mergeBaseSha = "3".repeat(40);
-  const refreshedHeadSha = "4".repeat(40);
-  const treeSha = "5".repeat(40);
-  const branch = "agent/device/runtime-integration";
-  const commands = [];
-  let headSha = preMergeHeadSha;
-  const gitText = args => {
-    const key = args.join(" ");
-    if (key === "status --porcelain") return "";
-    if (key === "rev-parse HEAD") return headSha;
-    if (key === "rev-parse origin/main") return targetMainSha;
-    if (key === `merge-base ${preMergeHeadSha} ${targetMainSha}`) return mergeBaseSha;
-    if (key === `merge-base --is-ancestor ${targetMainSha} ${targetMainSha}`) return "";
-    if (key === `rev-list --parents -n 1 ${refreshedHeadSha}`) {
-      return `${refreshedHeadSha} ${preMergeHeadSha} ${targetMainSha}\n`;
-    }
-    if (key === `rev-parse ${refreshedHeadSha}^{tree}`) return treeSha;
-    if (key === `diff --name-only --no-renames -z ${targetMainSha}..${refreshedHeadSha} --`) {
-      return "scripts/live-sync.mjs\0";
-    }
-    throw new Error(`unexpected git command: ${key}`);
-  };
-  const receipt = refreshTaskBranchFromMain({
-    repo: "/workspace/task",
-    gitText,
-    run: (command, args) => {
-      commands.push([command, ...args]);
-      if (command === "git" && args[0] === "merge") headSha = refreshedHeadSha;
-    },
-    runText: (command, args, options) => {
-      commands.push([command, ...args, JSON.stringify(options)]);
-      return treeSha;
-    },
-    squashSubject: "fix(runtime-integration): pin protected main refresh",
-    branch,
-    lease: { branch, scope: "runtime-integration", epoch: 1 },
-    expectedHeadSha: preMergeHeadSha,
-  });
-
-  const { receiptDigest, ...receiptSubject } = receipt;
-  assert.equal(receipt.status, "refreshed");
-  assert.equal(receipt.sourceHeadSha, preMergeHeadSha);
-  assert.equal(receipt.preMergeHeadSha, preMergeHeadSha);
-  assert.equal(receipt.targetMainSha, targetMainSha);
-  assert.equal(receipt.refreshedHeadSha, refreshedHeadSha);
-  assert.equal(receipt.treeSha, treeSha);
-  assert.deepEqual(receipt.paths, ["scripts/live-sync.mjs"]);
-  assert.equal(receipt.pathsDigest, digestValue(receipt.paths));
-  assert.equal(receipt.refreshCommitCount, 1);
-  assert.equal(receiptDigest, digestValue(receiptSubject));
-  assert.ok(commands.some(call => call.join(" ").includes(
-    `merge-tree --write-tree --no-messages ${preMergeHeadSha} ${targetMainSha}`,
-  )));
-  assert.ok(commands.some(call => call[0] === "git" && call[1] === "merge" &&
-    call.at(-1) === targetMainSha));
-  assert.equal(commands.some(call => call.includes("origin/main") && call[1] !== "fetch"), false);
-});
-
-test("task-branch refresh rejects an authored commit appended after the sealed source", () => {
-  const sealedHeadSha = "1".repeat(40);
-  const appendedHeadSha = "2".repeat(40);
-  const targetMainSha = "3".repeat(40);
-  const branch = "agent/device/runtime-integration";
-  assert.throws(() => refreshTaskBranchFromMain({
-    repo: "/workspace/task",
-    gitText: args => {
-      const key = args.join(" ");
-      if (key === "status --porcelain") return "";
-      if (key === "rev-parse HEAD") return appendedHeadSha;
-      if (key === "rev-parse origin/main") return targetMainSha;
-      if (key === `rev-list --parents -n 1 ${appendedHeadSha}`) {
-        return `${appendedHeadSha} ${sealedHeadSha}`;
-      }
-      throw new Error(`unexpected git command: ${key}`);
-    },
-    run: () => {},
-    runText: () => { throw new Error("unsealed history must fail before merge-tree"); },
-    squashSubject: "fix(runtime-integration): reject unsealed append",
-    branch,
-    lease: { branch, scope: "runtime-integration", epoch: 1 },
-    expectedHeadSha: sealedHeadSha,
-  }), /refresh chain contains an unsealed authored commit/u);
 });

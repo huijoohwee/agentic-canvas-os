@@ -21,7 +21,6 @@ source_docs:
   - "AGENT-TEAM.md"
   - "AGENTIC-SDLC-RUNTIME.md"
   - "MANAGED-IMPLEMENTATION-RUNS.md"
-  - "CLOUD-COLLABORATION.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
   - "docs/documents/git-guidelines.md"
@@ -82,6 +81,7 @@ dictionary_entries:
   - "#agentic-ecs"
   - "#dev-only"
   - "#mcp"
+  - "#webmcp"
   - "#repository-packing"
   - "#git-remote"
   - "#git-collaboration"
@@ -152,8 +152,8 @@ dictionary_entries:
   - "#profile-handoff"
   - "#worker-process"
   - "#multi-agent-collaboration"
-  - "#cloud-collaboration"
   - "#coordination-scheduler"
+  - "#goal-completion"
   - "#managed-implementation-run"
   - "#agentic-sdlc-observability"
   - "#application-composition"
@@ -253,6 +253,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#agentic-ecs` | Native entity-component-system hydration, tick, decision, and projection behavior owned by Knowgrph. | One of the three ECS MCP commands operates on a KGC-backed session. | Session identity, deterministic component/entity state, transactional tick outcome, decision provenance, cost logs, and the Dev-only execution boundary are explicit. |
 | `#dev-only` | Local development boundary. | Work must stop before Prod mirror or Cloudflare. | Status shows no Prod mirror mutation and no Cloudflare deploy command. |
 | `#mcp` | MCP discovery, gateway federation, or tool contract. | A capability is exposed to local, Pages, browser, or control-plane agents. | Tool IDs dedupe and discovery reports zero model spend. |
+| `#webmcp` | Browser-local W3C Model Context surface scope for in-page tool registration and inspection. | A request routes to a browser-local `agenticgraph.inspect_local_*` or `agenticgraph.control_local_*` tool instead of a local, Pages, or control-plane MCP owner. | The recorded API revision in `@webmcp-surface` resolves; an absent registration API fails visibly as an unavailable surface before any tool is advertised, and the token grants no model, network, camera, persistence, Prod, or Cloudflare authority. |
 | `#repository-packing` | Deterministic, bounded conversion of one exact local Git worktree into one AI-friendly content-addressed Markdown artifact. | `/repository.pack #repository-packing @repository-root @runtime-proof` requests the local stdio MCP owner. | Canonical Git discovery, typed omissions, source and artifact digests, path containment, atomic publication, independence proof, and zero network, model, token, cost, Prod, and Cloudflare activity are explicit. |
 | `#git-remote` | Browser Git object/ref operations with remote transport isolated behind a Dev Worker relay. | `/git.run` inspects, commits, clones, fetches, or pushes a configured remote. | Exact object hashing, atomic authority rejection, active persistence, bounded transport, expected-old ref checks, typed conflicts, and Worker-only credentials are proven. |
 | `#git-collaboration` | Git collaboration rules. | A task enters any git stage from session start through cleanup. | `docs/documents/git-guidelines.md` resolves and the focused checker reports registration parity. |
@@ -323,7 +324,6 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#profile-handoff` | Explicit row-level transfer between named agent profiles. | One worker pauses, delegates, resumes, or requests review from another profile. | Handoff row names source profile, target profile, context refs, blockers, acceptance, and resume state. |
 | `#worker-process` | Full OS process worker with its own identity and runtime state. | Work should run outside fragile in-process subagent swarms. | Worker profile, command, cwd, proof, and cleanup boundary are explicit. |
 | `#multi-agent-collaboration` | Durable collaboration through shared rows rather than transient subagents. | Several named profiles coordinate through board state. | Every task and handoff is readable/writable as rows, with no hidden process memory as SSOT. |
-| `#cloud-collaboration` | Protected remote claim authority for concurrent browser, cloud-agent, mobile-browser, and intermittently connected local authoring surfaces. | More than one device or session may publish work to shared source-control state. | One append-only remote ledger, normalized disjoint write sets, non-forced compare-and-swap, server-time expiry, idempotent receipts, protected exact-head verification, and no local or queue-derived lock authority are proven. |
 | `#managed-implementation-run` | Durable work-item-oriented autonomous implementation with isolated source mutation and team-visible control. | A project task should proceed through configured execution, bounded verification, pause/cancel/retry/review controls, and evidence without continuous agent supervision. | One versioned run ledger, safe fenced task worktree, configured runner, bounded attempts and time, exact review head, and `delivery_ready` default are proven; ACOS `review_ready` is distinct and automatic merge/deploy remain absent. |
 | `#agentic-sdlc-observability` | Deterministic read-only projection of one immutable Agentic SDLC ledger into end-to-end execution, evidence, budget, gate, checkpoint, and release-receipt graph context. | `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` requests a local observation of one exact run and ledger revision. | Exact receipt schema and digest, stable node and edge identities, source-backed GraphData and KGC Markdown, existing Canvas ownership, typed separation of `verified`, `delivery_ready`, and `deployed`, cache identity, zero model/network/token/cost evidence, and a closed Dev-only deploy boundary are explicit. |
 | `#application-composition` | Exact versioned component and interface composition for agent and LLM applications. | An application joins agent, model, tool, workflow, memory, guardrail, or integration components without absorbing their runtimes. | Exact source and component revisions, interface and schema digests, negotiated capabilities, runtime owners, one immutable plan digest, a deterministic dependency DAG, and explicit non-mutating migration diagnostics are present before execution. |
@@ -366,6 +366,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#payment-readiness` | Per-rail proof that a settlement rail is configured well enough to accept money. | A rail is about to be enabled, re-enabled, or exposed to a buyer or agent. | Required credential names, server-side presence, absence from visible configuration, pinned provider version, configured integration model, and one terminal sandbox payment are reported read-only, with a non-zero exit on any missing required input. |
 | `#workspace-parallelism` | Concurrent sessions working across sibling repositories in one workspace root as the intended mode. | More than one session, device, or tool can hold live work in the workspace at the same time. | Lane ownership, branch exclusivity, and scope exclusivity are each proven separately, every at-risk lane is named, and serialization is never used as the safety mechanism. |
 | `#coordination-scheduler` | Read-only partitioning of independently authorized tasks into bounded dependency-aware waves. | `/coordination.schedule @coordination-plan` receives exact authority states, write sets, dependencies, and findings. | Only current claims schedule; overlap and capacity serialize locally; proven disjoint global attention remains visible without blocking; the report performs no mutation. |
+| `#goal-completion` | Adaptive, outcome-weighted, non-blocking advance scope for one declared goal. | `/goal.advance @goal-plan` supplies units, authority states, write sets, dependencies, gates, and recorded outcomes. | Heuristic weights rank but never admit, gate, or unblock; gates fail closed without an exact authorization; blocked units bound only themselves and their dependents; the receipt is deterministic, frozen, and performs no dispatch or mutation. |
 | `#destructive-operation-guard` | Fail-closed review of an operation that can destroy work another session still holds. | A working-tree reset, untracked removal, forced checkout, history rewrite, lane removal, object prune, or fast-forward integration is proposed. | The operation is matched against the explicit forbidden catalog, foreign lane ownership and foreign uncommitted work refuse it, untracked paths refuse it outright, dirty tracked paths require a durable recovery reference, and the strongest outcome is allow-with-recovery. |
 
 ## Semantic Shape

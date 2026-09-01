@@ -183,12 +183,11 @@ automatic fallback.
 
 After scoped admission, every placement uses the same lifecycle:
 
-1. author only inside the admitted workspace and declared write set;
-2. heartbeat or revalidate authority after delay or reconnection;
+1. create one registered ADLC lane with `npm run lane -- <scope>`;
+2. author only inside its printed worktree;
 3. run focused checks and preserve the exact candidate commit;
-4. use `npm run device:review` for an immutable review-ready transition; and
-5. use `npm run device:integrate` only after explicit protected delivery
-   selection.
+4. publish the exact head with `npm run land`; and
+5. retire only after protected integration proof with `npm run reap -- --apply`.
 
 When review, CI, or a current-base check fails, the implementing agent resumes
 the exact fenced lane, fixes the source owner, reruns checks, and reviews a new
@@ -210,19 +209,16 @@ preserved unshared work. No prior cloud observation is inferred current while
 disconnected, and offline work must not claim shared ownership, push, dispatch
 review, assert review readiness, hand off, integrate, or retire.
 
-Reconnection requires fetch, live ledger verification or a fresh claim, rebase
-or replan when required, and focused checks before publication. Divergence,
-expiry, a competing fence, missing task proof, or overlap yields a typed
-handoff/recovery path, never automatic adoption or history rewriting.
+Reconnection requires fetch, live branch and pull-request observation, and
+focused checks before publication. Divergence, missing proof, or overlapping
+ownership yields a typed stop, never automatic adoption or history rewriting.
 
 ## Repository Ownership Audit
 
-Agentic Canvas OS already owns branch grammar, scoped admission, writer leases,
-protected integration, and task-worktree cleanup, so it owns this execution
-bootstrap. `huijoohwee.github.io` publishes the provider-neutral collaboration
-policy but owns no workspace-execution bootstrap. Adding a second bootstrap
-there would duplicate runtime ownership, so this change requires no site source
-or runtime mutation.
+Agentic Canvas OS owns its product and workspace-placement adapters. The pinned
+`agentic-os` package owns branch grammar, lane creation, protected integration
+proof, and exact task-worktree retirement. No placement adapter may recreate a
+second lifecycle state machine.
 
 ## Economics And Non-Goals
 

@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { auditLaneLifecycleRisks } from "./doctor-lib.mjs";
-import { buildLifecycleReport } from "./worktree-lifecycle-lib.mjs";
+import { buildLifecycleReport } from "./worktree-lifecycle.mjs";
 
 const checks = [
   {

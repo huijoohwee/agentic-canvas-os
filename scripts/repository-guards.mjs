@@ -1,9 +1,47 @@
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import {
-  assertNoCompetingScopePullRequests,
-  assertUniquePullRequestScopes,
-} from "./writer-lease-lib.mjs";
+
+const DEVICE_BRANCH_PATTERN = /^agent\/([^/]+)\/([^/]+)$/u;
+
+function parseDeviceBranch(branch) {
+  const match = String(branch || "").replace(/^refs\/heads\//u, "").match(DEVICE_BRANCH_PATTERN);
+  return match ? { branch: match[0], device: match[1], scope: match[2] } : null;
+}
+
+export function assertUniquePullRequestScopes(pulls) {
+  const owners = new Map();
+  for (const pull of Array.isArray(pulls) ? pulls : []) {
+    const identity = parseDeviceBranch(pull?.headRefName);
+    if (!identity) continue;
+    const existing = owners.get(identity.scope);
+    if (existing && existing.headRefName !== pull.headRefName) {
+      throw new Error(
+        `Semantic scope ${identity.scope} has multiple active pull requests: `
+          + `#${existing.number}:${existing.headRefName}, #${pull.number}:${pull.headRefName}`,
+      );
+    }
+    owners.set(identity.scope, pull);
+  }
+  return owners;
+}
+
+function assertNoCompetingScopePullRequests(pulls, activeBranch) {
+  const normalizedActiveBranch = String(activeBranch || "").replace(/^refs\/heads\//u, "");
+  const active = parseDeviceBranch(normalizedActiveBranch);
+  if (!active) {
+    throw new Error(
+      `Expected an agent/<device>/<semantic-scope> branch; received ${activeBranch}`,
+    );
+  }
+  const owner = assertUniquePullRequestScopes(pulls).get(active.scope);
+  if (owner && owner.headRefName !== normalizedActiveBranch) {
+    throw new Error(
+      `Semantic scope ${active.scope} is already owned by `
+        + `#${owner.number}:${owner.headRefName}; wait for an exact-SHA handoff.`,
+    );
+  }
+  return owner || null;
+}
 
 export function parseWorktreeRecords(porcelain) {
   const records = [];
@@ -84,5 +122,3 @@ export function assertNoUnmergedPaths({ conflictPaths, indexEntries }) {
 export function assertNoCompetingPullRequests(pulls, activeBranch) {
   return assertNoCompetingScopePullRequests(pulls, activeBranch);
 }
-
-export { assertUniquePullRequestScopes };

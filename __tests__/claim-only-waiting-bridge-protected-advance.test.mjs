@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
@@ -138,7 +141,9 @@ test("rejects rollback, overlap, checkpoint drift, and receipt join drift", () =
 });
 
 test("CLI keeps the protected plan private and requires paired replay authority", async () => {
-  const directory = mkdtempSync("/private/tmp/waiting-bridge-protected-");
+  const directory = mkdtempSync(path.join(
+    realpathSync(tmpdir()), "waiting-bridge-protected-",
+  ));
   try {
     chmodSync(directory, 0o700);
     const value = fixture();

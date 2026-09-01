@@ -4,10 +4,11 @@ import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
-import { validateGitHubAuthorityPolicy } from 'agentic-os/adapters/github-authority'
+import * as githubAuthority from 'agentic-os/adapters/github-authority'
+import { verifyGitHubAuthorityIssuanceLive } from 'agentic-os/adapters/github-authority-issuer'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/caa795b6acba2fca38e168a487e0a8dbf24ab1a3'
+const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/3d27ffd564d311709193ca11dd20746e0851b96a'
 const read = relativePath => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
 
 test('ACOS consumes one protected immutable agentic-os authority adapter', () => {
@@ -19,6 +20,8 @@ test('ACOS consumes one protected immutable agentic-os authority adapter', () =>
   assert.equal(installed.resolved, PIN)
   assert.match(installed.integrity, /^sha512-/u)
   assert.equal(installed.bin['agentic-os-authority'], 'bin/agentic-os-authority.mjs')
+  assert.equal(Object.hasOwn(githubAuthority, 'GITHUB_ACTIONS_RULESET_BYPASS'), false)
+  assert.equal(typeof verifyGitHubAuthorityIssuanceLive, 'function')
 })
 
 test('the committed policy is canonical, same-owner, and repository-neutral', () => {
@@ -51,7 +54,7 @@ test('the committed policy is canonical, same-owner, and repository-neutral', ()
     evidencePathPrefix: policy.evidencePathPrefix,
     validitySeconds: policy.validitySeconds,
   }
-  assert.deepEqual(validateGitHubAuthorityPolicy(effective), effective)
+  assert.deepEqual(githubAuthority.validateGitHubAuthorityPolicy(effective), effective)
 })
 
 test('the manual workflow binds event bytes without interpolating them into execution', () => {

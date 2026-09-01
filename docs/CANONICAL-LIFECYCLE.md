@@ -62,11 +62,24 @@ canonical ref and revision, workflow ref and revision, and static policy.
 Issuance validates and binds the exact Recovery Candidate plus the Coordination
 Request's single canonical effect-plan digest reference; it does not fetch or
 attest plan bytes. A consumer must resolve those bytes and prove their SHA-256
-matches before spending the bootstrap. Publication is create-only: one evidence
-ref names one one-parent child of the observed ACOS main revision and changes
-only its exact authority-evidence path. Creation uses the GitHub Actions
-integration bypass; separate zero-bypass rules forbid update, deletion, and
-non-fast-forward movement after creation.
+matches before spending the bootstrap. One active evidence ruleset has zero
+bypass actors and exactly the `update` rule with
+`update_allows_fetch_and_merge: false`, the `deletion` rule, and the
+`non_fast_forward` rule. Creation restrictions, additional evidence rules or
+rulesets, and every bypass actor fail closed. Publication is an absent-ref,
+create-only compare-and-swap: one evidence ref names one one-parent child of the
+observed ACOS main revision and changes only its exact authority-evidence path.
+The publisher identity does not grant authority; a conflicting absent-ref winner
+can deny availability but cannot authenticate a different issuance, while an
+exact winner is only an idempotent replay.
+
+A later consumer may spend the bootstrap only after obtaining the exact issuance
+from the provider-authenticated workflow-run output, retaining the exact dispatch
+payload and provider workflow run ID, and completing live provider revalidation
+with a trusted current clock while `issuedAt <= now < expiresAt`. It must also
+resolve the separately referenced effect plan to exact bytes whose SHA-256
+matches the Coordination Request's canonical effect-plan digest. Structural JSON,
+copied output, an evidence ref, or an unexpired timestamp alone is not authority.
 
 Authenticated evidence authorizes only the named recovery bootstrap and exact
 allowed effects in the separately resolved plan matching the request's

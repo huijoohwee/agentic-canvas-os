@@ -87,6 +87,59 @@ effect-plan digest. It grants no protected merge, deploy, release, claim
 retirement, source detachment, cleanup, or authority for another repository,
 candidate, epoch, ref, path, actor, or workflow run.
 
+## Authenticated Completion Transitions
+
+ACOS commits one canonical transition policy at
+`.agentic-os/github-transition-policy.json`. It binds the exact ACOS authority
+repository, `refs/heads/main`, `.github/workflows/adlc-transition.yml`, the flat
+`refs/heads/adlc/authority/` evidence namespace, and an exact target allowlist:
+ACOS, Agentic Commerce OS, and Knowgrph. Repository prefixes and targets selected
+by the dispatch payload are not authority.
+
+The transition Actions workflow is validation-only and read-only. Its only two
+required string inputs are `operation_payload`, the exact canonical UTF-8 bytes,
+and `operation_input_digest`, the lowercase SHA-256 of those bytes. The payload
+is `{schema,request,plan,planByteDigest,predecessorIssuance}` and contains no
+result fields. The complete two-input object stays within GitHub's 65,535
+character limit. Its exact run name is
+`ADLC transition <operation_input_digest> @ <workflow_sha>`. The validator reads
+only the bounded event file and canonical committed policy and requires
+`workflow_dispatch`, attempt one, identical checkout and workflow revisions,
+and the exact repository, canonical ref, and workflow path.
+
+Dispatch uses GitHub API version `2026-03-10` with
+`return_run_details:true`. The controller retains the provider-returned run ID
+and URLs and waits for that exact first-attempt run to complete successfully;
+it never discovers authority by listing runs. The workflow token never
+publishes, emits an authority result, or grants log or artifact authority.
+
+After terminal validation, a local controller may use an authenticated `gh`
+user credential. It first proves target Administration-read and ACOS
+contents-write capability, then re-observes the exact run and publishes a
+create-only canonical child at
+`refs/heads/adlc/authority/<transition-coordinate>`. The coordinate is derived
+only from authority repository, exact target repository, source claim, lease
+epoch, and fence; it excludes the operation, request, plan, and run. Exact bytes
+replay one winner, different bytes conflict, and a lost or non-201 create-ref
+response is classified by an immediate exact read. The protected ref and all
+provider records remain retained.
+
+An integrate transition records an already completed protected integration; it
+does not authorize merge. It live-revalidates the initial issuance, target
+numeric repository and owner identity, exact PR head, completed checks, passing
+non-bypassed rule suite, ruleset versions, permitted merge or squash method, and
+canonical ancestry. Omitted bypass actors are unobserved, never evidence of
+zero bypass. V1 rejects rebase because a one-parent result does not prove the
+whole rebased chain. A retire transition sources and revalidates the exact
+integrate winner, including authority and owner identities, scope, write set,
+resource, candidate, and snapshot.
+
+The deterministic authenticated transition receipt advances the lease by
+exactly one and uses the immutable CAS coordinate as its result fence. Mutable
+observation time is excluded from its semantic digest. Historical replay of an
+exact winner may reconstruct the same receipt after expiry, but authorizes no
+new effect.
+
 ## Future Cleanup Authorization
 
 The current ACOS profile is retention-only. A later target-specific decision
@@ -95,6 +148,28 @@ recovery when needed, protected integration proof, claim retirement, clean
 detachment, no-remaining-value proof, target-specific eligibility, and an
 authenticated cleanup receipt. None of those records authorizes a different
 target or effect.
+
+The generic upstream executor can quarantine only when a future trusted,
+committed profile explicitly opts into both the exact worktree projection and
+its exact registration. Branches, recovery refs, reflogs, peer registrations,
+objects, and every other cleanup target remain retained. ACOS's current profile
+is byte-identical and contains no such opt-in.
+
+Preservation and no-remaining-value records are local structural observations,
+not independent provider credentials. Their exact digests are transitively
+authority-bound by the live-authenticated retirement plan through the cleanup
+plan bytes. Eligibility and execution both replay the exact integrate and
+retire CAS winners live and require byte-identical deterministic receipts.
+
+Execution re-observes profile, canonical revision, dirty inventory, worktree
+administration, peers, refs, reflogs, and objects under explicit ceilings. It
+holds the clone-common operation lock and rechecks the trusted clock immediately
+before starting any effect. It journals, renames the exact projection into
+clone-private quarantine, proves the missing registration is the exact one
+authorized, then renames only that registration. These two renames are
+crash-recoverable, not atomic. The executor never removes or prunes a worktree,
+updates or deletes refs, runs garbage collection, deletes bytes, or quarantines
+canonical. Partial or drifting coordinates remain retained and blocked.
 
 ## Commands
 

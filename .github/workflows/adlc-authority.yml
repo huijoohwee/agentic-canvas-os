@@ -1,0 +1,41 @@
+name: ADLC Authority
+
+on:
+  workflow_dispatch:
+    inputs:
+      authority_payload:
+        description: Canonical recovery request and candidate JSON
+        required: true
+        type: string
+      authority_input_digest:
+        description: SHA-256 of the exact authority input
+        required: true
+        type: string
+
+run-name: ADLC authority issuance
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  issue:
+    name: issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install exact authority adapter
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Issue provider-authenticated recovery authority
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./node_modules/.bin/agentic-os-authority issue-github --event="$GITHUB_EVENT_PATH" --policy=.github/adlc-authority-policy.json

@@ -1,0 +1,19 @@
+{
+  "targetRepositoryPrefix": "github.com/huijoohwee/",
+  "canonicalRef": "refs/heads/main",
+  "workflowPath": ".github/workflows/adlc-authority.yml",
+  "confirmationClass": "interactive-provider",
+  "requiredStatusChecks": [
+    "budgets",
+    "build",
+    "collaboration-integration",
+    "docs-contract",
+    "test"
+  ],
+  "allowedMergeMethods": [
+    "squash"
+  ],
+  "evidenceRefPrefix": "refs/heads/adlc/authority/",
+  "evidencePathPrefix": "authority-evidence/",
+  "validitySeconds": 3600
+}

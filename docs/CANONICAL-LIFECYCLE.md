@@ -2,7 +2,7 @@
 title: "Canonical ADLC Lifecycle"
 graphId: "md:acos-canonical-adlc-lifecycle"
 doc_type: "Lifecycle Contract"
-date: "2026-09-01"
+date: "2026-09-02"
 lang: "en-US"
 schema: "acos-canonical-adlc-lifecycle/v1"
 frontmatter_contract: "required"
@@ -32,8 +32,9 @@ controller/adapter/evidence/store family for one incident is forbidden.
 - `main` is the read-only runtime and synchronization owner. Authoring happens
   only in one registered `agent/<device>/<scope>` worktree created from fetched
   `origin/main`.
-- The remotely addressable branch plus its pull request is the claim. Local ADLC
-  lane records are a cache and never grant authority.
+- The remotely addressable branch plus its pull request is a review projection,
+  never an authenticated claim. Local ADLC lane records are a cache and never
+  grant authority.
 - Required checks run on the exact published head. The provider owns landing
   order through merge queue or auto-merge with strict up-to-date disabled.
 - A queued lane is never author-restacked for ordering. One restack is permitted
@@ -48,6 +49,30 @@ controller/adapter/evidence/store family for one incident is forbidden.
 - Dirty, untracked, ambiguous, or concurrently owned bytes are preserved. No
   stash, reset, force checkout, force push, broad prune, or inferred ownership
   is an ADLC recovery operation.
+
+## External Recovery Authority
+
+ACOS's manual authority workflow is a thin, optional GitHub adapter over the
+provider-neutral lifecycle contracts in the pinned `agentic-os` package. It
+contains no product-specific recovery controller and accepts a target only
+within the committed same-owner repository prefix.
+
+The provider re-observes the workflow event, human actor, first run attempt,
+canonical ref and revision, workflow ref and revision, and static policy.
+Issuance validates and binds the exact Recovery Candidate plus the Coordination
+Request's single canonical effect-plan digest reference; it does not fetch or
+attest plan bytes. A consumer must resolve those bytes and prove their SHA-256
+matches before spending the bootstrap. Publication is create-only: one evidence
+ref names one one-parent child of the observed ACOS main revision and changes
+only its exact authority-evidence path. Creation uses the GitHub Actions
+integration bypass; separate zero-bypass rules forbid update, deletion, and
+non-fast-forward movement after creation.
+
+Authenticated evidence authorizes only the named recovery bootstrap and exact
+allowed effects in the separately resolved plan matching the request's
+effect-plan digest. It grants no protected merge, deploy, release, claim
+retirement, source detachment, cleanup, or authority for another repository,
+candidate, epoch, ref, path, actor, or workflow run.
 
 ## Future Cleanup Authorization
 

@@ -62,6 +62,8 @@ test('the manual workflow binds event bytes without interpolating them into exec
   assert.match(workflow, /^  workflow_dispatch:\n/mu)
   assert.match(workflow, /authority_payload:[\s\S]*required: true[\s\S]*type: string/u)
   assert.match(workflow, /authority_input_digest:[\s\S]*required: true[\s\S]*type: string/u)
+  assert.match(workflow,
+    /run-name: ADLC authority \$\{\{ inputs\.authority_input_digest \}\} @ \$\{\{ github\.workflow_sha \}\}/u)
   assert.doesNotMatch(workflow, /^\s{2}(?:pull_request|push|schedule|merge_group):/mu)
   assert.match(workflow, /^  actions: read\n  contents: write$/mu)
   assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/u)
@@ -69,7 +71,10 @@ test('the manual workflow binds event bytes without interpolating them into exec
   assert.match(workflow, /ref: \$\{\{ github\.sha \}\}[\s\S]*persist-credentials: false/u)
   assert.match(workflow, /npm ci --ignore-scripts --no-audit --no-fund/u)
   assert.match(workflow, /agentic-os-authority issue-github --event="\$GITHUB_EVENT_PATH" --policy=\.github\/adlc-authority-policy\.json/u)
-  assert.doesNotMatch(workflow, /\$\{\{\s*(?:inputs\.|github\.event\.inputs)/u)
+  const executionWorkflow = workflow.split('\n')
+    .filter(line => !line.startsWith('run-name:'))
+    .join('\n')
+  assert.doesNotMatch(executionWorkflow, /\$\{\{\s*(?:inputs\.|github\.event\.inputs)/u)
 
   const writeWorkflows = fs.readdirSync(path.join(ROOT, '.github', 'workflows'))
     .filter(name => /\.ya?ml$/u.test(name))

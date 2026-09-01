@@ -19,6 +19,17 @@ import { buildLifecycleReport } from "../scripts/worktree-lifecycle.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHA = "a".repeat(40);
 
+test("autonomy classification delegates to the integrated agentic-os implementation", () => {
+  const packageJson = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8"));
+  assert.equal(packageJson.scripts["autonomy-class"], "agentic-os autonomy-class");
+  assert.equal(
+    packageJson.devDependencies["agentic-os"],
+    "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/6d9be05e2b06b8455e9e8d166f7cd92f084e8c19",
+  );
+  assert.equal(existsSync(path.join(ROOT, "scripts", "autonomy-class.mjs")), false);
+  assert.equal(existsSync(path.join(ROOT, "__tests__", "autonomy-class.test.mjs")), false);
+});
+
 test("compatibility entrypoints import no deleted ACOS lifecycle implementation", () => {
   const relativeImports = /from\s+["']\.\/([^"']+)["']/gu;
   const allowedRelativeImports = new Set(["repository-guards.mjs", "worktree-lifecycle.mjs"]);

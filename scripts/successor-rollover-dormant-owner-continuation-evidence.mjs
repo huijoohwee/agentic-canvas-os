@@ -29,6 +29,28 @@ import { OPERATION } from "./successor-rollover-dormant-owner-continuation-contr
 export const EVIDENCE_SCHEMA = `agentic-${OPERATION}-evidence/v1`;
 
 export function buildDormantOwnerContinuationEvidence(input = {}) {
+  const { core, lease, promotionResult } = buildStaticEvidenceCore(input);
+  const cloud = requireCloudTopology({
+    status: input.cloudStatus,
+    lease,
+    promotionResult,
+  });
+  const { registryRevision, observedAt, ...prefix } = core;
+  const complete = { ...prefix, cloud, registryRevision, observedAt };
+  return deepFreeze({ ...complete, evidenceDigest: digestValue(complete) });
+}
+
+export function requireSameDormantOwnerContinuationStaticEvidence(expected, input = {}) {
+  const sealed = normalizeDormantOwnerContinuationEvidence(expected);
+  const { cloud: ignoredCloud, evidenceDigest: ignoredDigest, ...left } = sealed;
+  void ignoredCloud;
+  void ignoredDigest;
+  const right = buildStaticEvidenceCore(input).core;
+  if (canonicalJson(left) !== canonicalJson(right)) invalid("static live evidence drift");
+  return deepFreeze({ ...right, evidenceDigest: digestValue(right) });
+}
+
+function buildStaticEvidenceCore(input) {
   const continuation = normalizeSuccessorRolloverContinuationPlan(input.continuationPlan);
   const rolloverJournal = requireSuccessorRolloverContinuationJournal({
     plan: continuation,
@@ -63,11 +85,6 @@ export function buildDormantOwnerContinuationEvidence(input = {}) {
   });
   if (dirt.headSha !== lease.fenceSha || dirt.pathCount < 1) invalid("owned dirt fence");
   const pull = requirePullRequest(input.pullRequest, lease, continuation);
-  const cloud = requireCloudTopology({
-    status: input.cloudStatus,
-    lease,
-    promotionResult,
-  });
   const controller = requireProtectedControllerAdvance(
     input.protectedControllerAdvance,
     replacement,
@@ -95,7 +112,10 @@ export function buildDormantOwnerContinuationEvidence(input = {}) {
     taskAuthorityBindingDigest: lease.taskAuthority.bindingDigest,
     expiresAt: lease.expiresAt,
   };
-  const core = {
+  return {
+    lease,
+    promotionResult,
+    core: {
     schema: EVIDENCE_SCHEMA,
     repository: text(input.repository, "repository"),
     controllerRoot: text(input.controllerRoot, "controller root"),
@@ -117,11 +137,10 @@ export function buildDormantOwnerContinuationEvidence(input = {}) {
     pullRequest: pull,
     dirt,
     controller,
-    cloud,
     registryRevision: positive(input.registryRevision, "registry revision"),
     observedAt: instant(input.observedAt, "observation time"),
+    },
   };
-  return deepFreeze({ ...core, evidenceDigest: digestValue(core) });
 }
 
 export function normalizeDormantOwnerContinuationEvidence(value) {

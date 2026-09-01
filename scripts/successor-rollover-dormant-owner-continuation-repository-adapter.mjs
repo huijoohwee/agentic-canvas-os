@@ -19,27 +19,26 @@ import {
   continueExpiredCommittedHeartbeatCloudAuthority,
   preserveSourceManifestProjection,
 } from "./expired-committed-heartbeat-cloud-authority.mjs";
-import { createGitHubConditionalPullBodyPort }
-  from "./github-conditional-pull-body.mjs";
 import { writerLeaseBodyRemainder }
   from "./orphaned-task-authority-recovery-evidence.mjs";
+import { createGitHubConditionalPullBodyPort }
+  from "./github-conditional-pull-body.mjs";
 import {
   invokeRepositoryCloudAction,
   verifyAdmissionCloudAuthority,
 } from "./scoped-lane-cloud-authority.mjs";
-import { normalizeBoundAuthority }
-  from "./scoped-lane-cloud-reconciliation.mjs";
 import {
-  authorizeTaskBoundLeaseMutation,
-  createTaskAuthorityLeaseBinding,
-} from "./task-bound-lane-authority-store.mjs";
-import { assertTaskAuthorityBinding }
-  from "./task-bound-lane-authority-contract.mjs";
+  assertCapabilityMatchesBinding,
+  assertTaskAuthorityBinding,
+  createTaskAuthorityBinding,
+  createTaskAuthorityProof,
+  normalizeTaskAuthorityCapability,
+  verifyTaskAuthorityProof,
+} from "./task-bound-lane-authority-contract.mjs";
 import {
   createWriterLeaseStore,
   parseWriterLeasePullRequestBody,
   projectWriterLeasePullRequestMarker,
-  updateWriterLeasePullRequestBody,
 } from "./writer-lease-lib.mjs";
 import {
   mutateWriterLeaseRegistry,
@@ -48,13 +47,12 @@ import {
 import {
   buildDormantOwnerContinuationEvidence,
   requireSameDormantOwnerContinuationEvidence,
+  requireSameDormantOwnerContinuationStaticEvidence,
 } from "./successor-rollover-dormant-owner-continuation-evidence.mjs";
 import {
   normalizeDormantOwnerContinuationPlan,
   OPERATION,
 } from "./successor-rollover-dormant-owner-continuation-contract.mjs";
-import { readPrivateContinuationJson }
-  from "./successor-rollover-dormant-owner-continuation-store.mjs";
 
 export function createRepositoryDormantOwnerContinuationAdapter(
   options = {},
@@ -63,8 +61,8 @@ export function createRepositoryDormantOwnerContinuationAdapter(
   const repository = realpathSync(path.resolve(required(options.repository, "repository")));
   const sessionId = required(options.sessionId, "session ID");
   const pullRequestNumber = positive(options.pullRequestNumber, "pull request");
-  const taskAuthorityFile = options.taskAuthorityFile
-    ? path.resolve(options.taskAuthorityFile) : null;
+  const taskAuthorityCapability = options.taskAuthorityCapability
+    ? Object.freeze(normalizeTaskAuthorityCapability(options.taskAuthorityCapability)) : null;
   const controllerRoot = realpathSync(path.resolve(required(options.controllerRoot, "controller root")));
   const ttlSeconds = positive(options.ttlSeconds || 1_800, "TTL seconds");
   const environment = options.environment || process.env;
@@ -82,41 +80,22 @@ export function createRepositoryDormantOwnerContinuationAdapter(
   const commonDirectory = realpathSync(path.resolve(repository, git([
     "rev-parse", "--git-common-dir",
   ])));
-  const forbiddenRoots = [repository, commonDirectory, controllerRoot];
   const store = dependencies.leaseStore || createWriterLeaseStore({
     gitCommonDir: commonDirectory,
-    taskAuthorityFile,
-    taskAuthorityPolicy: "required",
+    taskAuthorityPolicy: "projected",
   });
   const pullPort = dependencies.pullPort || createGitHubConditionalPullBodyPort({ repository });
-  const inputPaths = Object.freeze({
-    continuationPlan: path.resolve(required(options.rolloverPlanFile, "rollover plan")),
-    rolloverJournal: path.resolve(required(options.rolloverJournalFile, "rollover journal")),
-    promotionJournal: path.resolve(required(
-      options.successorPromotionJournalFile,
-      "successor promotion journal",
-    )),
+  const sealedInputs = Object.freeze({
+    continuationPlan: cloneObject(options.continuationPlan, "rollover plan"),
+    rolloverJournal: cloneObject(options.rolloverJournal, "rollover journal"),
+    promotionJournal: cloneObject(options.promotionJournal, "successor promotion journal"),
   });
+  const consumedProofDigests = new Set();
+  const authorizedProofs = new Map();
   let recovered = null;
 
   function inputs() {
-    return Object.freeze({
-      continuationPlan: readPrivateContinuationJson(
-        inputPaths.continuationPlan,
-        "rollover continuation plan",
-        { forbiddenRoots },
-      ),
-      rolloverJournal: readPrivateContinuationJson(
-        inputPaths.rolloverJournal,
-        "rollover journal",
-        { forbiddenRoots },
-      ),
-      promotionJournal: readPrivateContinuationJson(
-        inputPaths.promotionJournal,
-        "successor promotion journal",
-        { forbiddenRoots },
-      ),
-    });
+    return sealedInputs;
   }
 
   function sourceLease(expectedPlan = null) {
@@ -166,42 +145,80 @@ export function createRepositoryDormantOwnerContinuationAdapter(
     });
   }
 
-  function captureEvidence({ plan = null } = {}) {
+  function staticEvidenceInput(plan = null) {
     const privateInputs = inputs();
     const lease = sourceLease(plan);
     const registry = store.readRegistry();
     const tombstone = registry.scopeExpansionSuccessorRolloverReceipts?.[lease.branch];
-    const status = cloudStatus(lease);
     const observedAt = plan?.evidenceSnapshot?.observedAt || now().toISOString();
-    const evidence = buildDormantOwnerContinuationEvidence({
+    return {
       ...privateInputs,
       lease,
       tombstone,
       pullRequest: readPull(),
       dirtEvidence: captureActiveOwnedDirtEvidence({ repository }),
       protectedControllerAdvance: controllerAdvance(privateInputs.continuationPlan),
-      cloudStatus: status,
       repository,
       controllerRoot,
       registryRevision: registry.revision,
       observedAt,
+    };
+  }
+
+  function captureEvidence({ plan = null } = {}) {
+    const input = staticEvidenceInput(plan);
+    const evidence = buildDormantOwnerContinuationEvidence({
+      ...input,
+      cloudStatus: cloudStatus(input.lease),
     });
     if (plan) requireSameDormantOwnerContinuationEvidence(plan.evidenceSnapshot, evidence);
     return evidence;
   }
 
-  function authorizeTaskAuthority({ plan }) {
-    if (!taskAuthorityFile) invalid("task-authority capability");
-    const lease = requireSourceLease(plan);
-    return authorizeTaskBoundLeaseMutation({
+  function authorizeTaskAuthority({ plan, operation }) {
+    if (!taskAuthorityCapability) invalid("task-authority capability");
+    const lease = requireSourceOrRecoveredLease(plan);
+    const binding = assertTaskAuthorityBinding({ binding: lease.taskAuthority, lease });
+    assertCapabilityMatchesBinding(taskAuthorityCapability, binding);
+    const issuedAt = now().toISOString();
+    const proof = createTaskAuthorityProof({
+      capability: taskAuthorityCapability,
+      binding,
       lease,
-      capabilityPath: taskAuthorityFile,
-      operation: `${OPERATION}:${plan.planDigest}`,
-      now: new Date(plan.evidenceSnapshot.observedAt),
+      operation: `${OPERATION}:${plan.planDigest}:${required(operation, "task operation")}`,
+      issuedAt,
     });
+    const verified = verifyTaskAuthorityProof({
+      proof,
+      binding,
+      lease,
+      operation: proof.challenge.operation,
+      now: new Date(issuedAt),
+      consumedProofDigests,
+    });
+    if (verified.proofDigest !== proof.proofDigest) invalid("task proof verification");
+    const authorization = proof;
+    authorizedProofs.set(proof.proofDigest, authorization);
+    return authorization;
   }
 
-  function recoverCloudAuthority({ plan }) {
+  function consumeTaskAuthorization(value, plan, operation) {
+    const proofDigest = value?.proofDigest;
+    const authorized = authorizedProofs.get(proofDigest);
+    if (!authorized || canonicalJson(authorized) !== canonicalJson(value)
+      || value.challenge.operation !== `${OPERATION}:${plan.planDigest}:${operation}`) {
+      invalid(`${operation} task proof`);
+    }
+    authorizedProofs.delete(proofDigest);
+    return authorized;
+  }
+
+  function recoverCloudAuthority({ plan, taskAuthority }) {
+    consumeTaskAuthorization(taskAuthority, plan, "cloud-recovery");
+    requireSameDormantOwnerContinuationStaticEvidence(
+      plan.evidenceSnapshot,
+      staticEvidenceInput(plan),
+    );
     const lease = requireSourceOrRecoveredLease(plan);
     if (isRecoveredLease(lease, plan)) {
       return cloudProjectionFromLiveLease(lease, plan);
@@ -234,25 +251,36 @@ export function createRepositoryDormantOwnerContinuationAdapter(
       invoke,
       verify: verifyCloud,
     });
-    recovered = preserveSourceManifestProjection(lease.cloudAuthority, result.authority);
+    const verified = verifyCloud({
+      authority: preserveSourceManifestProjection(
+        lease.cloudAuthority,
+        result.authority,
+      ),
+      manifest: lease.admission,
+      canonicalBaseSha: lease.baseSha,
+      environment,
+    });
+    recovered = preserveSourceManifestProjection(
+      lease.cloudAuthority,
+      verified.authority,
+    );
     return Object.freeze({
       authority: recovered,
       claimDigest: recovered.claimDigest,
       expiresAt: recovered.expiresAt,
       receiptDigest: required(
-        result.verification?.receiptDigest,
+        verified.verification?.receiptDigest,
         "cloud verification receipt digest",
       ),
     });
   }
 
-  function projectLocalLease({ plan, journal, cloudRecovery = null }) {
-    if (!taskAuthorityFile) invalid("task-authority capability");
+  function projectLocalLease({ plan, cloudRecovery = null, taskAuthority }) {
+    consumeTaskAuthorization(taskAuthority, plan, "local-projection");
+    if (!taskAuthorityCapability) invalid("task-authority capability");
     const current = requireSourceOrRecoveredLease(plan);
     if (isRecoveredLease(current, plan)) return projectedLeaseResult(current);
-    const cloud = cloudRecovery
-      ? requireJournalBoundCloudRecovery({ plan, journal, recovery: cloudRecovery })
-      : resolveJournaledCloudRecovery({ plan, journal, lease: current });
+    const cloud = requirePlanBoundCloudRecovery({ plan, recovery: cloudRecovery });
     const authority = cloud.authority;
     const originalDirt = plan.evidenceSnapshot.dirt;
     requireSameActiveOwnedDirtEvidence(
@@ -280,9 +308,9 @@ export function createRepositoryDormantOwnerContinuationAdapter(
         };
         nextLease = {
           ...core,
-          taskAuthority: createTaskAuthorityLeaseBinding({
+          taskAuthority: createTaskAuthorityBinding({
             lease: core,
-            capabilityPath: taskAuthorityFile,
+            capability: taskAuthorityCapability,
             bindingMode: "continuation",
             boundAt: plan.evidenceSnapshot.observedAt,
             transitionPlanDigest: null,
@@ -304,68 +332,18 @@ export function createRepositoryDormantOwnerContinuationAdapter(
     return projectedLeaseResult(nextLease, result.registryRevision);
   }
 
-  function resolveJournaledCloudRecovery({ plan, journal, lease }) {
-    const status = cloudStatus(lease);
-    const matches = status.claims?.filter(claim => claim.claimId === plan.claimId) || [];
-    if (matches.length !== 1) invalid("journaled cloud claim identity");
-    const claim = matches[0];
-    const cloudValues = journal?.receipts?.["cloud-recovered"]?.values;
-    if (claim.state !== "current" || claim.writeAuthority !== true
-      || claim.scopeReserved !== true || claim.transitionCounter !== plan.sourceTransitionCounter + 1
-      || claim.fenceRevision !== cloudValues?.claimDigest
-      || claim.expiresAt !== cloudValues?.expiresAt
-      || claim.canonicalBaseRevision !== plan.sourceBaseSha
-      || claim.laneRevision !== plan.sourceFenceSha
-      || claim.writeSetDigest !== plan.writeSetDigest
-      || claim.leaseEpoch !== lease.cloudAuthority.leaseEpoch
-      || claim.reviewRequestId !== plan.reviewRequestId
-      || claim.integration || claim.integrationReceiptDigest) {
-      invalid("journaled recovered cloud subject");
-    }
-    const authority = preserveSourceManifestProjection(lease.cloudAuthority, normalizeBoundAuthority({
-      result: {
-        claim,
-        claimDigest: claim.fenceRevision,
-        ledgerRevision: status.ledgerRevision,
-        ledgerDigest: status.ledgerDigest,
-      },
-      authority: lease.cloudAuthority,
-      manifest: lease.admission,
-    }));
-    const verified = verifyCloud({
-      authority,
-      manifest: lease.admission,
-      canonicalBaseSha: lease.baseSha,
-      environment,
-      inspect: invoke,
-      invoke,
-    });
-    return requireJournalBoundCloudRecovery({
-      plan,
-      journal,
-      recovery: {
-        authority: preserveSourceManifestProjection(lease.cloudAuthority, verified.authority),
-        claimDigest: verified.authority.claimDigest,
-        expiresAt: verified.authority.expiresAt,
-        receiptDigest: verified.verification.receiptDigest,
-      },
-    });
-  }
-
-  function requireJournalBoundCloudRecovery({ plan, journal, recovery }) {
+  function requirePlanBoundCloudRecovery({ plan, recovery }) {
     const authority = recovery?.authority;
-    const values = journal?.receipts?.["cloud-recovered"]?.values;
-    if (!authority || recovery.claimDigest !== values?.claimDigest
-      || recovery.expiresAt !== values?.expiresAt
+    if (!authority || recovery.claimDigest !== authority.claimDigest
+      || recovery.expiresAt !== authority.expiresAt
       || authority.claimId !== plan.claimId
-      || authority.claimDigest !== values.claimDigest
       || authority.transitionCounter !== plan.sourceTransitionCounter + 1
       || authority.canonicalBaseSha !== plan.sourceBaseSha
       || authority.laneRevision !== plan.sourceFenceSha
       || authority.writeSetDigest !== plan.writeSetDigest
       || authority.reviewRequestId !== plan.reviewRequestId
       || authority.state !== "active") {
-      invalid("journal-bound cloud recovery");
+      invalid("plan-bound cloud recovery");
     }
     recovered = authority;
     return recovery;
@@ -437,8 +415,6 @@ export function createRepositoryDormantOwnerContinuationAdapter(
       manifest: lease.admission,
       canonicalBaseSha: lease.baseSha,
       environment,
-      inspect: invoke,
-      invoke,
     });
     const core = {
       planDigest: plan.planDigest,

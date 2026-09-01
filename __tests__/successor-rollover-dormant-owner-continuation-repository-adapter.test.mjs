@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
 import { buildDormantOwnerContinuationPlan }
@@ -6,6 +7,19 @@ import { buildDormantOwnerContinuationPlan }
 import { classifyDormantOwnerContinuationLease }
   from "../scripts/successor-rollover-dormant-owner-continuation-repository-adapter.mjs";
 import { writerLeaseDigest } from "../scripts/writer-lease-registry-cas.mjs";
+
+test("direct cloud verification uses the verifier's own provider transport", () => {
+  const source = readFileSync(new URL(
+    "../scripts/successor-rollover-dormant-owner-continuation-repository-adapter.mjs",
+    import.meta.url,
+  ), "utf8");
+  const directCalls = [...source.matchAll(/const verified = verifyCloud\(\{([\s\S]*?)\n    \}\);/gu)];
+  assert.equal(directCalls.length, 2);
+  for (const [, parameters] of directCalls) {
+    assert.doesNotMatch(parameters, /\b(?:inspect|invoke)\s*:/u);
+  }
+  assert.match(source, /requireSameDormantOwnerContinuationStaticEvidence\([\s\S]*staticEvidenceInput\(plan\)/u);
+});
 
 test("classifies only the exact source or same-claim monotonic recovered lease", () => {
   const lease = sourceLease();

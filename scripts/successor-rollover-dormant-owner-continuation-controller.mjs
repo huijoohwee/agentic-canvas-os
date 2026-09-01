@@ -35,13 +35,15 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
   async function run({ plan, authorization } = {}) {
     const sealedPlan = normalizeDormantOwnerContinuationPlan(plan);
     let journal = journalStore.read();
+    let resumedPhase = null;
     if (journal) {
       journal = normalizeDormantOwnerContinuationJournal(journal);
+      resumedPhase = journal.phase;
       if (journal.plan.planDigest !== sealedPlan.planDigest) {
         throw new Error("Private continuation journal belongs to another plan.");
       }
     }
-    if (!journal || !atLeast(journal.phase, "cloud-recovered")) {
+    if (!journal || journal.phase === "authorized") {
       requireSameDormantOwnerContinuationEvidence(
         sealedPlan.evidenceSnapshot,
         await effects.captureEvidence({ plan: sealedPlan, journal }),
@@ -49,7 +51,7 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
     }
     if (!journal) {
       journal = createDormantOwnerContinuationJournal(sealedPlan, authorization);
-      journalStore.write(journal, null);
+      journal = await journalStore.write(journal, null);
     }
     if (journal.phase === "complete") {
       requireTerminalReplay(journal, await effects.verifyCompletion({
@@ -62,7 +64,7 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
     let cloudRecovery = null;
     if (!atLeast(journal.phase, "task-authority-verified")) {
       const result = await effects.authorizeTaskAuthority({ plan: sealedPlan, journal });
-      journal = persist(journal, "task-authority-verified", {
+      journal = await persist(journal, "task-authority-verified", {
         taskAuthorityReceiptDigest: requiredDigest(
           result?.receiptDigest,
           "task-authority receipt digest",
@@ -72,7 +74,7 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
     if (!atLeast(journal.phase, "cloud-recovered")) {
       const result = await effects.recoverCloudAuthority({ plan: sealedPlan, journal });
       cloudRecovery = result;
-      journal = persist(journal, "cloud-recovered", {
+      journal = await persist(journal, "cloud-recovered", {
         claimDigest: requiredDigest(result?.claimDigest, "recovered claim digest"),
         cloudReceiptDigest: requiredDigest(result?.receiptDigest, "cloud receipt digest"),
         expiresAt: requiredText(result?.expiresAt, "recovered cloud expiry"),
@@ -84,7 +86,7 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
         journal,
         cloudRecovery,
       });
-      journal = persist(journal, "local-cas", {
+      journal = await persist(journal, "local-cas", {
         leaseDigest: requiredDigest(result?.leaseDigest, "projected lease digest"),
         registryRevision: positive(result?.registryRevision, "registry revision"),
         taskAuthorityBindingDigest: requiredDigest(
@@ -95,7 +97,7 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
     }
     if (!atLeast(journal.phase, "pr-marker")) {
       const result = await effects.projectPullRequestMarker({ plan: sealedPlan, journal });
-      journal = persist(journal, "pr-marker", {
+      journal = await persist(journal, "pr-marker", {
         bodyDigest: requiredDigest(result?.bodyDigest, "pull-request body digest"),
         pullRequestMarkerDigest: requiredDigest(
           result?.markerDigest,
@@ -105,7 +107,7 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
     }
     if (!atLeast(journal.phase, "verified")) {
       const result = await effects.verifyCompletion({ plan: sealedPlan, journal });
-      journal = persist(journal, "verified", {
+      journal = await persist(journal, "verified", {
         claimDigest: requiredDigest(result?.claimDigest, "verified claim digest"),
         leaseDigest: requiredDigest(result?.leaseDigest, "verified lease digest"),
         pullRequestMarkerDigest: requiredDigest(
@@ -119,7 +121,13 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
       });
     }
     if (!atLeast(journal.phase, "complete")) {
-      journal = persist(journal, "complete", {
+      if (resumedPhase === "verified") {
+        requireTerminalReplay(journal, await effects.verifyCompletion({
+          plan: sealedPlan,
+          journal,
+        }));
+      }
+      journal = await persist(journal, "complete", {
         completionDigest: digestValue({
           planDigest: sealedPlan.planDigest,
           verifiedReceiptDigest: journal.receipts.verified.receiptDigest,
@@ -129,7 +137,7 @@ export function createDormantOwnerContinuationController({ adapter, journalStore
     return buildDormantOwnerContinuationResult(journal);
   }
 
-  function persist(current, phase, values) {
+  async function persist(current, phase, values) {
     const next = advanceDormantOwnerContinuationJournal(current, phase, values);
     return journalStore.write(next, current.journalDigest);
   }
@@ -152,11 +160,11 @@ function positive(value, label) {
 }
 
 function requireTerminalReplay(journal, result) {
+  requiredDigest(result?.verificationDigest, "completion verification digest");
   const expected = journal.receipts.verified.values;
   if (result?.claimDigest !== expected.claimDigest
     || result?.leaseDigest !== expected.leaseDigest
-    || result?.markerDigest !== expected.pullRequestMarkerDigest
-    || result?.verificationDigest !== expected.verificationDigest) {
+    || result?.markerDigest !== expected.pullRequestMarkerDigest) {
     throw new Error("Dormant-owner continuation terminal replay drifted.");
   }
 }

@@ -47,14 +47,19 @@ only the exact recovered claim, local lease, or provider body already described 
 cloud result is handed directly to local projection; a restart after that phase reconstructs it from
 read-only provider status and never issues a second continuation effect. Replay reads its sealed
 journal before choosing the phase-specific live proof, and a complete replay re-verifies the terminal
-claim, lease, and marker.
+claim, lease, and marker. A restart after task authorization revalidates every repository, private
+input, dirt, controller, and pull-request fact before it adopts an exact provider response loss. A
+restart from the verified phase also re-verifies those stable terminal identities before completion;
+the provider's time-sensitive verification receipt is evidence, not replay identity.
 
 Plans and journals are owner-only `0600` files outside the target repository, Git directory, and
-clean controller repository. Existing parent paths are resolved before containment checks, the
-journal compare-and-swap holds an exclusive adjacent lock, and execution accepts only the TTL sealed
-by the plan. The controller forbids new-claim, retirement, promotion, Git, source, review-state,
-merge, deployment, cleanup, and tombstone effects. Current-base reanchoring and ordinary protected
-delivery remain later independent controllers.
+clean controller repository. The immediate parent must already exist and is re-resolved before each
+effect. Journal compare-and-swap runs in a child process whose working directory is bound to the
+original parent inode, uses a stable temporary-directory private-operation lock, rejects live peers,
+and safely recovers a dead process owner. It fsyncs the payload and parent after atomic rename before
+reporting success. Execution accepts only the TTL sealed by the plan. The controller forbids
+new-claim, retirement, promotion, Git, source, review-state, merge, deployment, cleanup, and tombstone
+effects. Current-base reanchoring and ordinary protected delivery remain later independent controllers.
 
 Focused verification:
 

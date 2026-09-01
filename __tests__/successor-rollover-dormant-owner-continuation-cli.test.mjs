@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
-  chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
+  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync,
+  renameSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { canonicalJson, digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { withPrivateOperationLock } from "../scripts/private-operation-lock.mjs";
 import {
   advanceDormantOwnerContinuationJournal,
   buildDormantOwnerContinuationPlan,
@@ -14,6 +16,7 @@ import {
 } from "../scripts/successor-rollover-dormant-owner-continuation-contract.mjs";
 import {
   createDormantOwnerContinuationJournalStore,
+  requireCwdExternalIdentity,
   writePrivateContinuationJsonExclusive,
 } from "../scripts/successor-rollover-dormant-owner-continuation-store.mjs";
 import { main } from "../scripts/successor-rollover-dormant-owner-continuation.mjs";
@@ -137,23 +140,94 @@ test("private paths resolve intermediate symlinks and exclude the controller rep
     }),
     /outside repositories/u,
   );
+  assert.throws(
+    () => createDormantOwnerContinuationJournalStore({
+      journalPath: path.join(root, "missing", "journal.json"),
+    }),
+    /parent directory must already exist/u,
+  );
 });
 
-test("journal compare-and-swap is fenced by an exclusive multiprocess lock", () => {
+test("journal compare-and-swap rejects live peers and recovers a dead owner", async () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "dormant-owner-store-cas-"));
   const journalPath = path.join(root, "journal.json");
   const store = createDormantOwnerContinuationJournalStore({ journalPath });
   const plan = buildDormantOwnerContinuationPlan({ evidence: evidence() });
   const initial = createDormantOwnerContinuationJournal(plan, plan.exactAuthorization);
-  store.write(initial, null);
+  await store.write(initial, null);
   const next = advanceDormantOwnerContinuationJournal(initial, "task-authority-verified", {
     taskAuthorityReceiptDigest: d("task"),
   });
-  writeFileSync(`${journalPath}.lock`, "locked\n", { flag: "wx", mode: 0o600 });
+  await withPrivateOperationLock({
+    file: store.lockPath,
+    context: { test: "live peer" },
+    action: async () => assert.rejects(
+      store.write(next, initial.journalDigest),
+      /owned by a live process/u,
+    ),
+  });
+  const deadContext = { test: "dead peer" };
+  const deadOwner = {
+    schema: "agentic-private-operation-lock/v1",
+    pid: 1,
+    processIdentity: "dead-process",
+    token: "dead-token",
+    acquiredAt: "2026-08-31T00:00:00.000Z",
+    context: deadContext,
+    contextDigest: digestValue(deadContext),
+  };
+  writeFileSync(store.lockPath, `${canonicalJson(deadOwner)}\n`, {
+    flag: "wx", mode: 0o600,
+  });
+  assert.equal((await store.write(next, initial.journalDigest)).phase, "task-authority-verified");
+  assert.equal(existsSync(store.lockPath), false);
+});
+
+test("journal CAS never follows a replaced parent into a forbidden root", async () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "dormant-owner-store-parent-"));
+  const repository = path.join(root, "repository");
+  const privateParent = path.join(root, "private");
+  const preservedParent = path.join(root, "private-preserved");
+  mkdirSync(repository);
+  mkdirSync(privateParent, { mode: 0o700 });
+  const journalPath = path.join(privateParent, "journal.json");
+  const store = createDormantOwnerContinuationJournalStore({
+    journalPath,
+    forbiddenRoots: [repository],
+  });
+  const plan = buildDormantOwnerContinuationPlan({ evidence: evidence() });
+  const initial = createDormantOwnerContinuationJournal(plan, plan.exactAuthorization);
+  renameSync(privateParent, preservedParent);
+  symlinkSync(repository, privateParent, "dir");
+  await assert.rejects(
+    store.write(initial, null),
+    /outside repositories|identity changed|parent path must be a real directory/u,
+  );
+  assert.equal(existsSync(path.join(repository, "journal.json")), false);
+  assert.equal(existsSync(path.join(repository, "journal.json.lock")), false);
+  assert.equal(existsSync(store.lockPath), false);
+});
+
+test("anchored journal containment rejects relocation of the same directory inode", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "dormant-owner-store-relocated-inode-"));
+  const repository = path.join(root, "repository");
+  const privateParent = path.join(root, "private");
+  const movedParent = path.join(repository, "moved");
+  mkdirSync(repository);
+  mkdirSync(privateParent, { mode: 0o700 });
+  const stat = lstatSync(privateParent, { bigint: true });
+  const identity = { dev: String(stat.dev), ino: String(stat.ino) };
+  const originalCwd = process.cwd();
   try {
-    assert.throws(() => store.write(next, initial.journalDigest), /lock|compare-and-swap/u);
+    process.chdir(privateParent);
+    requireCwdExternalIdentity(identity, [repository]);
+    renameSync(privateParent, movedParent);
+    assert.throws(
+      () => requireCwdExternalIdentity(identity, [repository]),
+      /moved (?:inside a forbidden root|or became unresolvable)/u,
+    );
   } finally {
-    rmSync(`${journalPath}.lock`, { force: true });
+    process.chdir(originalCwd);
   }
 });
 

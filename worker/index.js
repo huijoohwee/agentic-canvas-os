@@ -11,8 +11,15 @@ import {
 } from "../agent-api/src/autonomous-runtime-config.js";
 import { isSecureRoomCapability, sessionCanJoinRoom, verifySessionToken } from "../agent-api/src/auth.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
+import { COMMERCE_ADMISSION_PATH } from "../agent-api/src/commerce-admission-contract.js";
+import { resolveCommerceDeploymentIdentity } from "../agent-api/src/commerce-deployment-identity.js";
+import {
+  COMMERCE_RELEASE_PROOF_PATH,
+  createCommerceReleaseProofHandler,
+} from "../agent-api/src/commerce-release-proof.js";
 import {
   createDurableObjectAgentToolkitStore,
+  createDurableObjectCommerceAdmissionStore,
   createDurableObjectFunctionExecutionReceiptStore,
   createDurableObjectFunctionContinuationStore,
   createDurableObjectHumanReviewStore,
@@ -20,6 +27,12 @@ import {
   createDurableObjectSkillDraftStore,
   createDurableObjectSwarmRunStore,
 } from "../agent-api/src/durable-object-state-store.js";
+import {
+  createCommerceAdmissionProvider,
+  createCommerceInvocationRegister,
+  createCommerceOperatorInstructionResolver,
+  createCommerceToolAllowlistProjection,
+} from "../agent-api/src/commerce-admission-provider.js";
 import { resolveModelProviderEnvironment } from "../agent-api/src/model-config.js";
 import { createModelProviderRuntime } from "../agent-api/src/model-providers.js";
 import { resolveOpenAiResponsesAgentConfig } from "../agent-api/src/openai-responses-agent-adapter.js";
@@ -70,6 +83,7 @@ const TOOL_SEARCH_BY_ENV = new WeakMap();
 const SKILL_PROPOSER_BY_ENV = new WeakMap();
 const SKILL_REGISTRY_GATE_BY_ENV = new WeakMap();
 const ADAPTER_REGISTRATION_BY_ENV = new WeakMap();
+const COMMERCE_ADMISSION_BY_ENV = new WeakMap();
 
 function json(statusCode, body) {
   return new Response(JSON.stringify(body ?? {}), {
@@ -189,6 +203,9 @@ function createWorkerApp(env) {
   const skillDraftStore = durableStateConfigured
     ? createDurableObjectSkillDraftStore({ namespace: env.AGENT_STATE })
     : undefined;
+  const commerceAdmissionStore = durableStateConfigured
+    ? createDurableObjectCommerceAdmissionStore({ namespace: env.AGENT_STATE })
+    : undefined;
   const agentToolkitTelemetry = env?.AGENT_TOOLKIT_TELEMETRY_ENABLED === "true"
     ? async (event) => {
       console.log(JSON.stringify(event));
@@ -263,10 +280,26 @@ function createWorkerApp(env) {
     }
     adapterRegistration = ADAPTER_REGISTRATION_BY_ENV.get(env);
     if (!adapterRegistration) {
+      const operatorResolver = createCommerceOperatorInstructionResolver(
+        env.ACOS_ADMISSION_OPERATOR_INSTRUCTION_REF,
+      );
       adapterRegistration = createAdapterRegistrationInterface({
         ...(agentDefinitions ? { agentDefinitionRegistry: agentDefinitions } : {}),
+        toolAllowlist: createCommerceToolAllowlistProjection(),
+        invocationRegister: createCommerceInvocationRegister(),
+        ...(operatorResolver.configured
+          ? { resolveOperatorInstruction: operatorResolver.resolveOperatorInstruction }
+          : {}),
       });
       ADAPTER_REGISTRATION_BY_ENV.set(env, adapterRegistration);
+    }
+    if (!COMMERCE_ADMISSION_BY_ENV.has(env)) {
+      COMMERCE_ADMISSION_BY_ENV.set(env, createCommerceAdmissionProvider({
+        store: commerceAdmissionStore,
+        registrationInterface: adapterRegistration,
+        deploymentIdentity: resolveCommerceDeploymentIdentity(env),
+        authSecret: env.ACOS_ADMISSION_AUTH_SECRET,
+      }));
     }
   }
   const app = createAgentApiApp({
@@ -296,8 +329,28 @@ function createWorkerApp(env) {
   return app;
 }
 
-async function dispatchCloudflareRequest(request, env = {}) {
+async function dispatchCloudflareRequest(request, env = {}, ctx = {}) {
   const url = new URL(request.url);
+
+  if (url.hostname === "acos-admission.internal") {
+    createWorkerApp(env);
+    const provider = COMMERCE_ADMISSION_BY_ENV.get(env);
+    return provider ? provider.handle(request) : json(503, { ok: false, code: "runtime_unconfigured" });
+  }
+  if (url.pathname === COMMERCE_ADMISSION_PATH
+    || url.pathname === `${COMMERCE_ADMISSION_PATH}/readyz`) {
+    return json(404, { error: "not found" });
+  }
+  if (url.pathname === COMMERCE_RELEASE_PROOF_PATH) {
+    const service = ctx?.exports?.CommerceAdmissionProbe;
+    return createCommerceReleaseProofHandler({
+      token: env.ACOS_RELEASE_PROBE_TOKEN,
+      admissionAuthSecret: env.ACOS_ADMISSION_AUTH_SECRET,
+      serviceFetch: typeof service?.fetch === "function"
+        ? (input) => service.fetch(input)
+        : undefined,
+    }).handle(request);
+  }
 
   if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {
     if (request.method !== "GET") return json(405, { error: "method not allowed" });
@@ -330,10 +383,23 @@ async function dispatchCloudflareRequest(request, env = {}) {
   }
 
   const app = createWorkerApp(env);
+  const commerceAdmission = env && typeof env === "object" ? COMMERCE_ADMISSION_BY_ENV.get(env) : null;
+  if (commerceAdmission?.stats().configured) {
+    try {
+      await commerceAdmission.rehydrate();
+    } catch {
+      return json(503, { error: "commerce admission projection unavailable" });
+    }
+  }
 
   if (url.pathname === "/api/ready" || url.pathname === "/ready") {
     if (request.method !== "GET") return json(405, { error: "method not allowed" });
-    return json(200, app.readiness());
+    const deploymentIdentity = resolveCommerceDeploymentIdentity(env);
+    return json(200, {
+      ...app.readiness(),
+      productionReady: deploymentIdentity !== null,
+      deploymentIdentity,
+    });
   }
 
   if (url.pathname === "/api/auth/session" || url.pathname === "/auth/session") {
@@ -440,9 +506,9 @@ async function dispatchCloudflareRequest(request, env = {}) {
   return json(404, { error: "not found" });
 }
 
-export async function handleCloudflareRequest(request, env = {}) {
+export async function handleCloudflareRequest(request, env = {}, ctx = {}) {
   try {
-    return await dispatchCloudflareRequest(request, env);
+    return await dispatchCloudflareRequest(request, env, ctx);
   } catch (error) {
     if (error instanceof JsonBodyError) {
       return json(error.statusCode, { error: error.message, code: error.code });
@@ -452,7 +518,15 @@ export async function handleCloudflareRequest(request, env = {}) {
 }
 
 export default {
+  fetch(request, env, ctx) {
+    return handleCloudflareRequest(request, env, ctx);
+  },
+};
+
+// Cloudflare exposes this named fetch handler as an authenticated loopback
+// Service Binding through ctx.exports. It has no public route of its own.
+export const CommerceAdmissionProbe = Object.freeze({
   fetch(request, env) {
     return handleCloudflareRequest(request, env);
   },
-};
+});

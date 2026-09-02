@@ -1,0 +1,188 @@
+{
+  "$schema": "commerce.acos-admission-v2-request-fixture/v1",
+  "commerceAgentDefinition": {
+    "id": "agent-acceptance-fixture",
+    "revision": "agent-acceptance-fixture-v1",
+    "name": "Acceptance fixture discovery",
+    "source": {
+      "uri": "workspace:/agents/agent-acceptance-fixture.json",
+      "digest": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "model": {
+      "providerId": "workspace-provider",
+      "modelId": "workspace-model"
+    },
+    "instructions": [
+      {
+        "name": "purpose",
+        "content": "Discover bounded commerce offers."
+      }
+    ],
+    "executableTarget": {
+      "contract": "agentic-graph-sandbox-executable/v1",
+      "kind": "javascript-module",
+      "source": "export async function executeTool() { return null }",
+      "sourceDigest": "d28f7dde24abde6f725bb12d76fdf7f4ba3794eb63bb26a748fd29c208b5373a"
+    }
+  },
+  "request": {
+    "url": "https://acos-admission.internal/internal/v2/adapter-registrations",
+    "method": "POST",
+    "headers": {
+      "content-type": "application/json",
+      "x-acos-admission-auth-schema": "commerce-acos-admission-auth/v1",
+      "x-acos-admission-auth-signature": "f77dbb18bff6d6387211eeb07aed7d76046d4a576fd46f90c3df8ef5616b62ff",
+      "x-authoring-mutation-contract": "agentic-graph-authoring-mutation-permit/v2",
+      "x-authoring-mutation-id": "mutation:41:7:7aa02c58765d6e16787fbe0b1320ed37",
+      "x-authoring-operation-id": "operation:7aa02c58765d6e16787fbe0b1320ed37d7f0ef610f9ba55a1ab2f56e69d583ee",
+      "x-authoring-request-digest": "7aa02c58765d6e16787fbe0b1320ed37d7f0ef610f9ba55a1ab2f56e69d583ee",
+      "x-authoring-mutation-sequence": "7",
+      "x-authoring-semantic-scope": "operator-registry",
+      "x-authoring-claim-id": "claim-acos-v2-fixture",
+      "x-authoring-lease-epoch": "41",
+      "x-authoring-lease-expires-at-ms": "4102444800000",
+      "x-authoring-fence-revision": "fence-acos-v2-fixture",
+      "x-authoring-write-target": "registry",
+      "x-authoring-reserved-at-ms": "1788396300000"
+    },
+    "body": {
+      "agent_definition": {
+        "id": "agent-acceptance-fixture",
+        "revision": "agent-acceptance-fixture-v1",
+        "name": "Acceptance fixture discovery",
+        "source": {
+          "uri": "workspace:/agents/agent-acceptance-fixture.json",
+          "digest": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "model": {
+          "providerId": "workspace-provider",
+          "modelId": "workspace-model"
+        },
+        "instructions": [
+          {
+            "name": "purpose",
+            "content": "Discover bounded commerce offers."
+          }
+        ]
+      },
+      "authoring_mutation_intent": {
+        "admissionInputs": {
+          "agentDefinition": {
+            "id": "agent-acceptance-fixture",
+            "revision": "agent-acceptance-fixture-v1",
+            "name": "Acceptance fixture discovery",
+            "source": {
+              "uri": "workspace:/agents/agent-acceptance-fixture.json",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "providerId": "workspace-provider",
+              "modelId": "workspace-model"
+            },
+            "instructions": [
+              {
+                "name": "purpose",
+                "content": "Discover bounded commerce offers."
+              }
+            ]
+          },
+          "toolAllowlistEntry": {
+            "entry_id": "allowlist-agent-acceptance-fixture",
+            "agent_definition_id": "agent-acceptance-fixture",
+            "adapter_identity": "commerce-discovery",
+            "tool_names": [
+              "commerce.flight.discover"
+            ],
+            "review_required": true
+          },
+          "invocationRegisterEntry": {
+            "route": "/tool.route",
+            "tag": "#mcp",
+            "binding": "@mcp-gateway",
+            "tool_identity": "acos.adapter.register"
+          },
+          "operatorInstructionRef": "operator://agentic-graph/commerce-adapter-admission/2026-09-03"
+        },
+        "invocationProof": {
+          "sourceRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "catalogDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "routingSchema": "agentic-canvas-os-docs-routing/v1",
+          "routingDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "counts": {
+            "command": 1,
+            "semantic": 1,
+            "binding": 1
+          },
+          "requiredTokens": [
+            "/tool.route",
+            "#mcp",
+            "@mcp-gateway"
+          ]
+        },
+        "commerceProjection": {
+          "category": "flight",
+          "discoveryTool": "commerce.flight.discover",
+          "declaredAttributes": {
+            "priceMinor": 100,
+            "qualityScore": 100,
+            "latencyMs": 10
+          },
+          "fallbackAgentId": null
+        },
+        "expectedPreviousContentHash": null,
+        "sandboxDryRun": {
+          "instanceId": "registration-agent-acceptance-fixture",
+          "purpose": "registration-dry-run",
+          "outcome": "completed",
+          "exceededLimit": null,
+          "configuredValue": null,
+          "attemptedCalls": [
+            {
+              "toolId": "commerce.flight.discover",
+              "allowlisted": true,
+              "outcome": "executed"
+            }
+          ]
+        }
+      },
+      "tool_allowlist_entry": {
+        "entry_id": "allowlist-agent-acceptance-fixture",
+        "agent_definition_id": "agent-acceptance-fixture",
+        "adapter_identity": "commerce-discovery",
+        "tool_names": [
+          "commerce.flight.discover"
+        ],
+        "review_required": true
+      },
+      "invocation_register_entry": {
+        "route": "/tool.route",
+        "tag": "#mcp",
+        "binding": "@mcp-gateway",
+        "tool_identity": "acos.adapter.register"
+      },
+      "operator_instruction_ref": "operator://agentic-graph/commerce-adapter-admission/2026-09-03"
+    }
+  },
+  "expectedReceiptIdentity": {
+    "schema": "acos-adapter-registration/v2",
+    "adapter_identity": "commerce-discovery",
+    "agent_definition_id": "agent-acceptance-fixture",
+    "tool_allowlist_entry_id": "allowlist-agent-acceptance-fixture",
+    "invocation_register_tokens": [
+      "/tool.route",
+      "#mcp",
+      "@mcp-gateway",
+      "acos.adapter.register"
+    ],
+    "resulting_status": "active",
+    "operator_instruction_reference": "operator://agentic-graph/commerce-adapter-admission/2026-09-03",
+    "deployment_identity": {
+      "schema": "acos-cloudflare-deployment-identity/v1",
+      "sourceRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "candidateDigest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "versionId": "11111111-1111-4111-8111-111111111111",
+      "versionTag": "acos-prod-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "versionTimestamp": "2026-09-03T00:00:00.000Z"
+    }
+  }
+}

@@ -16,8 +16,8 @@ import * as githubTransitionPolicy from 'agentic-os/adapters/github-transition-p
 import { createEffectPlan, encodeEffectPlan } from 'agentic-os/records/completion'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/e677a4c78905762680ad60dfc5d3dc37acd504b0'
-const INTEGRITY = 'sha512-/GFbKOmfEx5AeSkqiW5PEMkOmUPDKE6uquktuKDlnj+awGSjqzmG+iF+ZMqyn7LMehczFEd1e134e61lDziykA=='
+const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/78d782e1b64bf3be6c9b65423b7e6b28290498ff'
+const INTEGRITY = 'sha512-jt2VW/vZLqRVuWh+7stYGd38GsiG3KOmAW603CpMsYru+z0YghXQTAefMD4qF/XE9uwgjaXwdj09ptp8U1l2Cg=='
 const read = relativePath => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
 const digest = relativePath => createHash('sha256')
   .update(fs.readFileSync(path.join(ROOT, relativePath)))
@@ -129,10 +129,13 @@ test('ACOS consumes one protected immutable agentic-os authority adapter', () =>
   ]) assert.equal(typeof githubTransitionPolicy[operation], 'function', operation)
 })
 
-test('the installed authority CLI accepts bounded ambient GitHub event metadata', t => {
+test('the installed read-only authority CLI accepts bounded ambient GitHub event metadata', t => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'acos-authority-envelope-'))
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }))
   const eventPath = path.join(temporary, 'event.json')
+  const policyName = 'adlc-authority-policy.json'
+  fs.writeFileSync(path.join(temporary, policyName),
+    fs.readFileSync(path.join(ROOT, '.github', policyName)))
   const event = {
     ambient: 'x'.repeat(70_000),
     inputs: {
@@ -149,8 +152,8 @@ test('the installed authority CLI accepts bounded ambient GitHub event metadata'
   const revision = 'b'.repeat(40)
   const cli = path.join(ROOT, 'node_modules', 'agentic-os', 'bin',
     'agentic-os-authority.mjs')
-  const run = () => spawnSync(process.execPath, [cli, 'issue-github', `--event=${eventPath}`,
-    '--policy=missing-policy.json'], {
+  const run = () => spawnSync(process.execPath, [cli, 'validate-event', `--event=${eventPath}`,
+    `--policy=${policyName}`], {
     cwd: temporary,
     encoding: 'utf8',
     env: {
@@ -162,7 +165,6 @@ test('the installed authority CLI accepts bounded ambient GitHub event metadata'
       GITHUB_RUN_ATTEMPT: '1',
       GITHUB_RUN_ID: '1',
       GITHUB_SHA: revision,
-      GITHUB_TOKEN: 'fixture-token',
       GITHUB_WORKFLOW_REF:
         'huijoohwee/agentic-canvas-os/.github/workflows/adlc-authority.yml@refs/heads/main',
       GITHUB_WORKFLOW_SHA: revision,
@@ -170,7 +172,7 @@ test('the installed authority CLI accepts bounded ambient GitHub event metadata'
   })
   const result = run()
   assert.equal(result.status, 1)
-  assert.match(result.stderr, /missing-policy\.json/u)
+  assert.match(result.stderr, /authority validation failed/u)
   assert.doesNotMatch(result.stderr, /GitHub event exceeds structural bounds/u)
   fs.writeFileSync(eventPath, JSON.stringify({
     ...event, ambient: 'x'.repeat(256 * 1024),
@@ -295,12 +297,14 @@ test('the manual workflow binds event bytes without interpolating them into exec
   assert.match(workflow,
     /run-name: ADLC authority \$\{\{ inputs\.authority_input_digest \}\} @ \$\{\{ github\.workflow_sha \}\}/u)
   assert.doesNotMatch(workflow, /^\s{2}(?:pull_request|push|schedule|merge_group):/mu)
-  assert.match(workflow, /^  actions: read\n  contents: write$/mu)
+  assert.match(workflow, /^permissions:\n  contents: read$/mu)
   assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/u)
   assert.match(workflow, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/u)
   assert.match(workflow, /ref: \$\{\{ github\.sha \}\}[\s\S]*persist-credentials: false/u)
   assert.match(workflow, /npm ci --ignore-scripts --no-audit --no-fund/u)
-  assert.match(workflow, /agentic-os-authority issue-github --event="\$GITHUB_EVENT_PATH" --policy=\.github\/adlc-authority-policy\.json/u)
+  assert.match(workflow, /agentic-os-authority validate-event --event="\$GITHUB_EVENT_PATH" --policy=\.github\/adlc-authority-policy\.json/u)
+  assert.doesNotMatch(workflow,
+    /\bcontents:\s*write\b|\bactions:\s*write\b|GITHUB_TOKEN|github\.token|\bsecrets\.|\bcurl\b|\bgh\s+api\b|upload-artifact/u)
   const executionWorkflow = workflow.split('\n')
     .filter(line => !line.startsWith('run-name:'))
     .join('\n')
@@ -309,7 +313,7 @@ test('the manual workflow binds event bytes without interpolating them into exec
   const writeWorkflows = fs.readdirSync(path.join(ROOT, '.github', 'workflows'))
     .filter(name => /\.ya?ml$/u.test(name))
     .filter(name => /\bcontents:\s*write\b/u.test(read(path.join('.github', 'workflows', name))))
-  assert.deepEqual(writeWorkflows, ['adlc-authority.yml'])
+  assert.deepEqual(writeWorkflows, [])
 })
 
 test('the transition workflow is read-only exact-input validation', () => {
@@ -345,8 +349,8 @@ test('the retained profile and initial authority surfaces stay byte-identical', 
   }, {
     '.agentic-os.json': '73132537b7a7c54237061cf6ae13ff0f07443f902b9993a4599d726238874bc1',
     '.github/adlc-authority-policy.json':
-      'dc3d57d18462f4c71521bb8783785ba31c5952efc41ca7f27a7e807a7e0783db',
+      'df118c2eb4bed96b07445602c6f7111b717069ec1e36030402c5f8cef4c818aa',
     '.github/workflows/adlc-authority.yml':
-      'e1d4cbc90a05ea73e6e344b7e5a2693bafdec96a457a4f82b6b839618be5619b',
+      'b98345f744dbb2aba5f681468d688c537ea5d31d5d56d7b85cd5efe21b9b865e',
   })
 })

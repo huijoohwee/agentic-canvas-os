@@ -150,8 +150,8 @@ unsupported methods, and fail-closed missing authentication.
 
 ## Dev Deployment
 
-Deployment is a separate protected gate. Run only from a clean canonical
-`main` whose `HEAD` exactly equals fetched `origin/main`:
+Deployment is a separate product gate. Run only from a clean canonical `main`
+at the exact protected source revision accepted through ADLC:
 
 ```sh
 npm run upstream-dependency-admission:deploy:dev
@@ -162,7 +162,7 @@ Wrangler dependency for the `dev` environment with `--keep-vars` and `--strict`.
 It preserves remote variables and secrets that this model-free endpoint does
 not own and fails on conflicting remote configuration. It cannot deploy an
 Agentic Canvas OS production Worker; production remains owned by the protected
-consumer release controller.
+consumer product-deployment owner.
 
 `runtime-ready` applies to the evaluator and application route at the recorded
 protected source revision. It does not promote evaluated dependencies or

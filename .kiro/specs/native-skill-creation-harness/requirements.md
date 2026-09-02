@@ -37,7 +37,6 @@ These were confirmed directly against the repository. Implementers should not re
 | `/propose-skill`, `#skill-candidate`, and `@skill-registry` appear in **no** repository document today. They are new tokens. | Repository-wide search of `docs/**/*.md` returned no matches. |
 | `docs/SKILL-EVOLUTION.md` is a spec-complete contract (`schema: agentic-skill-evolution/v1`) with MCP tool `knowgrph.skill.evolve`, invocation `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator`, a `review_pending` terminal proposal, `/skill.manage` as the separate operator-gated persistence owner, hard `applied: false` / `modelWeightsMutated: false` / `deploymentAttempted: false` flags, and `external_dependency: forbidden` against Microsoft SkillOpt. | Read directly. |
 | `agent-api/src/` currently contains **59** `.js` modules, and `worker/` + `src/` + `agent-api/src/` currently total **19,834** lines. | `ls agent-api/src/*.js | wc -l`; `find worker src agent-api/src -name '*.js' -exec cat {} + | wc -l`. |
-| **The `repository-teardown` spec exists**, complete with `requirements.md`, `design.md`, `tasks.md`, and `.config.kiro`, at `$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`. It is absent from the main `agentic-canvas-os` checkout because the repository's own lane-lifecycle machinery provisioned a task worktree for it, so the spec lives on a task branch rather than on `main`. Its stated budget (at most 20 `agent-api/src/` modules, at most 8,000 lines across `worker/` + `src/` + `agent-api/src/`, at most 15 `scripts/` files and 3,000 lines, at most 20 `__tests__/` files and 3,000 lines, at most 12 top-level `docs/*.md` files and 2,500 lines) is therefore a **verified constraint from a spec on a task branch**, not an unverified external claim. | `find "$GITHUB_ROOT" -maxdepth 5 -type d -name "repository-teardown"` locates the worktree; the main checkout's `.kiro/specs/` directory listing contains only `native-skill-creation-harness`. |
 
 ---
 
@@ -53,9 +52,9 @@ The PRD's Dependencies section states this feature "must not start before" Must-
 
 `docs/SKILL-EVOLUTION.md` already owns a bounded loop that terminates in an operator-reviewed proposal, with `/skill.manage` as the separate persistence owner and an explicit clean-room ban on an external reference implementation. `/skill.propose` and `knowgrph.skill.propose` already exist. The scopes differ (Skill Evolution optimizes existing skill *text* against a frozen executor; this feature *creates* new Agent Definitions from capability gaps), but ADR-1's own "single owner per contract" principle is at risk if both ship as separate harnesses with separate registries and separate promotion gates. Requirements 15 and 16 fix the ownership boundary and the token namespace resolution.
 
-### Conflict 3 - Direction conflict with the repository-teardown effort
+### Conflict 3 - Product module growth
 
-The teardown effort targets at most 20 `agent-api/src/` modules and at most 8,000 lines across `worker/` + `src/` + `agent-api/src/`. This feature adds three harness modules plus an `adapters/` tree. Current state is 59 modules and 19,834 lines, so the teardown targets are already far from met independent of this feature. Mitigating fact: because `tool-search.js` and the agent definitions registry are statically imported by `worker/index.js` and reported at `/api/ready`, they are Proven_Path under the teardown's own rules and survive it, so the dependency base is not at risk. Only the module budget and sequencing are. Requirement 17 forces that accounting.
+This feature proposes three harness modules plus an `adapters/` tree while the product already has 59 `agent-api/src/` modules and 19,834 lines across `worker/` + `src/` + `agent-api/src/`. Requirement 17 therefore requires exact growth accounting, reuse of existing owners, and an explicit justification for every new product module. Repository lifecycle is outside this product specification and remains governed by the pinned `agentic-os` package.
 
 ---
 
@@ -293,17 +292,17 @@ The teardown effort targets at most 20 `agent-api/src/` modules and at most 8,00
 5. THE Native_Skill_Creation_Harness SHALL leave the `docs/SKILL-EVOLUTION.md` contract's `applied`, `modelWeightsMutated`, and `deploymentAttempted` flag semantics unchanged.
 6. THE recorded ownership boundary SHALL state whether Promotion_Gate and the existing `/skill.manage` persistence owner are the same owner or distinct owners, and SHALL name the artifact type each governs.
 
-### Requirement 17: Module Budget And Sequencing Accounting (Must tier)
+### Requirement 17: Product Module Budget Accounting (Must tier)
 
-**User Story:** As the Solo Founder, I want the three new modules accounted for against the teardown budget, so that two active efforts do not silently pull in opposite directions.
+**User Story:** As the Solo Founder, I want the proposed modules accounted for against the product budget, so that capability growth remains simple and reviewable.
 
 #### Acceptance Criteria
 
 1. THE Module_Budget_Audit SHALL record the current `agent-api/src/` module count of 59 and the current total of 19,834 lines across `worker/`, `src/`, and `agent-api/src/` as the pre-feature baseline.
 2. THE Module_Budget_Audit SHALL record the projected module count and line total after `skill-proposer.js`, `skill-registry-gate.js`, `adapter-registration.js`, and the `adapters/` tree are added.
-3. THE recorded sequencing decision SHALL state whether this feature ships before, after, or concurrently with the teardown effort, and SHALL name the operator instruction that accepts the chosen order.
-4. THE recorded sequencing decision SHALL state the location of the `repository-teardown` spec at `$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`, SHALL state that the spec resides on a task branch rather than on `main`, and SHALL state whether the sequencing decision is made against the task-branch version or against a merged version.
-5. THE recorded sequencing decision SHALL state the mitigating fact that `tool-search.js` and Agent_Definition_Registry are statically imported by the Shared_Entrypoint and reported at `GET /api/ready`, which classifies them as Proven_Path and keeps the dependency base intact through the teardown.
+3. THE Module_Budget_Audit SHALL state which existing modules can be reused and SHALL justify every net-new module against single-owner and acyclic-dependency constraints.
+4. THE Native_Skill_Creation_Harness SHALL introduce no repository-lifecycle controller, claim, lease, worktree, integration, retirement, or cleanup policy.
+5. THE Module_Budget_Audit SHALL state that `tool-search.js` and Agent_Definition_Registry are already imported by the Shared_Entrypoint and reported at `GET /api/ready`, so the feature reuses those product owners rather than duplicating them.
 
 ### Requirement 18: Bounded Latency And Concurrent Registration (Must tier)
 
@@ -401,6 +400,6 @@ Every VCC stated in the PRD maps to at least one acceptance criterion above.
 | PRD open question: fifth Deploy Boundary Contract field | 10.2, 10.3, 10.4, 10.5 |
 | Conflict 1: prerequisite entry condition | 1.1 through 1.5 |
 | Conflict 2: ownership boundary and token namespace | 15.6, 15.7, 15.8, 16.1 through 16.6 |
-| Conflict 3: module budget and sequencing | 17.1 through 17.5 |
+| Conflict 3: product module growth | 17.1 through 17.5 |
 | Repository discrepancy: Draft Registry Store binding | 7.1 through 7.5 |
 | Repository discrepancy: active registry has no file to diff | 2.6, and the Active_Registry_Snapshot definition in the Glossary |

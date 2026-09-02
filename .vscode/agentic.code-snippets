@@ -14,35 +14,18 @@
     ],
     "description": "Insert a strict 11-column planning row"
   },
-  "Session Declaration": {
-    "prefix": "!sessionstart",
+  "ADLC Start": {
+    "prefix": "!adlcstart",
     "body": [
-      "action: /session.start",
-      "semantics: [\"#multi-agent-collaboration\", \"#runtime-ready\", \"#no-hardcode\"]",
-      "bindings: [\"@operator\", \"@working-directory\", \"@runtime-proof\"]",
-      "device: ${1:device}",
-      "semantic_scope: ${2:semantic-scope}",
-      "branch: agent/${1:device}/${2:semantic-scope}",
-      "base_ref: origin/main",
-      "base_sha: ${3:fetched-origin-main-sha}",
-      "memory_base_ref: ${4:fetched-agentic-canvas-os-origin-main-sha}",
-      "memory_compliance: ${5:passed}",
-      "planning_base_ref: ${6:fetched-agentic-canvas-os-origin-main-sha}",
-      "planning_shard: ${7:todo/YYYY-MM.md}",
-      "planning_context: ${8:exact-unique-cross-repository-task-context}",
-      "planning_compliance: ${9:structure-passed}",
-      "worktree: ${10:resolved-sibling-worktree}",
-      "active_writer: ${11:single-owner}",
-      "acceptance: ${12:observable-vcc}",
-      "deploy_boundary: dev-only"
+      "Follow node_modules/agentic-os/docs/START-WORKFLOW.md for ${1:exact task scope}; preserve unrelated work and record only evidence actually observed."
     ],
-    "description": "Insert the compact session start declaration"
+    "description": "Insert the pinned ADLC start-workflow pointer"
   },
-  "End Session": {
-    "prefix": "!sessionend",
+  "ADLC Release": {
+    "prefix": "!adlcrelease",
     "body": [
-      "Before the final response, run `npm run device:end -- --json` so the task branch is safely parked and the checkout returns to clean `main` without human manual Git cleanup."
+      "If release is explicitly authorized, follow node_modules/agentic-os/docs/RELEASE-WORKFLOW.md and report each integration, verification, synchronization, retirement, and cleanup result separately."
     ],
-    "description": "Insert the canonical AI session-end instruction"
+    "description": "Insert the pinned ADLC release-workflow pointer"
   }
 }

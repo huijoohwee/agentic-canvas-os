@@ -47,14 +47,42 @@ const normalizeTokens = (input) => {
   return trimmed ? trimmed.split(/\s+/u) : [""];
 };
 
-const malformedRuleFor = (token) => {
+const ARGUMENT_BEARING_PREFIX = "@";
+const MAX_REMAINDER_LENGTH = 128;
+const MAX_ARGUMENT_LENGTH = 1_024;
+
+// Argument-bearing bindings are declared in the binding dictionary in their
+// canonical `@name:` form and invoked as `@name:<argument>`. Only the `@`
+// dictionary declares them; `/` and `#` remainders stay colon-free.
+export const malformedInvocationRuleFor = (token) => {
   if (!descriptorsByPrefix.has(token.slice(0, 1))) return "invalid-prefix";
   const remainder = token.slice(1);
   if (!remainder) return "empty-remainder";
-  if (remainder.length > 128) return "remainder-too-long";
-  if (!/^[a-z0-9.-]+$/u.test(remainder)) return "invalid-remainder-character";
+  const colonIndex = remainder.indexOf(":");
+  if (colonIndex < 0) {
+    if (remainder.length > MAX_REMAINDER_LENGTH) return "remainder-too-long";
+    if (!/^[a-z0-9.-]+$/u.test(remainder)) return "invalid-remainder-character";
+    return "";
+  }
+  if (token.slice(0, 1) !== ARGUMENT_BEARING_PREFIX) return "invalid-remainder-character";
+  const name = remainder.slice(0, colonIndex);
+  const argument = remainder.slice(colonIndex + 1);
+  if (!name) return "empty-remainder";
+  if (name.length > MAX_REMAINDER_LENGTH) return "remainder-too-long";
+  if (!/^[a-z0-9.-]+$/u.test(name)) return "invalid-remainder-character";
+  if (argument.length > MAX_ARGUMENT_LENGTH) return "argument-too-long";
   return "";
 };
+
+// The declared dictionary entry for an argument-bearing binding is its
+// `@name:` form; the opaque argument is never part of the declared token.
+export const canonicalInvocationToken = (token) => {
+  if (token.slice(0, 1) !== ARGUMENT_BEARING_PREFIX) return token;
+  const colonIndex = token.indexOf(":");
+  return colonIndex < 0 ? token : token.slice(0, colonIndex + 1);
+};
+
+const malformedRuleFor = malformedInvocationRuleFor;
 
 const splitMarkdownTableRow = (row) => {
   const cells = [];
@@ -176,12 +204,13 @@ const resolveToken = async ({
     };
   }
 
+  const declaredToken = canonicalInvocationToken(token);
   let metadata;
   let rows;
   try {
     metadata = dictionaryMetadata(markdown);
     if (metadata.prefix !== descriptor.prefix) throw new Error("dictionary prefix does not match its path");
-    rows = tableRowsForToken(markdown, descriptor.tableHeading, token);
+    rows = tableRowsForToken(markdown, descriptor.tableHeading, declaredToken);
   } catch {
     return {
       status: "unresolved",
@@ -193,7 +222,7 @@ const resolveToken = async ({
     };
   }
 
-  const entryCount = metadata.tokens.filter((listedToken) => listedToken === token).length;
+  const entryCount = metadata.tokens.filter((listedToken) => listedToken === declaredToken).length;
   if (entryCount > 1 || rows.length > 1) {
     return {
       status: "rejected",
@@ -240,7 +269,7 @@ const resolveToken = async ({
     status: "resolved",
     token,
     entry: {
-      token,
+      token: declaredToken,
       prefixRole: metadata.prefixRole,
       summary,
       sourceDocumentPath: descriptor.sourceDocumentPath,

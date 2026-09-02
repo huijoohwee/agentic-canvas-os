@@ -1,5 +1,5 @@
 name: CI
-run-name: ${{ github.event_name == 'workflow_dispatch' && format('Protected head refresh {0} {1}', inputs.operation_id, inputs.expected_head_sha) || github.event.pull_request.title || github.event.head_commit.message || format('CI {0} {1}', github.event_name, github.ref_name) }}
+run-name: ${{ github.event.pull_request.title || github.event.head_commit.message || format('CI {0} {1}', github.event_name, github.ref_name) }}
 
 on:
   pull_request:
@@ -7,110 +7,22 @@ on:
   merge_group:
   push:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      operation:
-        description: Exact trusted controller operation
-        required: true
-        type: string
-      pull_request_number:
-        description: Canonical positive pull request number
-        required: true
-        type: string
-      branch:
-        description: Exact refreshed pull request branch
-        required: true
-        type: string
-      expected_head_sha:
-        description: Exact lowercase refreshed head SHA
-        required: true
-        type: string
-      operation_id:
-        description: Lowercase SHA-256 digest of the refresh operation
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  # A dispatch receipt is an exact workflow_run_id. Keep duplicate operations in
-  # distinct groups so GitHub cannot replace an older pending receipt.
-  group: ci-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && format('{0}-{1}', inputs.operation_id, github.run_id) || github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   authorization:
-    name: protected-head-refresh-authorization
+    name: ci-authorization
     runs-on: 'ubuntu-slim'
     timeout-minutes: 5
     steps:
-      - name: Preserve standard CI event authorization
-        if: ${{ github.event_name != 'workflow_dispatch' }}
-        run: echo "Standard CI event admitted by its existing trigger."
-      - name: Check out the exact dispatched head without persisted credentials
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-          fetch-depth: 1
-      - name: Authorize the exact protected-head refresh
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        env:
-          DISPATCH_EVENT_NAME: ${{ github.event_name }}
-          DISPATCH_GITHUB_SHA: ${{ github.sha }}
-          DISPATCH_GITHUB_REF: ${{ github.ref }}
-          DISPATCH_GITHUB_REF_NAME: ${{ github.ref_name }}
-          DISPATCH_GITHUB_REF_TYPE: ${{ github.ref_type }}
-          DISPATCH_REPOSITORY: ${{ github.repository }}
-          DISPATCH_SERVER_URL: ${{ github.server_url }}
-          DISPATCH_OPERATION: ${{ inputs.operation }}
-          DISPATCH_PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
-          DISPATCH_BRANCH: ${{ inputs.branch }}
-          DISPATCH_EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-          DISPATCH_OPERATION_ID: ${{ inputs.operation_id }}
-        run: |
-          set -euo pipefail
-          export LC_ALL=C
-
-          reject() {
-            echo "Protected-head refresh authorization rejected: $1" >&2
-            exit 1
-          }
-
-          [ "$DISPATCH_EVENT_NAME" = "workflow_dispatch" ] || reject "event is not workflow_dispatch"
-          [ "$DISPATCH_OPERATION" = "protected-head-refresh" ] || reject "operation is not exact"
-          [[ "$DISPATCH_PULL_REQUEST_NUMBER" =~ ^[1-9][0-9]{0,9}$ ]] || reject "pull request number is not canonical"
-          [ "$DISPATCH_PULL_REQUEST_NUMBER" -le 2147483647 ] || reject "pull request number is out of bounds"
-          [ -n "$DISPATCH_BRANCH" ] || reject "branch is empty"
-          [ "${#DISPATCH_BRANCH}" -le 255 ] || reject "branch is too long"
-          git check-ref-format --branch "$DISPATCH_BRANCH" >/dev/null || reject "branch is invalid"
-          git check-ref-format "refs/heads/$DISPATCH_BRANCH" >/dev/null || reject "branch ref is invalid"
-          [[ "$DISPATCH_EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]] || reject "head SHA is not lowercase and full"
-          [[ "$DISPATCH_OPERATION_ID" =~ ^[0-9a-f]{64}$ ]] || reject "operation ID is not a lowercase digest"
-          [ "$DISPATCH_GITHUB_REF_TYPE" = "branch" ] || reject "dispatch ref is not a branch"
-          [ "$DISPATCH_GITHUB_REF_NAME" = "$DISPATCH_BRANCH" ] || reject "dispatch branch drifted"
-          [ "$DISPATCH_GITHUB_REF" = "refs/heads/$DISPATCH_BRANCH" ] || reject "dispatch ref drifted"
-          [ "$DISPATCH_GITHUB_SHA" = "$DISPATCH_EXPECTED_HEAD_SHA" ] || reject "dispatch head drifted"
-          [ "$(git rev-parse --verify 'HEAD^{commit}')" = "$DISPATCH_EXPECTED_HEAD_SHA" ] || reject "checkout head drifted"
-
-          expected_origin="$DISPATCH_SERVER_URL/$DISPATCH_REPOSITORY"
-          observed_origin="$(git remote get-url origin)"
-          case "$observed_origin" in
-            "$expected_origin"|"$expected_origin.git") ;;
-            *) reject "origin repository drifted" ;;
-          esac
-
-          git fetch --no-tags --no-recurse-submodules --depth=1 origin \
-            "+refs/heads/main:refs/remotes/origin/main"
-          protected_main_sha="$(git rev-parse --verify 'refs/remotes/origin/main^{commit}')"
-          [[ "$protected_main_sha" =~ ^[0-9a-f]{40}$ ]] || reject "protected main SHA is invalid"
-          candidate_blob="$(git rev-parse --verify "$DISPATCH_EXPECTED_HEAD_SHA:.github/workflows/ci.yml")"
-          protected_blob="$(git rev-parse --verify "$protected_main_sha:.github/workflows/ci.yml")"
-          [[ "$candidate_blob" =~ ^[0-9a-f]{40}$ ]] || reject "candidate workflow blob is invalid"
-          [[ "$protected_blob" =~ ^[0-9a-f]{40}$ ]] || reject "protected workflow blob is invalid"
-          [ "$candidate_blob" = "$protected_blob" ] || reject "candidate workflow differs from protected main"
+      - name: Accept the provider-selected candidate
+        run: test -n "${{ github.sha }}"
 
   test:
     name: test
@@ -126,12 +38,7 @@ jobs:
       - name: Require exact CI authorization
         env:
           AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
-          CI_EVENT_NAME: ${{ github.event_name }}
-          CI_GITHUB_SHA: ${{ github.sha }}
-          CI_EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-        run: |
-          [ "$AUTHORIZATION_RESULT" = "success" ] || exit 1
-          [ "$CI_EVENT_NAME" != "workflow_dispatch" ] || [ "$CI_GITHUB_SHA" = "$CI_EXPECTED_HEAD_SHA" ]
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
@@ -167,12 +74,7 @@ jobs:
       - name: Require exact CI authorization
         env:
           AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
-          CI_EVENT_NAME: ${{ github.event_name }}
-          CI_GITHUB_SHA: ${{ github.sha }}
-          CI_EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-        run: |
-          [ "$AUTHORIZATION_RESULT" = "success" ] || exit 1
-          [ "$CI_EVENT_NAME" != "workflow_dispatch" ] || [ "$CI_GITHUB_SHA" = "$CI_EXPECTED_HEAD_SHA" ]
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
@@ -192,12 +94,7 @@ jobs:
       - name: Require exact CI authorization
         env:
           AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
-          CI_EVENT_NAME: ${{ github.event_name }}
-          CI_GITHUB_SHA: ${{ github.sha }}
-          CI_EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-        run: |
-          [ "$AUTHORIZATION_RESULT" = "success" ] || exit 1
-          [ "$CI_EVENT_NAME" != "workflow_dispatch" ] || [ "$CI_GITHUB_SHA" = "$CI_EXPECTED_HEAD_SHA" ]
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
@@ -217,12 +114,7 @@ jobs:
       - name: Require exact CI authorization
         env:
           AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
-          CI_EVENT_NAME: ${{ github.event_name }}
-          CI_GITHUB_SHA: ${{ github.sha }}
-          CI_EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-        run: |
-          [ "$AUTHORIZATION_RESULT" = "success" ] || exit 1
-          [ "$CI_EVENT_NAME" != "workflow_dispatch" ] || [ "$CI_GITHUB_SHA" = "$CI_EXPECTED_HEAD_SHA" ]
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
@@ -232,22 +124,17 @@ jobs:
           node-version: 22
       - run: npm run collab:test
 
-  evaluate:
-    name: policy-runtime-readiness
+  budgets:
+    name: budgets
     needs: authorization
     if: ${{ always() }}
     runs-on: ubuntu-slim
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Require exact CI authorization
         env:
           AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
-          CI_EVENT_NAME: ${{ github.event_name }}
-          CI_GITHUB_SHA: ${{ github.sha }}
-          CI_EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-        run: |
-          [ "$AUTHORIZATION_RESULT" = "success" ] || exit 1
-          [ "$CI_EVENT_NAME" != "workflow_dispatch" ] || [ "$CI_GITHUB_SHA" = "$CI_EXPECTED_HEAD_SHA" ]
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
@@ -256,50 +143,9 @@ jobs:
         with:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Resolve the pinned guideline source revision
-        id: guideline-source
-        run: >-
-          node --input-type=module -e
-          'import { appendFileSync } from "node:fs";
-          import { LIFECYCLE_POLICY_SOURCE } from "./scripts/lifecycle-conformance-policy.mjs";
-          const revision = String(LIFECYCLE_POLICY_SOURCE.revision ?? "");
-          if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error("guideline source revision must be a full commit SHA");
-          appendFileSync(process.env.GITHUB_OUTPUT, `revision=${revision}\n`);'
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          repository: huijoohwee/huijoohwee.github.io
-          ref: ${{ steps.guideline-source.outputs.revision }}
-          path: .agentic-sdlc-source/huijoohwee.github.io
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Verify repository policy-runtime readiness
-        env:
-          GITHUB_ROOT: ${{ github.workspace }}/.agentic-sdlc-source
+      - name: Verify bounded repository contracts
         run: |
-          npm run lifecycle:conformance:check
-          npm run agentic-sdlc:source:check
-
-  conformance:
-    name: agentic-sdlc-policy-runtime
-    needs: evaluate
-    if: ${{ always() }}
-    runs-on: ubuntu-slim
-    timeout-minutes: 5
-    steps:
-      - name: Require exact CI authorization
-        env:
-          READINESS_RESULT: ${{ needs.evaluate.result }}
-          CI_EVENT_NAME: ${{ github.event_name }}
-          CI_GITHUB_SHA: ${{ github.sha }}
-          CI_EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-        run: |
-          [ "$READINESS_RESULT" = "success" ] || exit 1
-          [ "$CI_EVENT_NAME" != "workflow_dispatch" ] || [ "$CI_GITHUB_SHA" = "$CI_EXPECTED_HEAD_SHA" ]
-      - name: Require policy-runtime readiness
-        env:
-          EVALUATE_RESULT: ${{ needs.evaluate.result }}
-        run: |
-          if [ "$EVALUATE_RESULT" != "success" ]; then
-            echo "policy-runtime readiness did not succeed: $EVALUATE_RESULT" >&2
-            exit 1
-          fi
+          npm --prefix node_modules/agentic-os run evals
+          npm run authored-line-budget:check
+          node --test __tests__/adlc-compatibility.test.mjs __tests__/agentic-os-profile.test.mjs
+          npm run dictionary-catalog:check

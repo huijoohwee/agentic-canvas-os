@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const application = read("docs/APPLICATION-COMPOSITION.md");
 const facts = read("docs/FACTS.md");
@@ -196,6 +196,9 @@ function hasHashedWordWindow(source, size, expectedDigest) {
 function trackedTextSources() {
   const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0").filter(Boolean);
   return files.flatMap((file) => {
+    // A staged or unstaged deletion remains in the index until the lane is
+    // committed. It has no working-tree bytes to audit.
+    if (!existsSync(file)) return [];
     const bytes = readFileSync(file);
     return bytes.includes(0) ? [] : [[file, bytes.toString("utf8")]];
   });

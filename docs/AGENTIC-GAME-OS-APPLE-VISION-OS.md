@@ -49,8 +49,8 @@ lifecycle for one exact candidate.
 | Invocation truth | Agentic Canvas OS dictionaries | Define and resolve the tuple without aliases or mirrors. |
 | Shared gameplay and backend behavior | Knowgrph shared substrate | Name the boundary; never duplicate its capability or utility logic. |
 | Browser and native presentation | GameXR | Name the boundary; never own visuals, input presentation, scene values, or local adapters. |
-| Dev-to-delivery control | Agentic Canvas OS pipeline contract plus the existing release lifecycle | Validate ordering, identity, and authorization before delegating effects. |
-| Production artifacts and public routes | Existing release owners | Consume exact-candidate authorization and return evidence; this document grants no authority. |
+| Dev-to-delivery control | Agentic Canvas OS product pipeline plus pinned ADLC repository workflow | Validate product ordering, identity, and authorization; delegate repository effects only to ADLC. |
+| Production artifacts and public routes | Knowgrph product-deployment owner | Consume exact-candidate authorization and return product evidence; this document grants no authority. |
 
 The Prod mirror boundaries are `$GITHUB_ROOT/huijoohwee/content/knowgrph` and
 `$GITHUB_ROOT/huijoohwee/content/gamexr`. The Delivery surface boundaries are `airvio.co`,
@@ -192,7 +192,7 @@ valid exact-candidate authorization.
 |---|---:|---:|---|
 | Invocation and audit runtime | USD 0 | USD 0 | Node.js standard library and repository-pinned test dependencies |
 | Local Dev orchestration | USD 0 incremental | USD 0 incremental | Existing local Knowgrph runtime |
-| Pipeline state and audit entries | USD 0 | USD 0 | In-process candidate record; durable release evidence remains with the existing lifecycle owner |
+| Pipeline state and audit entries | USD 0 | USD 0 | In-process candidate record; durable product-deployment evidence remains with Knowgrph and repository-lifecycle evidence remains with ADLC |
 
 Minimum time to value is six steps and no more than 30 minutes for this source
 slice: install pinned dependencies, resolve the tuple, run the audit fixtures,
@@ -210,7 +210,7 @@ successful docs-contract exit.
 | Shared substrate | `spec-complete` | `runtime-ready` | Terminal scope authority, exact consumer pins, and complete Knowgrph portability owners | Knowgrph focused properties and package checks |
 | Browser and native projections | `spec-complete` | `runtime-ready` | Integrated GameXR source, mobile WebKit, iOS Simulator, and native visionOS destination evidence | GameXR browser and native checks |
 | Physical Apple devices | `undocumented` | `runtime-ready` | Recorded iPhone and Apple Vision Pro matrices | Device run naming model, OS, date, and every matrix result |
-| Production delivery | `undocumented` | `runtime-ready` | Exact-candidate authorization, mirror equality, public digest equality, live-route status, and rollback evidence | Existing repository-owned release workflow |
+| Production delivery | `undocumented` | `runtime-ready` | Exact-candidate authorization, mirror equality, public digest equality, live-route status, and rollback evidence | Knowgrph product-deployment owner; repository effects remain ADLC-owned |
 
 Simulator, compatibility-destination, headless-browser, HTTP status, preview,
 and source-contract results are never promoted into physical-device or
@@ -223,6 +223,6 @@ Protected integration proves Dev only. Neither a draft pull request, a task
 worktree, a focused test, a `main` label, a locally reachable surface, nor this
 document authorizes mirror or public-route mutation. Prod mirror and delivery
 each require their own exact-candidate, target-bound, unexpired, unconsumed
-human authorization and the existing protected release controller. A missing
+human authorization and the Knowgrph product-deployment owner. A missing
 token, changed revision, changed digest, changed target, failed check, or
 unavailable physical-device gate leaves Production closed.

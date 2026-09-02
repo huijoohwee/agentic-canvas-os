@@ -57,7 +57,6 @@ test("repository packing keeps one canonical invocation and bounded contract", (
   assert.deepEqual(validateRepositoryPackingContractDocuments(repositoryDocuments), []);
   assert.deepEqual(validateRepositoryPackingPlanningRow(repositoryPlanning), []);
   assert.deepEqual(REPOSITORY_PACKING_SOURCE_ROOTS, [
-    ".githooks",
     ".github",
     "__tests__",
     "agent-api/src",
@@ -73,7 +72,7 @@ test("repository packing keeps one canonical invocation and bounded contract", (
   assert.equal(repositorySources.some(([name]) => name === "scripts/docs-contract.mjs"), true);
   assert.equal(repositorySources.some(([name]) => name === "scripts/repository-packing-contract.mjs"), true);
   assert.equal(repositorySources.some(([name]) => name === "scripts/repository-packing-independence.mjs"), true);
-  assert.equal(repositorySources.some(([name]) => name === ".githooks/pre-commit"), true);
+  assert.equal(repositorySources.some(([name]) => name.startsWith(".githooks/")), false);
   assert.equal(repositorySources.some(([name]) => name === "__tests__/agent-api-app.test.mjs"), true);
   assert.equal(repositorySources.some(([name]) => name === "__tests__/repository-packing-contract.test.mjs"), false);
   assert.equal(repositorySources.some(([name]) => name === "web/index.html"), true);

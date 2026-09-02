@@ -12,18 +12,15 @@ status: "approved"
 # Native Skill Harness Operator Instruction
 
 Instruction reference:
-`operator://native-skill-harness/waive-prerequisite-gate-and-sequencing/2026-08-17`
+`operator://native-skill-harness/waive-prerequisite-gate/2026-08-17`
 
 ## Decision
 
-This instruction accepts two bounded decisions for the native skill creation
-harness increment:
-
-1. The sequencing order remains `after` the teardown effort recorded against
-   `$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`.
-2. The Prerequisite Gate may remain `waived` for this increment while the
-   shipped default honestly reports the upstream runtime surfaces as
-   unconfigured and provider execution as unverified.
+This instruction accepts one bounded product decision for the native skill
+creation harness increment: the Prerequisite Gate may remain `waived` while the
+shipped default honestly reports the upstream runtime surfaces as unconfigured
+and provider execution as unverified. It grants no repository lifecycle,
+deployment, or cleanup authority.
 
 ## Accepted unmet prerequisite set
 
@@ -43,8 +40,8 @@ Allowed under this instruction:
 
 - a `waived` prerequisite-gate record for the above unmet set
 - a passing `npm run native-skill-harness:check` with the Worker still fail-closed
-- contract documentation that names this instruction for the sequencing and
-  prerequisite-gate decisions
+- contract documentation that names this instruction for the prerequisite-gate
+  decision
 
 Not allowed under this instruction:
 

@@ -21,6 +21,11 @@ const TOKENS = Object.freeze([
   "acos.skill_proposer.propose",
   "acos.skill_registry.promote",
   "acos.adapter.register",
+  "#webmcp",
+  "@webmcp-surface",
+  "/goal.advance",
+  "#goal-completion",
+  "@goal-plan",
 ]);
 
 // A declaration is the canonical form: a dictionary_entries list item or a
@@ -35,6 +40,11 @@ const TOKEN_OWNER_FILE = Object.freeze({
   "acos.skill_proposer.propose": "docs/MCP-GATEWAY.md",
   "acos.skill_registry.promote": "docs/MCP-GATEWAY.md",
   "acos.adapter.register": "docs/MCP-GATEWAY.md",
+  "#webmcp": "docs/DICTIONARY-SEMANTIC.md",
+  "@webmcp-surface": "docs/DICTIONARY-BINDING.md",
+  "/goal.advance": "docs/DICTIONARY-COMMAND.md",
+  "#goal-completion": "docs/DICTIONARY-SEMANTIC.md",
+  "@goal-plan": "docs/DICTIONARY-BINDING.md",
 });
 
 function escapeRegExp(value) {

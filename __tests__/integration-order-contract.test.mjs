@@ -326,9 +326,9 @@ test("documentation binds runtime readiness to immutable protected source proven
     /`runtime-ready` applies only to this pure local\s+contract at the bound source revision/,
   );
   for (const contract of [
-    /canonical no-rename evidence/i,
-    /one exact commit whose\s+sole parent is the writer fence/i,
-    /newer canonical revision when the task\s+merge revision is its proven ancestor/i,
-    /Tree identity is an integrity check,\s+not an integration payload/i,
+    /owns no repository claim, worktree, branch, lease, review request/i,
+    /Each\s+repository executes its own pinned ADLC start and release workflows/i,
+    /installed ADLC release workflow remains the sole owner/i,
+    /performs no filesystem, network,\s+repository, merge, release, or deployment mutation/i,
   ]) assert.match(documentation, contract);
 });

@@ -164,6 +164,11 @@ Recorded accounting:
 - The fourth added module is `agent-api/src/tool-search-config.js`, introduced
   so a fully configured upstream runtime can report `toolSearch.configured`
   truthfully without changing the shipped fail-closed default
+- The separately authorized commerce-admission increment adds exactly two
+  `agent-api/src/` modules and raises the combined ceiling to `65` modules and
+  `22,300` lines. Its instruction is
+  `operator://agentic-graph/commerce-adapter-admission/2026-09-03`; it does not
+  alter the native skill harness proposal or promotion owners.
 
 Ownership decision:
 

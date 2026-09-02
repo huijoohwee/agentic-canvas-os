@@ -18,7 +18,11 @@ const BASELINE = Object.freeze({ agentApiModules: 59, totalLines: 19_834 });
 // +1,250 lines of module, store, registry, runtime wiring, and audit surface.
 // The fourth module is the env-aware Tool Search runtime owner added so the
 // configured upstream runtime can truthfully report toolSearch.configured.
-const PROJECTION = Object.freeze({ agentApiModules: 63, totalLines: 21_100 });
+const NATIVE_SKILL_PROJECTION = Object.freeze({ agentApiModules: 63, totalLines: 21_100 });
+// The independently authorized commerce-admission and deployment-identity
+// increment adds three bounded owners plus durable/Worker wiring without a
+// dependency or another Durable Object binding.
+const PROJECTION = Object.freeze({ agentApiModules: 67, totalLines: 23_100 });
 
 async function countLines(files) {
   let lines = 0;
@@ -84,7 +88,8 @@ async function run() {
   console.log(
     `module budget ok: ${observed.agentApiModules} agent-api modules (+${delta.agentApiModules}) and `
     + `${observed.totalLines} lines (+${delta.totalLines}) against baseline ${BASELINE.agentApiModules}/${BASELINE.totalLines.toLocaleString("en-US")}; `
-    + `projection ceilings ${PROJECTION.agentApiModules}/${PROJECTION.totalLines.toLocaleString("en-US")} hold`,
+    + `native projection ${NATIVE_SKILL_PROJECTION.agentApiModules}/${NATIVE_SKILL_PROJECTION.totalLines.toLocaleString("en-US")} and `
+    + `authorized combined ceilings ${PROJECTION.agentApiModules}/${PROJECTION.totalLines.toLocaleString("en-US")} hold`,
   );
 }
 

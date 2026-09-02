@@ -45,7 +45,9 @@
       "/function-call",
       "/function-call/recover",
       "/function-call/resume",
-      "/canvas/room"
+      "/canvas/room",
+      "/release-proof/*",
+      "/internal/*"
     ]
   },
   // One SQLite-backed room owner per room id and one atomic agent-state owner
@@ -60,13 +62,20 @@
     { "tag": "v1-canvas-room", "new_sqlite_classes": ["CanvasRoom"] },
     { "tag": "v2-agent-state", "new_sqlite_classes": ["AgentState"] }
   ],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "vars": {
     "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/control-plane/mcp",
     "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
-    "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
+    "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true",
+    "ACOS_ADMISSION_OPERATOR_INSTRUCTION_REF": "operator://agentic-graph/commerce-adapter-admission/2026-09-03",
+    "ACOS_SOURCE_REVISION": "__PROTECTED_RELEASE_SOURCE_REVISION__",
+    "ACOS_CANDIDATE_DIGEST": "__PROTECTED_RELEASE_CANDIDATE_DIGEST__",
+    "ACOS_STORAGE_COMPATIBILITY_REVISION": "__PROTECTED_RELEASE_STORAGE_COMPATIBILITY_REVISION__",
+    "ACOS_CONFIGURATION_DIGEST": "__PROTECTED_RELEASE_CONFIGURATION_DIGEST__",
+    "ACOS_UNMANAGED_BINDINGS_DIGEST": "__PROTECTED_RELEASE_UNMANAGED_BINDINGS_DIGEST__"
   },
   "secrets": {
-    "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET"]
+    "required": ["ACOS_ADMISSION_AUTH_SECRET", "ACOS_RELEASE_PROBE_TOKEN", "AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET"]
   },
   "env": {
     "dev": {
@@ -112,7 +121,9 @@
           "/function-call",
           "/function-call/recover",
           "/function-call/resume",
-          "/canvas/room"
+          "/canvas/room",
+          "/release-proof/*",
+          "/internal/*"
         ]
       },
       "durable_objects": {
@@ -125,6 +136,7 @@
         { "tag": "v1-canvas-room", "new_sqlite_classes": ["CanvasRoom"] },
         { "tag": "v2-agent-state", "new_sqlite_classes": ["AgentState"] }
       ],
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
       "services": [
         { "binding": "KNOWGRPH_MCP_SERVICE", "service": "knowgrph-mcp-dev" }
       ],
@@ -137,10 +149,16 @@
         "OPENAI_FUNCTION_CALLING_REASONING_EFFORT": "low",
         "OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS": "256",
         "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
-        "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
+        "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true",
+        "ACOS_ADMISSION_OPERATOR_INSTRUCTION_REF": "operator://agentic-graph/commerce-adapter-admission/2026-09-03",
+        "ACOS_SOURCE_REVISION": "__PROTECTED_RELEASE_SOURCE_REVISION__",
+        "ACOS_CANDIDATE_DIGEST": "__PROTECTED_RELEASE_CANDIDATE_DIGEST__",
+        "ACOS_STORAGE_COMPATIBILITY_REVISION": "__PROTECTED_RELEASE_STORAGE_COMPATIBILITY_REVISION__",
+        "ACOS_CONFIGURATION_DIGEST": "__PROTECTED_RELEASE_CONFIGURATION_DIGEST__",
+        "ACOS_UNMANAGED_BINDINGS_DIGEST": "__PROTECTED_RELEASE_UNMANAGED_BINDINGS_DIGEST__"
       },
       "secrets": {
-        "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN"]
+        "required": ["ACOS_ADMISSION_AUTH_SECRET", "ACOS_RELEASE_PROBE_TOKEN", "AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN"]
       }
     }
   }

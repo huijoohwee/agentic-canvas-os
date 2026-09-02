@@ -16,9 +16,11 @@ import {
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-// Pinned pre-feature digests: this feature must not move either file.
-const WRANGLER_SHA256 = "32f1c08f4833f04bcce5bae2f851289ae9b3e779e273eca86877ed654d806c46";
+// The commerce-admission operator instruction permits only this exact
+// post-feature Worker configuration; Skill Evolution remains untouched.
+const WRANGLER_SHA256 = "4a854e44f5b094c7d501a85621df2163c1a41a84961fd4958659bc3da9afdb6d";
 const SKILL_EVOLUTION_SHA256 = "fcf84f312ae010bd665c58d0648ac9712141522f219c733fa53e93bd459c7bc9";
+const COMMERCE_OPERATOR_REF = "operator://agentic-graph/commerce-adapter-admission/2026-09-03";
 const PROPERTY_SEED = 20260817;
 
 function parseLocalImports(text) {
@@ -75,12 +77,12 @@ test("the gate accepts no model-adapter-shaped and no fetch-shaped parameter", (
   assert.equal(gate.stats().modelCallCapability, false);
 });
 
-test("wrangler.jsonc is byte-identical to the pre-feature digest with unchanged binding counts", async () => {
+test("wrangler.jsonc matches the exact commerce-admission instruction without adding storage bindings", async () => {
   const text = await readFile(path.join(REPOSITORY_ROOT, "wrangler.jsonc"), "utf8");
   assert.equal(
     createHash("sha256").update(text).digest("hex"),
     WRANGLER_SHA256,
-    "wrangler.jsonc changed; the blocked prerequisite gate forbids any binding change",
+    "wrangler.jsonc drifted from the scoped commerce-admission operator instruction",
   );
   // Comment-tolerant parse of the JSONC body for the structural counts.
   const parsed = JSON.parse(text.replace(/^\s*\/\/.*$/gm, ""));
@@ -89,8 +91,19 @@ test("wrangler.jsonc is byte-identical to the pre-feature digest with unchanged 
   assert.equal(parsed.ratelimits.length, 2);
   assert.equal(parsed.assets ? 1 : 0, 1);
   assert.equal(parsed.env.dev.services.length, 1);
+  for (const config of [parsed, parsed.env.dev]) {
+    assert.equal(config.vars.ACOS_ADMISSION_OPERATOR_INSTRUCTION_REF, COMMERCE_OPERATOR_REF);
+    assert.ok(config.assets.run_worker_first.includes("/internal/*"));
+  }
+  assert.equal("staging" in parsed.env, false, "unverified staging bindings must not be invented");
   assert.equal("kv_namespaces" in parsed, false);
   assert.equal("d1_databases" in parsed, false);
+  const instruction = await readFile(path.join(
+    REPOSITORY_ROOT,
+    "docs/COMMERCE-ADMISSION-OPERATOR-INSTRUCTION-2026-09-03.md",
+  ), "utf8");
+  assert.match(instruction, /supersedes_in_part: "NATIVE-SKILL-HARNESS-OPERATOR-INSTRUCTION-2026-08-17\.md"/u);
+  assert.match(instruction, new RegExp(COMMERCE_OPERATOR_REF.replaceAll("/", "\\/"), "u"));
 });
 
 test("docs/SKILL-EVOLUTION.md is unchanged and its flag semantics are untouched", async () => {

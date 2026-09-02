@@ -18,6 +18,10 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 // caller registered before this feature stays dispatchable unchanged.
 export const AGENT_DEFINITION_STATUSES = Object.freeze(["proposed", "active", "deprecated"]);
 export const ACTIVE_REGISTRY_SNAPSHOT_SCHEMA = "acos-active-registry-snapshot/v1";
+export const AGENT_DEFINITION_FIELDS = Object.freeze([
+  "id", "revision", "name", "source", "model", "instructions", "tools",
+  "guardrails", "mcpServers", "handoffs", "output", "status",
+]);
 
 function normalizeStatus(value) {
   if (value === undefined) return "active";
@@ -150,7 +154,7 @@ function normalizeOutput(value) {
 function normalizeDefinition(value, limits) {
   assertExactKeys(
     value,
-    ["id", "revision", "name", "source", "model", "instructions", "tools", "guardrails", "mcpServers", "handoffs", "output", "status"],
+    AGENT_DEFINITION_FIELDS,
     "definition",
   );
   const id = assertIdentifier(value.id, "definition.id");
@@ -292,21 +296,33 @@ export function createAgentDefinitionRegistry({
   let outputValidationCount = 0;
   let blockedOutputCount = 0;
 
-  function register(value) {
+  function preflight(value) {
     const definition = normalizeDefinition(value, limits);
     assertUniqueReferenceNames(definition.tools, "tools");
     assertUniqueReferenceNames(definition.mcpServers, "mcpServers");
     const existing = definitions.get(definition.id);
+    if (existing?.revision === definition.revision && JSON.stringify(existing) !== JSON.stringify(definition)) {
+      throw new AgentDefinitionBlock("agent_revision_conflict", `Revision ${definition.revision} is already registered with different content.`);
+    }
+    if (!existing && definitions.size >= maxAgents) {
+      throw new AgentDefinitionBlock("agent_capacity", `Agent registry is limited to ${maxAgents} definitions.`);
+    }
+    return Object.freeze({
+      definition,
+      disposition: existing
+        ? existing.revision === definition.revision ? "already_registered" : "replaced"
+        : "registered",
+    });
+  }
+
+  function register(value) {
+    const { definition } = preflight(value);
+    const existing = definitions.get(definition.id);
     if (existing) {
       if (existing.revision === definition.revision) {
-        if (JSON.stringify(existing) !== JSON.stringify(definition)) {
-          throw new AgentDefinitionBlock("agent_revision_conflict", `Revision ${definition.revision} is already registered with different content.`);
-        }
         return Object.freeze({ id: existing.id, revision: existing.revision, status: "already_registered" });
       }
       replacementCount += 1;
-    } else if (definitions.size >= maxAgents) {
-      throw new AgentDefinitionBlock("agent_capacity", `Agent registry is limited to ${maxAgents} definitions.`);
     }
     definitions.set(definition.id, definition);
     registrationCount += 1;
@@ -515,7 +531,7 @@ export function createAgentDefinitionRegistry({
     });
   }
 
-  return Object.freeze({ register, prepare, validateOutput, remove, snapshot, snapshotDigest, stats });
+  return Object.freeze({ preflight, register, prepare, validateOutput, remove, snapshot, snapshotDigest, stats });
 }
 
 export const AGENT_DEFINITION_DEFAULTS = Object.freeze({

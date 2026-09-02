@@ -192,6 +192,10 @@ test("revision conflicts, stale prepares, unknown fields, and capacity fail clos
     /unsupported fields: credential/,
   );
   assert.throws(
+    () => registry.register(minimalDefinition({ revision: "briefing-v2", executableTarget: "commerce-only" })),
+    /unsupported fields: executableTarget/,
+  );
+  assert.throws(
     () => registry.register(minimalDefinition({
       revision: "briefing-v2",
       model: {

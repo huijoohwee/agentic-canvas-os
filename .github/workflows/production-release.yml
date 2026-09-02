@@ -1,0 +1,91 @@
+name: Protected production release
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_digest:
+        description: Exact SHA-256 candidate digest produced from protected main
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  deployments: read
+
+concurrency:
+  group: agentic-canvas-os-production
+  cancel-in-progress: false
+
+jobs:
+  seal-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Seal exact protected-main candidate
+        env:
+          ACOS_EXPECTED_CANDIDATE_DIGEST: ${{ inputs.candidate_digest }}
+        run: node scripts/acos-production-release.mjs prepare --output "$RUNNER_TEMP/acos-production-candidate.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: acos-production-candidate
+          path: ${{ runner.temp }}/acos-production-candidate.json
+          if-no-files-found: error
+          retention-days: 1
+
+  production-release:
+    needs: seal-candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: acos-production-candidate
+          path: ${{ runner.temp }}/acos-production-candidate
+      - name: Mutate Cloudflare only after authenticated production approval
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ACOS_PUBLIC_READY_URL: ${{ vars.ACOS_PUBLIC_READY_URL }}
+          ACOS_RELEASE_PROBE_TOKEN: ${{ secrets.ACOS_RELEASE_PROBE_TOKEN }}
+        run: >-
+          node scripts/acos-production-release.mjs release
+          --candidate "$RUNNER_TEMP/acos-production-candidate/acos-production-candidate.json"
+          --receipt "$RUNNER_TEMP/acos-production-receipt.json"
+      - name: Persist mandatory deployed receipt
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: acos-production-receipt
+          path: ${{ runner.temp }}/acos-production-receipt.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Persist best-effort failed release evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: acos-production-failure-evidence
+          path: ${{ runner.temp }}/acos-production-receipt.json
+          if-no-files-found: warn
+          retention-days: 30

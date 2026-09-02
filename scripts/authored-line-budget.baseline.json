@@ -1,0 +1,12 @@
+{
+  "budget": 600,
+  "note": "Recorded debt, not permission. Entries may only shrink or leave.",
+  "ceilings": {
+    "__tests__/agent-toolkit.test.mjs": 732,
+    "__tests__/agentic-graph-client.test.mjs": 709,
+    "__tests__/cloudflare-worker.test.mjs": 705,
+    "agent-api/src/app.js": 672,
+    "agent-api/src/programmatic-tool-calling.js": 737,
+    "web/app.js": 1135
+  }
+}

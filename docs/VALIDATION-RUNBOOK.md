@@ -113,28 +113,12 @@ Expected:
 - Runtime artifact scan returns no copied local provider/media artifacts.
 - External-copy scans cover docs, dedicated Swarm and Agent Toolkit runtimes/tests, and added integration lines; they return no imported code, prompt, API, schema, test, fixture, prose, dependency-field, or lockfile delta from referenced systems.
 
-## Lifecycle Monitoring Checks
-
-Run the focused model-free monitor proof:
-
-```bash
-node --test \
-  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-contract.test.mjs" \
-  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-controller.test.mjs" \
-  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-cli.test.mjs"
-```
-
-The suite must prove exact target binding, deterministic adaptive scheduling,
-monotonic evidence, replay integrity, bounded attempts/time/read units,
-sequential observation, cancellation, regular-file JSON input, and
-`mutationAuthority: false`. No test may treat silence, expiry, timeout, or a
-successful adapter call as target evidence.
-
 ## Repository-Owned Collaboration Gate
 
-First run `node --test __tests__/workspace-sync.test.mjs __tests__/production-runtime-readiness-contract.test.mjs __tests__/github-lifecycle-policy.test.mjs`.
-It proves candidate-first sync, retained last-known-good state, hashed quarantine,
-exact runtime identity binding, and rejection of drift or unknown fields.
+First run `npm run runtime-readiness-contract:check`.
+It proves the retained ACOS product-readiness contract and rejection of drift or
+unknown fields. Git lifecycle and canonical synchronization remain owned by the
+pinned `agentic-os` package and are not reimplemented by this gate.
 
 Then run `npm run collaboration:gate` from the Agentic Canvas OS repository.
 
@@ -150,26 +134,25 @@ The automated contexts model two independent collaboration peers; the gate does 
 
 `AGENTICGRAPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
 
-## Mandatory Completion Gate
+## Mandatory Completion Evidence
 
-After focused validation and protected Dev integration, run from the merged task
-branch:
+After the pinned ADLC release workflow records protected Dev integration, run
+the ADLC survey from the canonical checkout:
 
 ```bash
-npm run device:complete -- --json
+npm run reap
 ```
 
-The command must fail for dirty or stashed work, branch-only commits, an open or
-auto-merge-pending pull request, a non-`main` pull-request base, a merge commit
-absent from fetched `origin/main`, local-main drift, or a dirty final checkout.
-Success must emit `completedBranch`, `pullRequestUrl`, `mergeCommitSha`,
-`mainSha`, and `"status":"ok"`, with clean local `main` exactly equal to
-`origin/main`.
+ACOS's committed profile opts only exact worktree projection and registration
+into quarantine cleanup. It retains local and remote branches, remote-tracking
+refs, and unreachable objects. A green check, merged pull request, or integration
+proof grants no cleanup authority; `reap` requires the target-specific ADLC
+authorization and receipt for every effect it performs.
 
 Restart or reload the local application from `mainSha` and rerun the original
 browser failure path. Git evidence without matching runtime identity and browser
-acceptance is integration evidence, not task completion. Use `device:park` only
-for an explicitly paused or blocked task. Do not mutate Prod or Cloudflare
+acceptance is integration evidence, not task completion. Preserve an explicitly
+paused or blocked ADLC lane without changing its identity. Do not mutate Prod or Cloudflare
 without separate operator authorization.
 
 ### Immutable Pair Manifest Compliance
@@ -198,7 +181,7 @@ Run the structural gate at session start and again before release:
 ruby -rdate -ryaml -e 'root=ENV.fetch("MEMORY_ROOT"); files=Dir.glob(File.join(root,"[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).sort; abort("memory log has no monthly shard") if files.empty?; files.each do |file|; text=File.read(file); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{file}: missing frontmatter"); data=YAML.safe_load(match[1], permitted_classes:[Date], aliases:true); period=File.basename(file,".md"); required={"schema"=>"memory-log/v1","period"=>period,"timestamp_format"=>"YYYYMMDDTHHmmssZ","append_policy"=>"append-only","source_contract"=>"../docs/MEMORY-LOG.md"}; required.each{|key,value| abort("#{file}: invalid #{key}") unless data[key]==value}; %w[agent device].each{|key| abort("#{file}: missing #{key}") unless data[key].is_a?(String) && !data[key].empty?}; body=text[match.end(0)..]; headings=body.scan(/^## (@mem-[0-9]{8}T[0-9]{6}Z)$/).flatten; abort("#{file}: no memory entries") if headings.empty?; headings.each{|heading| begin instant=DateTime.strptime(heading.delete_prefix("@mem-"),"%Y%m%dT%H%M%SZ"); rescue Date::Error; abort("#{file}: invalid UTC memory timestamp #{heading}"); end; abort("#{file}: timestamp month mismatch #{heading}") unless instant.strftime("%Y-%m")==period}; abort("#{file}: duplicate or unordered memory headings") unless headings.uniq==headings && headings.sort==headings; abort("#{file}: non-sigil memory source format") if body.match?(/^## .*@mem-/) && body.scan(/^## .*@mem-/).length!=headings.length || body.match?(/^\|.*@mem-/); entries=body.split(/^## @mem-[^\n]+\n/).drop(1); entries.each{|entry| %w[type scope summary refs].each{|field| abort("#{file}: missing #{field}") unless entry.scan(/^#{field}:/).length==1}; abort("#{file}: refs must be a Markdown array") unless entry.match?(/^refs:\s*\[[^\]]+\]\s*$/)}; puts "#{file}: memory-log structure ok"; end'
 ```
 
-Before release, compare every existing shard with the exact memory base ref recorded by `START-WORKFLOW.md`:
+Before release, compare every existing shard with the exact memory base ref recorded by the pinned ADLC start workflow:
 
 ```bash
 export MEMORY_BASE_REF="<recorded-agentic-canvas-os-base-sha>"
@@ -381,6 +364,9 @@ ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.
 ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); memory=parse.call("MEMORY.md"); required_commands=%w[/tool.search /tool.describe /tool.call]; required_semantics=%w[#tool-search #deferred-tool-schema #bridge-tool]; required_bindings=%w[@deferred-tool-catalog @bridge-tool @tool-policy]; required_skills=%w[tool.search tool.describe tool.call]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x)}; abort("missing tool-search route coverage: #{missing.join(", ")}") unless missing.empty?; abort("tool search memory missing") unless memory.dig("agentic_os_memory","tool_search","commands").is_a?(Array); puts "tool-search route consistency ok"'
 ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); required_commands=%w[/moa]; required_semantics=%w[#mixture-of-agents #reference-agents #aggregator-agent]; required_bindings=%w[@moa-preset @reference-agents @aggregator-agent]; required_skills=%w[moa.run agent.moa]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x) || skills.fetch("skill_variants").include?(x)}; abort("missing moa route coverage: #{missing.join(", ")}") unless missing.empty?; puts "moa route consistency ok"'
 ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); required_commands=%w[/memory.search /experience.capture /skill.propose /skill.evolve /identity.reflect]; required_semantics=%w[#learning-loop #skill-evolution #memory-search #identity-model]; required_bindings=%w[@experience @memory-store @skill-catalog @identity-model]; required_skills=%w[experience.capture memory.search skill.propose skill.evolve identity.reflect agent.learning]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x) || skills.fetch("skill_variants").include?(x)}; abort("missing learning-loop route coverage: #{missing.join(", ")}") unless missing.empty?; puts "learning-loop route consistency ok"'
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run dictionary-catalog:check
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run kanban:check
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run goal-completion:check
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run skill-evolution:check && npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run voice-studio-contract:check
 	ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); required_commands=%w[/orchestration.graph /agent.swarm /agent.toolkit /state.checkpoint /human.review /stream.trace]; required_semantics=%w[#orchestration-graph #agent-swarm #agent-toolkit #stateful-agent #durable-execution #human-in-loop]; required_bindings=%w[@orchestration-graph @swarm-run @agent-toolkit-observer @state-store @checkpoint-store @human-review]; required_skills=%w[orchestration.graph agent.swarm agent.toolkit state.checkpoint human.review stream.trace agent.orchestrator]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x) || skills.fetch("skill_variants").include?(x)}; abort("missing orchestration route coverage: #{missing.join(", ")}") unless missing.empty?; puts "orchestration route consistency ok"'
 	ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); required_commands=%w[/superagent.run]; required_semantics=%w[#long-horizon-harness #sandboxed-workspace #message-gateway]; required_bindings=%w[@sandbox-workspace @message-gateway]; required_skills=%w[superagent.run]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x)}; abort("missing superagent route coverage: #{missing.join(", ")}") unless missing.empty?; puts "superagent route consistency ok"'
@@ -389,6 +375,9 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run skill-evolution:check && npm --prefix
 Expected:
 
 - Command, semantic, binding, skill, variant, eleven-entry Prompt Preset Chat/MCP, and structured Probe-Tree clarification contracts are discoverable and fail closed through `npm run docs:check`.
+- Every declared `/`, `#`, and `@` entry reconciles one-to-one with its table row, passes the shared invocation grammar, and recomputes the exact `catalog_entry_count` and `catalog_digest` declared once in `DICTIONARY-COMMAND.md`; count, digest, or digest-input drift fails closed before spend, mutation, or deploy.
+- `kanban.md` `## Ledger Projection` regenerates byte-identically from the `active_period` context records, its declared row count, period, and digest match, and no projected id collides with an authored `KANBAN-` row; a hand edit inside the fence fails closed.
+- `/goal.advance @goal-plan #goal-completion` resolves exactly once; outcome-derived weights are deterministic and order-independent, reorder only the ready set, and never admit, gate, or unblock a unit; unauthorized gated units are refused; each blocked unit bounds only itself and its dependents; and the advance receipt is frozen, digest-bound, and performs no dispatch or mutation.
 - Every `FACTS.md` `direct_resolution` token is present in the matching `/`, `#`, or `@` dictionary.
 - `/soul.load`, `/personality.overlay`, Soul tags, Soul bindings, `soul.load`, and `personality.overlay` route through dictionaries, `SOUL.md`, and `SKILLS.md`.
 - `/memory.write`, `/memory.compact`, `/memory.search`, `/session.search`, `/user.profile`, persistent-memory tags, memory bindings, and matching skills route through dictionaries, `MEMORY.md`, `USER.md`, and `SKILLS.md`.
@@ -422,19 +411,26 @@ Choose the subset matching touched owners. Do not run broader suites unless the 
 
 ## Agentic OS VCC Checks
 
-Run the focused writer-coordination proof before any broader docs or build check:
+Run the focused ADLC consumer proof before broader checks:
 
 ```sh
-node --test __tests__/writer-lease-lib.test.mjs __tests__/repository-guards.test.mjs __tests__/device-branch-lib.test.mjs
+node --test __tests__/adlc-compatibility.test.mjs __tests__/adlc-ci-contract.test.mjs __tests__/repository-guards.test.mjs
+npm run authored-line-budget:check
+node --test __tests__/adlc-compatibility.test.mjs __tests__/agentic-os-profile.test.mjs
+npm run dictionary-catalog:check
 ```
-The proof must show the protected remote collaboration ledger admits at most one same-parent transition, rejects overlapping normalized writes, advances epochs after server-time expiry, replays exact idempotency keys, binds immutable repository/actor/PR/head identity, updates its ref only with `force: false`, and treats local leases and pull-request markers as projections. `npm run collaboration:cloud:check` proves the reducer and GitHub adapter without claiming live authority; live readiness additionally requires the ledger ref, deletion/non-fast-forward ruleset, app-bound `cloud-collaboration` check, and claim/verify/release receipts. `node --test __tests__/worktree-lifecycle.test.mjs __tests__/device-integrate.test.mjs` must still prove attributed post-baseline untracked paths remain in their physical owning lane while canonical or unattributed dirt fails closed, exact completed worktree removal yields an unchanged `agentic-worktree-cleanup-result/v1` receipt whose Git common directory, repository-derived container roots, preserved branch, and recomputed operation identity agree, and nonrecursive managed-parent cleanup identity-pins and immediately revalidates derived directories under the cooperative registry lock, retains observed drift, and claims no atomic immunity after its final check. The consumer permits one same-command retry only for absent or unparseable synchronous child stdout; thrown, nonzero, and parseable-invalid results are not retried, and this is neither top-level lost-final-stdout recovery nor canonical-root device replay. `npm run worktree:lifecycle:cleanup-empty -- --repository="[canonical repository root]"` is a one-time orphan-container maintenance command, not provider, integration, branch, or deployment authority.
+
+The proof must keep branch/pull-request identity separate from local observation,
+require exact integration proof before exact clean retirement, and preserve every
+dirty or untracked byte. `budgets` is the sole protected bounded
+repository-contract context; the former bridge is retired and absent.
 
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
 | Automated collaboration and runtime identity | `npm run collaboration:gate` exits zero after focused checks and isolated owner/guest/worker proof; the result reports at least two active peers, remote document propagation, two distinct runtime identities, one common digest, identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs, and `fresh` hydration within two attempts. Physical devices and JSON exports are not required. |
 | Canonical local runtime | `turn:end` reports `ready` only when clean exact protected `main` revisions, private-token process ownership, fixed Apex/storage listeners, and direct plus proxied HTTP probes agree; `runtime:local:stop` refuses unrelated processes. |
-| Cloud writer coordination and Agentic SDLC conformance | `npm run collaboration:cloud:check` proves canonical encoding, bounded history, normalized overlap, server-time expiry, idempotent replay, non-forced CAS, bootstrap/race recovery, exact actor/repository/PR/head binding, and secret/path-safe public output; live runtime readiness separately joins the protected ledger ref, ruleset, app-bound check, and claim/verify/release receipts. Focused local writer-lease and worktree-lifecycle tests remain projection and authored-state preservation proof. `npm run agentic-sdlc:check` proves the canonical run evaluator; `npm run agentic-sdlc:source:check` binds the protected guideline revision/digests/Rule IDs, and `npm run agentic-sdlc:verify -- --run <explicit-run.json>` exits zero only for a runtime-ready artifact. Every command keeps the Deploy Boundary closed. |
+| ADLC lifecycle | `npm run doctor`, `npm run status`, and the focused ADLC compatibility tests prove observational state, exact integration proof, and exact clean retirement without granting Production or deployment authority. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |

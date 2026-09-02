@@ -16,8 +16,8 @@ import * as githubTransitionPolicy from 'agentic-os/adapters/github-transition-p
 import { createEffectPlan, encodeEffectPlan } from 'agentic-os/records/completion'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/e677a4c78905762680ad60dfc5d3dc37acd504b0'
-const INTEGRITY = 'sha512-/GFbKOmfEx5AeSkqiW5PEMkOmUPDKE6uquktuKDlnj+awGSjqzmG+iF+ZMqyn7LMehczFEd1e134e61lDziykA=='
+const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/71f7f83e92bf799e7af954cb4f59d59441b53cd5'
+const INTEGRITY = 'sha512-aWxnS1OCKbgX3W8ZPXldglhmTfWSiBJ8mhUoA4PfRaCI+ocwiDayaAWLezOm5tdVNrvOZj/RaZQvjpiugva9fQ=='
 const read = relativePath => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
 const digest = relativePath => createHash('sha256')
   .update(fs.readFileSync(path.join(ROOT, relativePath)))
@@ -343,7 +343,7 @@ test('the retained profile and initial authority surfaces stay byte-identical', 
     '.github/adlc-authority-policy.json': digest('.github/adlc-authority-policy.json'),
     '.github/workflows/adlc-authority.yml': digest('.github/workflows/adlc-authority.yml'),
   }, {
-    '.agentic-os.json': '73132537b7a7c54237061cf6ae13ff0f07443f902b9993a4599d726238874bc1',
+    '.agentic-os.json': '3fe2918ca7629edd5aa5f50186dcca5a9169f5f2d384301a6b55d785e88518ba',
     '.github/adlc-authority-policy.json':
       'dc3d57d18462f4c71521bb8783785ba31c5952efc41ca7f27a7e807a7e0783db',
     '.github/workflows/adlc-authority.yml':

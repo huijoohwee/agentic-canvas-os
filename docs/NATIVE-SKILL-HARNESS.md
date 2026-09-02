@@ -17,7 +17,7 @@ creation harness. The local rung is `spec-complete`. The delivered rung remains
 `npm run native-skill-harness:check`, the entrypoint diff proof, the timed p95
 result, and a Prerequisite Gate state of `satisfied` or `waived` under a named
 operator instruction. The current named operator instruction is
-`operator://native-skill-harness/waive-prerequisite-gate-and-sequencing/2026-08-17`,
+`operator://native-skill-harness/waive-prerequisite-gate/2026-08-17`,
 recorded in
 `docs/NATIVE-SKILL-HARNESS-OPERATOR-INSTRUCTION-2026-08-17.md`.
 
@@ -152,7 +152,7 @@ so the threshold is a repository decision recorded honestly. The timed test must
 report the observed p95 next to the declared threshold rather than claiming live
 proof from prose alone.
 
-## Decision 7: Module budget and sequencing
+## Decision 7: Product module budget
 
 Recorded accounting:
 
@@ -165,20 +165,13 @@ Recorded accounting:
   so a fully configured upstream runtime can report `toolSearch.configured`
   truthfully without changing the shipped fail-closed default
 
-Sequencing decision:
-
-- This feature ships after the teardown effort.
-- The decision is made against the task-branch version of the
-  `repository-teardown` spec under
-  `$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`.
-- The operator instruction accepting that order is
-  `operator://native-skill-harness/waive-prerequisite-gate-and-sequencing/2026-08-17`.
-
-Mitigating fact:
+Ownership decision:
 
 - `tool-search.js` and the Agent Definition registry are statically imported by
   `worker/index.js` and reported at `GET /api/ready`, so the dependency base is
-  on a Proven Path even though the teardown budget is not yet satisfied.
+  already on a Proven Path and remains the single product owner.
+- Each proposed module must justify its net product value and preserve an
+  acyclic dependency graph; repository lifecycle stays with pinned `agentic-os`.
 
 ## Decision 8: TCO and rollback
 
@@ -202,7 +195,7 @@ Rollback statement:
 
 | Component | Local rung | Delivered rung | Evidence reference | Operator instruction | Notes |
 |---|---|---|---|---|---|
-| Prerequisite Gate record and check | spec-complete | undocumented | `npm run native-skill-harness:check` in the current workspace proves the waived gate record recomputes and emits cleanly. | `operator://native-skill-harness/waive-prerequisite-gate-and-sequencing/2026-08-17` | Waived for this increment only; gated follow-on remains closed. |
+| Prerequisite Gate record and check | spec-complete | undocumented | `npm run native-skill-harness:check` in the current workspace proves the waived gate record recomputes and emits cleanly. | `operator://native-skill-harness/waive-prerequisite-gate/2026-08-17` | Waived for this increment only; gated follow-on remains closed. |
 | Draft Registry Store | spec-complete | undocumented | none yet | none | Reuses `AGENT_STATE`; no binding added. |
 | Skill Proposer | spec-complete | undocumented | none yet | none | Writes only `status: proposed` drafts. |
 | Skill Registry Promotion Gate | spec-complete | undocumented | none yet | none | Closed by default; no model call capability. |

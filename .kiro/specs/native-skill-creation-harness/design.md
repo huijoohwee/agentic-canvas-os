@@ -1348,7 +1348,7 @@ was already hardcoded.
 | Skill Evolution flags untouched | smoke | once, asserts `docs/SKILL-EVOLUTION.md` digest is unchanged by this feature | 16.5 |
 | Dependency audit | smoke | once, over `package.json` fields, source imports across four trees, outbound call targets | 12.1 through 12.5, 22.3 |
 | Module budget audit | smoke | once, reports the module count and line total against the recorded baseline and projection | 17.1, 17.2 |
-| Sequencing decision recorded | smoke, docs | once | 17.3, 17.4, 17.5 |
+| Product ownership boundary recorded | smoke, docs | once | 17.3, 17.4, 17.5 |
 | Binding count in `wrangler.jsonc` | smoke | once, asserts the count is unchanged from the pre-feature value | 19.1, 19.2, 19.3 |
 | Shared entrypoint diff | integration | once per registration fixture | 13.2, 13.3, 13.4 |
 | Timed p95 gap-to-draft | integration | one timed run over a fixed number of fake-adapter iterations, reporting observed p95 next to the declared 12000 ms threshold | 18.2 |
@@ -1435,30 +1435,13 @@ Satisfies Requirement 19 criteria 1, 2, 3, 4, 5.
 | `__tests__/` files | not re-counted here | +1 (`native-skill-harness.test.mjs`) |
 | `wrangler.jsonc` bindings | Durable Objects 2, rate limiters 2, assets 1, services 1 under `env.dev` | unchanged |
 
-Against the `repository-teardown` spec's budget (at most 20 `agent-api/src/` modules, at most 8,000
-lines across the three trees), the pre-feature state is already 59 modules and 19,834 lines. The
-teardown targets are missed by a factor of roughly 3 and 2.5 respectively **before** this feature.
-This feature moves them further away by 3 modules and roughly 1,100 lines, which is about 5 percent of
-the existing overshoot. That is the honest framing: this feature is not the cause of the budget
-problem and is not the fix for it.
-
-Mitigating fact, per Requirement 17 criterion 5: `tool-search.js` and the Agent Definition registry
-are statically imported by `worker/index.js` and reported at `GET /api/ready`, which classifies them as
-Proven_Path under the teardown's own rules. They survive the teardown, so this feature's dependency
-base is not at risk from it. What is at risk is only the module budget and the sequencing.
-
-Sequencing decision (Requirement 17 criteria 3 and 4): this feature should ship **after** the teardown
-effort, and the sequencing decision is made against the **task-branch** version of the
-`repository-teardown` spec at
-`$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`,
-not against a merged version, because that spec is not on `main`. The operator instruction accepting
-this order does not exist yet and is required before Must-tier implementation starts. Rationale for
-ordering after rather than before: adding three modules to a tree that a teardown is about to
-restructure guarantees a second round of rework on the new modules. Rationale someone could
-reasonably prefer the other order: the teardown's targets are so far from current state that waiting
-for it may mean waiting indefinitely, in which case a concurrent order with an explicit operator
-instruction is the honest alternative. This design recommends "after" and flags that the
-recommendation depends on the teardown actually landing.
+The verified pre-feature baseline is 59 modules and 19,834 lines. The proposal adds four modules and
+roughly 1,200 to 1,300 lines, so implementation must first show that each module has one product
+owner, cannot be folded into an existing cohesive module, and does not introduce a dependency cycle.
+`tool-search.js` and the Agent Definition registry are already imported by `worker/index.js` and
+reported at `GET /api/ready`; the design reuses those owners. It introduces no repository-lifecycle
+controller or policy. Repository admission, integration, synchronization, retirement, and cleanup
+remain governed by the pinned `agentic-os` package.
 
 ---
 
@@ -1514,11 +1497,11 @@ caller who invokes the wrong one gets a skill-text proposal when they wanted an 
 or the reverse. Mitigation: the recommended rename to `/skill.draft-definition`, which is outside this
 increment and needs an operator instruction because it edits a canonical register.
 
-**R3. Module budget conflict with the teardown spec on its task branch.** Verified: the teardown spec
-exists at a task-branch worktree path with a budget of at most 20 `agent-api/src/` modules and at most
-8,000 lines; current state is 59 modules and 19,834 lines. The two efforts pull in opposite
-directions. Requirement 17 forces the accounting; the sequencing decision above recommends "after"
-and names the risk that "after" may mean "indefinitely".
+**R3. Product module growth.** Verified: current state is 59 `agent-api/src/` modules and 19,834
+lines, while this proposal adds four modules and roughly 1,200 to 1,300 lines. Requirement 17 makes
+that delta explicit, requires reuse of the existing Tool Search and Agent Definition owners, and
+forbids adding repository-lifecycle policy to the product harness. The residual risk is product
+surface growing faster than integrated runtime proof.
 
 **R4. No model provider is configured, so the proposer loop cannot be proven end to end.** Verified:
 the shipped default has no provider; `env.dev` declares

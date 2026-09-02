@@ -14,7 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { canonicalJson, digestValue } from "../scripts/cloud-collaboration-primitives.mjs";
+import { canonicalJson, digestValue } from "../scripts/product-contract-primitives.mjs";
 import {
   readPrivateOperationLock,
   withPrivateOperationLock,

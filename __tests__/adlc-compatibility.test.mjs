@@ -1,111 +1,204 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { TextDecoder } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { collectScopedLaneState } from "../scripts/scoped-lane-admission-state.mjs";
-import { summarizeOwnedPaths } from "../scripts/worktree-lifecycle.mjs";
-
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SHA = "a".repeat(40);
-const PROFILE = Object.freeze({
-  canonical: Object.freeze({
-    localRef: "refs/heads/main",
-    remoteRef: "refs/remotes/origin/main",
-  }),
+const PIN = "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/71f7f83e92bf799e7af954cb4f59d59441b53cd5";
+const INTEGRITY = "sha512-aWxnS1OCKbgX3W8ZPXldglhmTfWSiBJ8mhUoA4PfRaCI+ocwiDayaAWLezOm5tdVNrvOZj/RaZQvjpiugva9fQ==";
+const UPSTREAM = path.join(ROOT, "node_modules", "agentic-os");
+const read = relativePath => readFileSync(path.join(ROOT, relativePath), "utf8");
+
+function markdownUnder(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return markdownUnder(absolutePath);
+    return entry.isFile() && entry.name.endsWith(".md") ? [absolutePath] : [];
+  });
+}
+
+test("ACOS pins one reviewed ADLC package and delegates lifecycle commands directly", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const lock = JSON.parse(read("package-lock.json"));
+  assert.equal(pkg.devDependencies["agentic-os"], PIN);
+  assert.equal(lock.packages[""].devDependencies["agentic-os"], PIN);
+  assert.equal(lock.packages["node_modules/agentic-os"].resolved, PIN);
+  assert.equal(lock.packages["node_modules/agentic-os"].integrity, INTEGRITY);
+  assert.deepEqual(Object.fromEntries([
+    "setup", "doctor", "lane", "land", "status", "reap", "queue:show",
+    "autonomy-class", "git:configure", "sync:canonical",
+  ].map(name => [name, pkg.scripts[name]])), {
+    setup: "agentic-os setup",
+    doctor: "agentic-os doctor",
+    lane: "agentic-os start",
+    land: "agentic-os land",
+    status: "agentic-os status",
+    reap: "agentic-os reap",
+    "queue:show": "agentic-os queue show",
+    "autonomy-class": "agentic-os autonomy-class",
+    "git:configure": "agentic-os git-configure",
+    "sync:canonical": "agentic-os canonical-sync",
+  });
 });
 
-test("ACOS pins the reviewed agentic-os compatibility contract", () => {
-  const packageJson = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8"));
-  assert.equal(
-    packageJson.devDependencies["agentic-os"],
-    "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/e677a4c78905762680ad60dfc5d3dc37acd504b0",
-  );
-  assert.equal(packageJson.scripts["autonomy-class"], "agentic-os autonomy-class");
-  assert.equal(existsSync(path.join(ROOT, "scripts", "autonomy-class.mjs")), false);
-  assert.equal(existsSync(path.join(ROOT, "__tests__", "autonomy-class.test.mjs")), false);
+test("global ADLC guidance and runtime prompt remain the installed SSOT", () => {
+  const instructions = read("AGENTS.md");
+  const guideline = readFileSync(path.join(UPSTREAM, "docs", "adlc-guidelines.md"), "utf8");
+  const guide = readFileSync(path.join(UPSTREAM, "guides", "AUTONOMOUS-GOAL-PURSUIT.md"), "utf8");
+  const promptBytes = readFileSync(path.join(UPSTREAM, "templates", "SYSTEM-PROMPT-RUNTIME.md"));
+  assert.equal(promptBytes.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])), false);
+  assert.equal(promptBytes.includes(0x0d), false);
+  assert.equal(promptBytes.at(-1), 0x0a);
+  const prompt = new TextDecoder("utf-8", { fatal: true }).decode(promptBytes);
+  assert.match(guideline, /^schema: agentic-os\/adlc-guidelines\/v1$/mu);
+  assert.match(guideline, /^version: 1\.1\.0$/mu);
+  assert.match(guideline, /^supersedes: agentic-sdlc$/mu);
+  assert.match(guideline, /^runtime_contract: enforced$/mu);
+  assert.match(guideline, /^runtime_evaluator: npm run evals$/mu);
+  assert.match(guideline, /^execution_policy: lean-time-bound-budget-driven-sprints$/mu);
+  assert.match(guideline, /^load_policy: lazy-beyond-always-load$/mu);
+  assert.match(guideline, /^integration_policy: minimal-diff-protected-merge$/mu);
+  assert.match(guideline, /^runtime_policy: fail-closed$/mu);
+  assert.match(guideline, /^lifecycle_status: active$/mu);
+  assert.equal(Buffer.byteLength(prompt, "utf8"), 1_000);
+  assert.ok(Buffer.byteLength(prompt, "utf8") <= 1_000);
+  assert.equal([...prompt].length, 988);
+  assert.ok(prompt.split("\n").every((line) => [...line].length <= 120));
+  assert.equal(createHash("sha256").update(promptBytes).digest("hex"),
+    "c72415b3f0c1886bc2e98cc8779e9561501f589cca726c1441c7b8dafc531ee0");
+  assert.match(prompt, /Lean time-bound sprints: state ETA\+time\/byte\/module caps;/u);
+  assert.match(prompt, /External wait: blocker\+recheck, not ETA\./u);
+  assert.match(guide, /on-demand ADLC guide, not an always-load instruction/u);
+  assert.match(guide, /smallest valuable vertical slice/u);
+  assert.match(guide, /minimal scoped hunks/u);
+  assert.match(guide, /After the same approach fails twice/u);
+  assert.match(guide, /shared-state repair gets one attempt/u);
+  for (const owner of [
+    "node_modules/agentic-os/templates/SYSTEM-PROMPT-RUNTIME.md",
+    "node_modules/agentic-os/docs/adlc-guidelines.md",
+    "node_modules/agentic-os/docs/START-WORKFLOW.md",
+    "node_modules/agentic-os/docs/RELEASE-WORKFLOW.md",
+  ]) assert.match(instructions, new RegExp(owner.replaceAll(".", "\\.")));
+  assert.match(instructions, /Continuously comply/u);
+  assert.match(instructions, /Do not\s+copy or redefine/u);
+  for (const owner of ["docs/START-WORKFLOW.md", "docs/RELEASE-WORKFLOW.md",
+    "docs/SYSTEM-PROMPT-RUNTIME.md", "docs/AUTONOMOUS-GOAL-PURSUIT.md",
+    "docs/CANONICAL-LIFECYCLE.md"]) {
+    assert.equal(existsSync(path.join(ROOT, owner)), false, owner);
+  }
 });
 
-test("compatibility projections are observation-only and have no private imports", () => {
-  const sources = [
+test("ACOS has no competing lane, worktree, session, guard, or synchronization controller", () => {
+  for (const relativePath of [
     "scripts/worktree-lifecycle.mjs",
     "scripts/scoped-lane-admission-state.mjs",
-  ].map(relativePath => readFileSync(path.join(ROOT, relativePath), "utf8"));
-  for (const source of sources) assert.doesNotMatch(source, /agentic-os\/src\//u);
-  assert.match(sources[0], /agentic-os\/adapters\/git/u);
-  assert.match(sources[0], /agentic-os\/compat\//u);
-  assert.match(sources[1], /agentic-os\/adapters\/git/u);
-  assert.match(sources[1], /agentic-os\/compat\//u);
-  assert.doesNotMatch(sources[0], /cleanupIntegratedLane|\bretire\b|\bremoveLaneRecord\b/u);
-});
+    "scripts/session-start-policy.mjs",
+    "scripts/live-sync.mjs",
+    "scripts/workspace-sync.mjs",
+    "scripts/workspace-sync-lib.mjs",
+    "scripts/workspace-guard-hook.mjs",
+    "scripts/workspace-parallelism-guard.mjs",
+    "scripts/workspace-parallelism-lib.mjs",
+    "scripts/install-workspace-guards.mjs",
+    "scripts/history-lifecycle.mjs",
+    "scripts/split-window-preparation.mjs",
+    "scripts/split-window-preparation-contract.mjs",
+    "scripts/split-window-preparation-controller.mjs",
+    "scripts/split-window-preparation-repository-adapter.mjs",
+    "scripts/split-window-preparation-sandbox.mjs",
+    "scripts/split-window-preparation-store.mjs",
+    "scripts/task-worktree-owned-containers.mjs",
+    "scripts/lifecycle-monitor.mjs",
+    "scripts/lifecycle-monitor-contract.mjs",
+    "scripts/lifecycle-monitor-controller.mjs",
+    "scripts/lifecycle-monitor-json-adapter.mjs",
+    "scripts/cloud-collaboration-primitives.mjs",
+    "scripts/teardown-archive.mjs",
+    "scripts/teardown-concurrency-trial.mjs",
+    "scripts/teardown-inventory.mjs",
+    "scripts/teardown-measure.mjs",
+    "scripts/teardown-route-baseline.mjs",
+    "scripts/collaborative-release-lifecycle-contract.mjs",
+    "scripts/collaborative-release-terminal-receipts.mjs",
+    "scripts/collaborative-release-schema.mjs",
+    "docs/SPLIT-WINDOW-PREPARATION.md",
+    "docs/MANAGED-IMPLEMENTATION-RUNS.md",
+    "docs/LIFECYCLE-MONITORING.md",
+    "docs/schemas/collaborative-release-lifecycle.v1.schema.json",
+    "docs/schemas/collaborative-release-lifecycle.v2.schema.json",
+    "docs/schemas/scoped-lane-admission-report.v1.schema.json",
+    ".githooks/git-guarded",
+    ".githooks/pre-commit",
+    ".githooks/pre-push",
+    ".githooks/reference-transaction",
+  ]) assert.equal(existsSync(path.join(ROOT, relativePath)), false, relativePath);
 
-test("legacy cleanup aliases are removed while the profile retains every cleanup effect", () => {
-  const packageJson = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8"));
-  assert.equal(Object.hasOwn(packageJson.scripts, "device:complete"), false);
-  assert.equal(Object.hasOwn(packageJson.scripts, "worktree:lifecycle:cleanup"), false);
-  assert.equal(existsSync(path.join(ROOT, "scripts", "device-branch.mjs")), false);
-  const profile = JSON.parse(readFileSync(path.join(ROOT, ".agentic-os.json"), "utf8"));
-  assert.ok(Object.values(profile.cleanup).every(effect => effect === "retain"));
-});
-
-test("lifecycle observation bounds owned-path output without concealing its digest", () => {
-  const summary = summarizeOwnedPaths(["z", "a", "z", "b"], 2);
-  assert.deepEqual(summary.sample, ["a", "b"]);
-  assert.equal(summary.count, 3);
-  assert.equal(summary.truncated, true);
-  assert.match(summary.digest, /^[0-9a-f]{64}$/u);
-});
-
-test("lane-state compatibility derives canonical identity from the ADLC profile", () => {
-  const repository = "/repo";
-  const lanePath = "/tasks/device--scope";
-  const laneHead = "b".repeat(40);
-  const porcelain = [
-    `worktree ${repository}`,
-    `HEAD ${SHA}`,
-    "branch refs/heads/main",
-    `worktree ${lanePath}`,
-    `HEAD ${laneHead}`,
-    "branch refs/heads/agent/device/scope",
-    "",
-  ].join("\0");
-  const git = (cwd, args) => {
-    const command = args.join(" ");
-    if (command === "worktree list --porcelain -z") return porcelain;
-    if (command === "rev-parse refs/remotes/origin/main") return SHA;
-    if (command === "status --porcelain=v1 -z --untracked-files=all") return "";
-    if (command === "ls-files --stage -z") return "";
-    if (command === "ls-files --modified --deleted --others --exclude-standard -z") return "";
-    if (command === "rev-parse HEAD^{tree}") {
-      return cwd === repository ? "c".repeat(40) : "d".repeat(40);
+  for (const spec of [
+    "active-dirty-scope-expansion-canonical-drift",
+    "orphaned-task-authority-recovery",
+    "repeated-dormant-bind-recovery",
+    "repeated-expired-committed-heartbeat-recovery",
+    "repeated-heartbeat-bind-recovery",
+    "repeated-successor-fence-recovery",
+    "reviewed-historical-base-cloud-verification",
+    "reviewed-predecessor-base-continuation",
+    "reviewed-source-correction-prepared-supersession",
+    "source-correction-binding-clean-head",
+    "task-authority-loss-incident-recovery",
+    "repository-teardown",
+  ]) {
+    for (const file of [".config.kiro", "design.md", "requirements.md", "tasks.md"]) {
+      const relativePath = path.join(".kiro", "specs", spec, file);
+      assert.equal(existsSync(path.join(ROOT, relativePath)), false, relativePath);
     }
-    throw new Error(`unexpected git call: ${cwd} ${command}`);
-  };
-  const result = collectScopedLaneState({
-    repository,
-    git,
-    readProfile: () => PROFILE,
-    readLaneStore: () => ({
-      schema: "agentic-os/lanes/v1",
-      lanes: {
-        "agent/device/scope": { ref: "agent/device/scope", state: "queued" },
-      },
-    }),
-  });
+  }
+});
 
-  assert.equal(result.canonicalBaseSha, SHA);
-  assert.equal(result.canonicalSourceDisposition, "exact");
-  assert.match(result.registryDigest, /^[0-9a-f]{64}$/u);
-  assert.match(result.laneStateDigest, /^[0-9a-f]{64}$/u);
-  assert.equal(result.lanes[1].lease, null);
-  assert.equal(result.lanes[1].leaseAmbiguous, false);
-  assert.deepEqual(result.lanes[1].branchIdentity, {
-    schema: "agentic-os-lane-identity/v1",
-    coordination: "git-branch",
-    ref: "agent/device/scope",
-    device: "device",
-    scope: "scope",
-    state: "queued",
-  });
+test("ACOS docs expose only the non-promoting observation compatibility route", () => {
+  const sources = [
+    path.join(ROOT, "COLLABORATION.md"),
+    path.join(ROOT, "README.md"),
+    path.join(ROOT, "llms.txt"),
+    path.join(ROOT, ".gitignore"),
+    path.join(ROOT, ".vscode", "agentic.code-snippets"),
+    path.join(ROOT, "scripts", "native-skill-harness", "prerequisite-gate.json"),
+    path.join(ROOT, "scripts", "native-skill-harness-module-budget.mjs"),
+    ...markdownUnder(path.join(ROOT, "docs")),
+    ...markdownUnder(path.join(ROOT, ".kiro", "specs")),
+  ]
+    .map(absolutePath => readFileSync(absolutePath, "utf8"))
+    .join("\n");
+  for (const removed of [
+    "/session.start",
+    "/implementation.run",
+    "/workspace.parallelism.check",
+    "/workspace.guards.install",
+    "/workspace.operation.review",
+    "agenticgraph.implementation_run.",
+    "#managed-implementation-run",
+    "#destructive-operation-guard",
+    "@workspace-lane",
+    "@recovery-reference",
+    "MANAGED-IMPLEMENTATION-RUNS.md",
+    "SPLIT-WINDOW-PREPARATION.md",
+    "LIFECYCLE-MONITORING.md",
+    "repository-teardown",
+    "teardown budget",
+    "repository-reduction planning decision",
+    "historical reduction target",
+    "waive-prerequisite-gate-and-sequencing",
+    "teardown-route-baseline",
+    "collaborative-release-lifecycle",
+    "joined terminal receipt chain",
+    "Adaptive lifecycle monitoring",
+    "orphaned-task-authority-recovery",
+  ]) assert.equal(sources.includes(removed), false, removed);
+
+  const observation = read("docs/IMPLEMENTATION-RUN-OBSERVATION.md");
+  assert.match(observation, /^status: "spec-complete"$/mu);
+  assert.match(observation, /\/sdlc\.observe #agentic-sdlc-observability/u);
+  assert.match(observation, /grants no Agentic SDLC\s+lifecycle authority/u);
 });

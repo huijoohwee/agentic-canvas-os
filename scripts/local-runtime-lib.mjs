@@ -73,7 +73,6 @@ export async function endLocalRuntimeTurn(options = {}, dependencies = {}) {
   const deps = createDependencies(dependencies);
   const normalized = normalizeOptions(options);
   const preflight = resolveCanonicalCandidate(normalized, deps, { verifyProtected: false });
-  const lifecycle = deps.runLifecycle(preflight.agenticCanvasOsRoot);
   const candidate = resolveCanonicalCandidate(normalized, deps, { verifyProtected: true });
   const locations = runtimeLocations(candidate.workspaceRoot);
   const releaseLock = deps.acquireLock(locations.lockPath);
@@ -93,7 +92,7 @@ export async function endLocalRuntimeTurn(options = {}, dependencies = {}) {
       },
     });
     writeJsonAtomic(locations.reviewCandidatePath, reviewCandidate, deps);
-    return { ...runtime, action: "turn-end", lifecycle, handoff, reviewCandidate };
+    return { ...runtime, action: "turn-end", handoff, reviewCandidate };
   } finally {
     releaseLock();
   }
@@ -258,4 +257,3 @@ function stoppedProjection(candidate) {
     ports: { apex: APEX_PORT, storage: STORAGE_PORT },
   };
 }
-

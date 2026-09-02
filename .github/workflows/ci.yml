@@ -145,7 +145,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify bounded repository contracts
         run: |
+          npm --prefix node_modules/agentic-os run evals
           npm run authored-line-budget:check
-          npm run frontmatter-runtime:check
-          npm run frontmatter-dictionary:check
+          node --test __tests__/adlc-compatibility.test.mjs __tests__/agentic-os-profile.test.mjs
           npm run dictionary-catalog:check

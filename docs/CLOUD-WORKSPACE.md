@@ -84,7 +84,7 @@ The machine result uses `agentic-hybrid-workspace-bootstrap/v1` and contains:
 - neutral placement `{ kind, source, containerized }`;
 - sanitized current-checkout repository evidence;
 - lifecycle `{ status: deferred-to-admission, scope: declared-write-scope,
-  nextWorkflow: docs/START-WORKFLOW.md }`;
+  nextWorkflow: node_modules/agentic-os/docs/START-WORKFLOW.md }`;
 - typed sanitized findings; and
 - `mutationAuthority: false`.
 
@@ -187,20 +187,19 @@ After scoped admission, every placement uses the same lifecycle:
 2. author only inside its printed worktree;
 3. run focused checks and preserve the exact candidate commit;
 4. publish the exact head with `npm run land`; and
-5. run `npm run reap` after protected integration and preserve the lane because
-   ACOS's committed profile retains every cleanup effect.
+5. run `npm run reap` after protected integration; exact worktree projection and
+   registration may be quarantined only by their own authorized receipts, while
+   branches, remote-tracking refs, and unreachable objects remain retained.
 
-When review, CI, or a current-base check fails, the implementing agent resumes
-the exact fenced lane, fixes the source owner, reruns checks, and reviews a new
-immutable head. Integration consumes an unchanged green reviewed candidate. It
-never uses a raw merge, direct protected-branch write, unchecked or unowned
-force update, or parity shortcut; the repository-owned exact-CAS
-`--force-with-lease` refresh remains the bounded exception.
+When review, CI, or a current-base check fails, resume through the pinned ADLC
+start workflow, fix the source owner, and rerun focused checks. Publication,
+integration, retry, and retirement semantics come only from `agentic-os`; this
+product document creates no local merge, force-update, lease, or recovery
+exception.
 
-Completion requires protected integration, declared canonical/runtime
-reconciliation, and a separately recorded cleanup-eligibility result. Exact
-target cleanup remains unavailable until a target-specific profile and
-authenticated receipt authorize it.
+Completion requires protected integration, declared product runtime proof, and
+the distinct ADLC receipts required by the installed release workflow. This
+document cannot authorize or infer any lifecycle effect.
 
 ## Offline Boundary
 

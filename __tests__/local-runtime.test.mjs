@@ -22,7 +22,6 @@ import {
   SESSION_RUNTIME_SCHEMA,
   STORAGE_PORT,
   acquireLock,
-  parseLifecycleCommandResult,
   validateOwnedService,
 } from "../scripts/local-runtime-supervisor-lib.mjs";
 
@@ -188,26 +187,6 @@ test("canonical runtime follows the single registered main worktree from a featu
   );
 });
 
-test("canonical runtime retains a valid attention lifecycle report without hiding command failures", () => {
-  const report = {
-    schema: "agentic-os-worktree-lifecycle-compatibility/v1",
-    status: "attention-required",
-    worktrees: [],
-  };
-  assert.deepEqual(
-    parseLifecycleCommandResult({ status: 1, stdout: JSON.stringify(report), stderr: "" }),
-    report,
-  );
-  assert.throws(
-    () => parseLifecycleCommandResult({ status: 2, stdout: "", stderr: "fatal" }),
-    /exit 2: fatal/,
-  );
-  assert.throws(
-    () => parseLifecycleCommandResult({ status: 1, stdout: "not-json", stderr: "" }),
-    /invalid JSON/,
-  );
-});
-
 for (const [name, candidate, expected] of [
   ["task branch", validCandidate({ knowgrph: { ...validCandidate().knowgrph, branch: "agent/device/task" } }), /must be on main/],
   ["dirty docs", validCandidate({
@@ -215,7 +194,7 @@ for (const [name, candidate, expected] of [
       clean: false,
       residue: classifyCanonicalRuntimeResidue({
         repositoryId: "agentic-canvas-os",
-        statusPorcelain: " M docs/START-WORKFLOW.md\n",
+        statusPorcelain: " M docs/PROJECT-RULES.md\n",
       }),
     }),
   }), /runtime-blocking residue/],
@@ -359,7 +338,6 @@ test("turn end atomically stops the exact session Vite group and proves canonica
   let nextGroup = 100;
   const dependencies = {
     inspectCanonicalCandidate: () => candidate,
-    runLifecycle: () => ({ schema: "agentic-worktree-lifecycle-report/v1", status: "clean" }),
     openLog: () => 1,
     closeLog: () => {},
     spawnService: ({ cwd, env, args }) => {

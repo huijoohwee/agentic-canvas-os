@@ -20,14 +20,10 @@ import { validateUrlIngestContractDocuments } from "./url-ingest-contract.mjs";
 import { validatePlanningContextRecordContract } from "./planning-context-record-contract.mjs";
 import { validateDictionaryCatalogContract } from "./dictionary-catalog-contract.mjs";
 import { validateKanbanProjection } from "./kanban-projection.mjs";
-import { evaluateCorpus, evaluateRatchet } from "./frontmatter-runtime-contract.mjs";
-import { validateFrontmatterDictionaryProjection } from "./frontmatter-dictionary-projection.mjs";
 
 export const MAX_DOCS_ARTIFACT_BYTES = 500_000;
 // The always-on harness header is loaded every session, so it carries a much
 // tighter budget than a normal owner document.
-export const SYSTEM_PROMPT_PATH = "SYSTEM-PROMPT-RUNTIME.md";
-export const MAX_SYSTEM_PROMPT_BYTES = 1_000;
 
 const REQUIRED_AUTHORED_KEYS = [
   "title",
@@ -50,6 +46,13 @@ const ARTIFACT_PATTERNS = [
   /upload-[0-9a-f]/i,
   /airvio\/runs/i,
 ];
+const RUNTIME_READY_STATUS = "runtime-ready";
+const UNPROVEN_RUNTIME_PROOF = /^(?:none|n\/a|tbd|todo|missing|absent|unproven|unverified|unclaimed)$/iu;
+const RUNTIME_READINESS_CONTRADICTIONS = [
+  /\b(?:this (?:document|contract|artifact)|runtime readiness)\s+(?:is|remains)\s+(?:not runtime-ready|unproven|unverified|unclaimed)\b/iu,
+  /\bdoes not claim\b[^\n]{0,160}\bruntime parity\b/iu,
+  /\b(?:runtime proof|proof for (?:this|the) (?:document|contract|artifact))\s+(?:is|remains)\s+(?:absent|missing|unproven|unverified|unclaimed)\b/iu,
+];
 
 export async function collectDocsArtifacts(docsRoot) {
   const artifacts = [];
@@ -66,6 +69,11 @@ export function validateMarkdownArtifact({ relativePath, text }) {
       validateWorkspaceSeedProjection({ relativePath, frontmatter, failures });
     } else {
       validateAuthoredFrontmatter({ relativePath, frontmatter, failures });
+      failures.push(...validateProductMetadataTruthfulness({
+        relativePath,
+        text,
+        frontmatter,
+      }));
     }
   }
 
@@ -82,6 +90,32 @@ export function validateMarkdownArtifact({ relativePath, text }) {
       if (pattern.test(line)) {
         failures.push(`${relativePath}:${index + 1}: runtime artifact pattern ${pattern}`);
       }
+    }
+  }
+  return failures;
+}
+
+// Product metadata may describe a bounded proof while excluding unrelated
+// runtime layers. It may not, however, claim runtime-ready while the same
+// artifact denies that readiness or names a placeholder as its proof.
+export function validateProductMetadataTruthfulness({ relativePath, text, frontmatter }) {
+  if (topLevelScalar(frontmatter, "status") !== RUNTIME_READY_STATUS) return [];
+
+  const failures = [];
+  const runtimeProof = topLevelScalar(frontmatter, "runtime_proof");
+  if (runtimeProof && UNPROVEN_RUNTIME_PROOF.test(runtimeProof)) {
+    failures.push(
+      `${relativePath}: runtime-ready frontmatter names unproven runtime_proof ${JSON.stringify(runtimeProof)}`,
+    );
+  }
+
+  const frontmatterEnd = text.indexOf("\n---\n", 4);
+  const body = frontmatterEnd < 0 ? "" : text.slice(frontmatterEnd + 5);
+  for (const contradiction of RUNTIME_READINESS_CONTRADICTIONS) {
+    if (contradiction.test(body)) {
+      failures.push(
+        `${relativePath}: runtime-ready frontmatter contradicts the document body (${contradiction})`,
+      );
     }
   }
   return failures;
@@ -142,8 +176,6 @@ export async function runDocsContract({
   failures.push(...validateUrlIngestContractDocuments(documents));
   failures.push(...validateDictionaryCatalogContract(documents));
   failures.push(...validateKanbanProjection(documents, { repository: repositoryRoot }));
-  failures.push(...validateFrontmatterDictionaryProjection(documents));
-  failures.push(...await validateFrontmatterRuntimeRatchet({ documents, repositoryRoot }));
   failures.push(...validatePlanningContextRecordContract({ repository: repositoryRoot }).failures);
 
   if (failures.length > 0) throw new Error(failures.join("\n"));
@@ -153,26 +185,6 @@ export async function runDocsContract({
     projectionCount,
     artifactCount: artifacts.length,
   });
-}
-
-// Frontmatter tiers are owned by the guidelines module
-// agentic-sdlc-yaml-frontmatter-runtime-guidelines.md. Only top-level docs are
-// evaluated; workspace-seed projections carry their own marker contract.
-async function validateFrontmatterRuntimeRatchet({ documents, repositoryRoot }) {
-  const artifacts = [...documents]
-    .filter(([relativePath]) => !relativePath.includes("/"))
-    .map(([relativePath, text]) => ({ relativePath, text }));
-  let baseline = [];
-  try {
-    const raw = await readFile(
-      path.join(repositoryRoot, "scripts", "frontmatter-runtime.baseline.json"),
-      "utf8",
-    );
-    baseline = JSON.parse(raw).nonConformant ?? [];
-  } catch {
-    return ["scripts/frontmatter-runtime.baseline.json: absent; record it with --write"];
-  }
-  return evaluateRatchet({ report: evaluateCorpus(artifacts), baseline });
 }
 
 async function collectDirectory(absoluteDirectory, relativeDirectory, artifacts) {
@@ -195,9 +207,7 @@ async function collectDirectory(absoluteDirectory, relativeDirectory, artifacts)
 
 function validateArtifactSize({ relativePath, text }) {
   const size = Buffer.byteLength(text, "utf8");
-  const budget = relativePath === SYSTEM_PROMPT_PATH
-    ? MAX_SYSTEM_PROMPT_BYTES
-    : MAX_DOCS_ARTIFACT_BYTES;
+  const budget = MAX_DOCS_ARTIFACT_BYTES;
   return size < budget
     ? []
     : [`${relativePath}: ${size} bytes exceeds the <${budget} byte budget`];

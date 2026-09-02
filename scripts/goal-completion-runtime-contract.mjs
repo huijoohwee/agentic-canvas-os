@@ -6,7 +6,7 @@
 //     write-set disjointness stay owned by coordination-scheduler-contract.mjs;
 //     this module composes it and never reimplements it.
 //   - digests, canonical JSON, and write-set normalization stay owned by
-//     cloud-collaboration-primitives.mjs.
+//     product-contract-primitives.mjs.
 //   - concurrent execution stays owned by the Agent Swarm runtime. Nothing here
 //     dispatches, sleeps, retries, or touches a lane, a lease, or a ref.
 //
@@ -28,7 +28,7 @@ import {
   COORDINATION_SCHEDULER_INPUT_SCHEMA,
   buildCoordinationSchedule,
 } from "./coordination-scheduler-contract.mjs";
-import { digestValue, normalizeWriteSet } from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet } from "./product-contract-primitives.mjs";
 
 export const GOAL_SCHEMA = "acos-goal-completion-goal/v1";
 export const GOAL_RECEIPT_SCHEMA = "acos-goal-completion-receipt/v1";

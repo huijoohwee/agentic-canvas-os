@@ -7,8 +7,8 @@ lang: "en-US"
 schema: "agentic-integration-order/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
-authority: "provider-neutral integration ordering and exact-canonical frontier advancement"
-publish_policy: "authoring and protected integration only; no deployment authority"
+authority: "provider-neutral product integration ordering and exact-canonical frontier evidence"
+publish_policy: "product planning evidence only; ADLC owns repository integration; no deployment authority"
 runtime_scope: "integration planning, canonical convergence, and release-frontier sealing"
 runtime_claim: "deterministic model-free contract; reading or checking this document causes no repository mutation or deployment"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -143,29 +143,13 @@ A release frontier may be sealed only when:
 The seal is an immutable candidate input. It is not release authorization and
 does not deploy, publish, or mutate any target.
 
-## Cross-Repository Coordination Task
+## Cross-Repository Lifecycle Boundary
 
-A cross-repository coordination task is a dependency-ordered directed acyclic
-graph of immutable per-repository work units. Each unit retains its own
-repository, branch, registered worktree, semantic scope, normalized write set
-and digest, authenticated claim, authority epoch, fence, review request, source
-revision and digest, named checks, and handoff evidence. The group identity is
-correlation only: it must not become a shared branch, worktree, lease, claim,
-fence, review request, or mutable evidence record.
-
-Every unit is admitted and continued independently through the four
-provider-neutral root operations `claim(scope)`, `continue(claim)`,
-`integrate(candidate)`, and `retire(claim)`. Disjoint units may progress in the
-same dependency wave without a global concurrency cap. Within one repository,
-path-prefix overlap serializes work even when an explicit dependency edge is
-absent. A waiting successor retains only its ordered non-writing request, while
-`dormant-preserved` retains its scope reservation until continuation or retirement.
-
-An edge means the consumer's integration receipt must bind the predecessor's
-exact terminal evidence. It does not transfer authority. A candidate advances
-only after every dependency is exact, its immutable review identity and
-revision still match, named checks pass, handoff evidence resolves, and the
-current monotonic compare-and-swap succeeds.
+This contract orders product integration units and computes disjoint dependency
+waves. It owns no repository claim, worktree, branch, lease, review request,
+integration, retirement, canonical synchronization, or cleanup operation. Each
+repository executes its own pinned ADLC start and release workflows. A product
+dependency edge transfers evidence only; it never transfers lifecycle authority.
 
 ## Evidence and Findings
 
@@ -183,70 +167,23 @@ structured evidence but cannot replace it.
 
 ## Agentic Canvas OS Reference Implementation
 
-This repository maps the neutral contract to its existing lifecycle without
-changing the core:
+This repository maps the neutral product-planning contract to ADLC-owned
+repository evidence without implementing that lifecycle:
 
 | Neutral concept | Reference implementation |
 |---|---|
-| Integration Unit ownership | One registered ADLC worktree, semantic scope, branch, source revision, and named focused checks established by `START-WORKFLOW.md`. |
-| Integration Frontier | Fetched protected revision plus the paired application, documentation, catalog, policy, and locked-dependency closure. |
-| Protected integration receipt | Exact-head protected checks plus ADLC ancestry, Source-Head, patch-identity, or squash-identity proof. |
-| Exact-canonical checks | Checks rerun against fetched protected state, never inferred from a task branch result. |
+| Integration Unit ownership | One registered ADLC worktree, semantic scope, branch, source revision, and named focused checks established by the pinned ADLC start workflow. |
+| Integration Frontier | Caller-supplied protected revision plus the paired application, documentation, catalog, policy, and locked-dependency closure. |
+| Protected integration receipt | Opaque current evidence returned by the pinned ADLC release workflow. |
+| Exact-canonical checks | Product checks bound to the accepted frontier; remote refresh and repository synchronization remain ADLC-owned. |
 | Runtime convergence | The repository-owned canonical runtime handoff and exact visible revision proof required by the lifecycle. |
-| Release frontier | A sealed input to `RELEASE-WORKFLOW.md`; still subject to candidate review and authenticated release authorization. |
+| Release frontier | A sealed input to the pinned ADLC release workflow; still subject to candidate review and authenticated release authorization. |
 
-The canonical source unit is JH `huijoohwee.github.io` revision
-`76903aba2a8f8a4e693dd51de580707affb3dfdc`, tree
-`609ef617362d4949ede63e56f92c955ebc28ce91`, guideline digest
-`1b0e040a3600ca3f8d92517bf42d55830e6192c0acff91fbe3a489d1d392eedd`,
-and git-companion digest
-`7de6a1130f033bbe8fd263b5fc29b9160c96cbdf25723309996058f3de74b516`.
-Its immutable unit is the predecessor of the ACOS runtime and registration
-unit: `JH guideline/checker -> ACOS coordination/runtime/registration`. Source
-drift blocks the consumer before mutation.
-
-Repository lifecycle wrappers are replaceable projections. Start and resume
-map to `claim(scope)` or `continue(claim)`; review binds immutable evidence
-through `continue(claim)`; protected delivery maps to `integrate(candidate)`;
-terminal cleanup becomes eligible only after `retire(claim)` and independent
-protected convergence proof. No wrapper creates another root operation or
-derives absent operator authority.
-
-### Delta-Only Worktree Convergence
-
-The reference adapter pins the freshly fetched `origin/main`, seals the
-immutable actual delta from the writer fence to the reviewed source, and
-materializes only that delta in the owned lane. It never copies or replaces a
-whole workspace, whole tree, or all files. Tree identity is an integrity check,
-not an integration payload.
-
-Changed-path admission uses canonical no-rename evidence: a rename is a source
-deletion plus a destination addition, so both paths must be admitted. The
-structural and binary delta digests bind the staged tree before commit and the
-exact one-parent commit afterward. The older
-`agentic-integration-commit/v1` replay record may retain its rename-folded path
-projection only as a compatibility shim after canonical admission and sealing;
-it never widens authority.
-
-A clean precommitted lane is replayable only when it is one exact commit whose
-sole parent is the writer fence and its canonical paths exactly equal the
-external change manifest. Local protected-main refresh starts at that sealed
-commit, accepts only recomputable two-parent refresh merges whose trees equal
-their pinned parent merge, and rejects any intervening authored commit.
-
-After protected integration, canonical live sync pins the actual fetched
-`origin/main` revision. It accepts a newer canonical revision when the task
-merge revision is its proven ancestor, records both revisions, fast-forwards to
-the pinned actual revision, and uses that actual revision for runtime and
-cleanup evidence. A later disjoint merge therefore does not create a brittle
-exact-parity blocker.
-
-For multiple units, create the plan before integration. Integrate successful
-dependency waves first, fetch the protected revision after every advancement,
-record evidence-backed `already-integrated` or `superseded` dispositions, and
-recompute the next wave from the new frontier. An exact branch name, open pull
-request, green task-branch check, or local runtime response is not
-exact-canonical evidence.
+For multiple units, create the product plan before repository delivery. Record
+only evidence-backed `already-integrated`, `superseded`, or `integrated`
+dispositions, then recompute the next wave from the current product frontier.
+The installed ADLC release workflow remains the sole owner of candidate review,
+protected integration, canonical reconciliation, and cleanup receipts.
 
 The executable owner is `scripts/integration-order-contract.mjs`; focused tests
 are in `__tests__/integration-order-contract.test.mjs`. The executable is pure:
@@ -254,7 +191,7 @@ it validates and returns frozen records, and performs no filesystem, network,
 repository, merge, release, or deployment mutation.
 
 The `guideline_source_revision` and `guideline_source_digest` frontmatter values
-bind this adapter to the fetched protected guideline source and its exact bytes.
+bind this adapter to its reviewed guideline source and exact bytes.
 A squash, rebase, or other protected merge may change the source revision even
 when its content is equivalent; equivalence must be recorded explicitly rather
 than inferred. Source drift returns this module to `blocked` until the exact

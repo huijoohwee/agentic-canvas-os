@@ -113,28 +113,12 @@ Expected:
 - Runtime artifact scan returns no copied local provider/media artifacts.
 - External-copy scans cover docs, dedicated Swarm and Agent Toolkit runtimes/tests, and added integration lines; they return no imported code, prompt, API, schema, test, fixture, prose, dependency-field, or lockfile delta from referenced systems.
 
-## Lifecycle Monitoring Checks
-
-Run the focused model-free monitor proof:
-
-```bash
-node --test \
-  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-contract.test.mjs" \
-  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-controller.test.mjs" \
-  "$AGENTIC_CANVAS_OS_ROOT/__tests__/lifecycle-monitor-cli.test.mjs"
-```
-
-The suite must prove exact target binding, deterministic adaptive scheduling,
-monotonic evidence, replay integrity, bounded attempts/time/read units,
-sequential observation, cancellation, regular-file JSON input, and
-`mutationAuthority: false`. No test may treat silence, expiry, timeout, or a
-successful adapter call as target evidence.
-
 ## Repository-Owned Collaboration Gate
 
-First run `node --test __tests__/workspace-sync.test.mjs __tests__/production-runtime-readiness-contract.test.mjs __tests__/github-lifecycle-policy.test.mjs`.
-It proves candidate-first sync, retained last-known-good state, hashed quarantine,
-exact runtime identity binding, and rejection of drift or unknown fields.
+First run `npm run runtime-readiness-contract:check`.
+It proves the retained ACOS product-readiness contract and rejection of drift or
+unknown fields. Git lifecycle and canonical synchronization remain owned by the
+pinned `agentic-os` package and are not reimplemented by this gate.
 
 Then run `npm run collaboration:gate` from the Agentic Canvas OS repository.
 
@@ -152,17 +136,18 @@ The automated contexts model two independent collaboration peers; the gate does 
 
 ## Mandatory Completion Evidence
 
-After focused validation and protected Dev integration, re-fetch `origin/main`
-and run the read-only ADLC survey from the canonical checkout:
+After the pinned ADLC release workflow records protected Dev integration, run
+the ADLC survey from the canonical checkout:
 
 ```bash
 npm run reap
 ```
 
-ACOS's committed profile retains every cleanup effect. A green check, merged
-pull request, or integration proof does not authorize deleting a worktree,
-branch, ref, or object. Record the exact integration proof and preserve the
-lane until a target-specific authenticated cleanup receipt is available.
+ACOS's committed profile opts only exact worktree projection and registration
+into quarantine cleanup. It retains local and remote branches, remote-tracking
+refs, and unreachable objects. A green check, merged pull request, or integration
+proof grants no cleanup authority; `reap` requires the target-specific ADLC
+authorization and receipt for every effect it performs.
 
 Restart or reload the local application from `mainSha` and rerun the original
 browser failure path. Git evidence without matching runtime identity and browser
@@ -196,7 +181,7 @@ Run the structural gate at session start and again before release:
 ruby -rdate -ryaml -e 'root=ENV.fetch("MEMORY_ROOT"); files=Dir.glob(File.join(root,"[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).sort; abort("memory log has no monthly shard") if files.empty?; files.each do |file|; text=File.read(file); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{file}: missing frontmatter"); data=YAML.safe_load(match[1], permitted_classes:[Date], aliases:true); period=File.basename(file,".md"); required={"schema"=>"memory-log/v1","period"=>period,"timestamp_format"=>"YYYYMMDDTHHmmssZ","append_policy"=>"append-only","source_contract"=>"../docs/MEMORY-LOG.md"}; required.each{|key,value| abort("#{file}: invalid #{key}") unless data[key]==value}; %w[agent device].each{|key| abort("#{file}: missing #{key}") unless data[key].is_a?(String) && !data[key].empty?}; body=text[match.end(0)..]; headings=body.scan(/^## (@mem-[0-9]{8}T[0-9]{6}Z)$/).flatten; abort("#{file}: no memory entries") if headings.empty?; headings.each{|heading| begin instant=DateTime.strptime(heading.delete_prefix("@mem-"),"%Y%m%dT%H%M%SZ"); rescue Date::Error; abort("#{file}: invalid UTC memory timestamp #{heading}"); end; abort("#{file}: timestamp month mismatch #{heading}") unless instant.strftime("%Y-%m")==period}; abort("#{file}: duplicate or unordered memory headings") unless headings.uniq==headings && headings.sort==headings; abort("#{file}: non-sigil memory source format") if body.match?(/^## .*@mem-/) && body.scan(/^## .*@mem-/).length!=headings.length || body.match?(/^\|.*@mem-/); entries=body.split(/^## @mem-[^\n]+\n/).drop(1); entries.each{|entry| %w[type scope summary refs].each{|field| abort("#{file}: missing #{field}") unless entry.scan(/^#{field}:/).length==1}; abort("#{file}: refs must be a Markdown array") unless entry.match?(/^refs:\s*\[[^\]]+\]\s*$/)}; puts "#{file}: memory-log structure ok"; end'
 ```
 
-Before release, compare every existing shard with the exact memory base ref recorded by `START-WORKFLOW.md`:
+Before release, compare every existing shard with the exact memory base ref recorded by the pinned ADLC start workflow:
 
 ```bash
 export MEMORY_BASE_REF="<recorded-agentic-canvas-os-base-sha>"
@@ -431,8 +416,7 @@ Run the focused ADLC consumer proof before broader checks:
 ```sh
 node --test __tests__/adlc-compatibility.test.mjs __tests__/adlc-ci-contract.test.mjs __tests__/repository-guards.test.mjs
 npm run authored-line-budget:check
-npm run frontmatter-runtime:check
-npm run frontmatter-dictionary:check
+node --test __tests__/adlc-compatibility.test.mjs __tests__/agentic-os-profile.test.mjs
 npm run dictionary-catalog:check
 ```
 

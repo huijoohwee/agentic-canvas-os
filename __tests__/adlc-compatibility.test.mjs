@@ -7,8 +7,8 @@ import { TextDecoder } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PIN = "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/bafaf3f0dde780461d11f02355c6fc6cac0dd6e0";
-const INTEGRITY = "sha512-ukHEzCOaQflgCxEZmMIpfJ296eUN+hH862jo72p+uoiAkc4qMtMcxMpDNGxQpmn5vIZ9tmgOvKWY/ACT3Ti7NA==";
+const PIN = "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/c94ae8c5a442ccdba83444ceddb612461d83e0b7";
+const INTEGRITY = "sha512-eBjEJgqBC5ojZvJp3UVwDDJYYAgibexdLBlYqfzEaibyyPHuyDL16SsSY9Dg0soO0n5IVvOteW1CMiIri9Y/UQ==";
 const UPSTREAM = path.join(ROOT, "node_modules", "agentic-os");
 const read = relativePath => readFileSync(path.join(ROOT, relativePath), "utf8");
 

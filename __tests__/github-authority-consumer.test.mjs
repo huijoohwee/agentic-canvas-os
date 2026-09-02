@@ -16,8 +16,8 @@ import * as githubTransitionPolicy from 'agentic-os/adapters/github-transition-p
 import { createEffectPlan, encodeEffectPlan } from 'agentic-os/records/completion'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/d3230b5ac8a9e251cbb9f4d30a401d3e7c532c03'
-const INTEGRITY = 'sha512-hnuT1JOAzhkUAfc030dPJjTwAw+aDf34V6RFAtueD+ksuQudYokbz2H6iMeUleERRdAp6J6bA1B2cCYKnQVQmg=='
+const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/43b1e7d74773d08651e9caa0a41ecda32c3de3e7'
+const INTEGRITY = 'sha512-METJ2TrdQ91B4bnefnog2OAf9SH6HGtMNXdpg/EyGOhfridg03ypzouj7T8x5bte2mVKQ1DWsBeqV8Cv6MZ4KA=='
 const read = relativePath => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
 const digest = relativePath => createHash('sha256')
   .update(fs.readFileSync(path.join(ROOT, relativePath)))
@@ -127,6 +127,57 @@ test('ACOS consumes one protected immutable agentic-os authority adapter', () =>
     'validateGitHubTransitionPolicy',
     'validateGitHubTransitionPolicyExecution',
   ]) assert.equal(typeof githubTransitionPolicy[operation], 'function', operation)
+})
+
+test('the installed authority CLI accepts bounded ambient GitHub event metadata', t => {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'acos-authority-envelope-'))
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }))
+  const eventPath = path.join(temporary, 'event.json')
+  const event = {
+    ambient: 'x'.repeat(70_000),
+    inputs: {
+      authority_payload: JSON.stringify({ request: {}, candidate: {} }),
+      authority_input_digest: hex('a'),
+    },
+    repository: Object.fromEntries(Array.from({ length: 95 }, (_, index) => [
+      `field${index}`, index,
+    ])),
+  }
+  const eventBytes = Buffer.from(JSON.stringify(event))
+  assert.ok(eventBytes.length > 64 * 1024 && eventBytes.length < 256 * 1024)
+  fs.writeFileSync(eventPath, eventBytes)
+  const revision = 'b'.repeat(40)
+  const cli = path.join(ROOT, 'node_modules', 'agentic-os', 'bin',
+    'agentic-os-authority.mjs')
+  const run = () => spawnSync(process.execPath, [cli, 'issue-github', `--event=${eventPath}`,
+    '--policy=missing-policy.json'], {
+    cwd: temporary,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      GITHUB_EVENT_NAME: 'workflow_dispatch',
+      GITHUB_EVENT_PATH: eventPath,
+      GITHUB_REF: 'refs/heads/main',
+      GITHUB_REPOSITORY: 'huijoohwee/agentic-canvas-os',
+      GITHUB_RUN_ATTEMPT: '1',
+      GITHUB_RUN_ID: '1',
+      GITHUB_SHA: revision,
+      GITHUB_TOKEN: 'fixture-token',
+      GITHUB_WORKFLOW_REF:
+        'huijoohwee/agentic-canvas-os/.github/workflows/adlc-authority.yml@refs/heads/main',
+      GITHUB_WORKFLOW_SHA: revision,
+    },
+  })
+  const result = run()
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /missing-policy\.json/u)
+  assert.doesNotMatch(result.stderr, /GitHub event exceeds structural bounds/u)
+  fs.writeFileSync(eventPath, JSON.stringify({
+    ...event, ambient: 'x'.repeat(256 * 1024),
+  }))
+  const oversized = run()
+  assert.equal(oversized.status, 1)
+  assert.match(oversized.stderr, /GitHub event byte budget exceeded/u)
 })
 
 test('the transition policy is canonical and authorizes only exact repositories', () => {

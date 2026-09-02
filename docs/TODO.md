@@ -109,6 +109,8 @@ Startup validates the index, immutable legacy identities, every context record, 
 
 Any malformed record, legacy rewrite, missing declared Context, duplicate task Context, overlong directive, empty cell, wrong-month heading, wrong Updated Date, or extra planning path blocks the next workflow stage.
 
+`active_period` records also project read-only into the `## Ledger Projection` table of `kanban.md` through `scripts/kanban-projection.mjs`. The projection is a consumer, never an authority: it adds no status, owner, or priority to a record, and board edits cannot write back here. Adding or changing a record shifts the projection, so regenerate with `npm run kanban:project` in the same change.
+
 ## Completion VCC
 
 Given the Todo index and planning root, when compliance runs, then every new record resolves to one Context/month, legacy history remains immutable, and concurrent tasks own disjoint complete records.

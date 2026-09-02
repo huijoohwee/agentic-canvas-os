@@ -84,7 +84,7 @@ The machine result uses `agentic-hybrid-workspace-bootstrap/v1` and contains:
 - neutral placement `{ kind, source, containerized }`;
 - sanitized current-checkout repository evidence;
 - lifecycle `{ status: deferred-to-admission, scope: declared-write-scope,
-  nextWorkflow: docs/START-WORKFLOW.md }`;
+  nextWorkflow: node_modules/agentic-os/docs/START-WORKFLOW.md }`;
 - typed sanitized findings; and
 - `mutationAuthority: false`.
 
@@ -183,23 +183,23 @@ automatic fallback.
 
 After scoped admission, every placement uses the same lifecycle:
 
-1. author only inside the admitted workspace and declared write set;
-2. heartbeat or revalidate authority after delay or reconnection;
+1. create one registered ADLC lane with `npm run lane -- <scope>`;
+2. author only inside its printed worktree;
 3. run focused checks and preserve the exact candidate commit;
-4. use `npm run device:review` for an immutable review-ready transition; and
-5. use `npm run device:integrate` only after explicit protected delivery
-   selection.
+4. publish the exact head with `npm run land`; and
+5. run `npm run reap` after protected integration; exact worktree projection and
+   registration may be quarantined only by their own authorized receipts, while
+   branches, remote-tracking refs, and unreachable objects remain retained.
 
-When review, CI, or a current-base check fails, the implementing agent resumes
-the exact fenced lane, fixes the source owner, reruns checks, and reviews a new
-immutable head. Integration consumes an unchanged green reviewed candidate. It
-never uses a raw merge, direct protected-branch write, unchecked or unowned
-force update, or parity shortcut; the repository-owned exact-CAS
-`--force-with-lease` refresh remains the bounded exception.
+When review, CI, or a current-base check fails, resume through the pinned ADLC
+start workflow, fix the source owner, and rerun focused checks. Publication,
+integration, retry, and retirement semantics come only from `agentic-os`; this
+product document creates no local merge, force-update, lease, or recovery
+exception.
 
-Completion requires protected integration, claim retirement, declared
-canonical/runtime reconciliation, and exact-target cleanup as independent
-receipts.
+Completion requires protected integration, declared product runtime proof, and
+the distinct ADLC receipts required by the installed release workflow. This
+document cannot authorize or infer any lifecycle effect.
 
 ## Offline Boundary
 
@@ -210,19 +210,16 @@ preserved unshared work. No prior cloud observation is inferred current while
 disconnected, and offline work must not claim shared ownership, push, dispatch
 review, assert review readiness, hand off, integrate, or retire.
 
-Reconnection requires fetch, live ledger verification or a fresh claim, rebase
-or replan when required, and focused checks before publication. Divergence,
-expiry, a competing fence, missing task proof, or overlap yields a typed
-handoff/recovery path, never automatic adoption or history rewriting.
+Reconnection requires fetch, live branch and pull-request observation, and
+focused checks before publication. Divergence, missing proof, or overlapping
+ownership yields a typed stop, never automatic adoption or history rewriting.
 
 ## Repository Ownership Audit
 
-Agentic Canvas OS already owns branch grammar, scoped admission, writer leases,
-protected integration, and task-worktree cleanup, so it owns this execution
-bootstrap. `huijoohwee.github.io` publishes the provider-neutral collaboration
-policy but owns no workspace-execution bootstrap. Adding a second bootstrap
-there would duplicate runtime ownership, so this change requires no site source
-or runtime mutation.
+Agentic Canvas OS owns its product and workspace-placement adapters. The pinned
+`agentic-os` package owns branch grammar, lane creation, protected integration
+proof, and exact task-worktree retirement. No placement adapter may recreate a
+second lifecycle state machine.
 
 ## Economics And Non-Goals
 

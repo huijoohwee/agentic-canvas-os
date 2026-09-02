@@ -167,7 +167,7 @@ test("a waiver with an exact accepted_unmet set passes without unmet failures", 
     ...BLOCKED_RECORD,
     state: "waived",
     accepted_unmet: unmet,
-    operator_instruction_reference: "operator://native-skill-harness/waive-prerequisite-gate-and-sequencing/2026-08-17",
+    operator_instruction_reference: "operator://native-skill-harness/waive-prerequisite-gate/2026-08-17",
   };
   const readinessBody = readinessBodyFromBooleans([false, false, true, true, true, true, true]);
 

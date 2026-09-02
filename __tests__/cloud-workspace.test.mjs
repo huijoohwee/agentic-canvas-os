@@ -12,7 +12,7 @@ const SIGNALS = ["CODESPACES", "GITPOD_WORKSPACE_ID", "CLOUD_WORKSTATION_CONFIG"
   "CLOUD_SHELL", "REMOTE_CONTAINERS", "DEVCONTAINER", "container"];
 const CLOUD_SIGNALS = new Set(SIGNALS.slice(0, 4));
 const CONTAINER_SIGNALS = new Set(["CODESPACES", "REMOTE_CONTAINERS", "DEVCONTAINER", "container"]);
-const LIFECYCLE = { status: "deferred-to-admission", scope: "declared-write-scope", nextWorkflow: "docs/START-WORKFLOW.md" };
+const LIFECYCLE = { status: "deferred-to-admission", scope: "declared-write-scope", nextWorkflow: "node_modules/agentic-os/docs/START-WORKFLOW.md" };
 function fixtureEnvironment() {
   const result = { ...process.env };
   for (const name of Object.keys(result)) if (name.startsWith("GIT_")) delete result[name];

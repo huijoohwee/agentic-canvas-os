@@ -76,8 +76,6 @@ async function run() {
     agentApiModules: observed.agentApiModules - BASELINE.agentApiModules,
     totalLines: observed.totalLines - BASELINE.totalLines,
   };
-  const againstTeardown = `repository-teardown budget is at most 20 modules and 8,000 lines; the pre-feature baseline was already ${BASELINE.agentApiModules} modules and ${BASELINE.totalLines.toLocaleString("en-US")} lines`;
-
   if (failures.length) {
     console.error(failures.join("\n"));
     process.exitCode = 1;
@@ -86,7 +84,7 @@ async function run() {
   console.log(
     `module budget ok: ${observed.agentApiModules} agent-api modules (+${delta.agentApiModules}) and `
     + `${observed.totalLines} lines (+${delta.totalLines}) against baseline ${BASELINE.agentApiModules}/${BASELINE.totalLines.toLocaleString("en-US")}; `
-    + `projection ceilings ${PROJECTION.agentApiModules}/${PROJECTION.totalLines.toLocaleString("en-US")} hold; ${againstTeardown}`,
+    + `projection ceilings ${PROJECTION.agentApiModules}/${PROJECTION.totalLines.toLocaleString("en-US")} hold`,
   );
 }
 

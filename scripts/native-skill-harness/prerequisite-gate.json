@@ -78,7 +78,7 @@
     "spend-safety.model-providers-configured",
     "spend-safety.model-providers-provider-execution"
   ],
-  "operator_instruction_reference": "operator://native-skill-harness/waive-prerequisite-gate-and-sequencing/2026-08-17",
+  "operator_instruction_reference": "operator://native-skill-harness/waive-prerequisite-gate/2026-08-17",
   "observation_gap": "no dedicated spendSafety readiness key exists; the modelProviders fields are used as a proxy for the PRD's spend-safety prerequisite",
   "pre_feature_wrangler_sha256": "32f1c08f4833f04bcce5bae2f851289ae9b3e779e273eca86877ed654d806c46",
   "permitted_while_blocked": [

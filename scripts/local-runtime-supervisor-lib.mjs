@@ -1,5 +1,5 @@
 // Responsibility: local runtime supervisor infrastructure - constants, options, locations, state files, dependency wiring, service launch and teardown, locks, and process/port/http evidence.
-import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   chmodSync,
   closeSync,
@@ -145,26 +145,6 @@ export function normalizeOptions(options, { requireSession = false } = {}) {
 }
 
 
-export function parseLifecycleCommandResult(result) {
-  if (result?.error) throw result.error;
-  const status = Number(result?.status);
-  if (![0, 1].includes(status)) {
-    throw new Error(`Worktree lifecycle command failed with exit ${Number.isFinite(status) ? status : "unknown"}: ${String(result?.stderr || "").trim()}`);
-  }
-  let report;
-  try {
-    report = JSON.parse(String(result?.stdout || ""));
-  } catch {
-    throw new Error("Worktree lifecycle command returned invalid JSON.");
-  }
-  if (report?.schema !== "agentic-worktree-lifecycle-report/v1" ||
-      !["ready", "attention-required"].includes(report.status)) {
-    throw new Error("Worktree lifecycle command returned an unsupported report.");
-  }
-  return report;
-}
-
-
 export function readJson(filePath) {
   if (!existsSync(filePath)) return null;
   return JSON.parse(readFileSync(filePath, "utf8"));
@@ -198,11 +178,6 @@ export function createDependencies(overrides) {
     waitForPortRelease,
     stopProcessGroup: pid => { try { process.kill(-pid, "SIGTERM"); } catch (error) { if (error?.code !== "ESRCH") throw error; } },
     acquireLock,
-    runLifecycle: root => parseLifecycleCommandResult(spawnSync(
-      process.execPath,
-      ["./scripts/worktree-lifecycle.mjs", "check", `--repository=${root}`],
-      { cwd: root, encoding: "utf8" },
-    )),
     now: () => new Date(),
     ...overrides,
   };

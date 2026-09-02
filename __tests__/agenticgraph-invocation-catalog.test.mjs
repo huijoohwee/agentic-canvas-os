@@ -6,7 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 
 const currentCatalog = [
   read("README.md"),
-  read("docs/AGENTIC-SDLC-RUNTIME.md"),
+  read("docs/IMPLEMENTATION-RUN-OBSERVATION.md"),
   read("docs/DICTIONARY-COMMAND.md"),
   read("docs/MCP-GATEWAY.md"),
 ].join("\n");

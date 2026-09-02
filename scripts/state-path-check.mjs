@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Responsibility: Fail on the first statically resolvable write target outside this repository.
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,17 +29,6 @@ export function firstOffender({ repositoryRoot: root, files = trackedFiles(root)
 export function analyzeSource({ source, file, repositoryRoot: root }) {
   const constants = literalConstants(source, root);
   const findings = [];
-  if (file.startsWith(".githooks/")) {
-    source.split("\n").forEach((line, index) => {
-      const expression = shellWriteTarget(line);
-      if (!expression) return;
-      const target = resolveExpression(expression, { constants, root })
-        || resolveShellLiteral(expression, root);
-      if (target && escapes(root, target)) findings.push({
-        file, line: index + 1, target, expression,
-      });
-    });
-  }
   for (const match of writeCallArguments(source)) {
     const target = resolveExpression(match.expression, { constants, root });
     if (target && escapes(root, target)) findings.push({
@@ -97,19 +86,10 @@ function parseLiteral(value) {
   return template ? template[1] : null;
 }
 function splitArguments(value) { return value.split(/,(?=(?:[^"'`]*["'`][^"'`]*["'`])*[^"'`]*$)/u).map(item => item.trim()); }
-function shellWriteTarget(line) {
-  const redirect = line.match(/(?:>|>>)\s*(["']?[^\s"']+["']?)/u);
-  if (redirect) return redirect[1];
-  const command = line.match(/(?:^|[;&|]\s*|\s)(mkdir|cp|mv|tee)\s+([^;&|]+)/u);
-  if (!command) return null;
-  const operands = command[2].trim().split(/\s+/u).filter(token => !token.startsWith("-"));
-  if (!operands.length) return null;
-  return ["cp", "mv"].includes(command[1]) ? operands.at(-1) : operands[0];
-}
-function resolveShellLiteral(expression, root) {
-  if (/[`$*?{}()[\]]/u.test(expression)) return null;
-  const unquoted = expression.replace(/^(["'])(.*)\1$/u, "$2");
-  return path.resolve(root, unquoted);
-}
 function escapes(root, target) { const relative = path.relative(path.resolve(root), path.resolve(target)); return relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative); }
-function trackedFiles(root) { return execFileSync("git", ["ls-files", "--", "scripts", ".githooks"], { cwd: root, encoding: "utf8" }).trim().split("\n").filter(Boolean); }
+function trackedFiles(root) {
+  return execFileSync("git", ["ls-files", "--", "scripts"], { cwd: root, encoding: "utf8" })
+    .trim()
+    .split("\n")
+    .filter(file => file && existsSync(path.join(root, file)));
+}

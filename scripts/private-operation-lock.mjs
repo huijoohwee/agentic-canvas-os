@@ -18,7 +18,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 
-import { canonicalJson, digestValue } from "./cloud-collaboration-primitives.mjs";
+import { canonicalJson, digestValue } from "./product-contract-primitives.mjs";
 
 const LOCK_SCHEMA = "agentic-private-operation-lock/v1";
 const LOCK_KEYS = Object.freeze([

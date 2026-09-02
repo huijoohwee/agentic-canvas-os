@@ -8,7 +8,7 @@ import { parseWorktreeRecords } from "./repository-guards.mjs";
 
 export const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const REQUIRED_CHECKS = Object.freeze({
-  "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration", "cloud-collaboration"],
+  "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration", "budgets"],
   knowgrph: ["Integration Gate"],
 });
 const BLOCKING_CONFIG_FILES = Object.freeze([
@@ -359,4 +359,3 @@ export function resolveWorkspaceRootFromGitCommonDir(commonDir) {
 export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
-

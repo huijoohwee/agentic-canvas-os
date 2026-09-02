@@ -1,5 +1,5 @@
 // Responsibility: Partition independently-authorized work without mutating any lane.
-import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./cloud-collaboration-primitives.mjs";
+import { digestValue, normalizeWriteSet, writeSetsOverlap } from "./product-contract-primitives.mjs";
 
 export const COORDINATION_SCHEDULER_INPUT_SCHEMA = "agentic-coordination-scheduler-input/v1";
 export const COORDINATION_SCHEDULER_REPORT_SCHEMA = "agentic-coordination-scheduler-report/v1";

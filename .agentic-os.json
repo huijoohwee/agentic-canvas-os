@@ -1,0 +1,48 @@
+{
+  "schema": "agentic-os/repository-profile/v1",
+  "repository": "github.com/huijoohwee/agentic-canvas-os",
+  "canonical": {
+    "localRef": "refs/heads/main",
+    "remoteRef": "refs/remotes/origin/main"
+  },
+  "adapters": {
+    "repository": {
+      "id": "git",
+      "version": "1"
+    },
+    "provider": {
+      "id": "github",
+      "version": "1"
+    }
+  },
+  "requiredChecks": [
+    "budgets",
+    "build",
+    "collaboration-integration",
+    "docs-contract",
+    "test"
+  ],
+  "capabilities": [
+    "deep-byte-audit-opt-in",
+    "host-qualified-repository-pin",
+    "integration-method:squash",
+    "protected-integration:pull-request",
+    "quarantine-worktree-cleanup-opt-in",
+    "read-only-repository-observation",
+    "read-only-review-observation",
+    "shallow-observation-default"
+  ],
+  "authority": {
+    "runtime": "consumer",
+    "release": "consumer"
+  },
+  "cleanup": {
+    "localBranch": "retain",
+    "remoteBranch": "retain",
+    "remoteTrackingRef": "retain",
+    "unreachableObjects": "retain",
+    "worktreeProjection": "quarantine",
+    "worktreeRegistration": "quarantine"
+  },
+  "profileDigest": "934ae07b9602bfe6c8368a161648750adf569096560893f6554a0be06203c1fe"
+}

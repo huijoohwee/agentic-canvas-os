@@ -15,8 +15,7 @@ on:
 run-name: ADLC authority ${{ inputs.authority_input_digest }} @ ${{ github.workflow_sha }}
 
 permissions:
-  actions: read
-  contents: write
+  contents: read
 
 jobs:
   issue:
@@ -35,7 +34,5 @@ jobs:
           cache: npm
       - name: Install exact authority adapter
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Issue provider-authenticated recovery authority
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: ./node_modules/.bin/agentic-os-authority issue-github --event="$GITHUB_EVENT_PATH" --policy=.github/adlc-authority-policy.json
+      - name: Validate exact recovery authority input
+        run: ./node_modules/.bin/agentic-os-authority validate-event --event="$GITHUB_EVENT_PATH" --policy=.github/adlc-authority-policy.json

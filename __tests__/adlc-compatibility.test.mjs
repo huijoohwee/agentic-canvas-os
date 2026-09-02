@@ -20,7 +20,7 @@ test("ACOS pins the reviewed agentic-os compatibility contract", () => {
   const packageJson = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8"));
   assert.equal(
     packageJson.devDependencies["agentic-os"],
-    "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/e677a4c78905762680ad60dfc5d3dc37acd504b0",
+    "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/78d782e1b64bf3be6c9b65423b7e6b28290498ff",
   );
   assert.equal(packageJson.scripts["autonomy-class"], "agentic-os autonomy-class");
   assert.equal(existsSync(path.join(ROOT, "scripts", "autonomy-class.mjs")), false);

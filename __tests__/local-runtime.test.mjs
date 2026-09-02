@@ -5,21 +5,25 @@ import path from "node:path";
 import test from "node:test";
 
 import {
-  APEX_PORT,
   classifyCanonicalRuntimeResidue,
+  parseConsumerPinnedDocsRef,
+  resolveCanonicalMainWorktree,
+  resolveWorkspaceRootFromGitCommonDir,
+  validateCanonicalRuntimeCandidate,
+} from "../scripts/local-runtime-candidate-lib.mjs";
+import { endLocalRuntimeTurn } from "../scripts/local-runtime-lib.mjs";
+import {
+  startSessionRuntime,
+  validateOwnedSessionService,
+} from "../scripts/local-runtime-session-lib.mjs";
+import {
+  APEX_PORT,
   LOCAL_RUNTIME_SCHEMA,
   SESSION_RUNTIME_SCHEMA,
   STORAGE_PORT,
   acquireLock,
-  parseLifecycleCommandResult,
-  resolveCanonicalMainWorktree,
-  resolveWorkspaceRootFromGitCommonDir,
-  endLocalRuntimeTurn,
-  startSessionRuntime,
-  validateCanonicalRuntimeCandidate,
   validateOwnedService,
-  validateOwnedSessionService,
-} from "../scripts/local-runtime-lib.mjs";
+} from "../scripts/local-runtime-supervisor-lib.mjs";
 
 const applicationSha = "a".repeat(40);
 const docsSha = "b".repeat(40);
@@ -51,7 +55,78 @@ function validCandidate(overrides = {}) {
 }
 
 test("canonical runtime accepts only clean protected exact-main sources", () => {
-  assert.equal(validateCanonicalRuntimeCandidate(validCandidate()).knowgrph.headSha, applicationSha);
+  const validated = validateCanonicalRuntimeCandidate(validCandidate());
+  assert.equal(validated.knowgrph.headSha, applicationSha);
+  assert.equal(validated.agenticCanvasOs.revisionBinding, "fetched-tip");
+});
+
+test("canonical runtime binds agentic-canvas-os to the consumer pin when it is an ancestor of origin/main", () => {
+  const pinSha = "e".repeat(40);
+  const tipSha = "f".repeat(40);
+  const candidate = validCandidate({
+    agenticCanvasOs: repository("agentic-canvas-os", pinSha, {
+      remoteSha: tipSha,
+      consumerPinnedRef: pinSha,
+      consumerPinnedRefIsAncestorOfRemote: true,
+    }),
+  });
+  const validated = validateCanonicalRuntimeCandidate(candidate);
+  assert.equal(validated.agenticCanvasOs.headSha, pinSha);
+  assert.equal(validated.agenticCanvasOs.revisionBinding, "consumer-pin");
+});
+
+test("canonical runtime rejects a consumer pin that is not an ancestor of fetched origin/main", () => {
+  const pinSha = "e".repeat(40);
+  const candidate = validCandidate({
+    agenticCanvasOs: repository("agentic-canvas-os", pinSha, {
+      remoteSha: "f".repeat(40),
+      consumerPinnedRef: pinSha,
+      consumerPinnedRefIsAncestorOfRemote: false,
+    }),
+  });
+  assert.throws(() => validateCanonicalRuntimeCandidate(candidate), /consumer-pinned docs_dependency ref/);
+});
+
+test("canonical runtime rejects an agentic-canvas-os HEAD that matches neither tip nor consumer pin", () => {
+  const candidate = validCandidate({
+    agenticCanvasOs: repository("agentic-canvas-os", docsSha, {
+      remoteSha: "f".repeat(40),
+      consumerPinnedRef: "e".repeat(40),
+      consumerPinnedRefIsAncestorOfRemote: true,
+    }),
+  });
+  assert.throws(() => validateCanonicalRuntimeCandidate(candidate), /consumer-pinned docs_dependency ref/);
+});
+
+test("canonical runtime never relaxes the knowgrph tip requirement to a pin", () => {
+  const candidate = validCandidate({
+    knowgrph: {
+      ...validCandidate().knowgrph,
+      remoteSha: "c".repeat(40),
+      consumerPinnedRef: applicationSha,
+      consumerPinnedRefIsAncestorOfRemote: true,
+    },
+  });
+  assert.throws(() => validateCanonicalRuntimeCandidate(candidate), /must equal fetched origin\/main/);
+});
+
+test("consumer pinned docs ref parsing is conservative", () => {
+  const pin = "0123456789abcdef0123456789abcdef01234567";
+  const frontmatter = [
+    "---",
+    "title: \"Contract\"",
+    "docs_dependency:",
+    "  repository: \"https://github.com/huijoohwee/agentic-canvas-os.git\"",
+    `  ref: "${pin}"`,
+    "---",
+    "body",
+  ].join("\n");
+  assert.equal(parseConsumerPinnedDocsRef(frontmatter), pin);
+  assert.equal(parseConsumerPinnedDocsRef(frontmatter.replace("docs_dependency:", "other_dependency:")), null);
+  assert.equal(parseConsumerPinnedDocsRef(frontmatter.replace(pin, "not-a-sha")), null);
+  assert.equal(parseConsumerPinnedDocsRef(`ref: "${pin}"`), null);
+  assert.equal(parseConsumerPinnedDocsRef(["---", "docs_dependency:", "---", `  ref: "${pin}"`].join("\n")), null);
+  assert.equal(parseConsumerPinnedDocsRef(null), null);
 });
 
 test("canonical runtime residue tolerates foreign parallel docs but blocks runtime authority drift", () => {
@@ -112,26 +187,6 @@ test("canonical runtime follows the single registered main worktree from a featu
   );
 });
 
-test("canonical runtime retains a valid attention lifecycle report without hiding command failures", () => {
-  const report = {
-    schema: "agentic-worktree-lifecycle-report/v1",
-    status: "attention-required",
-    worktrees: [],
-  };
-  assert.deepEqual(
-    parseLifecycleCommandResult({ status: 1, stdout: JSON.stringify(report), stderr: "" }),
-    report,
-  );
-  assert.throws(
-    () => parseLifecycleCommandResult({ status: 2, stdout: "", stderr: "fatal" }),
-    /exit 2: fatal/,
-  );
-  assert.throws(
-    () => parseLifecycleCommandResult({ status: 1, stdout: "not-json", stderr: "" }),
-    /invalid JSON/,
-  );
-});
-
 for (const [name, candidate, expected] of [
   ["task branch", validCandidate({ knowgrph: { ...validCandidate().knowgrph, branch: "agent/device/task" } }), /must be on main/],
   ["dirty docs", validCandidate({
@@ -139,7 +194,7 @@ for (const [name, candidate, expected] of [
       clean: false,
       residue: classifyCanonicalRuntimeResidue({
         repositoryId: "agentic-canvas-os",
-        statusPorcelain: " M docs/START-WORKFLOW.md\n",
+        statusPorcelain: " M docs/PROJECT-RULES.md\n",
       }),
     }),
   }), /runtime-blocking residue/],
@@ -178,6 +233,17 @@ test("service ownership binds listener group repository command and token", () =
     listenerEnvironment: `node_modules/.bin/vite AGENTIC_LOCAL_RUNTIME_TOKEN=${token}`,
   };
   assert.equal(validateOwnedService({ service, processEvidence: evidence, token, tokenDigest, candidate: validCandidate() }), true);
+  assert.equal(validateOwnedService({
+    service,
+    processEvidence: { ...evidence, pid: 102 },
+    token,
+    tokenDigest,
+    candidate: validCandidate(),
+  }), true);
+  assert.throws(
+    () => validateOwnedService({ service, processEvidence: null, token, tokenDigest, candidate: validCandidate() }),
+    /process is unavailable/,
+  );
   assert.throws(
     () => validateOwnedService({ service, processEvidence: { ...evidence, gitCommonDir: "/workspace/other/.git" }, token, tokenDigest, candidate: validCandidate() }),
     /unrelated repository/,
@@ -224,7 +290,7 @@ test("session Vite ownership binds exact session, process start, repository, com
     command: "node /workspace/knowgrph/node_modules/.bin/vite --strictPort",
     gitCommonDir: candidate.knowgrph.gitCommonDir,
     listenerEnvironment: `AGENTIC_SESSION_ID=session-a AGENTIC_SESSION_RUNTIME_TOKEN=${token} ` +
-      `KNOWGRPH_SOURCE_REVISION=${applicationSha} KNOWGRPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${docsSha}`,
+      `AGENTICGRAPH_SOURCE_REVISION=${applicationSha} AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${docsSha}`,
   };
   assert.equal(validateOwnedSessionService({
     state, processEvidence: evidence, token, candidate, sessionId: "session-a",
@@ -267,14 +333,15 @@ test("turn end atomically stops the exact session Vite group and proves canonica
   };
   const listeners = new Map();
   const processes = new Map();
+  const launchedCommands = [];
   const stoppedGroups = [];
   let nextGroup = 100;
   const dependencies = {
     inspectCanonicalCandidate: () => candidate,
-    runLifecycle: () => ({ schema: "agentic-worktree-lifecycle-report/v1", status: "clean" }),
     openLog: () => 1,
     closeLog: () => {},
     spawnService: ({ cwd, env, args }) => {
+      launchedCommands.push(args);
       const port = args.includes(String(STORAGE_PORT)) ? STORAGE_PORT : APEX_PORT;
       const supervisorPid = nextGroup;
       nextGroup += 100;
@@ -332,6 +399,10 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     assert.ok(stoppedGroups.includes(100));
     assert.equal(listeners.get(STORAGE_PORT), 201);
     assert.equal(listeners.get(APEX_PORT), 301);
+    assert.deepEqual(launchedCommands[1], [
+      "run", "storage:worker:dev", "--", "--local", "--var",
+      "AGENTICGRAPH_STORAGE_LOCAL_RUNTIME:true", "--ip", "127.0.0.1", "--port", "8787",
+    ]);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }

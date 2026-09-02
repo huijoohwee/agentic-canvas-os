@@ -290,7 +290,8 @@ function seededElementText(seed) {
   if (seed.kind === "anti-pattern-guard") {
     return seed.roleHint === "artifact-bearing"
       ? `Prohibited: omit the evidence record ${seed.token}\nCorrected: record the evidence value ${seed.token}`
-      : `Prohibited: rigid framing ${seed.token}\nCorrected: prefer adaptable framing ${seed.token}`;
+      // Keep the shrink token opaque so values such as "id" cannot change the generated role.
+      : `Prohibited: rigid framing sample${seed.token}\nCorrected: prefer adaptable framing sample${seed.token}`;
   }
   if (seed.kind === "required-template-field") {
     return seed.roleHint === "artifact-bearing"

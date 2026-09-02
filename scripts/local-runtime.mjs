@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 
 import {
-  LOCAL_RUNTIME_SCHEMA,
   endLocalRuntimeTurn,
   ensureLocalRuntime,
   readLocalRuntimeStatus,
+  stopLocalRuntime,
+} from "./local-runtime-lib.mjs";
+import {
   readSessionRuntimeStatus,
   startSessionRuntime,
   stopSessionRuntime,
-  stopLocalRuntime,
-} from "./local-runtime-lib.mjs";
+} from "./local-runtime-session-lib.mjs";
+import { LOCAL_RUNTIME_SCHEMA } from "./local-runtime-supervisor-lib.mjs";
 
 const [action, ...args] = process.argv.slice(2);
 const json = args.includes("--json");

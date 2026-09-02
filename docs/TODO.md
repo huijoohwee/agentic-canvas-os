@@ -4,20 +4,21 @@ graphId: "md:agentic-canvas-os-todo-contract"
 doc_type: "Planning Ledger Contract"
 date: "2026-08-01"
 lang: "en-US"
-schema: "todo-index/v1"
+schema: "todo-index/v2"
 frontmatter_contract: "required"
 status: "runtime-ready"
-authority: "Agentic Canvas OS cross-repository planning index and monthly shard contract"
+authority: "Agentic Canvas OS cross-repository planning index and context-record contract"
 todo_root: "../todo"
-shard_pattern: "YYYY-MM.md"
-active_shard: "../todo/2026-08.md"
-scope_key: "frontmatter scope plus UTC calendar month"
-append_policy: "append-only"
+active_period: "2026-08"
+legacy_shard_pattern: "../todo/YYYY-MM.md"
+context_record_pattern: "../todo/YYYY-MM/<context>.md"
+legacy_policy: "immutable"
+record_policy: "immutable"
 size_limit_bytes: 500000
 line_limit: 599
 adoption_date: "2026-07-14"
 publish_policy: "Dev-only; no Prod mirror or Cloudflare authority"
-runtime_scope: "bounded planning retrieval, append-only task capture, and release compliance"
+runtime_scope: "bounded planning retrieval, independently owned immutable task capture, and release compliance"
 runtime_claim: "source contract and index only; reading this document performs no task mutation or deployment"
 runtime_proof: "RUNTIME-PROOF.md"
 ---
@@ -26,9 +27,9 @@ runtime_proof: "RUNTIME-PROOF.md"
 
 ## Authority And Boundaries
 
-`TODO.md` is the bounded, always-loadable planning index and schema owner. Actual planning rows live only in `../todo/YYYY-MM.md`; do not rebuild a monolithic table in this file.
+`TODO.md` is the bounded, always-loadable planning index and schema owner. New planning records live only in `../todo/YYYY-MM/<context>.md`; do not rebuild a monolithic table in this file.
 
-The shard key is one declared cross-repository scope plus one UTC calendar month. The flat monthly path is the minimum-viable layout while one cross-repository scope is active. If multiple independent scopes later exceed the size cap, add scope directories through a versioned contract change rather than inventing filenames ad hoc.
+The legacy monthly shards are immutable history. Each new task uses one stable kebab-case Context as its filename beneath the active UTC month. Independent tasks therefore claim only its exact context record path and never contend on a shared writable index or monthly file.
 
 Agentic Canvas OS is the sole live planning owner for participating repositories. Repository-local todo files are forbidden because they duplicate authority and drift from the monthly shards. Committed shard rows may retain retired paths as immutable historical provenance, never as current routing instructions.
 
@@ -37,61 +38,60 @@ Agentic Canvas OS is the sole live planning owner for participating repositories
 | Source | Responsibility | Load policy |
 |---|---|---|
 | `TODO.md` | Schema, shard routing, lifecycle, retrieval, validation, and escalation. | Load at workflow start. |
-| `../todo/YYYY-MM.md` | Append-only planning rows for one declared scope and UTC month. | Load the active month or an exact requested month. |
+| `../todo/YYYY-MM.md` | Immutable legacy `todo-log/v1` history. | Search only when exact record lookup is empty or history is requested. |
+| `../todo/YYYY-MM/<context>.md` | One immutable `todo-context-record/v2` task record. | Load the exact Context; enumerate and sort only for a derived monthly view. |
 
-## Shard Frontmatter
+## Context Record Frontmatter
 
-Every shard starts with plain YAML using this contract:
+Every new record starts with plain YAML using this contract:
 
 ```yaml
 ---
-title: "Agentic Canvas OS Todo YYYY-MM"
-doc_type: "Planning Ledger Shard"
-schema: "todo-log/v1"
+schema: "todo-context-record/v2"
 period: "YYYY-MM"
+context: "stable-kebab-case-context"
 scope: "cross-repository"
-status: "append-only"
-append_policy: "append-only"
-date_heading_format: "YYYY-MM-DD"
-source_contract: "../docs/TODO.md"
-adoption_date: "2026-07-14"
+status: "immutable"
+record_policy: "immutable"
+source_contract: "../../docs/TODO.md"
+updated_date: "YYYY-MM-DD"
 ---
 ```
 
-`period` must equal the filename and `status` remains `append-only` for the shard's lifetime. `TODO.md`'s `active_shard` pointer is the sole lifecycle owner: every non-active shard is closed and immutable. At UTC month rollover, update the index pointer and create a new shard; never edit the prior shard's frontmatter.
+`period` must equal the parent directory, `context` must equal the filename, and `updated_date` must be inside the period. Status and record policy remain `immutable`. At UTC month rollover, update `active_period`; prior records and all legacy monthly shards remain byte-immutable.
 
 ## Row Contract
 
-Each dated section has the canonical 11-column table:
+Each record has exactly one dated section and one canonical 11-column row:
 
 | Context | Intent | Directive | Module | Class/Object | Function/Method | Input | Output | Decision Logic | Next Step Recommendation | Updated Date |
 |---|---|---|---|---|---|---|---|---|---|---|
 
-For rows authored on or after `adoption_date`:
+For every `todo-context-record/v2` record:
 
-- append one complete row at EOF under an exact `## YYYY-MM-DD` UTC heading;
-- keep the heading month equal to the shard `period`;
+- create one complete row under an exact `## YYYY-MM-DD` UTC heading;
+- keep the heading and `Updated Date` equal to frontmatter `updated_date`;
 - fill all 11 cells; forbid empty cells and placeholder `-` values;
 - keep `Directive` at 50 words or fewer;
 - set `Updated Date` equal to the enclosing dated heading;
 - name the affected source in `Module` and use a stable, unique `Context`;
-- append a superseding row when a prior decision changes; never rewrite history.
+- bind the row Context to both filename and frontmatter, then never rewrite the record.
 
-Imported pre-adoption rows remain byte-preserved historical evidence. They are exempt from retroactive row normalization but not from shard identity, size, or history-preservation checks.
+Legacy `todo-log/v1` monthly shards are immutable, byte-preserved historical evidence. They are parsed only for deterministic projection and duplicate-Context detection, not retroactively normalized.
 
 ## Append And Merge Rules
 
 - Record the exact Agentic Canvas OS base ref before the first task write.
-- Existing shard bytes at that ref must remain an exact prefix of the release candidate.
-- Two concurrent valid appends are both retained and ordered by UTC date, then stable Context when reconciliation is required.
-- A conflict is resolved by keeping both independent rows; do not select one history and discard the other.
-- Frontmatter is created once. Changing identity, scope, period, adoption boundary, or policy requires a new contract version and migration proof.
+- Claim only `todo/YYYY-MM/<context>.md` plus the semantic Context; shared planning files are not task write targets.
+- Release requires the record to be absent at base and exactly one new record path for the declared Context.
+- A monthly view is derived deterministically from legacy rows and context records ordered by date, Context, then source path.
+- Changing a committed record, any legacy shard, or index identity requires a new contract version and migration proof.
 
 ## Retrieval And Token Economics
 
-1. Load `TODO.md` plus the active monthly shard by default.
+1. Load `TODO.md` plus the exact Context record by default.
 2. Resolve an exact month or Context with `rg` before loading more files.
-3. Search adjacent shards only when the exact lookup is empty.
+3. Search legacy and adjacent periods only when exact lookup is empty.
 4. Add local BM25 ranking only after exact search becomes noisy.
 5. Add embeddings only after measured keyword-retrieval failure and approved TCO review.
 
@@ -99,19 +99,20 @@ This keeps routine planning context bounded to one small index and one relevant 
 
 ## Size And Rollover
 
-- Each shard must remain below 500,000 bytes and 600 lines.
-- Month rollover is mandatory even when the prior file is small.
-- If one scope exceeds either cap inside a month, stop and propose a versioned scope-directory extension; do not create numbered overflow files silently.
-- Never split a committed shard by rewriting its history. A migration requires preserved source hashes, a mapping ledger, and explicit operator approval.
+- Each context record stays below 500,000 bytes and 600 lines.
+- Month rollover updates only `active_period`; it does not create a shared writable shard.
+- Never split or rewrite committed records or legacy shards. A migration requires preserved source hashes, a mapping ledger, and explicit operator approval.
 
 ## Compliance Gates
 
-Startup validates the index, every shard's frontmatter, filename-period match, chronological unique date headings, month boundary, size budget, and active/closed lifecycle. Release additionally compares committed shard prefixes with the recorded base ref and strictly validates the declared task row.
+Startup validates the index, immutable legacy identities, every context record, path/frontmatter identity, unique Context ownership, the one-row schema, date boundary, and size budget. Release additionally proves legacy shards unchanged, the declared record absent at base, and exactly one new Context record.
 
-Any malformed shard, historical rewrite, missing declared Context, duplicate task Context, overlong directive, empty cell, wrong-month heading, wrong Updated Date, or size overflow blocks the next workflow stage.
+Any malformed record, legacy rewrite, missing declared Context, duplicate task Context, overlong directive, empty cell, wrong-month heading, wrong Updated Date, or extra planning path blocks the next workflow stage.
+
+`active_period` records also project read-only into the `## Ledger Projection` table of `kanban.md` through `scripts/kanban-projection.mjs`. The projection is a consumer, never an authority: it adds no status, owner, or priority to a record, and board edits cannot write back here. Adding or changing a record shifts the projection, so regenerate with `npm run kanban:project` in the same change.
 
 ## Completion VCC
 
-Given the Todo index and monthly shard root, when planning compliance runs, then every shard resolves to one scope/month, historical bytes remain append-only, and the declared current task row is complete and bounded.
+Given the Todo index and planning root, when compliance runs, then every new record resolves to one Context/month, legacy history remains immutable, and concurrent tasks own disjoint complete records.
 
-VCC: verify frontmatter parsing, filename-period equality, chronological headings, byte and line caps, base-prefix preservation, and one strict `PLANNING_CONTEXT` row; stop on the first violation without Prod or Cloudflare mutation.
+VCC: verify frontmatter and path identity, unique Context ownership, deterministic projection, legacy immutability, and one new strict Context record relative to the base; stop without provider, Prod, or Cloudflare mutation.

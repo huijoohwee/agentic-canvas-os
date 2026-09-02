@@ -49,10 +49,10 @@ test("repository keeps one canonical role-based Agent Team contract", () => {
     text: "/agent.team #role-based-agent-team @agent-team",
   });
   assert.deepEqual(AGENT_TEAM_MCP_TOOLS, [
-    "knowgrph.agent_team.plan",
-    "knowgrph.agent_team.start",
-    "knowgrph.agent_team.list",
-    "knowgrph.agent_team.control",
+    "agenticgraph.agent_team.plan",
+    "agenticgraph.agent_team.start",
+    "agenticgraph.agent_team.list",
+    "agenticgraph.agent_team.control",
   ]);
   assert.deepEqual(AGENT_TEAM_BOUNDS, {
     participants: 16,

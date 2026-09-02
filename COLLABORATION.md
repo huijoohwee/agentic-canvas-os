@@ -1,94 +1,62 @@
 # Multi-device delivery
 
-This repository uses protected pull requests as the synchronization boundary. Devices never push directly to `main`; one registered `main` worktree remains the runtime and synchronization owner while registered task worktrees publish distinct scoped branches concurrently. CI validates each branch, GitHub merges protected changes, and the clean main worktree fast-forwards after integration.
+This repository delegates Git lifecycle, protected integration, canonical
+reconciliation, and eligible cleanup to the exact pinned `agentic-os` package.
+The installed `node_modules/agentic-os/docs/START-WORKFLOW.md`,
+`node_modules/agentic-os/docs/adlc-guidelines.md`, and
+`node_modules/agentic-os/docs/RELEASE-WORKFLOW.md` are the lifecycle SSOT. This
+file adds only ACOS product validation and deployment boundaries.
 
-## One-time activation
-
-Merge the workflow and script files to `main`, then run:
-
-```bash
-npm run github:configure -- --apply
-```
-
-The command replaces the stale Vercel branch checks with these strict checks:
-
-- `test`
-- `build`
-- `docs-contract`
-- `collaboration-integration`
-
-It retains CODEOWNERS routing for authentication, collaboration state, Worker, Wrangler, and workflow changes. A solo owner cannot approve their own pull request, so merge permission depends on the strict required checks, resolved conversations, conflict-free index, and unique-semantic-scope guard instead of an impossible self-review. Production remains disabled through `PROD_DEPLOY_ENABLED=false`.
-
-Before enabling deployment, configure `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as production environment secrets, set the repository variable `PRODUCTION_URL`, fix and verify the public session-token minting vulnerability, then explicitly set `PROD_DEPLOY_ENABLED=true`.
-
-## Work from a device
-
-Set a stable device id once if the hostname is not suitable:
+## Install and verify the pinned harness
 
 ```bash
-git config agentic.device katrina-macbook
+npm ci --ignore-scripts
+npm run doctor
 ```
 
-Create a detached registered task worktree from current remote `main`, then claim it:
+The repository has no local lifecycle installer or GitHub-configuration
+controller. GitHub authority remains selected by `.github/adlc-authority-policy.json`,
+`.agentic-os/github-transition-policy.json`, and their retained workflows.
+
+## Author and publish a scoped change
 
 ```bash
-export TASK_WORKTREE_ROOT="../.worktrees/agentic-canvas-os"
-export TASK_WORKTREE="$TASK_WORKTREE_ROOT/canvas-presence"
-git fetch --prune origin
-git worktree add --detach "$TASK_WORKTREE" origin/main
-npm run device:start -- canvas-presence \
-  --session="<stable-task-id>" --repository="$TASK_WORKTREE"
+npm run lane -- canvas-presence
+# author and commit only in the worktree printed by agentic-os
+npm run land
 ```
 
-Commit intentionally, then publish the clean branch:
+Treat every command result as bounded evidence, not inferred authority. Do not
+replace the installed start workflow with raw worktree creation, branch adoption,
+lease repair, or direct protected-branch publication.
+
+## Observe or reconcile canonical state
 
 ```bash
-npm run device:publish
+npm run status
+npm run sync:canonical
 ```
 
-`device:start` configures the repository-owned pre-commit hook. Run `npm run git:configure` once in an existing checkout that has not used `device:start` yet. The hook rejects unresolved index entries, unregistered worktrees, branch/lease mismatches, and expired sessions. It treats ordinary local commits on a valid task branch as normal authoring; protected-branch enforcement belongs to canonical `main` publication and integration, not to every local commit.
+`status` is read-only. `sync:canonical` is the sole exposed reconciliation
+command and remains subject to the pinned ADLC contract. Neither command is
+described here as an implicit fetch, fast-forward, integration, or cleanup
+receipt; use its actual typed result.
 
-If work was started on canonical `main`, preserve those bytes and move them into a task branch or registered task worktree before the next ordinary commit or publication step. Prefer explicit branch/worktree admission over a generic "trying to commit to a protected branch" failure for local authoring.
+## ACOS product gates
 
-Publishing requires a registered task worktree, its branch-bound lease, no unresolved conflict, and no open PR or other live publish authority owned by another branch for the same semantic scope or any overlapping publish path. It runs local checks, pushes the branch, updates its scope-owned PR with the `automerge` label, and enables squash auto-merge. Different semantic scopes may keep independent worktrees and pull requests active concurrently only when they cannot publish different revisions for the same path.
-
-## Conflict policy
-
-- Resolve every merge conflict before committing changes. Unmerged index stages fail both the pre-commit hook and device publication.
-- Use only a path returned by `git worktree list --porcelain -z`; copied-source and unregistered paths are not delivery authorities.
-- Keep one open pull request per semantic scope. Distinct scopes may coexist; duplicate scope owners must serialize through exact-SHA handoff.
-- Keep one current publish authority per path. Distinct semantic scopes still serialize when they can publish different revisions for the same path, whether directly or through generated outputs.
-- Never use `git checkout --ignore-other-worktrees` or activate one branch in multiple worktrees.
-- GitHub updates and merges disjoint changes automatically.
-- Concurrent append-only `memory/YYYY-MM.md` and `todo/YYYY-MM.md` changes preserve the current `main` bytes and append the device suffix.
-- A `package-lock.json`-only collision is regenerated from the merged package manifest.
-- Source, schema, auth, Durable Object, storage, secret, deployment, or workflow conflicts receive `automerge/conflict` and stop for owner review.
-- Generated web output is rebuilt; it is not a merge authority.
-
-## Update an idle canonical checkout
-
-Run a single update:
+Before product handoff, run the focused checks for the changed surface and then:
 
 ```bash
-npm run sync:live
+npm run runtime-readiness-contract:check
+npm run collaboration:gate
+npm run web:build
 ```
 
-Or watch every 20 seconds:
+`npm run smoke` is available only as a caller-supplied URL check. This repository
+contains no preview, production-deploy, or rollback workflow, and passing a local
+smoke check does not claim deployment. Production and Cloudflare effects require
+their separately authorized external owner and exact product release evidence.
 
-```bash
-npm run sync:live -- --watch --interval=20
-```
-
-The command requires invocation from the registered `main` worktree with a clean `main` branch. It fetches `origin/main` and uses a fast-forward-only merge without switching, merging, or inspecting task worktree content. It fails closed on a task worktree, local main changes, or non-fast-forward history; additional registered task worktrees are allowed.
-
-## Preview, smoke, and rollback
-
-Three CI safeguards support multi-device delivery beyond the merge queue:
-
-- **Preview deploys.** `preview.yml` runs on every pull request and, when the `PREVIEW_DEPLOY_ENABLED` repository variable is `true`, uploads a non-production Cloudflare Worker *version* and comments its preview URL on the PR. A version upload never shifts production traffic; another device can exercise the change on a real URL before it merges. Promotion to production still happens only through `deploy.yml` after merge.
-- **Post-deploy smoke checks.** After each production deploy, `deploy.yml` runs `npm run smoke` (`scripts/smoke.mjs`) against `PRODUCTION_URL`. The checks need no secrets and assert that the critical routes are wired and correctly gated: `GET /api/ready` returns a `200` JSON object, `GET /api/canvas/room` returns `400`/`401` (Durable Object route plus auth are live), and `POST /api/invoke` returns `401` (MCP forward route is live and auth-gated). A `404`, `501`, or `5xx` fails the deploy. Run the same checks locally with `PRODUCTION_URL=https://… npm run smoke`.
-- **Rollback.** When smoke fails, `deploy.yml` prints rollback guidance. Roll back through the **Rollback production** workflow (`rollback.yml`, `workflow_dispatch`) with an optional `version_id` from `wrangler versions list`, or locally with `npm run rollback`. Rollback shares the `production` concurrency group with deploy, so the two never race, and it re-runs the smoke checks after restoring the previous version.
-
-## Security scanning
-
-`security.yml` runs dependency and static-analysis scanning on pull requests, on `main`, and on a weekly schedule: `npm audit --audit-level=high`, CodeQL for JavaScript, and (on PRs) a dependency review that fails on newly introduced high-severity advisories. Run the dependency audit locally with `npm audit --audit-level=high`.
+The retained `security.yml` and `dependency-security.yml` workflows provide
+repository security checks. They grant no lifecycle, release, or deployment
+authority.

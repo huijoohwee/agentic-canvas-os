@@ -3,13 +3,14 @@
 Vendor-neutral routing hints for AI agents and coding tools.
 
 Start here:
+- AGENTS.md
 - README.md
 - docs/PROJECT-RULES.md
-- docs/START-WORKFLOW.md
 - docs/VALIDATION-RUNBOOK.md
 - docs/RUNTIME-READINESS.md
 
 Rules:
-- Use docs/PROJECT-RULES.md as the repository-owned engineering and session-closeout source of truth.
-- End sessions in this repo with `npm run device:end -- --json`.
+- Continuously comply with node_modules/agentic-os/templates/SYSTEM-PROMPT-RUNTIME.md.
+- Use node_modules/agentic-os/docs/adlc-guidelines.md, START-WORKFLOW.md, and RELEASE-WORKFLOW.md for lifecycle governance.
+- Use docs/PROJECT-RULES.md only for ACOS product, deploy, rollback, and authorization policy.
 - Keep deployment, Prod mirror, and Cloudflare mutation operator-gated.

@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "spec-complete"
 invocation: "/repository.pack #repository-packing @repository-root @runtime-proof"
 skill_id: "repository.pack"
-mcp_tool: "knowgrph.repository.pack"
+mcp_tool: "agenticgraph.repository.pack"
 runtime_owner: "$GITHUB_ROOT/knowgrph/mcp/repository-pack-contract.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-error.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-format.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-git.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-publisher.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-runtime.js; $GITHUB_ROOT/knowgrph/mcp/local-tool-contract.js; $GITHUB_ROOT/knowgrph/mcp/os-status-runtime.js; $GITHUB_ROOT/knowgrph/mcp/server.js"
 runtime_surface: "local stdio MCP"
 publish_policy: "Dev-only; no Prod or Cloudflare authority"
@@ -35,7 +35,7 @@ local stdio MCP tool.
 | Semantic route | `#repository-packing` | Classify deterministic repository packing. |
 | Root binding | `@repository-root` | Bind one exact local Git worktree root. |
 | Proof binding | `@runtime-proof` | Bind the structured result and focused checks. |
-| MCP wire tool | `knowgrph.repository.pack` | Execute through Knowgrph local stdio MCP only. |
+| MCP wire tool | `agenticgraph.repository.pack` | Execute through Knowgrph local stdio MCP only. |
 
 The exact host alias is
 `/repository.pack #repository-packing @repository-root @runtime-proof`.
@@ -214,7 +214,7 @@ Knowgrph revisions:
 | VCC | Pass condition |
 |---|---|
 | Invocation parity | The exact host tuple resolves once through the three dictionaries and facts. |
-| MCP parity | `knowgrph.repository.pack` is listed once and its closed schema matches this request. |
+| MCP parity | `agenticgraph.repository.pack` is listed once and its closed schema matches this request. |
 | Determinism | An unchanged fixture produces byte-identical artifacts and the same two digests. |
 | Containment | Traversal, symlink, root swap, and output escape cases fail closed. |
 | Completeness | Every selected candidate is embedded or receives one typed state in the path index; policy-excluded paths are counted without disclosure. |

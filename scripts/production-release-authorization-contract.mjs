@@ -1,18 +1,14 @@
-import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-
+import { digestValue } from "./product-contract-primitives.mjs";
 import { validateProductionRuntimeReadiness } from "./production-runtime-readiness-contract.mjs";
-
 export const LOCAL_REVIEW_CANDIDATE_SCHEMA = "agentic-local-review-candidate/v1";
 export const PRODUCTION_RELEASE_CANDIDATE_SCHEMA = "agentic-production-release-candidate/v1";
 export const PRODUCTION_RELEASE_AUTHORIZATION_SCHEMA = "agentic-production-release-authorization/v1";
 export const PRODUCTION_AUTHORIZATION_PROMPT_SCHEMA = "agentic-production-authorization-prompt/v1";
 export const PRODUCTION_AUTHORIZATION_FORMATTER_PATH = "agentic-canvas-os/scripts/production-release-authorization-contract.mjs";
 export const PRODUCTION_AUTHORIZATION_LOCAL_FORMATTER_PATH = fileURLToPath(import.meta.url);
-
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-
 export function createLocalReviewCandidate(runtime, trees) {
   if (runtime?.status !== "runtime-ready" || runtime.ready !== true) {
     throw new Error("Local review requires runtime-ready evidence.");
@@ -55,7 +51,6 @@ export function createLocalReviewCandidate(runtime, trees) {
   };
   return Object.freeze({ ...evidence, candidateDigest: digest(evidence) });
 }
-
 export function createProductionReleaseCandidate(localReview, readiness) {
   validateLocalReviewCandidate(localReview);
   validateProductionRuntimeReadiness(readiness);
@@ -77,7 +72,6 @@ export function createProductionReleaseCandidate(localReview, readiness) {
   };
   return Object.freeze({ ...evidence, candidateDigest: digest(evidence) });
 }
-
 export function validateProductionReleaseAuthorization(candidate, authorization, current) {
   validateProductionReleaseCandidate(candidate);
   if (!isExactObject(authorization, [
@@ -100,15 +94,11 @@ export function validateProductionReleaseAuthorization(candidate, authorization,
   }
   validateProductionRuntimeReadiness(current?.readiness);
   const rebuilt = createProductionReleaseCandidate(current.localReview, current.readiness);
-  if (rebuilt.candidateDigest !== candidate.candidateDigest ||
-      current.originMainSha !== candidate.source.revision ||
-      current.localMainSha !== candidate.source.revision ||
-      current.agenticCanvasOsSha !== candidate.agenticCanvasOs.revision) {
+  if (rebuilt.candidateDigest !== candidate.candidateDigest) {
     throw new Error("Production authorization is invalid because source, artifact, manifest, or runtime identity drifted.");
   }
   return true;
 }
-
 export function createProductionAuthorizationPrompt(runtime, localReview, candidate, input) {
   if (!isExactObject(input, ["runRef"])) {
     throw new Error("Production authorization prompt input is malformed.");
@@ -133,7 +123,6 @@ export function createProductionAuthorizationPrompt(runtime, localReview, candid
   };
   return Object.freeze({ ...evidence, promptDigest: digest(evidence) });
 }
-
 export function formatProductionAuthorizationPrompt(value) {
   validateProductionAuthorizationPrompt(value);
   return [
@@ -152,7 +141,6 @@ export function formatProductionAuthorizationPrompt(value) {
     `\`${value.authorizationReply}\``,
   ].join("\n");
 }
-
 export function validateProductionAuthorizationPrompt(value) {
   if (!isExactObject(value, [
     "schema",
@@ -179,7 +167,6 @@ export function validateProductionAuthorizationPrompt(value) {
   }
   return value;
 }
-
 export function validateLocalReviewCandidate(value) {
   if (!isExactObject(value, [
     "schema",
@@ -202,7 +189,6 @@ export function validateLocalReviewCandidate(value) {
   if (candidateDigest !== digest(evidence)) throw new Error("Local review candidate digest does not match its evidence.");
   return value;
 }
-
 export function validateProductionReleaseCandidate(value) {
   if (!isExactObject(value, [
     "schema",
@@ -229,7 +215,6 @@ export function validateProductionReleaseCandidate(value) {
   if (candidateDigest !== digest(evidence)) throw new Error("Production release candidate digest does not match its evidence.");
   return value;
 }
-
 function assertShaTree(value, label) {
   if (!isExactObject(value, ["repository", "revision", "tree"]) ||
       typeof value.repository !== "string" ||
@@ -239,7 +224,6 @@ function assertShaTree(value, label) {
     throw new Error(`${label} must contain exact commit and tree SHAs.`);
   }
 }
-
 function assertDigest(value, label) {
   if (!isExactObject(value, ["algorithm", "digest"]) ||
       value.algorithm !== "sha256" ||
@@ -247,7 +231,6 @@ function assertDigest(value, label) {
     throw new Error(`${label} must contain an exact SHA-256 digest.`);
   }
 }
-
 function validatePromptRuntimeIdentity(runtime, localReview) {
   if (runtime?.status !== "runtime-ready" || runtime.ready !== true) {
     throw new Error("Production authorization prompt requires runtime-ready localhost review.");
@@ -265,7 +248,6 @@ function validatePromptRuntimeIdentity(runtime, localReview) {
     throw new Error("Production authorization prompt requires all localhost probes to return HTTP 200.");
   }
 }
-
 function resolveLocalhostReviewUrl(runtime) {
   const host = runtime?.host;
   const port = runtime?.ports?.apex;
@@ -277,7 +259,6 @@ function resolveLocalhostReviewUrl(runtime) {
   }
   return `http://${host === "::1" ? "[::1]" : host}:${port}/`;
 }
-
 function requireLocalhostUrl(value) {
   const match = /^http:\/\/(?:127\.0\.0\.1|localhost|\[::1\]):([1-9][0-9]{0,4})\/$/.exec(String(value || ""));
   if (!match) {
@@ -289,7 +270,6 @@ function requireLocalhostUrl(value) {
   }
   return value;
 }
-
 function requirePromptReference(value) {
   if (typeof value !== "string" ||
       value.length < 1 ||
@@ -299,19 +279,7 @@ function requirePromptReference(value) {
   }
   return value;
 }
-
-function digest(value) {
-  return createHash("sha256").update(canonicalJson(value)).digest("hex");
-}
-
-function canonicalJson(value) {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  if (value && typeof value === "object") {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
+const digest = digestValue;
 function isExactObject(value, keys) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const expected = [...keys].sort();

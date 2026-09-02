@@ -24,7 +24,7 @@ const passingProof = {
     requiredDeviceCount: 2,
     verificationDigest: "a".repeat(64),
     devices: ["owner", "guest"],
-    knowgrphRevision: "b".repeat(40),
+    agenticgraphRevision: "b".repeat(40),
     agenticCanvasOsRevision: "c".repeat(40),
     catalogRevision: "c".repeat(40),
     catalogHydrationStatus: "fresh",
@@ -53,7 +53,7 @@ test("collaboration gate resolves the sibling Knowgrph owner without machine pat
     path.resolve("/repos/knowgrph"),
   );
   assert.equal(
-    resolveKnowgrphRoot({ agenticCanvasOsRoot: "/repos/agentic-canvas-os", env: { KNOWGRPH_ROOT: "/work/knowgrph" } }),
+    resolveKnowgrphRoot({ agenticCanvasOsRoot: "/repos/agentic-canvas-os", env: { AGENTICGRAPH_ROOT: "/work/knowgrph" } }),
     path.resolve("/work/knowgrph"),
   );
 });

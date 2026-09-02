@@ -13,7 +13,7 @@ runtime_claim: "Agentic Canvas OS supplies the model-free validated contract; th
 runtime_owner: "$GITHUB_ROOT/knowgrph/mcp"
 runtime_proof: "../scripts/agent-team-contract.mjs; ../__tests__/agent-team-contract.test.mjs; $GITHUB_ROOT/knowgrph npm run agent-team:check"
 invocation: "/agent.team #role-based-agent-team @agent-team"
-mcp_tools: ["knowgrph.agent_team.plan", "knowgrph.agent_team.start", "knowgrph.agent_team.list", "knowgrph.agent_team.control"]
+mcp_tools: ["agenticgraph.agent_team.plan", "agenticgraph.agent_team.start", "agenticgraph.agent_team.list", "agenticgraph.agent_team.control"]
 external_pattern_source: "https://github.com/crewaiinc/crewai"
 external_source_policy: "official abstract capability inspiration only; local source, vocabulary, schemas, prompts, fixtures, tests, and prose are independently authored"
 external_dependency: "forbidden"
@@ -24,7 +24,7 @@ publish_policy: "runtime-ready in local Dev only; provider, remote Worker, Prod,
 
 `/agent.team #role-based-agent-team @agent-team` selects one exact, source-backed team whose members collaborate through existing Agent Definitions, Agent Orchestration, and Progressive Agents owners. It does not create another agent registry, loop, model router, tool gateway, state store, approval system, or dynamic swarm.
 
-The tuple is a host invocation alias. MCP clients call the four exact `knowgrph.agent_team.*` wire tools. Unknown aliases remain unsupported.
+The tuple is a host invocation alias. MCP clients call the four exact `agenticgraph.agent_team.*` wire tools. Unknown aliases remain unsupported.
 
 ## Owner Separation
 
@@ -69,10 +69,10 @@ Every response uses `knowgrph-agent-team-result/v1` with `ok`, `operation`, `tea
 
 | Tool | Required input | Typed result | Mutation boundary |
 |---|---|---|---|
-| `knowgrph.agent_team.plan` | Exact invocation, team source identity, requested task, bounds, policy references, and idempotency key. | Immutable `planId`, `planDigest`, resolved revisions, branch set, owner map, effective bounds, and `planned` state. | Read-only and model-free; no durable run, agent call, tool call, checkpoint, or spend. |
-| `knowgrph.agent_team.start` | `planId`, `planDigest`, exact `teamRevision`, expected plan state version, and idempotency key. | Durable `runId`, state version, initial checkpoint, manager ownership, and queued or running state. | Creates only the bounded team run after all fences and current policy pass. |
-| `knowgrph.agent_team.list` | Bounded filters, page limit, and optional exact run id. | Sanitized summaries, current owner, state, budget use, blockers, review status, and evidence references. | Read-only and zero-model; no polling loop or private output disclosure. |
-| `knowgrph.agent_team.control` | Exact `runId`, expected state version, action, idempotency key, reason, and review receipt when required. | One serialized transition, checkpoint reference, new state version, and typed next action. | Only `pause`, `resume`, `cancel`, `retry`, `request_review`, and `record_review` are supported. |
+| `agenticgraph.agent_team.plan` | Exact invocation, team source identity, requested task, bounds, policy references, and idempotency key. | Immutable `planId`, `planDigest`, resolved revisions, branch set, owner map, effective bounds, and `planned` state. | Read-only and model-free; no durable run, agent call, tool call, checkpoint, or spend. |
+| `agenticgraph.agent_team.start` | `planId`, `planDigest`, exact `teamRevision`, expected plan state version, and idempotency key. | Durable `runId`, state version, initial checkpoint, manager ownership, and queued or running state. | Creates only the bounded team run after all fences and current policy pass. |
+| `agenticgraph.agent_team.list` | Bounded filters, page limit, and optional exact run id. | Sanitized summaries, current owner, state, budget use, blockers, review status, and evidence references. | Read-only and zero-model; no polling loop or private output disclosure. |
+| `agenticgraph.agent_team.control` | Exact `runId`, expected state version, action, idempotency key, reason, and review receipt when required. | One serialized transition, checkpoint reference, new state version, and typed next action. | Only `pause`, `resume`, `cancel`, `retry`, `request_review`, and `record_review` are supported. |
 
 Planning canonicalizes the exact team source, resolved definition revisions, workflow revision, branch ids and modes, review-policy revision, task digest, and effective bounds into `planDigest`. Start, resume, retry, review continuation, and every checkpoint must match that digest and `teamRevision`. Control must also match the current `stateVersion`; stale or skipped versions fail without mutation.
 
@@ -148,7 +148,7 @@ The checked-in `team.collaborative-intelligence@1.0.0` source binds
 `agent.collaboration-manager@1.0.0`, `agent.evidence-scout@1.0.0`, and
 `agent.risk-reviewer@1.0.0` to two ordered delegate branches. The manager owns
 both branch synthesis and the final public answer. The operator must explicitly
-select an exact model with `KNOWGRPH_AGENT_TEAM_MODEL`; loopback Ollama is the
+select an exact model with `AGENTICGRAPH_AGENT_TEAM_MODEL`; loopback Ollama is the
 default, no model is downloaded or hard-coded, and unconfigured execution
 fails before durable state or model work.
 

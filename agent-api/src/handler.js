@@ -4,7 +4,7 @@
 //   1. `POST /auth/session` → mint a stateless session token (HS256, secret
 //      server-side only).
 //   2. `POST /run` → verify the session token, validate the request schema, and
-//      FORWARD `knowgrph.video_remix.run` to the knowgrph MCP control plane,
+//      FORWARD `agenticgraph.video_remix.run` to the AgenticGraph MCP control plane,
 //      returning the Run_Manifest. This tier holds NO model keys and calls NO
 //      paid model directly; all reasoning/spend happens in knowgrph behind its
 //      Approval_Gates.
@@ -122,7 +122,7 @@ export function createRunHandler({ secret, mcpClient, now } = {}) {
   return async function run(request = {}) {
     if (!secret) return json(501, { error: "auth not configured" });
     if (!mcpClient || typeof mcpClient.runVideoRemix !== "function") {
-      return json(501, { error: "knowgrph MCP control plane not configured" });
+      return json(501, { error: "AgenticGraph MCP control plane not configured" });
     }
 
     // 1. Auth: verify the session token (access gate; never authorizes spend).
@@ -134,7 +134,7 @@ export function createRunHandler({ secret, mcpClient, now } = {}) {
     const { valid, errors, value } = validateRunRequest(request.body);
     if (!valid) return json(400, { error: "invalid request", fields: errors });
 
-    // 3. Forward to the knowgrph control plane over MCP; return the Run_Manifest.
+    // 3. Forward to the AgenticGraph control plane over MCP; return the Run_Manifest.
     try {
       const manifest = await mcpClient.runVideoRemix(value, { bearer: token });
       return json(200, manifest);
@@ -142,7 +142,7 @@ export function createRunHandler({ secret, mcpClient, now } = {}) {
       const status = Number.isFinite(err && err.status) ? err.status : 502;
       // Non-disclosing: surface a coarse upstream-failure indication only.
       return json(status >= 400 && status < 600 ? status : 502, {
-        error: "knowgrph control plane call failed",
+        error: "AgenticGraph control plane call failed",
         code: (err && err.code) || "mcp_error",
       });
     }
@@ -150,14 +150,14 @@ export function createRunHandler({ secret, mcpClient, now } = {}) {
 }
 
 /**
- * `POST /invoke` handler factory: verify session → forward to knowgrph
+ * `POST /invoke` handler factory: verify session → forward to AgenticGraph
  * MCP command grammar tool.
  */
 export function createInvokeHandler({ secret, mcpClient, now } = {}) {
   return async function invoke(request = {}) {
     if (!secret) return json(501, { error: "auth not configured" });
     if (!mcpClient || typeof mcpClient.invokeDocsGrammar !== "function") {
-      return json(501, { error: "knowgrph MCP control plane not configured" });
+      return json(501, { error: "AgenticGraph MCP control plane not configured" });
     }
 
     const token = readBearer(request.headers);
@@ -175,7 +175,7 @@ export function createInvokeHandler({ secret, mcpClient, now } = {}) {
     } catch (err) {
       const status = Number.isFinite(err && err.status) ? err.status : 502;
       return json(status >= 400 && status < 600 ? status : 502, {
-        error: "knowgrph control plane call failed",
+        error: "AgenticGraph control plane call failed",
         code: (err && err.code) || "mcp_error",
       });
     }

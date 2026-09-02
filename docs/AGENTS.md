@@ -14,8 +14,7 @@ runtime_proof: "RUNTIME-PROOF.md"
 publish_policy: "protected green main authorizes Dev integration only; forward Production release requires exact-candidate human authorization"
 source_docs:
   - "FACTS.md"
-  - "START-WORKFLOW.md"
-  - "RELEASE-WORKFLOW.md"
+  - "../AGENTS.md"
   - "SKILLS.md"
   - "VALIDATION-RUNBOOK.md"
   - "INSTRUCTION-AUDIT.md"
@@ -30,9 +29,11 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 ## Start Here
 
 - Read `FACTS.md` for source precedence and repository truth.
-- Run `START-WORKFLOW.md` before repository mutation or runtime-readiness work.
+- Continuously comply with the pinned `node_modules/agentic-os/templates/SYSTEM-PROMPT-RUNTIME.md`.
+- Run the pinned `node_modules/agentic-os/docs/START-WORKFLOW.md` before repository mutation or runtime-readiness work.
 - Load only the owner documents needed for the task; do not read the whole documentation tree by default.
-- Use `RELEASE-WORKFLOW.md` only when integration or release is explicitly in scope.
+- Use `node_modules/agentic-os/docs/RELEASE-WORKFLOW.md` only when integration or release is explicitly in scope.
+- Treat `node_modules/agentic-os/docs/adlc-guidelines.md` as the lifecycle and governance SSOT; ACOS retains only product, deploy, rollback, and authorization policy.
 
 ## Durable Rules
 
@@ -43,7 +44,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 - Treat external projects and documentation as design references only. Do not copy their code, prose, prompts, schemas, tests, fixtures, or dependencies.
 - Keep claims proportional to evidence. A source contract is not live-provider, deployment, or runtime proof.
 - Prefer focused checks for touched behavior. Use the validation owner rather than restating commands here.
-- Prod mirrors and Cloudflare change only through the repository-owned release controller after exact-candidate human authorization in the protected Production environment; local agents, task worktrees, merges, and `turn:end` have no deploy authority.
+- Prod mirrors and Cloudflare change only through the Knowgrph product-deployment owner after exact-candidate human authorization in the protected Production environment; repository integration remains ADLC-owned, and local agents, task worktrees, merges, and `turn:end` have no deploy authority.
 
 ## Owner Routing
 
@@ -56,14 +57,13 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Reusable skill discovery and selection | `SKILLS.md` |
 | Command, semantic, and binding tokens | `DICTIONARY-COMMAND.md`, `DICTIONARY-SEMANTIC.md`, and `DICTIONARY-BINDING.md` |
 | Runtime schemas, cost, fallbacks, and orchestration | `HARNESS-CONTRACTS.md` |
-| Managed implementation-run invocation and lifecycle | `MANAGED-IMPLEMENTATION-RUNS.md` |
+| Read-only implementation-run compatibility observation | `IMPLEMENTATION-RUN-OBSERVATION.md` |
 | Probe-Tree semantic clarification behavior | `PROBE-TREE.md` |
-| Session ownership and reference release mechanics | `START-WORKFLOW.md` and `RELEASE-WORKFLOW.md` |
+| Session ownership and reference release mechanics | pinned `agentic-os/docs/START-WORKFLOW.md` and `agentic-os/docs/RELEASE-WORKFLOW.md` |
 | Dependency-ordered cross-repository integration | `INTEGRATION-ORDER.md` |
 | Upstream dependency admission and bounded continuation | `UPSTREAM-DEPENDENCY-ADMISSION.md` |
-| Provider-neutral release semantics, receipts, proof surfaces, and cleanup | `CANONICAL-LIFECYCLE.md` |
-| Session-end worktree audit and safe cleanup | `START-WORKFLOW.md` and `scripts/worktree-lifecycle.mjs` |
-| Planning lifecycle | `TODO.md` and the active monthly shard |
+| Provider-neutral lifecycle, proof, and exact cleanup | pinned `agentic-os/docs/adlc-guidelines.md` and the committed `.agentic-os.json` profile |
+| Planning lifecycle | `TODO.md` and one immutable Context record per task |
 | Proof and validation | `RUNTIME-PROOF.md` and `VALIDATION-RUNBOOK.md` |
 
 ## Instruction Placement

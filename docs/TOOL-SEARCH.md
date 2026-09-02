@@ -69,6 +69,15 @@ Defaults allow 32 active sessions, 256 tools per session, nine tools per namespa
 
 Every completion reports loaded names, remaining deferred count, immutable-prefix status, and a cost log. Client and hosted adapters must report model, prompt tokens, completion tokens, cache hits, and estimated cost. Preflight blocks use the explicit `not-run` zero-cost state; attempted search without usable cost evidence reports nullable `unreported` fields. `providerContextReduction` remains `unverified` in readiness and offline results.
 
+When the Worker has a configured `KNOWGRPH_MCP_ENDPOINT` and at least one real
+upstream execution lane enabled through Function Calling or the autonomous
+runtime, the default app wiring seeds a deterministic session-catalog client
+search owner. That makes `toolSearch.configured` truthful for the configured
+runtime without exposing deferred schemas outside the active session. The owner
+searches only current session metadata, returns exact session tool names, and
+reports zero-cost local evidence; it still does not claim live provider context
+reduction.
+
 ## VCCs
 
 - Given one direct tool and several deferred tools, when a client search selects one exact name, then only that definition appears in the append-only output, the initial context remains unchanged, and unselected tools stay unauthorized.

@@ -3,21 +3,21 @@ import {
   skillEvolutionResultValidationFields,
 } from "./skill-evolution-result.js";
 import {
-  createKnowgrphKnowledgeGraphClient,
-  KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
-  KNOWLEDGE_GRAPH_MCP_TOOLS,
+  createKnowgrphAgenticGraphClient,
+  AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE,
+  AGENTIC_GRAPH_MCP_TOOLS,
   KnowgrphMcpError,
 } from "./knowgrph-mcp-contract.js";
 
 export {
-  createKnowgrphKnowledgeGraphClient,
-  KNOWLEDGE_GRAPH_DEFAULT_PARSER_PROFILE,
-  KNOWLEDGE_GRAPH_MCP_TOOLS,
+  createKnowgrphAgenticGraphClient,
+  AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE,
+  AGENTIC_GRAPH_MCP_TOOLS,
   KnowgrphMcpError,
-  validateKnowledgeGraphIngestResult,
-  validateKnowledgeGraphParserResult,
-  validateKnowledgeGraphReadResult,
-  validateKnowledgeGraphRequest,
+  validateAgenticGraphIngestResult,
+  validateAgenticGraphParserResult,
+  validateAgenticGraphReadResult,
+  validateAgenticGraphRequest,
 } from "./knowgrph-mcp-contract.js";
 
 // Keyless MCP Streamable HTTP client for the agentic-canvas-os product tier.
@@ -247,7 +247,7 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     return extractToolResult(parseMcpReply(bodyText, getHeader("content-type")));
   }
 
-  function localKnowledgeGraphCall(toolName, args, opts) {
+  function localAgenticGraphCall(toolName, args, opts) {
     let parsed;
     try {
       parsed = new URL(url);
@@ -261,26 +261,26 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
       || /^127(?:\.[0-9]{1,3}){3}$/u.test(hostname);
     if (!loopback) {
       throw new KnowgrphMcpError(
-        "knowledge graph calls require a local MCP endpoint",
-        { code: "mcp_knowledge_graph_local_transport_required" },
+        "agentic graph calls require a local MCP endpoint",
+        { code: "mcp_agentic_graph_local_transport_required" },
       );
     }
     return callTool(toolName, args, opts);
   }
 
-  const knowledgeGraph = createKnowgrphKnowledgeGraphClient({
-    callTool: localKnowledgeGraphCall,
+  const agenticGraph = createKnowgrphAgenticGraphClient({
+    callTool: localAgenticGraphCall,
   });
   return {
     endpoint: url,
     callTool,
     runVideoRemix(input, opts) {
-      return callTool("knowgrph.video_remix.run", input, opts);
+      return callTool("agenticgraph.video_remix.run", input, opts);
     },
     invokeDocsGrammar(input, opts) {
-      return callTool("knowgrph.agentic_canvas_os.docs.invoke", input, opts);
+      return callTool("agenticgraph.agentic_canvas_os.docs.invoke", input, opts);
     },
-    ...knowledgeGraph,
+    ...agenticGraph,
     async evolveSkill(input, opts) {
       const expectedOperation = input?.operation;
       if (!isSkillEvolutionOperation(expectedOperation)) {
@@ -289,7 +289,7 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
           data: { fields: ["operation"] },
         });
       }
-      const result = await callTool("knowgrph.skill.evolve", input, opts);
+      const result = await callTool("agenticgraph.skill.evolve", input, opts);
       return validateSkillEvolutionResult(result, { expectedOperation });
     },
   };

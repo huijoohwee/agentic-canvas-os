@@ -1,0 +1,7 @@
+{
+  "name": "Agentic Canvas OS hybrid workspace",
+  "image": "node:22-bookworm",
+  "remoteUser": "node",
+  "updateRemoteUserUID": true,
+  "postCreateCommand": "node ./scripts/cloud-workspace.mjs bootstrap --json"
+}

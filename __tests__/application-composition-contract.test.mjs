@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const application = read("docs/APPLICATION-COMPOSITION.md");
 const facts = read("docs/FACTS.md");
@@ -10,9 +10,9 @@ const gateway = read("docs/MCP-GATEWAY.md");
 const packageJson = JSON.parse(read("package.json"));
 const invocation = "/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof";
 const tools = [
-  "knowgrph.application.catalog",
-  "knowgrph.application.plan",
-  "knowgrph.application.execute",
+  "agenticgraph.application.catalog",
+  "agenticgraph.application.plan",
+  "agenticgraph.application.execute",
 ];
 const routes = [
   ["docs/DICTIONARY-COMMAND.md", "/application.compose"],
@@ -88,7 +88,7 @@ test("source-bound host component packs are bounded, deterministic, and inert", 
     /pure JSON data with a pack id, exact pack revision/,
     /no more than 16 component records/,
     /at most 100 components/,
-    /`workspace:\/`, `kgdoc:`, and `urn:knowgrph:`/,
+    /`workspace:\/`, `kgdoc:`, and `urn:agenticgraph:`/,
     /`source\.sha256` field containing exactly 64 lowercase hexadecimal characters/,
     /after removing only `source\.sha256`/,
     /packs by `\(pack id, exact revision, source URI\)`/,
@@ -99,14 +99,14 @@ test("source-bound host component packs are bounded, deterministic, and inert", 
     assert.match(application, required);
   }
   assert.match(application, /Let `SEG` be the exact lowercase ASCII grammar `\[a-z0-9\]\+\(\?:\[\._-\]\[a-z0-9\]\+\)\*`/);
-  assert.match(application, /`workspace:\/SEG\[\/SEG\.\.\.\]`, `kgdoc:SEG\[\/SEG\.\.\.\]`, and `urn:knowgrph:SEG\[:SEG\.\.\.\]`/);
+  assert.match(application, /`workspace:\/SEG\[\/SEG\.\.\.\]`, `kgdoc:SEG\[\/SEG\.\.\.\]`, and `urn:agenticgraph:SEG\[:SEG\.\.\.\]`/);
   assert.match(application, /first URN segment cannot be `http`, `https`, `file`, `ftp`, `ws`, or `wss`/);
   assert.match(application, /dot-only, traversal, consecutive or trailing punctuation, uppercase, tilde, backslash, authority, query, fragment, percent-encoded, nested-scheme, and network-shaped values are invalid/);
   assert.match(application, /never dereferenced by the composition subsystem/);
   assert.match(application, /MCP callers and application manifests cannot provide, select, or override packs/);
   assert.match(application, /pack-content digest mismatch is admission drift/);
   assert.match(application, /none of the three tools becomes available for that rejected set/);
-  assert.match(application, /`knowgrph\.application\.catalog` returns its current digests, while plan and execute reject the stale proof/);
+  assert.match(application, /`agenticgraph\.application\.catalog` returns its current digests, while plan and execute reject the stale proof/);
   assert.match(application, /does not claim a persisted cross-process baseline/);
   assert.match(application, /definition digests cover its normalized component definition independently of unrelated members/);
   assert.match(application, /requires explicit proof refresh and replanning/);
@@ -196,6 +196,9 @@ function hasHashedWordWindow(source, size, expectedDigest) {
 function trackedTextSources() {
   const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0").filter(Boolean);
   return files.flatMap((file) => {
+    // A staged or unstaged deletion remains in the index until the lane is
+    // committed. It has no working-tree bytes to audit.
+    if (!existsSync(file)) return [];
     const bytes = readFileSync(file);
     return bytes.includes(0) ? [] : [[file, bytes.toString("utf8")]];
   });

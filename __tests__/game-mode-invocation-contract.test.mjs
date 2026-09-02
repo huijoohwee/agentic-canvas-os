@@ -36,8 +36,8 @@ test("repository keeps one canonical Game Mode invocation tuple", () => {
     invocation: "/game.mode @canvas #gameplay",
   });
   assert.deepEqual(GAME_MODE_WEB_MCP_TOOLS, [
-    "knowgrph.inspect_local_game_mode",
-    "knowgrph.control_local_game_mode",
+    "agenticgraph.inspect_local_game_mode",
+    "agenticgraph.control_local_game_mode",
   ]);
   assert.deepEqual(validateGameModeInvocationContractDocuments(repositoryDocuments), []);
 });

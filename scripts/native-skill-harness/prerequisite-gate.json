@@ -1,0 +1,100 @@
+{
+  "schema": "acos-prerequisite-gate/v1",
+  "feature": "native-skill-creation-harness",
+  "state": "waived",
+  "prerequisites": [
+    {
+      "name": "gateway-federation.function-calling-configured",
+      "readiness_pointer": "/functionCalling/configured",
+      "expected": "true",
+      "observed": "false",
+      "evidence_reference": "GET /api/ready readiness().functionCalling.configured in agent-api/src/app.js; false in the shipped default because no OpenAI function adapter config is set",
+      "met": false
+    },
+    {
+      "name": "gateway-federation.function-calling-provider-execution",
+      "readiness_pointer": "/functionCalling/providerExecutionStatus",
+      "expected": "not:unverified",
+      "observed": "unverified",
+      "evidence_reference": "GET /api/ready readiness().functionCalling.providerExecutionStatus in agent-api/src/app.js; the literal string unverified in the shipped default",
+      "met": false
+    },
+    {
+      "name": "gateway-federation.tool-search-configured",
+      "readiness_pointer": "/toolSearch/configured",
+      "expected": "true",
+      "observed": "false",
+      "evidence_reference": "GET /api/ready readiness().toolSearch.configured in agent-api/src/app.js; false in the shipped default because clientSearchConfigured requires a session catalog",
+      "met": false
+    },
+    {
+      "name": "gateway-federation.agent-definitions-configured",
+      "readiness_pointer": "/agentDefinitions/configured",
+      "expected": "true",
+      "observed": "false",
+      "evidence_reference": "GET /api/ready readiness().agentDefinitions.configured in agent-api/src/app.js; false in the shipped default Worker because the default registers no agents",
+      "met": false
+    },
+    {
+      "name": "gateway-federation.agent-definitions-provider-execution",
+      "readiness_pointer": "/agentDefinitions/providerExecutionStatus",
+      "expected": "not:unverified",
+      "observed": "unverified",
+      "evidence_reference": "GET /api/ready readiness().agentDefinitions.providerExecutionStatus in agent-api/src/app.js; the literal string unverified",
+      "met": false
+    },
+    {
+      "name": "spend-safety.model-providers-configured",
+      "readiness_pointer": "/modelProviders/configured",
+      "expected": "true",
+      "observed": "false",
+      "evidence_reference": "GET /api/ready readiness().modelProviders.configured in agent-api/src/app.js; false in the shipped default because no AGENT_MODEL_* environment is resolved",
+      "met": false
+    },
+    {
+      "name": "spend-safety.model-providers-provider-execution",
+      "readiness_pointer": "/modelProviders/providerExecutionStatus",
+      "expected": "not:unverified",
+      "observed": "unverified",
+      "evidence_reference": "GET /api/ready readiness().modelProviders.providerExecutionStatus in agent-api/src/app.js; the literal string unverified",
+      "met": false
+    }
+  ],
+  "unmet": [
+    "gateway-federation.function-calling-configured",
+    "gateway-federation.function-calling-provider-execution",
+    "gateway-federation.tool-search-configured",
+    "gateway-federation.agent-definitions-configured",
+    "gateway-federation.agent-definitions-provider-execution",
+    "spend-safety.model-providers-configured",
+    "spend-safety.model-providers-provider-execution"
+  ],
+  "accepted_unmet": [
+    "gateway-federation.function-calling-configured",
+    "gateway-federation.function-calling-provider-execution",
+    "gateway-federation.tool-search-configured",
+    "gateway-federation.agent-definitions-configured",
+    "gateway-federation.agent-definitions-provider-execution",
+    "spend-safety.model-providers-configured",
+    "spend-safety.model-providers-provider-execution"
+  ],
+  "operator_instruction_reference": "operator://native-skill-harness/waive-prerequisite-gate/2026-08-17",
+  "observation_gap": "no dedicated spendSafety readiness key exists; the modelProviders fields are used as a proxy for the PRD's spend-safety prerequisite",
+  "pre_feature_wrangler_sha256": "32f1c08f4833f04bcce5bae2f851289ae9b3e779e273eca86877ed654d806c46",
+  "permitted_while_blocked": [
+    "the three harness module files exporting factories, strict validators, typed error classes, and frozen result shapes",
+    "the status field, the snapshot() projection, and their validators in agent-definitions.js",
+    "the createDurableObjectSkillDraftStore factory in durable-object-state-store.js",
+    "the unit tests, property tests, and audit scripts",
+    "readiness keys that report configured false",
+    "the prerequisite gate record and its check script",
+    "invocation register declarations and the recorded decisions document"
+  ],
+  "forbidden_while_blocked": [
+    "any wrangler.jsonc change",
+    "constructing a Skill_Proposer in worker/index.js with a live model adapter attached",
+    "any code path that reaches promote with a resolvable operator instruction reference",
+    "any non-configured-false readiness claim for skillProposer, skillRegistryGate, or adapterRegistration"
+  ],
+  "recorded_at_ms": 1786959000000
+}

@@ -257,7 +257,7 @@ MoA harnesses are one-shot deliberation contracts. External MoA systems may info
 | Stage | Harness input | Harness output | Guard |
 |---|---|---|---|
 | Preset resolution | `{ presetRef, prompt, contextRef }` | Resolved local preset, usage response, or typed missing-preset error. | Bare `/moa` returns usage; recursive MoA aggregator is rejected before spend. |
-| Reference fan-out | `{ references[], prompt, trimmedContext, caps }` | Advisory reference outputs or typed reference failures. | No tools, no mutation, max tokens, timeout, and cost logging are required. |
+| Reference fan-out | `{ references[], prompt, trimmedContext, caps }` | Input-ordered advisory outcomes plus attempted, succeeded, failed, and setup-failure totals. | Every independent reference settles fail-soft; sibling failure cannot erase a success; raw adapter errors stay out of the audit ledger; no tools, mutation, uncapped tokens, or unbounded time are allowed. |
 | Private context assembly | `{ referenceLedger, prompt, contextRef }` | Aggregator context packet. | Advisory outputs are private context, not source truth or generated docs. |
 | Aggregation | `{ aggregator, contextPacket, toolSchemas, approvals[] }` | User-visible response, tool request, or typed fallback. | Aggregator owns final answer and normal approval gates. |
 | Restore | `{ priorModelContext, runId, costLog }` | Restored model or agent context and proof ledger. | `/moa` does not globally switch models or persist copied presets. |
@@ -266,7 +266,7 @@ MoA harnesses are one-shot deliberation contracts. External MoA systems may info
 
 | Guardrail | Requirement |
 |---|---|
-| Reference cap | Every reference call names max tokens, timeout, and failover policy. |
+| Reference cap | Every reference call names max tokens, timeout, and fail-soft settlement policy. |
 | Aggregator-only action | Tool calls, mutation, and transcript persistence are aggregator-owned. |
 | Cost separation | Cost log separates reference and aggregator token counts, cache hits, failures, and estimated cost. |
 | Prompt cache | Stable prompt prefixes and cached context should be reused; advisory tails stay bounded. |
@@ -393,7 +393,7 @@ Direct function calling exposes strict application-owned declarations to a model
 
 The controller bounds tools, schema size, model turns, total calls, parallel width, result size, and stage duration. Tool Search supplies only direct or already-loaded definitions; Programmatic Tool Calling remains a separate route for predictable read-only reductions. Offline proof does not establish live provider or gateway execution.
 
-The concrete Dev adapter uses the OpenAI Responses protocol only after explicit server-side model, key, and pricing configuration. The HTTP caller supplies no schemas, routes, review ids, stored state, or approval arrays. `read_agentic_os_status` maps through an explicit allowlist to Knowgrph's existing `knowgrph.os.status` MCP owner, where caller type, immutable policy, tool-input guardrail, result shape, tool-output guardrail, and zero-cost evidence are revalidated. Optional application review policy pauses that same path. The manager stores the private response chain under a per-run Durable Object identity, while a separate receipt owner stores reviewed execution authorization before MCP, fences one claimant, sends a stable idempotency key, and replays terminal output. Mutating mappings additionally require an exact native receipt from Knowgrph; none is enabled yet. Returned provider reasoning stays private and is deleted with terminal continuation state.
+The concrete Dev adapter uses the OpenAI Responses protocol only after explicit server-side model, key, and pricing configuration. The HTTP caller supplies no schemas, routes, review ids, stored state, or approval arrays. `read_agentic_os_status` maps through an explicit allowlist to Knowgrph's existing `agenticgraph.os.status` MCP owner, where caller type, immutable policy, tool-input guardrail, result shape, tool-output guardrail, and zero-cost evidence are revalidated. Optional application review policy pauses that same path. The manager stores the private response chain under a per-run Durable Object identity, while a separate receipt owner stores reviewed execution authorization before MCP, fences one claimant, sends a stable idempotency key, and replays terminal output. Mutating mappings additionally require an exact native receipt from Knowgrph; none is enabled yet. Returned provider reasoning stays private and is deleted with terminal continuation state.
 
 ## Programmatic Tool Calling Harness Contract
 

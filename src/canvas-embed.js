@@ -1,8 +1,8 @@
-// Run-scoped knowgrph canvas embed for the agentic-canvas-os product tier.
+// Run-scoped AgenticGraph canvas embed for the agentic-canvas-os product tier.
 //
-// The knowgrph Storyboard_Harness emits a Kgc_Document (`kgc-computing-flow/v1`,
-// one node per planned shot). This product tier EMBEDS the live knowgrph canvas
-// doc-view scoped to the run rather than reimplementing the renderer — knowgrph
+// The AgenticGraph Storyboard_Harness emits a Kgc_Document (`kgc-computing-flow/v1`,
+// one node per planned shot). This product tier EMBEDS the live AgenticGraph canvas
+// doc-view scoped to the run rather than reimplementing the renderer — AgenticGraph
 // owns the canvas engine, agentic-canvas-os is the shell around it.
 //
 // SCHEME MIRROR: the doc-view URL scheme + embed security attributes mirror the
@@ -119,7 +119,7 @@ export function buildCanvasEmbed(manifest, opts = {}) {
     docId: "",
     sandbox: CANVAS_EMBED_SANDBOX,
     referrerPolicy: CANVAS_EMBED_REFERRER_POLICY,
-    title: "knowgrph canvas",
+    title: "AgenticGraph canvas",
     reason: "",
   };
 
@@ -131,5 +131,5 @@ export function buildCanvasEmbed(manifest, opts = {}) {
   const src = resolveCanvasDocViewUrl({ baseUrl, runId, docId });
   if (!src) return { ...base, reason: "canvas URL could not be resolved" };
 
-  return { ...base, available: true, src, docId, title: `knowgrph canvas — run ${runId}` };
+  return { ...base, available: true, src, docId, title: `AgenticGraph canvas — run ${runId}` };
 }

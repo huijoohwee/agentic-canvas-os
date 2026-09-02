@@ -14,7 +14,7 @@ export const REPOSITORY_PACKING_INVOCATION = Object.freeze({
   binding: "@repository-root",
   proofBinding: "@runtime-proof",
   text: "/repository.pack #repository-packing @repository-root @runtime-proof",
-  tool: "knowgrph.repository.pack",
+  tool: "agenticgraph.repository.pack",
 });
 
 export const REPOSITORY_PACKING_BOUNDS = Object.freeze({
@@ -78,9 +78,9 @@ export const REPOSITORY_PACKING_DOCUMENTS = Object.freeze([
   "README.md",
 ]);
 
-export const REPOSITORY_PACKING_SOURCE_ROOTS = Object.freeze([".githooks", ".github", "__tests__", "agent-api/src", "scripts", "src", "web", "worker"]);
+export const REPOSITORY_PACKING_SOURCE_ROOTS = Object.freeze([".github", "__tests__", "agent-api/src", "scripts", "src", "web", "worker"]);
 export const REPOSITORY_PACKING_SOURCE_FILES = Object.freeze(["wrangler.jsonc"]);
-const COMPOSITION_ROW = "| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |";
+const COMPOSITION_ROW = "| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `agenticgraph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |";
 const EXTERNAL_PROJECT = ["repo", "mix"].join("");
 const PLANNING_CONTEXT = "repository-packing-ai-friendly-single-file-runtime";
 const PLANNING_DATE = "2026-07-24";
@@ -118,8 +118,8 @@ const PROJECTION_ROWS = Object.freeze([
   {
     document: "MCP-GATEWAY.md",
     sectionStart: "## Repository Packing Capability",
-    sectionEnd: "## Managed Implementation Run Capabilities",
-    key: "`knowgrph.repository.pack`",
+    sectionEnd: "## Workspace Artifact Lifecycle Capabilities",
+    key: "`agenticgraph.repository.pack`",
     columns: 3,
     markers: ["return verified metadata only", "Local, idempotent, bounded, zero-network, zero-model, and zero-cost", "Prod, and Cloudflare fail before publication"],
   },

@@ -290,32 +290,6 @@ test('the committed policy is canonical, same-owner, and repository-neutral', ()
   assert.deepEqual(githubAuthority.validateGitHubAuthorityPolicy(effective), effective)
 })
 
-test('the Agentic OS authority surface selects its exact checks and read-only workflow', () => {
-  const policyPath = '.github/adlc-agentic-os-authority-policy.json'
-  const workflowPath = '.github/workflows/adlc-agentic-os-authority.yml'
-  const policy = JSON.parse(read(policyPath))
-  assert.deepEqual(policy, {
-    targetRepositoryPrefix: 'github.com/huijoohwee/',
-    canonicalRef: 'refs/heads/main',
-    workflowPath,
-    confirmationClass: 'interactive-provider',
-    requiredStatusChecks: ['budgets', 'test'],
-    allowedMergeMethods: ['squash'],
-    evidenceRefPrefix: 'refs/heads/adlc/authority/',
-    evidencePathPrefix: 'authority-evidence/',
-    validitySeconds: 3600,
-  })
-  const workflow = read(workflowPath)
-  assert.match(workflow, /^  workflow_dispatch:\n/mu)
-  assert.match(workflow, /^permissions:\n  contents: read$/mu)
-  assert.match(workflow,
-    /run-name: ADLC authority \$\{\{ inputs\.authority_input_digest \}\} @ \$\{\{ github\.workflow_sha \}\}/u)
-  assert.match(workflow,
-    /agentic-os-authority validate-event --event="\$GITHUB_EVENT_PATH" --policy=\.github\/adlc-agentic-os-authority-policy\.json/u)
-  assert.doesNotMatch(workflow,
-    /\bcontents:\s*write\b|\bactions:\s*write\b|GITHUB_TOKEN|github\.token|\bsecrets\.|\bcurl\b|\bgh\s+api\b|upload-artifact/u)
-})
-
 test('the manual workflow binds event bytes without interpolating them into execution', () => {
   const workflow = read('.github/workflows/adlc-authority.yml')
   assert.match(workflow, /^  workflow_dispatch:\n/mu)

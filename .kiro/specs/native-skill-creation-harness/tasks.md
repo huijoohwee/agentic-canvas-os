@@ -193,18 +193,16 @@ at the end and is not part of this increment.
     - Record that the timed test reports the observed p95 next to the threshold
     - _Requirements: 18.1, 18.2_
 
-  - [ ] 2.7 Record the module budget and sequencing accounting
+  - [ ] 2.7 Record the product module budget accounting
     - Record the pre-feature baseline of 59 `agent-api/src/` modules and 19,834 lines across
       `worker/`, `src/`, and `agent-api/src/`, and the projection after this feature (63 modules,
       roughly 21,100 lines, plus 4 scripts and the new test files)
-    - Record the sequencing decision that this feature ships after the teardown effort, that the
-      decision is made against the task-branch version of the `repository-teardown` spec at
-      `$GITHUB_ROOT/.worktrees/agentic-canvas-os/repository-teardown-20260816/.kiro/specs/repository-teardown/`
-      rather than a merged version, and that the operator instruction accepting that order does not
-      exist yet
-    - Record the mitigating fact that `tool-search.js` and the Agent Definition registry are
-      statically imported by `worker/index.js` and reported at `GET /api/ready`, classifying them as
-      Proven_Path so the dependency base survives the teardown
+    - Record which existing product modules can be reused and justify every net-new module against
+      single-owner and acyclic-dependency constraints
+    - Record that `tool-search.js` and the Agent Definition registry are already imported by
+      `worker/index.js` and reported at `GET /api/ready`, so the feature reuses those owners
+    - Assert that the feature introduces no repository-lifecycle controller or policy; repository
+      admission, integration, synchronization, retirement, and cleanup stay with pinned `agentic-os`
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5_
 
   - [ ] 2.8 Record the TCO and rollback statement
@@ -742,7 +740,6 @@ None of it is in the numbered plan.
 - Any real promotion through the gate with a resolvable Operator_Instruction_Reference.
 - Raising the readiness rung above `spec-complete`, which additionally requires cited passing test
   commands per `docs/RUNTIME-READINESS.md`.
-- The operator instruction accepting the sequencing order recorded in Task 2.7.
 
 ## Notes
 

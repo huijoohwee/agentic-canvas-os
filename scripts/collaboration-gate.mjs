@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { digestValue } from "./cloud-collaboration-primitives.mjs";
+import { digestValue } from "./product-contract-primitives.mjs";
 import { createCollaborationGateSandbox } from "./collaboration-gate-sandbox.mjs";
 import { withPrivateOperationLock } from "./private-operation-lock.mjs";
 

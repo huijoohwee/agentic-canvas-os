@@ -9,8 +9,8 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "2aa301248a2020580de1d0cb7ddf318189e5488f735a86725ec558ee08f7641f"
-catalog_entry_count: 416
+catalog_digest: "66ee9f46031d54282c635e69bf04aadd089f26f5e900531e3454ba23abefc0d0"
+catalog_entry_count: 406
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "scripts/dictionary-catalog-contract.mjs"
 source_docs:
@@ -23,13 +23,10 @@ source_docs:
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
-  - "AGENTIC-SDLC-RUNTIME.md"
-  - "MANAGED-IMPLEMENTATION-RUNS.md"
+  - "IMPLEMENTATION-RUN-OBSERVATION.md"
   - "MCP-GATEWAY.md"
-  - "WORKSPACE-PARALLELISM.md"
   - "VALIDATION-RUNBOOK.md"
-  - "START-WORKFLOW.md"
-  - "RELEASE-WORKFLOW.md"
+  - "../AGENTS.md"
   - "docs/documents/git-guidelines.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
@@ -123,8 +120,6 @@ dictionary_entries:
   - "/runtime-ready.check"
   - "/instruction.audit"
   - "/instruction.quality-evaluate"
-  - "/session.start"
-  - "/implementation.run"
   - "/sdlc.observe"
   - "/ecs.session-start"
   - "/ecs.world-tick"
@@ -141,11 +136,8 @@ dictionary_entries:
   - "/payment.receipt.project"
   - "/payment.refund"
   - "/payment.readiness"
-  - "/workspace.parallelism.check"
   - "/coordination.schedule"
   - "/goal.advance"
-  - "/workspace.operation.review"
-  - "/workspace.guards.install"
   - "/canvas.project"
   - "/canvas.render"
   - "/canvas.node.add"
@@ -289,13 +281,11 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/runtime-ready.check` | Verify whether a spec-complete artifact or exact local Git worktree is runnable. | `@local-harness`, `@runtime-proof`, and `@repository-root` for repository audits | `#harness`, `#vcc`, `#runtime-ready` | Focused checks or the bounded source-admission evaluator emit layer-specific proof, stable findings, zero-cost evidence, and unchanged deploy boundaries; exit 0 applies only to the requested proven layer. |
 | `/instruction.audit` | Audit always-on guidance and skill catalog context without model calls or source mutation. | `@instruction-source`, `@local-harness`, `@runtime-proof` | `#instruction-audit`, `#progressive-disclosure`, `#runtime-ready` | Required intent remains present; context budgets, duplicate instructions, embedded procedures, and owner leakage pass with exact zero model cost. |
 | `/instruction.quality-evaluate` | Score recorded or live final answers against the bounded instruction task-quality suite. | `@instruction-eval-suite`, `@runtime-proof`, `@operator` | `#instruction-quality`, `#vcc`, `#runtime-ready` | Every registered case passes required concepts, forbidden-claim screening, and word budgets with explicit candidate provenance and human review. |
-| `/session.start` | Start one conflict-safe Codex build lane from current remote state. | `@operator`, `@working-directory`, `@runtime-proof` | `#multi-agent-collaboration`, `#runtime-ready`, `#vcc` | Remote refs are fetched, the clean registered `main` worktree remains the runtime owner, and one detached registered task worktree claims a unique contract-valid `agent/<device>/<semantic-scope>` branch and branch-bound lease; `.local` remains valid only in the device segment, invalid identity fails before checkout mutation, and Prod or Cloudflare remains unchanged. |
-| `/implementation.run` | Turn one durable work item into an isolated, managed implementation run through the Knowgrph local MCP supervisor and ACOS lifecycle owner. | `@work-item`, `@implementation-run`, `@sandbox-workspace`, `@runtime-proof`, and `@operator` for mutating start, review, or delivery control | `#managed-implementation-run`, `#multi-agent-collaboration`, `#runtime-ready` | Plan is zero-mutation; start provisions and claims one fenced task worktree; configured execution and bounded verification produce durable evidence; pause, cancel, retry, and review controls are explicit, with retry performing fenced resumption when needed; the run stops `delivery_ready` when ACOS reports `review_ready`, without automatic merge or deploy. |
 | `/sdlc.observe` | Project one immutable local Agentic SDLC ledger receipt into end-to-end execution, evidence, cost, gate, and release-lifecycle graph context through the existing AgenticGraph Canvas owner. | exactly `@implementation-run`, `@canvas`, and `@runtime-proof` | exactly `#agentic-sdlc-observability` | `agenticgraph.agentic_sdlc.observe` returns `agenticgraph-agentic-sdlc-observation/v1` with source identity, typed status and conformance, deterministic GraphData plus KGC Markdown, cache evidence, and zero model, network, token, and cost use; `verified`, `delivery_ready`, and `deployed` remain distinct claims, and no ledger, Canvas source, release state, Prod mirror, or Cloudflare target is mutated. |
 | `/ecs.session-start` | Hydrate one bounded native ECS session from a repository-owned KGC Markdown document. | `@source.frontmatter`, `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#mcp`, `#dev-only` | `agenticgraph.ecs.session_start` validates a safe workspace-relative `.md` path, hydrates registered components and entities deterministically, and returns a private session id plus zero-spend proof without network, Prod, or Cloudflare capability. |
 | `/ecs.world-tick` | Advance one hydrated ECS session through its ordered systems and bounded reasoning boundary. | `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#token-economics`, `#dev-only` | `agenticgraph.ecs.world_tick` resolves a live session, commits successful systems in order, rolls back only a failing system, and reports decisions plus `cost_logs`; timeout or unavailable reasoning defers without invented decisions or spend. |
 | `/ecs.decision-persist` | Persist only pending ECS decisions from one live session into its source KGC document. | `@ecs-session`, `@source.frontmatter`, `@runtime-proof` | `#agentic-ecs`, `#frontmatter`, `#dev-only` | `agenticgraph.ecs.decision_persist` atomically and idempotently appends validated `EcsDecision` nodes, preserves unrelated authored bytes, closes the session on success or zero pending decisions, and retains it after failure for retry. |
-| `/release.complete` | Complete one exact bounded release through the provider-neutral lifecycle and its selected implementation adapter. | `@operator`, `@source.frontmatter`, `@runtime-proof` | `#runtime-ready`, `#multi-agent-collaboration`, `#vcc` | The canonical target-and-candidate release key, authenticated operator decision, and joined terminal receipt chain govern `production-complete`; a remote transport may inspect or continue only the existing run and grants no authority. |
+| `/release.complete` | Authorize and verify one exact bounded product release through its selected deployment adapter. | `@operator`, `@source.frontmatter`, `@runtime-proof` | `#runtime-ready`, `#multi-agent-collaboration`, `#vcc` | The candidate digest, authenticated operator decision, immutable product artifact, target verification, and rollback evidence govern `production-complete`; repository integration and cleanup stay with ADLC. |
 | `/deploy.guard` | Stop accidental Prod mirror or Cloudflare mutation. | `@operator`, `@dev-only` | `#no-deploy`, `#approval-gate` | Output states Dev-only status and no Prod/Cloudflare mutation occurred. |
 | `/harness.define` | Define typed input, output, fallback, cost, and bounds for an AI-capable component. | `@local-harness`, `@cost-log` | `#harness`, `#token-economics`, `#vcc` | Harness contract includes schemas, cost fields, fallback paths, and max iteration. |
 | `/mcp.capabilities` | Discover tool capabilities through the existing MCP gateway contract. | `@mcp-gateway`, `@local-harness` | `#mcp`, `#runtime-ready`, `#cost` | Capability list is deduplicated and discovery reports zero model spend. |
@@ -307,11 +297,8 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/payment.receipt.project` | Serialize terminal payment records into one locally readable document and parse that document back without loss. | `@payment-record`, `@payment-intent`, `@runtime-proof` | `#payment-data-minimization`, `#offline-intent-queue`, `#vcc` | Every terminal record yields exactly one entry, parse then print and print then parse then print are byte-identical, a malformed document returns a typed parse error naming the failing line with bytes unchanged, no prohibited identifier appears in any entry, and the receipt view renders with zero network requests. |
 | `/payment.refund` | Create one refund on the rail that settled the original payment. | `@payment-intent`, `@payment-provider`, `@cost-log`, `@operator` | `#payment-settlement-integrity`, `#approval-gate`, `#vcc` | A refund on a settled record records a refund reference on the settling rail, a repeated request leaves the refunded amount unchanged, a non-settled record returns a typed not-applicable result with zero provider contact, and every recorded failure carries the provider request identifier where the provider supplies one. |
 | `/payment.readiness` | Report per-rail payment configuration completeness without mutating configuration. | `@payment-readiness`, `@payment-rail`, `@runtime-proof` | `#payment-readiness`, `#dev-only`, `#runtime-ready` | The gate lists required credential names per rail, reports presence in server-side secret storage, fails when a credential name or value appears in client bundle output or visible runtime variables, reports the pinned provider API version and configured integration model, marks a rail ready only after a sandbox payment on that rail reached a terminal state, performs zero writes, and exits non-zero on any missing required input. |
-| `/workspace.parallelism.check` | Audit every lane across the sibling repositories in one workspace root and report which lanes hold work no destructive operation could restore. | `@workspace-lane`, `@recovery-reference`, `@runtime-proof` | `#workspace-parallelism`, `#dev-only`, `#truth` | One lane owns one session, one branch is live in at most one worktree, one semantic scope per repository has one session owner, every at-risk lane is named with its dirty and untracked counts, the audit writes nothing, and readiness is true only when no lane holds untracked work or unreferenced modifications. |
 | `/coordination.schedule` | Partition independently authorized tasks into deterministic bounded waves without executing them. | `@coordination-plan`, `@runtime-proof` | `#coordination-scheduler`, `#workspace-parallelism`, `#truth` | Only current claims enter ready waves; waiting or non-writing claims retain typed dispositions, overlapping write sets serialize, dependencies propagate locally, and global attention is non-blocking only with digest-bound disjoint affected scope. The report grants no mutation or deployment authority. |
 | `/goal.advance` | Derive the next non-blocking advance decision for one declared goal from its unit set and its recorded outcomes. | exactly `@goal-plan` and `@runtime-proof` | exactly `#goal-completion` | Weights derive deterministically from recorded outcomes with a neutral prior for unseen kinds and may only reorder the ready set; unauthorized gated units are refused; each blocked unit bounds itself and its dependents while the goal stays continuable; the frozen digest-bound receipt dispatches nothing and grants no mutation, integration, release, or deployment authority. |
-| `/workspace.operation.review` | Return one fail-closed decision for a candidate destructive Git operation before it runs. | `@workspace-lane`, `@recovery-reference`, `@operator` | `#destructive-operation-guard`, `#approval-gate`, `#vcc` | The operation is classified against the explicit forbidden catalog, a foreign-owned lane is refused, any other session holding uncommitted or untracked work in that repository refuses the operation, untracked paths in the target lane refuse it outright, modified tracked paths without a durable recovery reference refuse it, and no catalog operation ever returns a plain allow. |
-| `/workspace.guards.install` | Install the destructive-operation enforcement surfaces across every repository in the workspace root and report the classes no hook can reach. | `@workspace-lane`, `@recovery-reference`, `@operator` | `#destructive-operation-guard`, `#workspace-parallelism`, `#runtime-ready` | Every repository points `core.hooksPath` at one hook directory with no copied hook file, the pre-commit, pre-push, and reference-transaction surfaces are active, the PATH shim exposes the wrapper to external tooling, the coverage report names `untrackedRemoval`, `forcedCheckout`, and `objectPruning` as hook-unreachable and marks the wrapper required, and installation writes only hook configuration and the shim without touching any ref, index, or working tree. |
 | `/canvas.project` | Project source-backed runtime state into existing Canvas owners. | `@source.frontmatter`, `@source.body`, `@canvas` | `#canvas`, `#frontmatter`, `#runtime-ready` | Source-backed graph, table, or Storyboard surface renders without dashboard-only storage. |
 | `/canvas.render` | Inspect or trigger projection through existing Canvas render owners without mutating source graph data. | `@canvas`, `@source.frontmatter`, `@runtime-proof` | `#canvas`, `#runtime-ready`, `#vcc` | Canvas projection reports rendered graph, table, KGC, or Storyboard state without direct store mutation. |
 | `/canvas.node.add` | Create a graph node through existing Canvas owners at the resolved insertion point. | `@canvas`, `@canvas-center`, `@source.frontmatter` | `#canvas-node`, `#canvas-selection`, `#vcc` | Node creation uses shared graph mutation utilities, selects the committed node, and reports the resolved graph-space point. |
@@ -412,7 +399,6 @@ command:
 | `/tool.call` lacks described schema or real tool policy | Block before execution; never treat the bridge as approval. |
 | `/moa` references an MoA preset as aggregator | Reject with a typed recursion error before token spend. |
 | `/superagent.run` lacks sandbox scope, message gateway, checkpoint policy, or stop condition | Reject before execution; do not start an open-ended agent loop. |
-| `/implementation.run` lacks a canonical work item, configured runner, safe worktree, bounded verification, durable run store, or current fence | Reject before provisioning or execution; do not accept raw shell text, mutate canonical main, or infer completion. |
 | `/sdlc.observe` lacks an exact immutable `agentic-sdlc-ledger-receipt/v1`, expected revision, or expected ledger digest, or the source bytes drift | Return a typed read-only block before projection; do not infer a receipt, repair a ledger, translate `delivery_ready` into `verified`, infer `deployed`, call a model or network, or create a second graph store or renderer. |
 | `/application.compose` receives missing bindings, mutable or inexact references, digest drift, an incompatible capability or schema, a cyclic or ambiguous DAG, or executable, connection, or secret material | Reject before owner execution or spend; do not choose a fallback, upgrade, install, retry, migrate, connect, or deploy. |
 | `/agentic.graph.parser.generate` receives a missing, mutable, executable, ambiguous, oversized, or unsupported parser specification | Reject before registry compilation or publication; do not infer source matchers, download an adapter, execute caller code, fall back to a model or remote service, or start ingestion. |

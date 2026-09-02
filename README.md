@@ -9,185 +9,49 @@ secrets are Cloudflare secret bindings; the browser only sees public URLs.
 
 ## Start Here
 
-If you are working in this repo as a human contributor, use this file as the
-entrypoint and treat [`docs/`](./docs) as the agent control surface.
+This repository consumes one pinned global ADLC harness. Read [AGENTS.md](./AGENTS.md)
+first and continuously comply with the installed owners:
 
-Before executing any task, humans and AI tools should read:
+- `node_modules/agentic-os/templates/SYSTEM-PROMPT-RUNTIME.md`
+- `node_modules/agentic-os/docs/adlc-guidelines.md`
+- `node_modules/agentic-os/docs/START-WORKFLOW.md`
+- `node_modules/agentic-os/docs/RELEASE-WORKFLOW.md`
 
-1. [`docs/PROJECT-RULES.md`](./docs/PROJECT-RULES.md) for project-wide engineering and session-end rules.
-2. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md) for session start, registered task worktrees, and ownership rules.
-3. [`docs/VALIDATION-RUNBOOK.md`](./docs/VALIDATION-RUNBOOK.md) for focused checks and release gates.
+Load `node_modules/agentic-os/guides/AUTONOMOUS-GOAL-PURSUIT.md` on demand
+through the upstream guideline; do not copy its execution policy into ACOS.
 
-## GitHub-Native Collaboration Contract
-
-This repository's upstream collaboration baseline is GitHub-native:
-
-- protected canonical `main`
-- remotely addressable task branches
-- pull-request review and discussion
-- server-enforced required checks
-- merge receipts published by the protected remote
-
-Treat that baseline as the authoritative multi-device concurrent cloud
-collaboration contract. A local commit is private until it is mapped to a
-branch and pull request the remote can evaluate.
-
-The `device:*`, runtime, lease, and parking commands are this repository's
-agentic orchestration layer on top of that baseline. They are additive and
-replaceable. They do not create alternate merge authority, relax branch
-protection, reinterpret failed required checks, or make direct pushes to
-protected `main` the normal path.
-
-When a local tool, an IDE warning, or orchestration metadata disagrees with the
-protected remote state, fail closed in favor of GitHub's branch, pull request,
-and required-check state, then fix the repository-owned rule or adapter at the
-source.
+ACOS retains only product, deployment, rollback, validation, runtime-readiness,
+and authorization policy in [docs/PROJECT-RULES.md](./docs/PROJECT-RULES.md),
+[docs/VALIDATION-RUNBOOK.md](./docs/VALIDATION-RUNBOOK.md),
+[docs/RUNTIME-READINESS.md](./docs/RUNTIME-READINESS.md), the committed ADLC
+profile, and the authenticated authority/transition policies.
 
 Quick local path:
 
 ```bash
-npm install
+npm ci --ignore-scripts
 npm run doctor
+npm run doctor:product
+npm run status
 npm run check
 npm run dev
 ```
 
-Run the complete collaboration and runtime-identity proof from this repository with one command:
+Use `npm run lane -- <scope>`, `npm run land`, `npm run reap -- --ref=<lane>`,
+and `npm run sync:canonical` only under the pinned ADLC workflows. Required checks,
+protected integration, integration proof, retirement, exact worktree quarantine,
+canonical synchronization, deployment, and rollback remain separate authorized receipts.
+The ACOS profile permits quarantine of an exact eligible worktree projection and
+registration only; branches, refs, and unreachable objects remain retained.
+
+Run the complete product collaboration and runtime-identity proof with:
 
 ```bash
 npm run collaboration:gate
 ```
 
-The command delegates to the canonical Knowgrph runtime owner, starts isolated owner and guest browser contexts plus the local storage worker, verifies the shared room and runtime-identity digest, and cleans up automatically. It does not require physical devices or manual JSON exports.
-
-Safe pause or blocked exit:
-
-```bash
-npm run device:park
-```
-
-This preserves local task-branch work, proves the ownership pull request remains
-draft, pins dirty work to an immutable per-lease stash ref and commit, detaches
-that task worktree at fetched `origin/main`, and marks the task as paused or
-blocked. Exact same-session resume restores and verifies that object; moving
-`stash@{n}` selectors are never lifecycle identity. A parked branch is never
-completed work.
-
-Exceptional canonical-main equivalence recovery is a separate, explicit
-operation:
-
-```bash
-npm run canonical:main:recover -- \
-  --repository=<primary-main-worktree> \
-  --session=<stable-session> \
-  --expected-local-head=<exact-local-sha> \
-  --expected-origin-head=<exact-protected-sha> \
-  --acknowledge-equivalent-realignment \
-  --json
-```
-
-Use it only after protected integration has produced a different commit with
-the same patch as every local-only canonical commit. It fails before authored
-state mutation for an ordinary ahead/behind checkout, non-equivalent history,
-a linked worktree, missing exact expectations, or missing acknowledgement. A
-successful run leaves clean `main` at the fetched protected SHA while retaining
-the prior HEAD and all tracked, staged, and untracked dirt under immutable refs
-and content-addressed receipts. Ignored paths remain in place only after the
-adapter proves unchanged ignore rules and no filesystem-aware exact, ancestor,
-or descendant protected-target collision, then revalidates that proof at each
-realignment boundary. Git's no-overwrite-ignore switch guard closes the final
-proof-to-mutation race. Any unsafe ignored path blocks before preservation. The
-command does not merge, restore preserved dirt, review, release, or deploy.
-
-Managed autonomous runs hand work to the team without merging it:
-
-```bash
-npm run device:review -- --json
-```
-
-This validates and pushes the fenced task branch, preserves pull-request context, and marks it ready for review without an automerge label or merge call by default. The ACOS lease reports `review_ready`; the Knowgrph run ledger projects `delivery_ready`. Use exact-branch `device:resume` for requested changes; it restores and proves draft ownership before a new writer claim. `device:publish` remains the separate explicit protected-delivery action.
-
-For a pre-authorized terminal-turn protected merge, declare the immutable intent when the task lease is created:
-
-```bash
-npm run device:start -- <scope> --auto-delivery --session=<stable-session> --repository=<task-worktree>
-```
-
-Recommend `--auto-delivery` when the operator's task request explicitly names
-protected merge and downstream promotion or canonical runtime refresh as the
-intended terminal outcome. Do not recommend it for implementation-only,
-review-only, exploratory, diagnostic, or conversational work. The choice is
-made at task creation and remains immutable for that lease; a later request to
-deliver an existing review-ready task uses its explicit protected delivery
-path rather than rewriting the lease.
-
-For an eligible pre-authorized task, recommend the terminal implementation-turn
-ending as the delivery checkpoint: run the review handoff, wake protected
-auto-merge, and continue through canonical runtime reconciliation instead of
-stopping at `review_ready`. The ending consumes the authority recorded in the
-lease; it does not create authority by itself.
-
-Auto-delivery is eligible only when the implementation run is terminal: the requested work is genuinely complete, no required work remains, and the exact reviewed head satisfies every protected gate. An ordinary end-of-message, end-of-chat, end-of-session, or end-of-thread event is not a delivery hook. Questions, status reports, read-only work, waits, partial progress, dirty work, parked work, and blocked work never trigger delivery.
-
-The terminal review handoff then wakes the repository's trusted auto-delivery workflow. It accepts only the same-repository, non-draft PR whose hidden lease is `review_ready`, binds `reviewHeadSha` exactly to the current PR head, and carries both `autoDelivery` and `runtimeRequired`. The workflow enables GitHub protected auto-merge only; a changed head, a fork, a missing marker, or a conflict label fails closed. It never makes a runtime-ready or completion claim. The matching `device:integrate` run must use canonical runtime reconciliation—`--runtime=none` is rejected for this path—and reports success only as `runtime_ready` after protected merge, canonical convergence, and supervised local runtime proof.
-
-Repository recommendation: end every implementation turn with the lane or
-worktree payload either absorbed into canonical protected `origin/main` and the
-root checkout parked cleanly on `main`, or explicitly preserved through
-`device:park` while canonical `main` remains clean and exact.
-
-End each implementation turn with the canonical local runtime ready:
-
-```bash
-npm run turn:end -- --repository=<canonical-knowgrph-root> --json
-```
-
-This verifies clean protected `main` for both repositories, owns the fixed Apex
-and storage ports through a private supervisor token, rejects unmanaged
-listeners before mutation, and proves direct and proxied HTTP readiness.
-
-For interactive browser work that must hand off automatically at turn end,
-launch Vite through the session owner instead of invoking `dev:apex` directly:
-
-```bash
-npm run runtime:session:start -- \
-  --session="$AGENTIC_SESSION_ID" \
-  --repository=<canonical-knowgrph-root> --json
-```
-
-The launcher records a private token plus the exact session, PID and process
-group, process start time, command, working directory, Git common directory,
-source SHA, and port. The normal `turn:end` command reads `AGENTIC_SESSION_ID`,
-stops only that exact session-owned Vite group, and starts the canonical Apex
-and storage runtime under the same host lock. It returns success only after the
-canonical runtime is `runtime-ready`. Raw or mismatched listeners remain
-untouched and block the handoff. `runtime:session:status` and
-`runtime:session:stop` provide explicit diagnostics and recovery.
-
-Mandatory completion evidence is separate from cleanup:
-
-```bash
-npm run reap
-```
-
-After a protected pull request merges, re-fetch `origin/main` and inspect the
-ADLC integration survey. ACOS currently retains every cleanup effect in its
-committed profile, so the survey is evidence only: it cannot delete a worktree,
-branch, ref, or object. Preserve every lane until a later target-specific ADLC
-profile and authenticated cleanup receipt authorize one exact retirement.
-
-First success check:
-
-```bash
-curl http://127.0.0.1:8787/api/ready
-```
-
-Before changing workflow or control-surface docs, read:
-
-1. [`docs/PROJECT-RULES.md`](./docs/PROJECT-RULES.md)
-2. [`docs/START-WORKFLOW.md`](./docs/START-WORKFLOW.md)
-3. [`docs/VALIDATION-RUNBOOK.md`](./docs/VALIDATION-RUNBOOK.md)
-4. [`docs/RUNTIME-READINESS.md`](./docs/RUNTIME-READINESS.md)
+No local script, clean checkout, green check, merged pull request, or runtime response
+creates lifecycle or deployment authority.
 
 ## Topology
 

@@ -46,7 +46,7 @@ const STATIC_GIT_SIGNATURES = new Set(
 const DEFERRED_LIFECYCLE = Object.freeze({
   status: "deferred-to-admission",
   scope: "declared-write-scope",
-  nextWorkflow: "docs/START-WORKFLOW.md",
+  nextWorkflow: "node_modules/agentic-os/docs/START-WORKFLOW.md",
 });
 const FINDING_MESSAGES = Object.freeze({
   "invalid-placement-override":

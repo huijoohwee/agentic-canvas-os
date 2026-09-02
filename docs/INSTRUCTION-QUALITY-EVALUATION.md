@@ -31,7 +31,7 @@ The evaluator never invokes a model and never reads private reasoning. A caller 
 | Case | Observable behavior |
 |---|---|
 | Canonical owner routing | Reproduce from evidence, repair the shared source owner, and name focused proof without downstream workarounds. |
-| Workflow and deployment boundary | Respect `START-WORKFLOW.md`, one claimed writer, exact revision proof, unrelated work, and explicit deployment approval. |
+| Workflow and deployment boundary | Respect the pinned ADLC start workflow, one admitted lane, exact revision proof, unrelated work, and explicit deployment approval. |
 | Progressive skill disclosure | Keep always-on guidance durable, load selected specialist detail on demand, and preserve required intent. |
 | Honest quality proof | Treat structural reduction as bounded evidence, evaluate final outputs, and retain human review without provider overclaims. |
 

@@ -22,7 +22,6 @@ source_docs:
   - "COORDINATION-SCHEDULER.md"
   - "INTEGRATION-ORDER.md"
   - "AGENT-SWARM.md"
-  - "LIFECYCLE-MONITORING.md"
   - "PROJECT-RULES.md"
 ---
 <!-- Responsibility: Derive the next non-blocking advance decision for one goal without owning readiness, dispatch, or authority. -->
@@ -40,9 +39,9 @@ This file adds a composition layer. It owns no capability another document alrea
 | Readiness, dependency waves, blocker localization to dependents, write-set disjointness | `COORDINATION-SCHEDULER.md` | Composes it; never reimplements it |
 | Unit state classification and canonical frontier order | `INTEGRATION-ORDER.md` | Consumes the same unit vocabulary |
 | Concurrent execution of ready work | `AGENT-SWARM.md` | Emits the ready set; dispatches nothing |
-| Waiting for a condition to become true | `LIFECYCLE-MONITORING.md` | Emits `stalled`; owns no timer, sleep, or retry |
-| Digests, canonical JSON, write-set normalization | `scripts/cloud-collaboration-primitives.mjs` | Imports them; computes no digest of its own design |
-| Claims, leases, integration, release | `START-WORKFLOW.md`, `RELEASE-WORKFLOW.md`, `CANONICAL-LIFECYCLE.md` | Reads nothing and grants nothing |
+| Waiting for a condition to become true | Pinned `agentic-os` runtime prompt | Emits `stalled`; owns no timer, sleep, retry, or lifecycle authority |
+| Digests, canonical JSON, write-set normalization | `scripts/product-contract-primitives.mjs` | Imports them; computes no digest of its own design |
+| Claims, integration, release | pinned `agentic-os` ADLC guideline/start/release owners | Reads nothing and grants nothing |
 
 ## Contract
 

@@ -20,7 +20,6 @@ source_docs:
   - "VOICE-STUDIO.md"
   - "SKILL-EVOLUTION.md"
   - "RUNTIME-READINESS.md"
-  - "MANAGED-IMPLEMENTATION-RUNS.md"
   - "INSTRUCTION-AUDIT.md"
 external_pattern_sources:
   - "https://learn.chatgpt.com/docs/customization/overview"
@@ -90,7 +89,6 @@ skill_contracts:
   - "human.review"
   - "stream.trace"
   - "superagent.run"
-  - "implementation.run"
   - "agentic.graph.parser.generate"
   - "agentic.graph.ingest"
   - "agentic.graph.query"
@@ -149,7 +147,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Identity and memory | `soul.load`, `personality.overlay`, `memory.write`, `memory.compact`, `memory.search`, `session.search`, `user.profile`, `identity.reflect` | `SOUL.md`, `MEMORY.md`, `MEMORY-LOG.md`, `USER.md` |
 | Skill and context loading | `skill.discover`, `skill.load`, `skill.bundle`, `skill.manage`, `skill.propose`, `skill.evolve`, `context.discover`, `context.load`, `context.audit`, `reference.expand`, `reference.audit` | This catalog, dictionaries, `SKILL-EVOLUTION.md`, and `HARNESS-CONTRACTS.md` |
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
-| Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.team`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `implementation.run`, `kanban.collaborate` | `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `MANAGED-IMPLEMENTATION-RUNS.md`, `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
+| Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.team`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `kanban.collaborate` | `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `HARNESS-CONTRACTS.md`, `kanban.md`, and runtime-specific proof |
 | Agentic graph | `agentic.graph.parser.generate`, `agentic.graph.ingest`, `agentic.graph.query`, `agentic.graph.explain` | `AGENTIC-GRAPH.md`, `MCP-GATEWAY.md`, and the Knowgrph executable owner |
 | Canvas and domain capabilities | `flow.computing`, `image.to-threejs`, `image.to-glb`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `url.ingest`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named Knowgrph runtime owners |
 
@@ -167,7 +165,6 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Agent Swarm | `AGENT-SWARM.md` |
 | Agent Toolkit | `AGENT-TOOLKIT.md` |
 | Skill Evolution | `SKILL-EVOLUTION.md` |
-| Managed implementation runs | `MANAGED-IMPLEMENTATION-RUNS.md` |
 | Deterministic agentic graph | `AGENTIC-GRAPH.md` |
 | Repository packing | `REPOSITORY-PACKING.md` |
 | Workspace artifact lifecycle | Invocation dictionaries and `MCP-GATEWAY.md` |

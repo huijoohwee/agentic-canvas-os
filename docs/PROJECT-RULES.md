@@ -53,8 +53,9 @@ document can express the same contract.
 
 - `agentic-os` ADLC is the single lifecycle owner. Start with `npm run lane --
   <scope>`, publish with `npm run land`, and observe with `npm run status` and
-  `npm run reap`. ACOS retains every cleanup effect until a target-specific
-  authenticated cleanup receipt authorizes one exact retirement.
+  `npm run reap`. ACOS opts into exact worktree projection and registration
+  quarantine while retaining branches, refs, and unreachable objects; each
+  effect still requires ADLC eligibility and exact authority.
 - The remotely addressable branch and pull request are the shared claim. Local
   records and compatibility shims are observations; they never replace GitHub
   branch protection, exact required checks, or pull-request authority.
@@ -106,68 +107,22 @@ document can express the same contract.
 
 - Test focused diffs only; do not run indefinite full-codebase sweeps.
 - Resolve issues and verify no regressions before handoff.
-- Allow same-device and cross-device parallel mutation only for different semantic scopes in distinct registered task worktrees or clones. Bind each task worktree to one session lease, branch, and pull request; preserve post-baseline untracked files in that physical lane as cleanup-ineligible `owned-untracked` state, and reject shared-worktree sessions, duplicate scopes, stale fencing epochs, deletion, stash, masking, relocation, or adoption by another task.
+- Preserve dirty or ambiguous user bytes. All parallel Git mutation, ownership,
+  and cleanup decisions come from the pinned ADLC owners.
 
 ## Concurrent Sessions
 
-Parallel sessions across the sibling repositories in one workspace root are the
-intended mode. `docs/WORKSPACE-PARALLELISM.md` is the contract; these are the rules
-that bind every session and tool.
-
-- Claim one lane per session: one repository plus one registered worktree. Never
-  share a worktree, never check one branch out in two worktrees, and never claim a
-  semantic scope another session already holds in that repository.
-- Run `npm run workspace:parallelism:check` before any operation in the forbidden
-  catalog. Treat a blocked report as a stop, not as a cleanup task.
-- Install the enforcement surfaces once per machine with
-  `npm run workspace:guards:install`, and put the generated shim directory ahead of
-  Git on `PATH` so external tooling is guarded too. Hooks alone leave `clean`,
-  forced checkout, and object pruning ungated; the wrapper is not optional.
-- Never disable a guard to make a command succeed. The bypass sentinel exists for a
-  deliberate, explained decision, not for unblocking a workflow.
-- Never reset a working tree, remove untracked files, force a checkout, rewrite
-  pushed history, delete a lane, prune objects, or fast-forward a lane while any
-  session holds uncommitted or untracked work in that repository. This applies to
-  every repository in the workspace, not only the one being worked on.
-- Never run a destructive operation on a lane the current session does not own, and
-  never assume an idle-looking lane is unowned. Absence of recent output is not
-  evidence that a session ended.
-- Treat untracked files as unrecoverable until a repository-owned capture has
-  written their exact blobs, modes, paths, and tree under an immutable recovery
-  ref and content-addressed receipt. Before that proof completes, no destructive
-  operation over them is permitted.
-- Before any permitted destructive operation on an owned dirty lane, create a durable
-  recovery reference: a branch, a tag, or a bundle under the workspace backup
-  directory. A moving or raw stash selector does not qualify. The only stash-backed
-  exception is a repository-owned adapter that holds the shared park lock, proves
-  the exact parent and message, pins the stash commit under an immutable ref,
-  records tracked, staged, untracked, symlink, and mode evidence, and emits a
-  content-addressed receipt before realignment.
-- Ignored local paths may remain in place across canonical realignment only
-  after a repository-owned adapter proves a stable path-set digest, unchanged
-  ignore rules, and no filesystem-aware exact, ancestor, or descendant
-  collision with the target tree. Revalidate that proof at every realignment
-  boundary and use Git's no-overwrite-ignore guard for the final switch.
-  Otherwise recovery stops before preservation or ref mutation.
-- Commit early and on a branch when work must survive a concurrent session. An
-  uncommitted edit is the only state this contract cannot fully protect.
-- When a collision is found, name it and stop. Resolving it by discarding the other
-  side is forbidden regardless of which session is further along.
+Parallel sessions across sibling repositories are governed exclusively by the
+pinned `agentic-os` guideline, start workflow, release workflow, and committed
+repository profile. ACOS defines no lane, claim, lease, worktree, recovery,
+destructive-operation, integration, synchronization, retirement, or cleanup
+exception. Preserve user bytes and stop on any typed ADLC attention result.
 
 ## Post-Task
 
 - Update cross-repo and API docs when the change affects them.
-- End every implementation turn with completed work integrated and exactly
-  retired, or incomplete work preserved in its existing ADLC lane with canonical
-  `main` untouched.
-- Never report a task complete while its fix is dirty, stashed, branch-only, in
-  an open pull request, absent from `origin/main`, or unverified on the local
-  runtime started from that exact Dev `main` SHA.
-- For completed work, re-fetch the protected Dev branch and run `npm run reap`
-  as an integration survey. ACOS retains every cleanup effect, so keep the
-  worktree and refs intact until a target-specific authenticated cleanup receipt
-  authorizes one exact retirement; then restart the local runtime from clean
-  `main` and rerun the original acceptance path.
+- Lifecycle closeout must satisfy the installed ADLC release workflow. This
+  product policy neither restates nor weakens its completion receipts.
 - Before the final response of every implementation turn, run `npm run turn:end
   -- --repository=<canonical-knowgrph-root> --json`. Runtime-ready may be
   claimed only when its JSON proves exact protected `main` SHAs, no
@@ -175,12 +130,6 @@ that bind every session and tool.
   and storage listeners, and all HTTP probes. Foreign parallel residue may be
   tolerated only when it is explicitly classified as non-blocking. The command
   must fail closed without stopping an unrelated listener.
-- A preserved open lane never satisfies completion.
-- Audit the task worktree at every chat, session, or thread end. The current
-  ACOS profile makes cleanup ineligible, so retain every worktree, branch, ref,
-  and object; fail closed on dirt or ambiguity. A future target-specific cleanup
-  decision must bind the exact lane, proof, owner, and receipt before it can
-  remove anything.
 - A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.
 - Suggest next steps in `/GitHub/agentic-canvas-os/{docs/TODO.md, todo/}`,
   `/GitHub/knowgrph/docs/`, and

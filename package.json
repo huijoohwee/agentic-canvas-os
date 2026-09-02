@@ -99,7 +99,7 @@
     "cloudflare:dev": "npm run web:build && wrangler dev"
   },
   "devDependencies": {
-    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/78d782e1b64bf3be6c9b65423b7e6b28290498ff",
+    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/bafaf3f0dde780461d11f02355c6fc6cac0dd6e0",
     "ajv": "8.20.0",
     "fast-check": "3.23.2",
     "wrangler": "4.120.0"

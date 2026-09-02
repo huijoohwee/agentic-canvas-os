@@ -88,8 +88,9 @@ class FakeDurableObjectCtx {
         this.operations.get += 1;
         return this.store.get(key);
       },
-      put: async (key, value) => {
+      put: async (key, value, options) => {
         this.operations.put += 1;
+        this.operations.lastPutOptions = options;
         this.store.set(key, value);
       },
       delete: async (key) => {
@@ -194,6 +195,108 @@ test("an applied op is acked to the sender and broadcast to peers", async () => 
   const broadcast = b.messagesOfType("nodeUpserted").at(-1);
   assert.equal(broadcast.node.id, "n1");
   assert.equal(broadcast.opId, "op-n1-000000000000");
+});
+
+test("broadcast continues past a broken peer and audits delivery degradation", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const sender = await connect(room, ctx, { subject: "sender" });
+  const broken = await connect(room, ctx, { subject: "broken" });
+  const healthy = await connect(room, ctx, { subject: "healthy" });
+  broken.closed = true;
+
+  await room.webSocketMessage(sender, upsert("fanout"));
+
+  assert.equal(healthy.messagesOfType("nodeUpserted").at(-1).node.id, "fanout");
+  assert.equal(sender.messagesOfType("ack").at(-1).rev, 1);
+  assert.equal(room.state.rev, 1);
+  assert.equal(ctx.store.get("room-state-v1").graph.rev, 1);
+  assert.equal(room.metrics.fanOutRecipientsFailed, 1);
+  assert.equal(room.metrics.fanOutPartial, 1);
+  assert.equal(room.metrics.errors, 0);
+  assert.equal(ctx.store.get("room-fanout-audit-v1").cumulative.fanOutRecipientsFailed, 1);
+  assert.deepEqual(ctx.operations.lastPutOptions, { allowUnconfirmed: true });
+
+  const resumed = new CanvasRoom(ctx, { AGENT_API_JWT_SECRET: SECRET });
+  await resumed.ensureLoaded();
+  assert.equal(resumed.metrics.fanOutRecipientsFailed, 1, "failure evidence survives hibernation");
+
+  const degraded = parsedLogs().find((entry) => (
+    entry.event === "fanout_degraded" && entry.deliveryType === "nodeUpserted"
+  ));
+  assert.ok(degraded, "one structured degradation record was emitted");
+  assert.equal(degraded.level, "warn");
+  assert.deepEqual(
+    { attempted: degraded.attempted, succeeded: degraded.succeeded, failed: degraded.failed },
+    { attempted: 2, succeeded: 1, failed: 1 },
+  );
+  assert.deepEqual(degraded.reasonCodes, ["branch_unavailable"]);
+  assert.equal(JSON.stringify(degraded).includes("socket closed"), false);
+  assert.equal(JSON.stringify(degraded).includes("broken"), false);
+});
+
+test("broadcast setup failure remains fail-soft and visible to the sender", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const sender = await connect(room, ctx, { subject: "sender" });
+  ctx.getWebSockets = () => { throw new Error("runtime detail must not escape"); };
+
+  await room.webSocketMessage(sender, upsert("setup-failure"));
+
+  assert.equal(sender.messagesOfType("ack").at(-1).rev, 1);
+  assert.equal(room.state.rev, 1);
+  assert.equal(ctx.store.get("room-state-v1").graph.rev, 1);
+  assert.equal(room.metrics.fanOutSetupFailures, 1);
+  assert.equal(room.metrics.fanOutExhausted, 1);
+  assert.equal(ctx.store.get("room-fanout-audit-v1").cumulative.fanOutSetupFailures, 1);
+
+  const degraded = parsedLogs().find((entry) => (
+    entry.event === "fanout_degraded" && entry.deliveryType === "nodeUpserted"
+  ));
+  assert.ok(degraded);
+  assert.equal(degraded.setupFailures, 1);
+  assert.deepEqual(degraded.reasonCodes, ["fanout_setup_failed"]);
+  assert.equal(JSON.stringify(degraded).includes("runtime detail must not escape"), false);
+});
+
+test("audit persistence failure cannot suppress healthy delivery or sender acknowledgement", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const sender = await connect(room, ctx, { subject: "sender" });
+  const broken = await connect(room, ctx, { subject: "broken" });
+  const healthy = await connect(room, ctx, { subject: "healthy" });
+  broken.closed = true;
+  const originalPut = ctx.storage.put;
+  let puts = 0;
+  ctx.storage.put = async (key, value, options) => {
+    puts += 1;
+    if (puts === 2) throw new Error("storage secret must not escape");
+    return originalPut(key, value, options);
+  };
+
+  await room.webSocketMessage(sender, upsert("audit-write"));
+
+  assert.equal(healthy.messagesOfType("nodeUpserted").at(-1).node.id, "audit-write");
+  assert.equal(sender.messagesOfType("ack").at(-1).rev, 1);
+  assert.equal(room.metrics.fanOutAuditPersistFailures, 1);
+  assert.equal(room.metrics.observabilityFailures, 1);
+  const auditFailure = parsedLogs().find((entry) => entry.event === "fanout_audit_persist_failed");
+  assert.ok(auditFailure);
+  assert.equal(JSON.stringify(auditFailure).includes("storage secret must not escape"), false);
+});
+
+test("websocket runtime errors are sanitized and counted", async () => {
+  logLines.length = 0;
+  const { room, ctx } = makeRoom();
+  const ws = await connect(room, ctx, { subject: "socket-owner" });
+
+  await room.webSocketError(ws, new Error("transport secret must not escape"));
+
+  assert.equal(room.metrics.socketErrors, 1);
+  assert.equal(ctx.store.get("room-fanout-audit-v1").cumulative.socketErrors, 1);
+  const socketError = parsedLogs().find((entry) => entry.event === "websocket_error");
+  assert.ok(socketError);
+  assert.equal(JSON.stringify(socketError).includes("transport secret must not escape"), false);
 });
 
 test("ordinary room activity verifies an alarm once and does not rewrite it", async () => {

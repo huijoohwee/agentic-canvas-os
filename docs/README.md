@@ -18,7 +18,7 @@ source_of_truth:
   - "SKILLS.md"
   - "INSTRUCTION-AUDIT.md"
   - "INSTRUCTION-QUALITY-EVALUATION.md"
-publish_policy: "protected green main authorizes Dev integration only; forward Production requires exact-candidate human authorization"
+publish_policy: "product checks provide Dev evidence only; ADLC governs repository integration; forward Production requires exact-candidate human authorization"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "documentation control surface for making knowgrph a runtime-ready Agentic Canvas OS"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -36,31 +36,35 @@ the smallest set of docs needed for the task.
 
 Recommended reading order:
 
-1. [`PROJECT-RULES.md`](./PROJECT-RULES.md) for project-wide engineering and session-closeout rules.
-2. [`START-WORKFLOW.md`](./START-WORKFLOW.md) for session start, ownership, and the registered multi-worktree rule.
-3. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused checks and release gates.
-4. [`RUNTIME-READINESS.md`](./RUNTIME-READINESS.md) for the current spec-complete to runtime-ready state.
-5. [`AGENTS.md`](./AGENTS.md) only when changing the docs control surface itself.
-6. The three dictionary files only when changing invocation grammar or routing meaning.
+0. [`../AGENTS.md`](../AGENTS.md), which continuously binds the pinned global runtime prompt and ADLC owners.
+1. `node_modules/agentic-os/templates/SYSTEM-PROMPT-RUNTIME.md` as the always-on global harness header.
+2. `node_modules/agentic-os/docs/adlc-guidelines.md` and `START-WORKFLOW.md` for lifecycle governance and session start.
+3. [`PROJECT-RULES.md`](./PROJECT-RULES.md) for ACOS-only product, deploy, rollback, and authorization policy.
+4. [`VALIDATION-RUNBOOK.md`](./VALIDATION-RUNBOOK.md) for focused product checks.
+5. [`RUNTIME-READINESS.md`](./RUNTIME-READINESS.md) for the current spec-complete to runtime-ready state.
+6. [`AGENTS.md`](./AGENTS.md) only when changing the docs control surface itself.
+7. The three dictionary files only when changing invocation grammar or routing meaning.
 
 Human-friendly rule: speak in task intent, then translate into the strict
 contracts only when the work touches planning, workflow, or invocation grammar.
+For delivery planning or repeated mechanical failure, lazy-load only
+`node_modules/agentic-os/guides/AUTONOMOUS-GOAL-PURSUIT.md`.
 
 ## Document Map
 
 | File | Role | Use |
 |---|---|---|
+| `GOAL-COMPLETION-RUNTIME.md` | Adaptive non-blocking advance decision | Outcome-weighted dispatch order over the coordination scheduler, blocker locality to dependents, fail-closed gates, and one digest-bound advance receipt; owns no readiness, dispatch, or authority. |
+| `node_modules/agentic-os/guides/AUTONOMOUS-GOAL-PURSUIT.md` | On-demand operator-interaction economy | Upstream delivery planning, minimal-diff execution, input completeness, derivation, retry, and escalation guidance; grants no ACOS product or lifecycle authority. |
 | `PROJECT-RULES.md` | Repository-wide engineering rules | Neutral code hygiene, validation, and session-end behavior shared across devices and tools. |
 | `SOUL.md` | Durable identity layer | Agent identity, voice, prompt slot 1 contract, personality overlay boundary, and hardcoded-default replacement rules. |
 | `FACTS.md` | Shared truth layer | Stable facts, precedence, direct `/`, `#`, and `@` definitions, deploy boundary truth, context-file and context-reference facts, tool/toolset facts, Tool Gateway and Tool Search facts, MoA facts, learning-loop facts, stateful orchestration facts, and long-horizon SuperAgent facts. |
 | `MEMORY.md` | Agent memory seed | Bounded agent notes, persistence, routing memory, MoA memory, stateful orchestration memory, reusable runtime-readiness context, and local operating lenses. |
 | `MEMORY-LOG.md` | Append-only memory contract | GitHub-as-SSOT sync boundaries, `memory-log/v1` monthly shards, sigil entries, merge rules, bounded retrieval, and the BM25-to-embedding escalation path. |
-| `TODO.md` | Bounded planning index | Cross-repository `todo-log/v1` monthly shards, append-only lifecycle, exact-first retrieval, size caps, and release compliance. |
+| `TODO.md` | Bounded planning index | Immutable legacy monthly history, independent `todo-context-record/v2` task files, deterministic projection, and release compliance. |
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
-| `CANONICAL-LIFECYCLE.md` | Provider-neutral release lifecycle | Fenced collaboration, exact Release Frontier, joined integration through rollback receipts, immutable-origin and public transport proof, state reconciliation, publication, and ownership-safe cleanup. |
-| `CLOUD-COLLABORATION.md` | Cloud-authoritative collaboration runtime | Four provider-neutral root operations, unlimited disjoint authorities, one current writer per overlap, waiting successors, dormant preservation, monotonic CAS, and typed receipts. |
-| `INTEGRATION-ORDER.md` | Dependency-ordered integration contract | Immutable per-repository units, cross-repository DAG waves, exact-canonical frontier advancement, dependency receipts, runtime convergence, and release-frontier sealing. |
+| `INTEGRATION-ORDER.md` | Product dependency-order contract | Immutable product units, disjoint DAG waves, evidence-backed product frontiers, and explicit delegation of every repository lifecycle effect to pinned ADLC. |
 | `docs/documents/git-guidelines.md` | Git-layer companion to the execution set | any git stage: session start through cleanup |
 | `UPSTREAM-DEPENDENCY-ADMISSION.md` | Upstream dependency admission runtime | Early source admission, bounded deferral, exact consumer-closure isolation, protected-source-only projection, and disjoint-work continuation. |
 | `INSTRUCTION-AUDIT.md` | Instruction audit runtime | Model-free context budgets, intent preservation, duplication checks, owner-boundary checks, baseline reduction, and zero-cost proof. |
@@ -97,8 +101,6 @@ contracts only when the work touches planning, workflow, or invocation grammar.
 | `HARNESS-CONTRACTS.md` | Harness contract catalog | Typed AI harness contracts, cost logs, fallback paths, and loop bounds. |
 | `MCP-GATEWAY.md` | MCP federation contract | Discovery-first gateway rules across local, Pages, browser, and control-plane surfaces. |
 | `VALIDATION-RUNBOOK.md` | Focused proof lane | Commands and checks for documentation, local runtime, and deploy guards. |
-| `START-WORKFLOW.md` | Conflict-safe session-start contract | Fetch-first inspection, one canonical `main` runtime owner, registered task worktrees, branch-bound session leases, scope-aware draft PRs, fencing SHAs, and exact-SHA proof. |
-| `RELEASE-WORKFLOW.md` | Runtime-ready reference release profile | Conflict-safe Dev integration, exact-candidate authorization, immutable Pages deployment, direct D1 reconciliation, transport-separated verification, mirror publication, rollback, cleanup, and terminal evidence. |
 
 ## Runtime Position
 
@@ -143,18 +145,18 @@ The current native-in-repo target is:
 flowchart LR
   local["Local MCP + Source Files"]
   soul["SOUL.md identity"]
-  canvas["Knowgrph Canvas"]
+  canvas["AgenticGraph Canvas"]
   mcp["Cloudflare McpAgent where deployed"]
   gateway["Discovery-first MCP federation"]
   harnesses["Existing harnesses"]
   proof["Runtime-ready proof"]
 
-  soul --> gateway
-  local --> gateway
-  canvas --> gateway
-  mcp --> gateway
-  gateway --> harnesses
-  harnesses --> proof
+  soul -->|"identity - read"| gateway
+  local -->|"catalog - read"| gateway
+  canvas -->|"surface - read"| gateway
+  mcp -->|"remote catalog - read"| gateway
+  gateway -->|"dispatch - gated"| harnesses
+  harnesses -->|"evidence - recorded"| proof
 ```
 
 Superseded Vercel/AWS connector lanes are historical reference only unless a later ADR reopens them with a separate TCO and deployment-model comparison. The active runtime-ready path is `knowgrph` local + Cloudflare control-plane owners.

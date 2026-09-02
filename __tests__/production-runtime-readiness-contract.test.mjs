@@ -19,7 +19,7 @@ const sample = {
   artifact: { algorithm: 'sha256', digest },
   immutableManifest: { algorithm: 'sha256', digest: 'e'.repeat(64) },
   mirror: { repository: 'huijoohwee/huijoohwee' },
-  surfaces: ['/', '/knowgrph'],
+  surfaces: ['/', '/agenticgraph'],
 }
 
 test('production runtime readiness binds app docs catalog artifact manifest mirror and surfaces', () => {

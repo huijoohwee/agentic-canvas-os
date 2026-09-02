@@ -41,6 +41,8 @@ import {
   createKnowgrphGuardrailEvaluator,
   parseKnowgrphFunctionToolAllowlist,
 } from "./knowgrph-function-gateway.js";
+import { createAdapterRegistrationInterface } from "./adapter-registration.js";
+import { createDurableObjectSkillDraftStore } from "./durable-object-state-store.js";
 import { resolveModelProviderEnvironment } from "./model-config.js";
 import { createModelProviderRuntime } from "./model-providers.js";
 import {
@@ -57,7 +59,9 @@ import { createProgressiveAgentsRuntime } from "./progressive-agents.js";
 import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
 import { createRunningAgentRuntime } from "./running-agents.js";
 import { createSandboxAgentRuntime } from "./sandbox-agents.js";
-import { createToolSearchRuntime } from "./tool-search.js";
+import { createSkillProposerRuntime } from "./skill-proposer.js";
+import { createSkillRegistryGate } from "./skill-registry-gate.js";
+import { createConfiguredToolSearchRuntime } from "./tool-search-config.js";
 import { createUpstreamDependencyAdmissionHandler } from "./upstream-dependency-admission-handler.js";
 import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
 
@@ -94,6 +98,10 @@ import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
  * @param {ReturnType<createRunningAgentRuntime>} [opts.runningAgents] application-turn lifecycle controller
  * @param {ReturnType<createSandboxAgentRuntime>} [opts.sandboxAgents] container-workspace control plane
  * @param {ReturnType<createToolSearchRuntime>} [opts.toolSearch] deferred-definition controller
+ * @param {object} [opts.skillDraftStore] optional durable skill draft store
+ * @param {ReturnType<createSkillProposerRuntime>} [opts.skillProposer] bounded proposed-definition draft runtime
+ * @param {ReturnType<createSkillRegistryGate>} [opts.skillRegistryGate] approval-gated draft promotion runtime
+ * @param {ReturnType<createAdapterRegistrationInterface>} [opts.adapterRegistration] stable adapter registration interface
  * @param {ReturnType<createModelProviderRuntime>} [opts.modelProviders] model and transport selection controller
  * @returns {{ authSession: Function, run: Function, configured: boolean }}
  */
@@ -124,6 +132,10 @@ export function createAgentApiApp({
   runningAgents: providedRunningAgents,
   sandboxAgents: providedSandboxAgents,
   toolSearch: providedToolSearch,
+  skillDraftStore: providedSkillDraftStore,
+  skillProposer: providedSkillProposer,
+  skillRegistryGate: providedSkillRegistryGate,
+  adapterRegistration: providedAdapterRegistration,
   modelProviders: providedModelProviders,
 } = {}) {
   const e = env || (typeof process !== "undefined" ? process.env : {}) || {};
@@ -141,6 +153,13 @@ export function createAgentApiApp({
   const reviewSecret = configuredReviewSecret && configuredReviewSecret !== secret ? configuredReviewSecret : "";
   const agentDefinitions = providedAgentDefinitions
     || createAutonomousAgentDefinitionRegistry(autonomousRuntimeEnvironment);
+  const durableStateConfigured = Boolean(
+    e?.AGENT_STATE
+    && typeof e.AGENT_STATE.idFromName === "function"
+    && typeof e.AGENT_STATE.get === "function"
+  );
+  const skillDraftStore = providedSkillDraftStore
+    || (durableStateConfigured ? createDurableObjectSkillDraftStore({ namespace: e.AGENT_STATE }) : undefined);
   const cacheContext = providedCacheContext || createCacheContextRegistry();
   const reasoningContinuity = providedReasoningContinuity || createReasoningContinuityRegistry();
   const authenticateReviewer = reviewSecret
@@ -169,7 +188,20 @@ export function createAgentApiApp({
     ...(pausedTurnStore ? { pausedTurnStore } : {}),
   });
   const sandboxAgents = providedSandboxAgents || createSandboxAgentRuntime();
-  const toolSearch = providedToolSearch || createToolSearchRuntime();
+  const toolSearch = providedToolSearch || createConfiguredToolSearchRuntime(e, {
+    openAiFunctionConfig,
+    autonomousRuntimeEnvironment,
+  });
+  const skillProposer = providedSkillProposer || createSkillProposerRuntime({
+    ...(skillDraftStore ? { draftStore: skillDraftStore } : {}),
+  });
+  const skillRegistryGate = providedSkillRegistryGate || createSkillRegistryGate({
+    ...(skillDraftStore ? { draftStore: skillDraftStore } : {}),
+    agentDefinitionRegistry: agentDefinitions,
+  });
+  const adapterRegistration = providedAdapterRegistration || createAdapterRegistrationInterface({
+    agentDefinitionRegistry: agentDefinitions,
+  });
   const modelProviders = providedModelProviders || createModelProviderRuntime();
   if (modelProviderEnvironment.ready) {
     modelProviders.registerProvider(modelProviderEnvironment.providerDefinition);
@@ -275,6 +307,10 @@ export function createAgentApiApp({
     runningAgents,
     sandboxAgents,
     toolSearch,
+    skillDraftStore,
+    skillProposer,
+    skillRegistryGate,
+    adapterRegistration,
     upstreamDependencyAdmissionEvaluate: createUpstreamDependencyAdmissionHandler({ secret }),
     agentSwarmStart: agentSwarmHandlers.start,
     agentSwarmWork: agentSwarmHandlers.work,
@@ -309,6 +345,9 @@ export function createAgentApiApp({
         : runningAgents.stats();
       const sandboxAgentStats = sandboxAgents.stats();
       const toolSearchStats = toolSearch.stats();
+      const skillProposerStats = skillProposer.stats();
+      const skillRegistryGateStats = skillRegistryGate.stats();
+      const adapterRegistrationStats = adapterRegistration.stats();
       const modelProviderStats = modelProviders.stats();
       return {
         configured: Boolean(
@@ -359,6 +398,8 @@ export function createAgentApiApp({
           capabilityPolicy: "reference-only-with-application-authorization",
           executionOwner: "running-agents-adapter",
           providerExecutionStatus: "unverified",
+          statusCounts: agentDefinitionStats.statusCounts,
+          snapshotDigestAlgorithm: agentDefinitionStats.snapshotDigestAlgorithm,
           ...agentDefinitionStats,
         },
         guardrailsHumanReview: {
@@ -563,6 +604,38 @@ export function createAgentApiApp({
           programSearchPolicy: "top-level-before-hosted-program",
           providerContextReduction: "unverified",
           ...toolSearchStats,
+        },
+        skillProposer: {
+          configured: skillProposerStats.draftStoreConfigured && skillProposerStats.modelAdapterConfigured,
+          contractReady: true,
+          proposalOwner: "acos-skill-proposer",
+          registryWriteCapability: false,
+          iterationBound: skillProposerStats.iterationBound,
+          circuitBreakerConsecutiveNoCandidate: skillProposerStats.circuitBreakerConsecutiveNoCandidate,
+          p95GapToDraftMs: skillProposerStats.p95GapToDraftMs,
+          providerExecutionStatus: "unverified",
+          ...skillProposerStats,
+        },
+        skillRegistryGate: {
+          configured: skillRegistryGateStats.draftStoreConfigured
+            && skillRegistryGateStats.operatorInstructionResolverConfigured,
+          contractReady: true,
+          boundaryState: "closed",
+          promotionOwner: "acos-skill-registry-gate",
+          artifactType: "agent-definition",
+          modelCallCapability: false,
+          providerExecutionStatus: "unverified",
+          ...skillRegistryGateStats,
+        },
+        adapterRegistration: {
+          configured: adapterRegistrationStats.registryConfigured
+            && adapterRegistrationStats.operatorInstructionResolverConfigured,
+          contractReady: true,
+          registrationOwner: "acos-adapter-registration",
+          sharedEntrypointAdapterNames: 0,
+          requestScopedState: false,
+          providerExecutionStatus: "unverified",
+          ...adapterRegistrationStats,
         },
         upstreamDependencyAdmission: {
           configured: Boolean(secret),

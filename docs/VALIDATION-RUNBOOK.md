@@ -92,11 +92,11 @@ Resolve repository roots once, then run all checks through those roots:
 AGENTIC_CANVAS_OS_ROOT="$(git rev-parse --show-toplevel)"
 GITHUB_ROOT="$(dirname "$AGENTIC_CANVAS_OS_ROOT")"
 DOCS_ROOT="$AGENTIC_CANVAS_OS_ROOT/docs"
-KNOWGRPH_ROOT="$GITHUB_ROOT/knowgrph"
+AGENTICGRAPH_ROOT="$GITHUB_ROOT/knowgrph"
 PROD_MIRROR_ROOT="$GITHUB_ROOT/huijoohwee/content/knowgrph"
 MEMORY_ROOT="$AGENTIC_CANVAS_OS_ROOT/memory"
 PLANNING_ROOT="$AGENTIC_CANVAS_OS_ROOT/todo"
-export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT KNOWGRPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT PLANNING_ROOT
+export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT AGENTICGRAPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT PLANNING_ROOT
 find "$DOCS_ROOT" -maxdepth 1 -type f -name '*.md' -print0 | xargs -0 ruby -rdate -ryaml -e 'ARGV.each { |path| text=File.read(path); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{path}: missing frontmatter"); YAML.safe_load(match[1], permitted_classes: [Date], aliases: true); puts "#{path}: frontmatter ok" }'
 wc -l "$DOCS_ROOT"/*.md
 ! LC_ALL=C rg -n "[^[:ascii:]]" "$DOCS_ROOT"
@@ -115,9 +115,10 @@ Expected:
 
 ## Repository-Owned Collaboration Gate
 
-First run `node --test __tests__/workspace-sync.test.mjs __tests__/production-runtime-readiness-contract.test.mjs __tests__/github-lifecycle-policy.test.mjs`.
-It proves candidate-first sync, retained last-known-good state, hashed quarantine,
-exact runtime identity binding, and rejection of drift or unknown fields.
+First run `npm run runtime-readiness-contract:check`.
+It proves the retained ACOS product-readiness contract and rejection of drift or
+unknown fields. Git lifecycle and canonical synchronization remain owned by the
+pinned `agentic-os` package and are not reimplemented by this gate.
 
 Then run `npm run collaboration:gate` from the Agentic Canvas OS repository.
 
@@ -131,28 +132,27 @@ This is the only required operator command. It resolves the sibling Knowgrph che
 
 The automated contexts model two independent collaboration peers; the gate does not require two physical devices. It does not accept clipboard actions or manually assembled evidence; its private run-scoped proof artifact is validator-owned and deleted after success. `Copy diagnostic JSON` remains optional troubleshooting only. A nonzero exit, fewer than two peers, a room-key mismatch, duplicate runtime identity, revision mismatch, stale hydration, different digest, propagation failure, or leaked run-owned process blocks parity and release without blocking ownership-qualified isolated authoring.
 
-`KNOWGRPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
+`AGENTICGRAPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
 
-## Mandatory Completion Gate
+## Mandatory Completion Evidence
 
-After focused validation and protected Dev integration, run from the merged task
-branch:
+After the pinned ADLC release workflow records protected Dev integration, run
+the ADLC survey from the canonical checkout:
 
 ```bash
-npm run device:complete -- --json
+npm run reap
 ```
 
-The command must fail for dirty or stashed work, branch-only commits, an open or
-auto-merge-pending pull request, a non-`main` pull-request base, a merge commit
-absent from fetched `origin/main`, local-main drift, or a dirty final checkout.
-Success must emit `completedBranch`, `pullRequestUrl`, `mergeCommitSha`,
-`mainSha`, and `"status":"ok"`, with clean local `main` exactly equal to
-`origin/main`.
+ACOS's committed profile opts only exact worktree projection and registration
+into quarantine cleanup. It retains local and remote branches, remote-tracking
+refs, and unreachable objects. A green check, merged pull request, or integration
+proof grants no cleanup authority; `reap` requires the target-specific ADLC
+authorization and receipt for every effect it performs.
 
 Restart or reload the local application from `mainSha` and rerun the original
 browser failure path. Git evidence without matching runtime identity and browser
-acceptance is integration evidence, not task completion. Use `device:park` only
-for an explicitly paused or blocked task. Do not mutate Prod or Cloudflare
+acceptance is integration evidence, not task completion. Preserve an explicitly
+paused or blocked ADLC lane without changing its identity. Do not mutate Prod or Cloudflare
 without separate operator authorization.
 
 ### Immutable Pair Manifest Compliance
@@ -160,15 +160,15 @@ without separate operator authorization.
 Create the artifact from one exact source object, then validate the downloaded bytes against the same source and pinned docs revisions:
 
 ```bash
-export KNOWGRPH_SOURCE_REVISION="<exact-knowgrph-sha>"
-export KNOWGRPH_TARGET_REF="refs/heads/agent/<device>/<semantic-scope>"
-npm --prefix "$KNOWGRPH_ROOT" run release:manifest:create -- \
-  --source-sha "$KNOWGRPH_SOURCE_REVISION" \
-  --target-ref "$KNOWGRPH_TARGET_REF" \
+export AGENTICGRAPH_SOURCE_REVISION="<exact-knowgrph-sha>"
+export AGENTICGRAPH_TARGET_REF="refs/heads/agent/<device>/<semantic-scope>"
+npm --prefix "$AGENTICGRAPH_ROOT" run release:manifest:create -- \
+  --source-sha "$AGENTICGRAPH_SOURCE_REVISION" \
+  --target-ref "$AGENTICGRAPH_TARGET_REF" \
   --output immutable-release-manifest.json
-npm --prefix "$KNOWGRPH_ROOT" run release:manifest:check -- \
+npm --prefix "$AGENTICGRAPH_ROOT" run release:manifest:check -- \
   immutable-release-manifest.json \
-  --source-sha "$KNOWGRPH_SOURCE_REVISION"
+  --source-sha "$AGENTICGRAPH_SOURCE_REVISION"
 ```
 
 CI must upload the generated file, download it into a separate directory, and rerun the checker with the expected app SHA, resolved Agentic Canvas OS SHA, and first-pass manifest digest. A current-worktree report, individually green docs PR, branch name, manually assembled JSON, or unvalidated upload is insufficient.
@@ -181,7 +181,7 @@ Run the structural gate at session start and again before release:
 ruby -rdate -ryaml -e 'root=ENV.fetch("MEMORY_ROOT"); files=Dir.glob(File.join(root,"[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).sort; abort("memory log has no monthly shard") if files.empty?; files.each do |file|; text=File.read(file); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{file}: missing frontmatter"); data=YAML.safe_load(match[1], permitted_classes:[Date], aliases:true); period=File.basename(file,".md"); required={"schema"=>"memory-log/v1","period"=>period,"timestamp_format"=>"YYYYMMDDTHHmmssZ","append_policy"=>"append-only","source_contract"=>"../docs/MEMORY-LOG.md"}; required.each{|key,value| abort("#{file}: invalid #{key}") unless data[key]==value}; %w[agent device].each{|key| abort("#{file}: missing #{key}") unless data[key].is_a?(String) && !data[key].empty?}; body=text[match.end(0)..]; headings=body.scan(/^## (@mem-[0-9]{8}T[0-9]{6}Z)$/).flatten; abort("#{file}: no memory entries") if headings.empty?; headings.each{|heading| begin instant=DateTime.strptime(heading.delete_prefix("@mem-"),"%Y%m%dT%H%M%SZ"); rescue Date::Error; abort("#{file}: invalid UTC memory timestamp #{heading}"); end; abort("#{file}: timestamp month mismatch #{heading}") unless instant.strftime("%Y-%m")==period}; abort("#{file}: duplicate or unordered memory headings") unless headings.uniq==headings && headings.sort==headings; abort("#{file}: non-sigil memory source format") if body.match?(/^## .*@mem-/) && body.scan(/^## .*@mem-/).length!=headings.length || body.match?(/^\|.*@mem-/); entries=body.split(/^## @mem-[^\n]+\n/).drop(1); entries.each{|entry| %w[type scope summary refs].each{|field| abort("#{file}: missing #{field}") unless entry.scan(/^#{field}:/).length==1}; abort("#{file}: refs must be a Markdown array") unless entry.match?(/^refs:\s*\[[^\]]+\]\s*$/)}; puts "#{file}: memory-log structure ok"; end'
 ```
 
-Before release, compare every existing shard with the exact memory base ref recorded by `START-WORKFLOW.md`:
+Before release, compare every existing shard with the exact memory base ref recorded by the pinned ADLC start workflow:
 
 ```bash
 export MEMORY_BASE_REF="<recorded-agentic-canvas-os-base-sha>"
@@ -196,148 +196,35 @@ Expected:
 - Existing shards preserve every byte from the recorded base and add content only at EOF; deleted shards fail.
 - A new monthly shard is allowed only when its filename, `period`, identity, policy, source contract, and first entry validate.
 
-## Planning Shard Compliance Checks
+## Planning Context Record Compliance Checks
 
 Run the structural gate at session start and again before release:
 
 ```bash
-ruby -rdate -ryaml <<'RUBY'
-root = ENV.fetch("PLANNING_ROOT")
-index_path = File.expand_path("../docs/TODO.md", root)
-index_text = File.read(index_path)
-index_match = index_text.match(/\A---\n(.*?)\n---\n/m) or abort("TODO.md: missing frontmatter")
-index = YAML.safe_load(index_match[1], permitted_classes: [Date], aliases: true)
-abort("TODO.md: invalid schema") unless index["schema"] == "todo-index/v1"
-abort("TODO.md: invalid append policy") unless index["append_policy"] == "append-only"
-
-active_path = File.expand_path(index.fetch("active_shard"), File.dirname(index_path))
-files = Dir.glob(File.join(root, "[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).sort
-abort("todo: no monthly shards") if files.empty?
-abort("todo: active shard missing") unless files.include?(active_path)
-
-strict_contexts = []
-files.each do |file|
-  text = File.read(file)
-  match = text.match(/\A---\n(.*?)\n---\n/m) or abort("#{file}: missing frontmatter")
-  data = YAML.safe_load(match[1], permitted_classes: [Date], aliases: true)
-  period = File.basename(file, ".md")
-  required = {
-    "schema" => "todo-log/v1",
-    "period" => period,
-    "scope" => "cross-repository",
-    "status" => "append-only",
-    "append_policy" => "append-only",
-    "date_heading_format" => "YYYY-MM-DD",
-    "source_contract" => "../docs/TODO.md",
-    "adoption_date" => index.fetch("adoption_date")
-  }
-  required.each { |key, value| abort("#{file}: invalid #{key}") unless data[key] == value }
-  abort("#{file}: byte cap exceeded") unless File.size(file) < index.fetch("size_limit_bytes")
-  abort("#{file}: line cap exceeded") unless text.lines.length <= index.fetch("line_limit")
-
-  body = text[match.end(0)..]
-  headings = body.scan(/^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/).flatten
-  abort("#{file}: no dated sections") if headings.empty?
-  abort("#{file}: duplicate or unordered dates") unless headings.uniq == headings && headings.sort == headings
-  headings.each do |heading|
-    Date.iso8601(heading)
-    abort("#{file}: heading month mismatch #{heading}") unless heading.start_with?(period + "-")
-  end
-  header = "| Context | Intent | Directive | Module | Class/Object | Function/Method | Input | Output | Decision Logic | Next Step Recommendation | Updated Date |"
-  separator = "|--------|--------|-----------|--------|-----------------|-------|--------|----------------|--------------------------|--------------------------|--------------|"
-  sections = body.scan(/^## [0-9]{4}-[0-9]{2}-[0-9]{2}\n.*?(?=^## [0-9]{4}-[0-9]{2}-[0-9]{2}\n|\z)/m)
-  abort("#{file}: dated table missing") unless sections.length == headings.length && sections.all? { |section_text| section_text.lines.any? { |line| line.chomp == header } && section_text.lines.any? { |line| line.chomp == separator } }
-
-  section = nil
-  body.each_line do |line|
-    if line =~ /^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/
-      section = Regexp.last_match(1)
-      next
-    end
-    next unless section && section >= index.fetch("adoption_date")
-    next unless line.start_with?("| ")
-    cells = line.strip.split("|", -1)[1...-1].map(&:strip)
-    next if cells.first == "Context"
-    abort("#{file}: strict row must have 11 cells") unless cells.length == 11
-    abort("#{file}: strict row has empty or placeholder cells") if cells.any? { |cell| cell.empty? || cell == "-" }
-    directive_words = cells[2].split(/\s+/).length
-    abort("#{file}: strict Directive exceeds 50 words") if directive_words > 50
-    abort("#{file}: strict Updated Date mismatch") unless cells[10] == section
-    strict_contexts << cells.first
-  end
-  puts "#{file}: planning shard structure ok"
-end
-abort("todo: no strict planning rows") if strict_contexts.empty?
-abort("todo: duplicate strict Context") unless strict_contexts.uniq.length == strict_contexts.length
-RUBY
+node "$AGENTIC_CANVAS_OS_ROOT/scripts/planning-context-record-contract.mjs" check \
+  --repository="$AGENTIC_CANVAS_OS_ROOT"
 ```
 
-Before release, compare committed shard prefixes and validate the declared task row:
+Before release, validate the one declared task record against the recorded base:
 
 ```bash
 export PLANNING_BASE_REF="<recorded-agentic-canvas-os-base-sha>"
-export PLANNING_SHARD="todo/<utc-year-month>.md"
-export PLANNING_CONTEXT="<exact-cross-repository-task-context>"
-ruby -rdate -ropen3 -ryaml <<'RUBY'
-root = ENV.fetch("AGENTIC_CANVAS_OS_ROOT")
-base = ENV.fetch("PLANNING_BASE_REF")
-relative = ENV.fetch("PLANNING_SHARD")
-context = ENV.fetch("PLANNING_CONTEXT")
-abort("todo: unsafe planning shard") unless relative.match?(%r{\Atodo/[0-9]{4}-[0-9]{2}\.md\z})
-abort("todo: empty or unsafe Context") if context.empty? || context.include?("|")
-index_text = File.read(File.join(root, "docs", "TODO.md"))
-index_match = index_text.match(/\A---\n(.*?)\n---\n/m) or abort("TODO.md: missing frontmatter")
-index = YAML.safe_load(index_match[1], permitted_classes: [Date], aliases: true)
-active_relative = File.expand_path(index.fetch("active_shard"), File.join(root, "docs")).delete_prefix(root + "/")
-abort("todo: declared shard is not active") unless relative == active_relative
-
-listed, status = Open3.capture2("git", "-C", root, "ls-tree", "-r", "--name-only", base, "--", "todo")
-abort("todo: cannot read planning base ref") unless status.success?
-base_files = listed.lines.map(&:strip).grep(%r{\Atodo/[0-9]{4}-[0-9]{2}\.md\z})
-current_files = Dir.glob(File.join(root, "todo", "[0-9][0-9][0-9][0-9]-[0-9][0-9].md")).map { |file| file.delete_prefix(root + "/") }
-missing = base_files - current_files
-abort("todo: deleted planning shards: #{missing.join(", ")}") unless missing.empty?
-base_files.each do |base_file|
-  prior, read_status = Open3.capture2("git", "-C", root, "show", "#{base}:#{base_file}")
-  abort("todo: cannot read #{base_file} at base") unless read_status.success?
-  now = File.binread(File.join(root, base_file))
-  abort("#{base_file}: historical bytes changed or content inserted before EOF") unless now.start_with?(prior.b)
-end
-
-path = File.join(root, relative)
-section = nil
-matches = []
-File.foreach(path) do |line|
-  section = Regexp.last_match(1) if line =~ /^## ([0-9]{4}-[0-9]{2}-[0-9]{2})$/
-  next unless line.start_with?("| ")
-  cells = line.strip.split("|", -1)[1...-1].map(&:strip)
-  next if cells.first == "Context"
-  matches << [line, section, cells] if cells.first == context
-end
-abort("todo: planning Context must occur exactly once") unless matches.length == 1
-line, section, cells = matches.first
-abort("todo: planning row must have 11 cells") unless cells.length == 11
-abort("todo: planning row has empty or placeholder cells") if cells.any? { |cell| cell.empty? || cell == "-" }
-words = cells[2].split(/\s+/).length
-abort("todo: planning Directive exceeds 50 words") if words > 50
-Date.iso8601(cells[10])
-abort("todo: planning Updated Date mismatch") unless cells[10] == section
-abort("todo: planning row predates adoption boundary") unless section >= index.fetch("adoption_date")
-if base_files.include?(relative)
-  prior = Open3.capture2("git", "-C", root, "show", "#{base}:#{relative}").first
-  abort("todo: declared planning row was not appended") if prior.lines.include?(line)
-end
-puts "planning row ok: context=#{context} directive_words=#{words}"
-RUBY
+export PLANNING_CONTEXT="<stable-kebab-case-context>"
+export PLANNING_RECORD="todo/<utc-year-month>/<stable-kebab-case-context>.md"
+node "$AGENTIC_CANVAS_OS_ROOT/scripts/planning-context-record-contract.mjs" release \
+  --repository="$AGENTIC_CANVAS_OS_ROOT" \
+  --base-ref="$PLANNING_BASE_REF" \
+  --context="$PLANNING_CONTEXT" \
+  --record="$PLANNING_RECORD"
 ```
 
 Expected:
 
-- `TODO.md` stays the bounded index; rows live only in monthly shards.
-- Each shard matches its filename, scope, lifecycle, UTC month, chronological ordering, and size caps.
-- Pre-adoption rows remain byte-preserved history; strict validation applies to rows at or after `2026-07-14`.
-- Every shard present at the recorded base remains an exact byte prefix; deleted, edited, reordered, or prepended history fails.
-- Release finds one new declared planning Context with 11 filled cells, a Directive of at most 50 words, and a matching Updated Date.
+- `TODO.md` remains the bounded `todo-index/v2` routing contract and is not a task write target.
+- Flat `todo/YYYY-MM.md` shards remain immutable legacy `todo-log/v1` history.
+- Each new task owns exactly one immutable `todo/YYYY-MM/<context>.md` record with matching path/frontmatter identity and one complete 11-cell row.
+- Structural validation rejects duplicate Contexts and derives one deterministic view ordered by date, Context, then source path.
+- Release requires the declared record to be absent at base and rejects legacy mutation, extra context-record changes, empty cells, placeholders, overlong Directives, and mismatched dates.
 
 ## Function Calling Runtime Checks
 
@@ -477,6 +364,9 @@ ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.
 ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); memory=parse.call("MEMORY.md"); required_commands=%w[/tool.search /tool.describe /tool.call]; required_semantics=%w[#tool-search #deferred-tool-schema #bridge-tool]; required_bindings=%w[@deferred-tool-catalog @bridge-tool @tool-policy]; required_skills=%w[tool.search tool.describe tool.call]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x)}; abort("missing tool-search route coverage: #{missing.join(", ")}") unless missing.empty?; abort("tool search memory missing") unless memory.dig("agentic_os_memory","tool_search","commands").is_a?(Array); puts "tool-search route consistency ok"'
 ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); required_commands=%w[/moa]; required_semantics=%w[#mixture-of-agents #reference-agents #aggregator-agent]; required_bindings=%w[@moa-preset @reference-agents @aggregator-agent]; required_skills=%w[moa.run agent.moa]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x) || skills.fetch("skill_variants").include?(x)}; abort("missing moa route coverage: #{missing.join(", ")}") unless missing.empty?; puts "moa route consistency ok"'
 ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); required_commands=%w[/memory.search /experience.capture /skill.propose /skill.evolve /identity.reflect]; required_semantics=%w[#learning-loop #skill-evolution #memory-search #identity-model]; required_bindings=%w[@experience @memory-store @skill-catalog @identity-model]; required_skills=%w[experience.capture memory.search skill.propose skill.evolve identity.reflect agent.learning]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x) || skills.fetch("skill_variants").include?(x)}; abort("missing learning-loop route coverage: #{missing.join(", ")}") unless missing.empty?; puts "learning-loop route consistency ok"'
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run dictionary-catalog:check
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run kanban:check
+npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run goal-completion:check
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run skill-evolution:check && npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run voice-studio-contract:check
 	ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); required_commands=%w[/orchestration.graph /agent.swarm /agent.toolkit /state.checkpoint /human.review /stream.trace]; required_semantics=%w[#orchestration-graph #agent-swarm #agent-toolkit #stateful-agent #durable-execution #human-in-loop]; required_bindings=%w[@orchestration-graph @swarm-run @agent-toolkit-observer @state-store @checkpoint-store @human-review]; required_skills=%w[orchestration.graph agent.swarm agent.toolkit state.checkpoint human.review stream.trace agent.orchestrator]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x) || skills.fetch("skill_variants").include?(x)}; abort("missing orchestration route coverage: #{missing.join(", ")}") unless missing.empty?; puts "orchestration route consistency ok"'
 	ruby -ryaml -e 'root=ENV.fetch("DOCS_ROOT"); parse=->(name){text=File.read(File.join(root,name)); YAML.safe_load(text.match(/\A---\n(.*?)\n---\n/m)[1], aliases: true)}; command=parse.call("DICTIONARY-COMMAND.md").fetch("dictionary_entries"); semantic=parse.call("DICTIONARY-SEMANTIC.md").fetch("dictionary_entries"); binding=parse.call("DICTIONARY-BINDING.md").fetch("dictionary_entries"); skills=parse.call("SKILLS.md"); required_commands=%w[/superagent.run]; required_semantics=%w[#long-horizon-harness #sandboxed-workspace #message-gateway]; required_bindings=%w[@sandbox-workspace @message-gateway]; required_skills=%w[superagent.run]; missing=required_commands.reject{|x| command.include?(x)}+required_semantics.reject{|x| semantic.include?(x)}+required_bindings.reject{|x| binding.include?(x)}+required_skills.reject{|x| skills.fetch("skill_contracts").include?(x)}; abort("missing superagent route coverage: #{missing.join(", ")}") unless missing.empty?; puts "superagent route consistency ok"'
@@ -485,6 +375,9 @@ npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run skill-evolution:check && npm --prefix
 Expected:
 
 - Command, semantic, binding, skill, variant, eleven-entry Prompt Preset Chat/MCP, and structured Probe-Tree clarification contracts are discoverable and fail closed through `npm run docs:check`.
+- Every declared `/`, `#`, and `@` entry reconciles one-to-one with its table row, passes the shared invocation grammar, and recomputes the exact `catalog_entry_count` and `catalog_digest` declared once in `DICTIONARY-COMMAND.md`; count, digest, or digest-input drift fails closed before spend, mutation, or deploy.
+- `kanban.md` `## Ledger Projection` regenerates byte-identically from the `active_period` context records, its declared row count, period, and digest match, and no projected id collides with an authored `KANBAN-` row; a hand edit inside the fence fails closed.
+- `/goal.advance @goal-plan #goal-completion` resolves exactly once; outcome-derived weights are deterministic and order-independent, reorder only the ready set, and never admit, gate, or unblock a unit; unauthorized gated units are refused; each blocked unit bounds only itself and its dependents; and the advance receipt is frozen, digest-bound, and performs no dispatch or mutation.
 - Every `FACTS.md` `direct_resolution` token is present in the matching `/`, `#`, or `@` dictionary.
 - `/soul.load`, `/personality.overlay`, Soul tags, Soul bindings, `soul.load`, and `personality.overlay` route through dictionaries, `SOUL.md`, and `SKILLS.md`.
 - `/memory.write`, `/memory.compact`, `/memory.search`, `/session.search`, `/user.profile`, persistent-memory tags, memory bindings, and matching skills route through dictionaries, `MEMORY.md`, `USER.md`, and `SKILLS.md`.
@@ -492,7 +385,7 @@ Expected:
 - `/context.discover`, `/context.load`, `/context.audit`, context-file tags, working-directory bindings, policy bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`.
 - `/reference.expand`, `/reference.audit`, context-reference tags, reference bindings, attached-context packets, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`.
 - `/kanban.task`, `/kanban.handoff`, `/kanban.sync`, Kanban tags, board bindings, row bindings, profile bindings, and `kanban.collaborate` route through dictionaries, `MEMORY.md`, `SKILLS.md`, and `kanban.md`.
-- `/tool.catalog`, `/tool.route`, `/tool.provider.select`, `/tool.gateway.audit`, tool gateway tags, tool bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`; `/voice.studio` additionally resolves exact clone, dictate, and create metadata routes to one `knowgrph.voice.studio` wire identity while consent, approval, runtime proof, and external dependency remain fail-closed.
+- `/tool.catalog`, `/tool.route`, `/tool.provider.select`, `/tool.gateway.audit`, tool gateway tags, tool bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`; `/voice.studio` additionally resolves exact clone, dictate, and create metadata routes to one `agenticgraph.voice.studio` wire identity while consent, approval, runtime proof, and external dependency remain fail-closed.
 - `/tool.catalog`, `/toolset.enable`, `/toolset.disable`, tool-function tags, toolset tags, platform-surface bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`.
 - `/tool.search`, `/tool.describe`, `/tool.call`, tool-search tags, deferred-schema tags, bridge bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`.
 - `/moa`, MoA tags, MoA bindings, `moa.run`, and `agent.moa` route through dictionaries and `SKILLS.md`.
@@ -505,39 +398,46 @@ Expected:
 
 ## Knowgrph Local Runtime Checks
 
-Run only when a runtime owner in `$KNOWGRPH_ROOT` is touched:
+Run only when a runtime owner in `$AGENTICGRAPH_ROOT` is touched:
 
 ```bash
-npm -C "$KNOWGRPH_ROOT" run vdeoxpln:check
-npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- mcpLocalToolContract
-npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- vdeoxplnContract
-npm -C "$KNOWGRPH_ROOT/canvas" run typecheck
+npm -C "$AGENTICGRAPH_ROOT" run vdeoxpln:check
+npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- mcpLocalToolContract
+npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- vdeoxplnContract
+npm -C "$AGENTICGRAPH_ROOT/canvas" run typecheck
 ```
 
 Choose the subset matching touched owners. Do not run broader suites unless the change crosses shared contracts or compiler boundaries.
 
 ## Agentic OS VCC Checks
 
-Run the focused writer-coordination proof before any broader docs or build check:
+Run the focused ADLC consumer proof before broader checks:
 
 ```sh
-node --test __tests__/writer-lease-lib.test.mjs __tests__/repository-guards.test.mjs __tests__/device-branch-lib.test.mjs
+node --test __tests__/adlc-compatibility.test.mjs __tests__/adlc-ci-contract.test.mjs __tests__/repository-guards.test.mjs
+npm run authored-line-budget:check
+node --test __tests__/adlc-compatibility.test.mjs __tests__/agentic-os-profile.test.mjs
+npm run dictionary-catalog:check
 ```
-The proof must show the protected remote collaboration ledger admits at most one same-parent transition, rejects overlapping normalized writes, advances epochs after server-time expiry, replays exact idempotency keys, binds immutable repository/actor/PR/head identity, updates its ref only with `force: false`, and treats local leases and pull-request markers as projections. `npm run collaboration:cloud:check` proves the reducer and GitHub adapter without claiming live authority; live readiness additionally requires the ledger ref, deletion/non-fast-forward ruleset, app-bound `cloud-collaboration` check, and claim/verify/release receipts. `node --test __tests__/worktree-lifecycle.test.mjs` must still prove attributed post-baseline untracked paths remain in their physical owning lane while canonical or unattributed dirt fails closed.
+
+The proof must keep branch/pull-request identity separate from local observation,
+require exact integration proof before exact clean retirement, and preserve every
+dirty or untracked byte. `budgets` is the sole protected bounded
+repository-contract context; the former bridge is retired and absent.
 
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
 | Automated collaboration and runtime identity | `npm run collaboration:gate` exits zero after focused checks and isolated owner/guest/worker proof; the result reports at least two active peers, remote document propagation, two distinct runtime identities, one common digest, identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs, and `fresh` hydration within two attempts. Physical devices and JSON exports are not required. |
 | Canonical local runtime | `turn:end` reports `ready` only when clean exact protected `main` revisions, private-token process ownership, fixed Apex/storage listeners, and direct plus proxied HTTP probes agree; `runtime:local:stop` refuses unrelated processes. |
-| Cloud writer coordination and Agentic SDLC conformance | `npm run collaboration:cloud:check` proves canonical encoding, bounded history, normalized overlap, server-time expiry, idempotent replay, non-forced CAS, bootstrap/race recovery, exact actor/repository/PR/head binding, and secret/path-safe public output; live runtime readiness separately joins the protected ledger ref, ruleset, app-bound check, and claim/verify/release receipts. Focused local writer-lease and worktree-lifecycle tests remain projection and authored-state preservation proof. `npm run agentic-sdlc:check` proves the canonical run evaluator; `npm run agentic-sdlc:source:check` binds the protected guideline revision/digests/Rule IDs, and `npm run agentic-sdlc:verify -- --run <explicit-run.json>` exits zero only for a runtime-ready artifact. Every command keeps the Deploy Boundary closed. |
+| ADLC lifecycle | `npm run doctor`, `npm run status`, and the focused ADLC compatibility tests prove observational state, exact integration proof, and exact clean retirement without granting Production or deployment authority. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |
 | Video Remix Director | Missing approvals produce blocked zero-cost manifest; approved dry-run emits storyboard evidence. |
 | Canvas dashboard | Frontmatter parses; KGC graph materializes through existing Source Files/Canvas owners. |
-| Agentic OS slash dictionary | `npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.composer.memoryInvocationRuntime` exits 0. |
-| FloatingPanel Chat action recommendation | `npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.pipeline`, `ui.floatingPanelChat.quickActions.invocationRoutes`, `ui.floatingPanelChat.composer.ingestCommandRegistry`, and `ui.floatingPanelChat.composer.slashVariableMenus` exit 0. |
+| Agentic OS slash dictionary | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.composer.memoryInvocationRuntime` exits 0. |
+| FloatingPanel Chat action recommendation | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.pipeline`, `ui.floatingPanelChat.quickActions.invocationRoutes`, `ui.floatingPanelChat.composer.ingestCommandRegistry`, and `ui.floatingPanelChat.composer.slashVariableMenus` exit 0. |
 | Soul identity | Focused docs route check reports `soul route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes prompt slot 1 assembly, scan, bounds, typed fallback, and no-hardcoded-default rejection. |
 | Mixture of Agents | Focused docs route check reports `moa route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes preset resolution, reference fan-out, aggregator action, separated cost logs, and no-recursion rejection. |
 | Persistent memory | Focused docs route check reports `persistent-memory route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes bounded memory/profile targets, frozen snapshot reads, typed capacity errors, scan, and session search. |
@@ -559,7 +459,7 @@ The proof must show the protected remote collaboration ledger admits at most one
 | Sandbox Agents | `npm run sandbox-provider:check` exits zero; affected app and Worker tests keep default readiness unconfigured; `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-docker:check` must report a fresh verified proof, 20 checks, real files, argv commands, offline local package installation, internal networking, loopback preview traffic, snapshot seeding, atomic cross-controller resume, zero cost, and zero residual labeled resources. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |
-| Computing-flow | `npm -C "$KNOWGRPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |
+| Computing-flow | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |
 | Learning loop and Skill Evolution | Focused docs routing covers memory, experience, skill, identity, and `agent.learning`; `npm run skill-evolution:check` proves only the model-free ACOS spec and fail-closed client transport for singular invocation, resumable operations, isolated validation, strict metrics, candidate roles, complete snapshots, dependency/import clean-room checks, and safety flags. Runtime readiness requires exact integrated Knowgrph test citations. |
 | Stateful orchestration | Focused docs route check reports `orchestration route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed graph, checkpoint, review, and trace outputs. |
 | Long-horizon SuperAgent | Focused docs route check reports `superagent route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed graph, sandbox workspace, message gateway, artifact manifest, verification, cost, and stop condition outputs. |
@@ -570,7 +470,7 @@ Documentation-only changes must end with:
 
 ```bash
 git -C "$AGENTIC_CANVAS_OS_ROOT" status --short -- docs
-git -C "$KNOWGRPH_ROOT" status --short
+git -C "$AGENTICGRAPH_ROOT" status --short
 ```
 
 Confirm:

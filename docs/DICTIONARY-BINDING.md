@@ -17,9 +17,8 @@ source_docs:
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
   - "APPLICATION-COMPOSITION.md"
-  - "KNOWLEDGE-GRAPH.md"
+  - "AGENTIC-GRAPH.md"
   - "AGENT-TEAM.md"
-  - "CLOUD-COLLABORATION.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
   - "docs/documents/git-guidelines.md"
@@ -76,12 +75,14 @@ dictionary_entries:
   - "@image"
   - "@image-to-threejs"
   - "@image-to-glb"
-  - "@knowgrph.probe-tree"
+  - "@agenticgraph.probe-tree"
   - "@audio"
   - "@voice-profile"
   - "@video"
   - "@mcp-gateway"
+  - "@webmcp-surface"
   - "@canvas"
+  - "@portability-layer"
   - "@canvas-view"
   - "@scene"
   - "@camera"
@@ -122,6 +123,9 @@ dictionary_entries:
   - "@context-file"
   - "@working-directory"
   - "@repository-root"
+  - "@artifact-operation"
+  - "@workspace-entry"
+  - "@artifact-policy"
   - "@context-policy"
   - "@file:"
   - "@folder:"
@@ -138,12 +142,11 @@ dictionary_entries:
   - "@attached-context"
   - "@kanban-board"
   - "@task-row"
-  - "@work-item"
   - "@implementation-run"
   - "@application-manifest"
   - "@component-catalog"
   - "@integration-profile"
-  - "@knowledge-graph"
+  - "@agentic-graph"
   - "@parser-specification"
   - "@agent-team"
   - "@handoff-row"
@@ -162,6 +165,7 @@ dictionary_entries:
   - "@browser-tool"
   - "@tool-policy"
   - "@skill-catalog"
+  - "@skill-registry"
   - "@identity-model"
   - "@orchestration-graph"
   - "@swarm-run"
@@ -178,11 +182,10 @@ dictionary_entries:
   - "@payment-event"
   - "@payment-record"
   - "@payment-readiness"
-  - "@workspace-lane"
-  - "@recovery-reference"
-  - "@collaboration-ledger"
-  - "@cloud-claim"
+  - "@coordination-plan"
+  - "@goal-plan"
 ---
+<!-- Responsibility: Define canonical binding invocation entries and their authority boundaries. -->
 
 # Binding Dictionary
 
@@ -214,8 +217,8 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@soul-profile` | Durable source-backed agent identity and voice. | `SOUL.md` plus approved prompt-assembly owner. | Identity only; no project commands, architecture notes, file paths, ports, credentials, memory facts, or deploy approvals. |
 | `@identity-slot` | Prompt slot 1 identity position. | Approved prompt-assembly owner. | Must be filled from scanned `@soul-profile` or a typed fallback result; silent hardcoded default identity is forbidden. |
 | `@personality-overlay` | Temporary session-level style overlay. | Operator-approved session state. | Overlay cannot mutate `SOUL.md`, override facts, bypass safety, or authorize deploy. |
-| `@moa-preset` | Local neutral MoA preset binding for reference roles, aggregator role, caps, and failover policy. | `FACTS.md`, `SKILLS.md`, and the approved local model router or harness owner. | Must not contain copied provider examples, hardcoded external model ids, recursive MoA aggregators, or global model-switch side effects. |
-| `@reference-agents` | Bounded advisory agents in a Mixture of Agents run. | Approved local harness or provider router. | No tools, no source mutation, capped output, typed failure, cost logging, and private advisory context only. |
+| `@moa-preset` | Local neutral MoA preset binding for reference roles, aggregator role, caps, and fail-soft failure classification. | `FACTS.md`, `SKILLS.md`, and the approved local model router or harness owner. | Must not contain copied provider examples, hardcoded external model ids, recursive MoA aggregators, or global model-switch side effects. |
+| `@reference-agents` | Bounded advisory agents in a Mixture of Agents run. | Approved local harness or provider router. | No tools, no source mutation, capped output, all-settled typed outcomes, sanitized failure audit, aggregate counts, cost logging, and private advisory context only. |
 | `@aggregator-agent` | Single acting agent in a Mixture of Agents run. | Approved local harness or provider router. | Owns final answer, tool calls, approvals, transcript persistence, and follow-up iteration through normal gates. |
 | `@operator` | Human approval authority and final release gate. | The user. | Required before paid, mutating, payment, browser-auth, Prod, or Cloudflare actions. |
 | `@source.frontmatter` | Parsed YAML frontmatter. | Authored document source. | SSOT for identity, routing, renderer flags, and runtime gates. |
@@ -234,12 +237,14 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@image` | Request source-consistent image artifacts. | Shared image-generation, persistence, Media, and Canvas projection owners. | Only provider-returned and read-back-verified image identities may project; no fabricated or localhost-only URL is accepted as durable output. |
 | `@image-to-threejs` | Bind one existing PNG, JPG, JPEG, or SVG source to the native `image.to-threejs` conversion. | Shared Card, Widget, image-to-threejs, and Rich Media Panel owners. | Uses the selected source URL only; no credential, provider generation, external plugin, or deploy authority is introduced. |
 | `@image-to-glb` | Bind one existing PNG, JPG, JPEG, or SVG source to the native procedural `image.to-glb` asset contract. | Shared Card, Widget, image-to-threejs source utilities, and GLB asset-pipeline owners. | Uses only the selected source URL; source media remains unchanged, external plugin/copy paths are forbidden, and any LLM execution requires its separately approved runtime. |
-| `@knowgrph.probe-tree` | Bind one Widget Card or answered branch to the shared Probe-Tree generation context. | Authored graph identity, selected child Output including numbered multi-selections and Other, bounded ancestor lineage, local MCP Probe-Tree tools, shared Storyboard publication owners, and the active Chat provider, endpoint, and model. | Carries no credentials or implicit provider approval; the selected child replaces any same-ID root alias as continuation owner, every accepted question and clarification suggestion traces to the selected child or bounded lineage through verbatim anchors, generation is bounded, forward-only, page-stable, and zero-spend by default, stale card-local routing is forbidden, and graph mutation remains atomic through the owning publication transaction. |
+| `@agenticgraph.probe-tree` | Bind one Widget Card or answered branch to the shared Probe-Tree generation context. | Authored graph identity, selected child Output including numbered multi-selections and Other, bounded ancestor lineage, local MCP Probe-Tree tools, shared Storyboard publication owners, and the active Chat provider, endpoint, and model. | Carries no credentials or implicit provider approval; the selected child replaces any same-ID root alias as continuation owner, every accepted question and clarification suggestion traces to the selected child or bounded lineage through verbatim anchors, generation is bounded, forward-only, page-stable, and zero-spend by default, stale card-local routing is forbidden, and graph mutation remains atomic through the owning publication transaction. |
 | `@audio` | Request narration, dialogue, sound, music, subtitle-sync, and master-audio artifacts. | Shared audio/video generation, media-probe, persistence, and Timeline owners. | Languages, synchronization, media kind, persistence, and read-back identity must be typed before projection. |
 | `@voice-profile` | Bind one exact revision of a consented voice-profile manifest for profile creation or disclosed synthesis. | Knowgrph's voice-studio runtime resolves opaque profile identity, source digests, speaker authorization, permitted uses, retention, disclosure, and revocation state through existing media and policy owners. | It contains no voice embedding, raw audio, credential, mutable provider alias, or implicit consent; a missing, expired, mismatched, or revoked profile blocks adapter work, spend, persistence, and output. |
 | `@video` | Request playable video artifacts and final composition. | Shared video-generation, composition, persistence, Media, and Timeline owners. | Completion requires returned or composed playable bytes, media verification, persistence, read-back, and one durable identity across Canvas surfaces. |
 | `@mcp-gateway` | Discovery-first MCP federation surface. | Existing local, Pages, browser, or control-plane MCP owner. | Discovery is zero-token; spend routes through approval gates. |
+| `@webmcp-surface` | Browser-local W3C Model Context registration surface pinned to `navigator.modelContext.registerTool` with `signal` and `exposedTo` options and `getTools({ fromOrigins })` discovery, at origin-trial stage and unshipped by default in every recorded engine. | Existing browser-local Knowgrph Canvas owner; this repository declares the surface and its recorded API revision but registers no tool of its own. | Carries no renderer, storage, credential, spend, Prod, or Cloudflare authority; an absent or renamed registration API fails visibly as an unavailable surface, and a registered set whose digest drifts from the recorded set is refused rather than served. |
 | `@canvas` | Source-backed Canvas projection and active browser-local Canvas control surface. | Existing Source Files, frontmatter, KGC, table, Storyboard, Main Toolbar, Launch, Canvas View, and Interaction owners. | No dashboard-only graph store or renderer fork. Semantic row-value and toolbar-action invocations bind to existing owners and add no panel-local state, credential, collaboration grant, or deployment authority. |
+| `@portability-layer` | Shared capability-detected portability contract consumed by browser and native Agentic Game OS projections. | Knowgrph shared substrate and its source-backed public portability surface; Agentic Canvas OS owns invocation metadata and GameXR owns frontend projection only. | No renderer, capability implementation, persistence engine, token registry, credential, provider, model, infrastructure, Prod, Cloudflare, or deploy authority; an unsupported capability remains a typed gap rather than a local fallback. |
 | `@canvas-view` | Active browser-local Canvas View Mode control surface and its canonical option-id inventory. | Existing Canvas View toolbar options, shared selection action, semantic row affordances, and browser-local WebMCP bridge. | Carries no renderer, storage, collaboration, credential, or deployment authority; an unavailable or disabled option fails visibly before mutation. |
 | `@scene` | Current canonical XR scene and immersive placement scope. | Browser-local Knowgrph scene, hit-test, and shared Canvas projection owners. | Carries no camera or sensor grant and creates no duplicate renderer, persistence owner, approval, credential, Prod, or Cloudflare authority. |
 | `@camera` | First-class shared Camera framing and XR motion runtime. | Application-root Camera runtime, shared framing utilities, and canonical BottomPanel Timeline transport. | Does not create a panel-local Camera store, timeline, selection owner, credential, or deployment grant. |
@@ -280,6 +285,9 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@context-file` | One discovered project-local context file. | Working directory, ancestor, or touched subdirectory under the approved project scope. | Read-only unless operator requests edits; must scan, bound, and never override `FACTS.md`, `SOUL.md`, system, developer, or operator instructions. |
 | `@working-directory` | Current startup or tool-call working directory used for context discovery. | Runtime session state or explicit operator path. | Must be explicit, normalized, and scoped; no home-wide or global scan unless approved. |
 | `@repository-root` | Exact local Git worktree root selected for deterministic repository packing. | Explicit operator path resolved under the configured Knowgrph local MCP root. | Must equal Git's canonical worktree root after symlink-safe validation; it grants reads only within that root and one content-addressed write under the approved output directory. |
+| `@artifact-operation` | One normalized workspace artifact operation: inspect, create file, create folder, update file, import file, export file, trash, or restore. | Explicit request field accepted by the selected lifecycle owner. | Grants only the named operation; plan is read-only, apply additionally requires `@operator`, and recursive import/export or purge is unsupported until separately specified and proven. |
+| `@workspace-entry` | One relative file or folder path inside an explicitly configured workspace root, plus a source or destination path when the selected operation requires it. | Operator-selected path resolved by the local MCP owner against configured roots. | Traversal, reserved names, special files, undeclared roots, and every symlink component fail before read or mutation; the binding never grants network, provider, repository, Prod, or deployment authority. |
+| `@artifact-policy` | Collision, bounds, atomicity, and recovery policy for one workspace artifact operation. | Host defaults narrowed by explicit request values. | Cannot weaken configured roots or security limits; replace requires an expected digest, idempotent identical reuse is explicit, mutations use atomic publication and read-back, and typed recovery evidence is returned without hidden deletion. |
 | `@context-policy` | Precedence, scan, truncation, and progressive-discovery rules for context files. | `FACTS.md`, `AGENTS.md`, `VALIDATION-RUNBOOK.md`, and approved runtime owner. | First-match project context, per-directory visited set, prompt-injection block, capacity bound, and deploy gate are required. |
 | `@file:` | Context reference to one workspace file or 1-indexed line range. | Explicit message text plus normalized workspace path. | Text only, workspace-scoped, sensitive path blocked, path traversal blocked, binary rejected, and bounded before expansion. |
 | `@folder:` | Context reference to a directory listing or bounded folder summary. | Explicit message text plus normalized workspace directory. | Maximum entry cap, no recursive content dump by default, sensitive children skipped with warnings. |
@@ -296,12 +304,11 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@attached-context` | Bounded appended context packet produced by reference expansion. | Approved `/reference.expand` runtime owner. | Packet records source token, normalized source, size, truncation, warnings, refusal, and cost posture. |
 | `@kanban-board` | Durable `kanban.md` task board. | Authored Markdown table source plus existing multi-dimensional table/Kanban utilities. | Board rows are the SSOT for task and handoff state; no browser-only, process-only, or copied board store. |
 | `@task-row` | One validated task row in `kanban.md`. | Shared table row parser and operator-approved task schema. | Requires stable id, title, owner profile, status, priority, acceptance, evidence, and next action. |
-| `@work-item` | One durable implementation request with objective, acceptance, repository, human semantic scope, allowed paths, configured runner id, verifier profile ids, and attempt/time bounds. | Operator-approved project source or management surface; Knowgrph resolves verifier profiles to exact host-owned commands. | Contains no raw shell text, arbitrary executable string, credentials, provider secrets, arbitrary environment, merge grant, or deployment authority. |
-| `@implementation-run` | Versioned durable ledger identity for one managed implementation attempt series. | Knowgrph local MCP run store and its single supervisor. | Records exact work item, state version, worktree, branch, lease epoch, fence, PR, runner attempt, evidence, and transition; idempotent compare-and-set writes only. |
+| `@implementation-run` | Immutable identity and revision for one externally owned implementation-run receipt. | The caller-selected receipt source; ACOS consumes it only through the read-only `/sdlc.observe` compatibility shim. | Carries no worktree, branch, lease, claim, review, integration, release, cleanup, or deployment authority. |
 | `@application-manifest` | Bounded source-backed application slots, dependency edges, entrypoints, outputs, bounds, and exact revisions and digests. | Authored application source selected by the operator or project owner. | No latest tags, ranges, fallbacks, callbacks, packages, commands, endpoints, headers, environment maps, credentials, or embedded code. |
 | `@component-catalog` | Immutable exact component, source, interface, schema, capability, runtime-owner, risk, and readiness records. | Knowgrph local component catalog owner. | Same-revision drift, missing evidence, disabled records, and implicit fallback or upgrade block planning. |
 | `@integration-profile` | Opaque host-approved integration id, exact profile revision, and exact declared capability revision. | Existing integration registry, gateway, or transport owner. | Executable, arguments, transport, endpoint, headers, secrets, credentials, sessions, and provider payloads remain owner-private. |
-| `@knowledge-graph` | One exact digest-fenced local graph snapshot view plus its source, parser, diagnostic, and artifact manifest. | Knowgrph artifact owner under an explicitly configured local boundary. | The binding is not a database credential, global index, vector store, approval, or executable graph; replacement makes prior expected digests stale, source files stay authored SSOT, and query or explanation cannot select or mutate another snapshot. |
+| `@agentic-graph` | One exact digest-fenced local graph snapshot view plus its source, parser, diagnostic, and artifact manifest. | Knowgrph artifact owner under an explicitly configured local boundary. | The binding is not a database credential, global index, vector store, approval, or executable graph; replacement makes prior expected digests stale, source files stay authored SSOT, and query or explanation cannot select or mutate another snapshot. |
 | `@parser-specification` | One immutable inert parser-registry specification containing bounded source matchers, declared kinds, native adapter identities, fidelity, and deterministic priority. | Operator-selected authored source resolved by the Knowgrph local MCP parser-generator owner. | It contains no executable code, adapter implementation, command, dependency, credential, remote endpoint, model prompt, artifact path, implicit ingest authority, or mutable alias; ambiguous or unsupported adapter declarations fail before compilation. |
 | `@handoff-row` | One validated handoff row in `kanban.md`. | Shared table row parser and named profiles. | Requires from profile, to profile, task id, context refs, blockers, resume state, and acceptance criteria. |
 | `@agent-profile` | Named profile that can own or receive board work. | `SOUL.md`, `USER.md`, profile config, or explicit operator-defined profile source. | Profile identity is explicit and non-secret; it cannot imply deploy, spend, or hidden memory ownership. |
@@ -319,10 +326,12 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@browser-tool` | Cloud browser automation capability. | Approved browser automation harness. | Requires isolated session, action schema, redaction, screenshots or vision bounds, and approval. |
 | `@tool-policy` | Tool approval, egress, secret, cost, and fallback policy. | `FACTS.md`, `MCP-GATEWAY.md`, `HARNESS-CONTRACTS.md`, and approved runtime owner. | Paid, mutating, browser-auth, generated-media, and deploy actions fail closed without approval. |
 | `@skill-catalog` | Reusable skill contract catalog. | `SKILLS.md` plus existing shared skill registry owner when present. | Skill changes are proposals until reviewed; direct auto-commit and external copying are forbidden. |
+| `@skill-registry` | In-Worker Agent Definition registry created by `createAgentDefinitionRegistry` plus its `Active_Registry_Snapshot` projection. | `agent-api/src/agent-definitions.js` inside the Cloudflare Worker declared in `wrangler.jsonc`. | Distinct from `@skill-catalog`, which resolves to skill text contracts; this binding is read-only from the invocation surface, dispatches only `status: active` definitions, and promotion to active requires the operator-gated skill registry promotion gate. |
 | `@identity-model` | Stable model of operator preferences, project boundaries, and agent operating rules. | `FACTS.md`, `MEMORY.md`, and operator-approved memory. | Stores non-secret, source-backed facts only; no sensitive profiling or unsupported personal inference. |
 | `@orchestration-graph` | Source-backed state, node, edge, and stop-condition topology. | `SKILLS.md`, `HARNESS-CONTRACTS.md`, and existing Canvas/KGC graph owners. | No external graph runtime import, hidden node registry, or direct graph-store mutation. |
 | `@agent-team` | Exact source URI and digest, team revision, participant-to-Agent-Definition revisions, registered workflow revision and branches, role metadata, review policy, and hard bounds. | `AGENT-TEAM.md` defines the source contract; Knowgrph local stdio MCP owns durable lifecycle state; existing agent owners retain execution authority. | Roles, goals, personas, membership, and MCP requests cannot grant facts, instructions, models, tools, credentials, approval, routing, final-answer ownership, Prod, or Cloudflare authority; drift and mutable aliases fail closed. |
 | `@swarm-run` | Durable ledger for one dynamically planned Agent Swarm run. | `AGENT-SWARM.md`, Agent Swarm runtime, and the injected atomic state-store adapter. | Holds bounded private task results for dependencies and synthesis plus state, claims, leases, verified receipts, cost, and trace; never exposes those results publicly or stores provider secrets, caller roles, or workflow topology. |
+| `@goal-plan` | One declared goal binding its unit set, gates, explicit authorizations, and recorded prior outcomes. | `GOAL-COMPLETION-RUNTIME.md` and `scripts/goal-completion-runtime-contract.mjs`; readiness and waves remain owned by the coordination scheduler. | Carries no claim, lease, dispatcher, timer, or provider credential; recorded outcomes are observations only, and neither a weight nor a gate authorization grants mutation, integration, release, or deployment authority. |
 | `@agent-toolkit-observer` | Injected metadata observer and digest-bound evaluator for one Toolkit principal. | `AGENT-TOOLKIT.md`, Agent Toolkit runtime, and the application-owned authorizer, adapter, or evaluator. | Accepts bounded redacted lifecycle metadata, declared metrics, unique evidence references, and owner-aggregate cost; caller-declared digests need application verification, and remote telemetry stays untrusted and comparison-ineligible. |
 | `@state-store` | Scoped current-state snapshot for a stateful run. | Existing approved local state owner. | Typed, bounded, secret-free state only; writes require mutation approval. |
 | `@checkpoint-store` | Durable checkpoint and resume surface. | Existing approved local persistence owner. | Checkpoints require scope, recovery proof, idempotency, and cleanup path. |
@@ -336,10 +345,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@payment-event` | One inbound provider settlement callback plus its recorded processing identity. | Existing provider event ingress owner and its event ledger. | Authenticity must be verified before the payload is read, and provider state remains the settlement authority over the payload. |
 | `@payment-record` | The serialized projection of terminal payment records for local audit and receipts. | Existing payment record serializer and its document store. | Deterministic and byte-stable; excludes credentials, card numbers, bank account numbers, buyer email addresses, and provider customer identifiers. |
 | `@payment-readiness` | Per-rail configuration completeness snapshot for the payments capability. | Existing per-rail readiness gate. | Read-only; reports required credential names, presence, pinned version, configured integration model, and terminal sandbox proof without mutating configuration or granting deploy authority. |
-| `@workspace-lane` | One unit of parallel work: one repository plus one registered worktree, its branch, its claimed semantic scope, and its dirty and untracked counts. | `WORKSPACE-PARALLELISM.md` plus the existing worktree registry, writer lease, and lifecycle owners. | Exactly one session owns a lane, one branch is live in at most one worktree, and one semantic scope per repository has one session owner; the binding reads Git state and never stages, resets, cleans, checks out, prunes, or removes anything. |
-| `@recovery-reference` | The durable ref that a lane's uncommitted work can be restored from before a permitted destructive operation. | The owning session, recorded as a branch, tag, or workspace bundle. | Must exist and must be durable; `refs/stash` is rejected as anonymous, and no reference can cover untracked paths, which stay unrecoverable and therefore undeletable. |
-| `@collaboration-ledger` | Current protected remote append-only ledger revision for cross-device claim authority. | The exact `agentic/collaboration-ledger` Git ref and its schema-valid content-addressed history. | Read or update only through bounded Git API calls; local files, review labels, workflow queues, branch names, and model output are projections or transport, never authority. |
-| `@cloud-claim` | One current claim digest plus its repository, work item, normalized write set, epoch, fence, expiry, and immutable lane projection. | The current entry in `@collaboration-ledger`. | Stores no token or absolute local path, grants collaboration ownership only, and cannot imply review, integration, release, publication, or deployment authority. |
+| `@coordination-plan` | One immutable set of task ids, declared write sets, dependency ids, priorities, authority states, and digest-bound findings. | Operator-selected external JSON normalized by `scripts/coordination-scheduler-contract.mjs`. | The binding contains no command, secret, lease mutation, approval, or inferred authority; malformed graphs and unscoped global findings fail closed. |
 
 ## Binding Shape
 
@@ -372,7 +378,6 @@ binding:
 | `@file:`, `@folder:`, `@git:`, or `@url:` targets sensitive, binary, outside-workspace, disallowed-egress, or over-hard-limit content | Warn or refuse before context attachment or source import; do not fetch, inject, or persist the content. |
 | Missing `@kanban-board` for `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` | Return missing-board; do not create a second board store. |
 | Missing `@agent-profile` or `@worker-process` for a handoff | Return missing-profile; do not spawn an anonymous worker. |
-| Missing `@work-item` or `@implementation-run` for `/implementation.run` | Return missing-managed-run-context before worktree creation, process launch, model spend, or mutation. |
 | Missing or mutable `@application-manifest`, `@component-catalog`, or `@integration-profile`, or changed source, interface, schema, capability, owner, or plan evidence | Return a typed composition block before execution or spend; never infer, upgrade, install, reconnect, retry, migrate, or deploy. |
 | Missing, mutable, executable, ambiguous, oversized, or unsupported `@parser-specification` | Return a typed parser-generation block before compilation or registry publication; do not infer matchers, download an adapter, execute caller code, or start ingestion. |
 | Missing or unconfigured `@swarm-run` state, exact-agent resolver, planner, worker, synthesizer, receipt verifier, authorizer, or authenticated run principal | Return a typed block before work, disclosure, spend, or cancellation; never accept a caller-supplied substitute. |
@@ -397,15 +402,15 @@ binding:
 | `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Bind validated KGC source to one private bounded ECS session. |
 | `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Resolve and advance the live session without exposing its world object. |
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Persist the session's pending decisions atomically and dispose it only after a terminal success. |
-| `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Authorize and prove the bounded Dev-to-Prod-to-Cloudflare release workflow. |
-| `/implementation.run #managed-implementation-run @work-item @implementation-run @sandbox-workspace` | Execute one bounded work item inside its fenced run workspace and stop `delivery_ready` with ACOS `review_ready`. |
+| `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Bind fresh human authorization to the exact product artifact, deployment target, verification result, and rollback evidence without granting repository authority. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Compile exact host-owned interfaces into one immutable plan and delegate bounded ready steps to their existing owners. |
-| `/knowledge.graph.ingest #knowledge-graph #mcp #runtime-ready @working-directory @knowledge-graph @operator @runtime-proof` | Bind one explicit workspace selection and artifact view to Knowgrph deterministic ingestion. |
-| `/knowledge.graph.parser.generate #knowledge-graph #parser-generation #mcp @parser-specification @runtime-proof` | Bind one exact inert specification to Knowgrph parser generation and its digest-fenced result identity. |
-| `/knowledge.graph.query #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Bind a query to one opaque Knowgrph graph id and expected current snapshot digest. |
-| `/knowledge.graph.explain #knowledge-graph #mcp #vcc @knowledge-graph @runtime-proof` | Bind explanation to one exact Knowgrph-stored edge under one expected snapshot digest. |
+| `/agentic.graph.ingest #agentic-graph #mcp #runtime-ready @working-directory @agentic-graph @operator @runtime-proof` | Bind one explicit workspace selection and artifact view to Knowgrph deterministic ingestion. |
+| `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` | Bind one exact inert specification to Knowgrph parser generation and its digest-fenced result identity. |
+| `/agentic.graph.query #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | Bind a query to one opaque Knowgrph graph id and expected current snapshot digest. |
+| `/agentic.graph.explain #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | Bind explanation to one exact Knowgrph-stored edge under one expected snapshot digest. |
 | `/agent.team #role-based-agent-team @agent-team` | Resolve one revision-fenced role-based team and hand typed plan/start/list/control lifecycle ownership to the Knowgrph local stdio MCP runtime without creating a second scheduler or broadening Agent Swarm. |
-| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `knowgrph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
+| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `agenticgraph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |
+| `/game.portability #game-portability @portability-layer` | Select the source-backed browser/native portability contract while leaving capability execution, projection, persistence, provider, and deployment authority with their existing owners. |
 | `/canvas.node.add #canvas-node @canvas-center` | Create a graph node at the visible Canvas insertion point. |
 | `/canvas.selection.open #canvas-selection @markdown-provenance` | Open selected graph records through existing source or side-panel surfaces. |
 | `/canvas.media.attach #canvas-media @selected-node @media-url` | Attach rich media metadata to the selected graph node. |
@@ -419,8 +424,6 @@ binding:
 | `/payment.event.settle #payment-settlement-integrity @payment-event @payment-intent @payment-provider` | Apply one authenticated provider event at most once against provider-authoritative state. |
 | `/payment.reconcile #offline-intent-queue @payment-intent @payment-provider @runtime-proof` | Resolve queued intents to a terminal state from provider-read state under a bounded retry schedule. |
 | `/payment.readiness #payment-readiness @payment-readiness @payment-rail @runtime-proof` | Report per-rail configuration completeness read-only without mutating configuration or granting deploy authority. |
-| `/workspace.parallelism.check #workspace-parallelism @workspace-lane @recovery-reference @runtime-proof` | Prove lane isolation across every repository in the workspace root and name every lane whose work is unrecoverable. |
-| `/workspace.operation.review #destructive-operation-guard @workspace-lane @recovery-reference @operator` | Refuse a destructive operation before it runs whenever it would cross a lane boundary or discard work that cannot be restored. |
 | `/deploy.guard #dev-only @operator @cloudflare` | Confirm release remains gated until operator explicitly authorizes deploy. |
 | `/moa #mixture-of-agents @moa-preset @reference-agents @aggregator-agent` | Run one-shot advisory fan-out and aggregator-owned response under cost and approval gates. |
 | `/experience.capture #learning-loop @experience` | Store a bounded lesson from proof before proposing reuse. |
@@ -452,12 +455,12 @@ binding:
 | `/tool.route #web-search @web-search-tool` | Execute search or extraction with citations and egress policy. |
 | `/tool.route #image-generation @image-tool` | Execute image generation with approval and artifact manifest. |
 | `/tool.route #text-to-speech @tts-tool` | Execute TTS with voice and output bounds. |
-| `/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `clone` route; `knowgrph.voice.studio` remains the only wire executor. |
-| `/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `dictate` route; `knowgrph.voice.studio` remains the only wire executor. |
-| `/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof` | Bind bounded text and one active profile revision to the metadata-only `create` route; `knowgrph.voice.studio` remains the only wire executor. |
+| `/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `clone` route; `agenticgraph.voice.studio` remains the only wire executor. |
+| `/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof` | Bind one authorized source recording to the metadata-only `dictate` route; `agenticgraph.voice.studio` remains the only wire executor. |
+| `/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof` | Bind bounded text and one active profile revision to the metadata-only `create` route; `agenticgraph.voice.studio` remains the only wire executor. |
 | `/tool.route #cloud-browser @browser-tool` | Execute cloud browser automation with isolated session and redaction. |
 | `/skill.propose #skill-evolution @skill-catalog` | Draft a reusable skill contract for review. |
-| `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Invoke `knowgrph.skill.evolve` through the catalog, policy, proof, and human authority owners; no binding grants automatic apply. |
+| `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator` | Invoke `agenticgraph.skill.evolve` through the catalog, policy, proof, and human authority owners; no binding grants automatic apply. |
 | `/memory.search #memory-search @memory-store` | Retrieve prior context from scoped local memory. |
 | `/identity.reflect #identity-model @identity-model` | Persist stable non-secret preferences with operator authority. |
 | `/orchestration.graph #orchestration-graph @orchestration-graph` | Validate graph topology through source-backed owners. |
@@ -475,10 +478,10 @@ binding:
 | `@agent-team` | `FACTS.md` direct-resolution entry for one exact source-backed Agent Team binding. |
 | `@component-catalog` | `FACTS.md` direct-resolution entry for immutable local component and interface records. |
 | `@integration-profile` | `FACTS.md` direct-resolution entry for opaque host-owned integration capability bindings. |
-| `@knowledge-graph` | `FACTS.md` direct-resolution entry for one exact digest-fenced local graph snapshot view. |
+| `@agentic-graph` | `FACTS.md` direct-resolution entry for one exact digest-fenced local graph snapshot view. |
 | `@agent` | `FACTS.md` direct-resolution entry for executing-agent obligations. |
 | `@soul-profile` | `FACTS.md` direct-resolution entry for durable identity binding. |
-| `@knowgrph.probe-tree` | `FACTS.md` direct-resolution entry for the selected Probe-Tree graph context. |
+| `@agenticgraph.probe-tree` | `FACTS.md` direct-resolution entry for the selected Probe-Tree graph context. |
 | `@ecs-session` | `FACTS.md` direct-resolution entry for private bounded ECS session identity. |
 | `@memory-entry` | `FACTS.md` direct-resolution entry for bounded memory entries. |
 | `@skill-index` | `FACTS.md` direct-resolution entry for progressive skill discovery. |

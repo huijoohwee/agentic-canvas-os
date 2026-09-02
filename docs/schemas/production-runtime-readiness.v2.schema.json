@@ -16,7 +16,7 @@
     "surfaces"
   ],
   "properties": {
-    "schema": { "const": "knowgrph-production-runtime-readiness/v2" },
+    "schema": { "const": "agenticgraph-production-runtime-readiness/v2" },
     "status": { "const": "verified-build" },
     "source": {
       "type": "object",
@@ -52,10 +52,10 @@
       "type": "array",
       "minItems": 2,
       "uniqueItems": true,
-      "items": { "enum": ["/", "/knowgrph"] },
+      "items": { "enum": ["/", "/agenticgraph"] },
       "allOf": [
         { "contains": { "const": "/" } },
-        { "contains": { "const": "/knowgrph" } }
+        { "contains": { "const": "/agenticgraph" } }
       ]
     }
   },

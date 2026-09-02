@@ -5,6 +5,10 @@
 // keeps all secrets in Cloudflare env bindings.
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
+import {
+  createAutonomousAgentDefinitionRegistry,
+  resolveAutonomousRuntimeEnvironment,
+} from "../agent-api/src/autonomous-runtime-config.js";
 import { isSecureRoomCapability, sessionCanJoinRoom, verifySessionToken } from "../agent-api/src/auth.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import {
@@ -13,14 +17,21 @@ import {
   createDurableObjectFunctionContinuationStore,
   createDurableObjectHumanReviewStore,
   createDurableObjectPausedTurnStore,
+  createDurableObjectSkillDraftStore,
   createDurableObjectSwarmRunStore,
 } from "../agent-api/src/durable-object-state-store.js";
+import { resolveModelProviderEnvironment } from "../agent-api/src/model-config.js";
 import { createModelProviderRuntime } from "../agent-api/src/model-providers.js";
+import { resolveOpenAiResponsesAgentConfig } from "../agent-api/src/openai-responses-agent-adapter.js";
+import { resolveOpenAiResponsesFunctionConfig } from "../agent-api/src/openai-responses-function-adapter.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
 import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
 import { createRunningAgentRuntime } from "../agent-api/src/running-agents.js";
 import { createSandboxAgentRuntime } from "../agent-api/src/sandbox-agents.js";
-import { createToolSearchRuntime } from "../agent-api/src/tool-search.js";
+import { createSkillProposerRuntime } from "../agent-api/src/skill-proposer.js";
+import { createSkillRegistryGate } from "../agent-api/src/skill-registry-gate.js";
+import { createConfiguredToolSearchRuntime } from "../agent-api/src/tool-search-config.js";
+import { createAdapterRegistrationInterface } from "../agent-api/src/adapter-registration.js";
 import { isValidRoomId } from "../src/collab-room.js";
 import { CanvasRoom } from "./canvas-room.js";
 import { AgentState } from "./agent-state.js";
@@ -48,6 +59,7 @@ export function createWorkerFetch(env = {}, publicFetch) {
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const MAX_JSON_BODY_BYTES = 512 * 1024;
 const APP_BY_ENV = new WeakMap();
+const AGENT_DEFINITIONS_BY_ENV = new WeakMap();
 const CACHE_CONTEXT_BY_ENV = new WeakMap();
 const MODEL_PROVIDERS_BY_ENV = new WeakMap();
 const REASONING_CONTINUITY_BY_ENV = new WeakMap();
@@ -55,6 +67,9 @@ const PROGRAMMATIC_TOOL_CALLING_BY_ENV = new WeakMap();
 const RUNNING_AGENTS_BY_ENV = new WeakMap();
 const SANDBOX_AGENTS_BY_ENV = new WeakMap();
 const TOOL_SEARCH_BY_ENV = new WeakMap();
+const SKILL_PROPOSER_BY_ENV = new WeakMap();
+const SKILL_REGISTRY_GATE_BY_ENV = new WeakMap();
+const ADAPTER_REGISTRATION_BY_ENV = new WeakMap();
 
 function json(statusCode, body) {
   return new Response(JSON.stringify(body ?? {}), {
@@ -138,12 +153,16 @@ function toResponse(result) {
 function createWorkerApp(env) {
   if (env && typeof env === "object" && APP_BY_ENV.has(env)) return APP_BY_ENV.get(env);
   let cacheContext;
+  let agentDefinitions;
   let modelProviders;
   let reasoningContinuity;
   let programmaticToolCalling;
   let runningAgents;
   let sandboxAgents;
   let toolSearch;
+  let skillProposer;
+  let skillRegistryGate;
+  let adapterRegistration;
   const durableStateConfigured = Boolean(
     env?.AGENT_STATE
     && typeof env.AGENT_STATE.idFromName === "function"
@@ -167,12 +186,26 @@ function createWorkerApp(env) {
   const agentToolkitStore = durableStateConfigured
     ? createDurableObjectAgentToolkitStore({ namespace: env.AGENT_STATE })
     : undefined;
+  const skillDraftStore = durableStateConfigured
+    ? createDurableObjectSkillDraftStore({ namespace: env.AGENT_STATE })
+    : undefined;
   const agentToolkitTelemetry = env?.AGENT_TOOLKIT_TELEMETRY_ENABLED === "true"
     ? async (event) => {
       console.log(JSON.stringify(event));
     }
     : undefined;
   if (env && typeof env === "object") {
+    const modelProviderEnvironment = resolveModelProviderEnvironment(env);
+    const openAiAgentConfig = resolveOpenAiResponsesAgentConfig(env);
+    const autonomousRuntimeEnvironment = resolveAutonomousRuntimeEnvironment(env, {
+      modelProviderEnvironment,
+      openAiAgentConfig,
+    });
+    agentDefinitions = AGENT_DEFINITIONS_BY_ENV.get(env);
+    if (!agentDefinitions) {
+      agentDefinitions = createAutonomousAgentDefinitionRegistry(autonomousRuntimeEnvironment);
+      AGENT_DEFINITIONS_BY_ENV.set(env, agentDefinitions);
+    }
     cacheContext = CACHE_CONTEXT_BY_ENV.get(env);
     if (!cacheContext) {
       cacheContext = createCacheContextRegistry();
@@ -207,12 +240,38 @@ function createWorkerApp(env) {
     }
     toolSearch = TOOL_SEARCH_BY_ENV.get(env);
     if (!toolSearch) {
-      toolSearch = createToolSearchRuntime();
+      toolSearch = createConfiguredToolSearchRuntime(env, {
+        openAiFunctionConfig: resolveOpenAiResponsesFunctionConfig(env),
+        autonomousRuntimeEnvironment,
+      });
       TOOL_SEARCH_BY_ENV.set(env, toolSearch);
+    }
+    skillProposer = SKILL_PROPOSER_BY_ENV.get(env);
+    if (!skillProposer) {
+      skillProposer = createSkillProposerRuntime({
+        ...(skillDraftStore ? { draftStore: skillDraftStore } : {}),
+      });
+      SKILL_PROPOSER_BY_ENV.set(env, skillProposer);
+    }
+    skillRegistryGate = SKILL_REGISTRY_GATE_BY_ENV.get(env);
+    if (!skillRegistryGate) {
+      skillRegistryGate = createSkillRegistryGate({
+        ...(skillDraftStore ? { draftStore: skillDraftStore } : {}),
+        ...(agentDefinitions ? { agentDefinitionRegistry: agentDefinitions } : {}),
+      });
+      SKILL_REGISTRY_GATE_BY_ENV.set(env, skillRegistryGate);
+    }
+    adapterRegistration = ADAPTER_REGISTRATION_BY_ENV.get(env);
+    if (!adapterRegistration) {
+      adapterRegistration = createAdapterRegistrationInterface({
+        ...(agentDefinitions ? { agentDefinitionRegistry: agentDefinitions } : {}),
+      });
+      ADAPTER_REGISTRATION_BY_ENV.set(env, adapterRegistration);
     }
   }
   const app = createAgentApiApp({
     env,
+    agentDefinitions,
     cacheContext,
     modelProviders,
     reasoningContinuity,
@@ -227,6 +286,10 @@ function createWorkerApp(env) {
     agentToolkitTelemetry,
     sandboxAgents,
     toolSearch,
+    skillDraftStore,
+    skillProposer,
+    skillRegistryGate,
+    adapterRegistration,
     fetchImpl: createWorkerFetch(env),
   });
   if (env && typeof env === "object") APP_BY_ENV.set(env, app);

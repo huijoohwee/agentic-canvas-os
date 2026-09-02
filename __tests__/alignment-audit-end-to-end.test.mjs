@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 
 import { runAudit } from "../scripts/alignment-audit/alignment-auditor.mjs";
 import { resolveAuditConfig } from "../scripts/alignment-audit/config.mjs";
-import { ALIGNMENT_AUDIT_ROUTES } from "../scripts/alignment-audit/invocation-surface.mjs";
 import { createInMemoryWriteSink } from "../scripts/alignment-audit/output-boundary.mjs";
 import { createNodeSourceReader } from "../scripts/alignment-audit/source-reader.mjs";
 
@@ -15,6 +14,12 @@ const CONFIG_PATH = path.join(
   REPOSITORY_ROOT,
   "scripts/alignment-audit/alignment-audit.config.json",
 );
+const FIXTURE_INVOCATION_ROUTES = Object.freeze([
+  { surface: "slash", token: "/alignment.audit", owner: "alignment-audit-contract" },
+  { surface: "hash", token: "#alignment-audit", owner: "alignment-audit-contract" },
+  { surface: "at", token: "@alignment-audit", owner: "alignment-audit-contract" },
+  { surface: "mcp", token: "alignment.audit", owner: "alignment-audit-contract" },
+]);
 
 test("committed fixture pair completes the non-mutating audit lane deterministically", async () => {
   const supplied = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
@@ -30,7 +35,7 @@ test("committed fixture pair completes the non-mutating audit lane deterministic
   );
   assert.deepEqual(
     [...auditedRoutes.values()].sort(compareRoutes),
-    ALIGNMENT_AUDIT_ROUTES.map((route) => ({ ...route })).sort(compareRoutes),
+    [...FIXTURE_INVOCATION_ROUTES].sort(compareRoutes),
   );
   assert.deepEqual(
     first.gates.gates.map(({ state }) => state),

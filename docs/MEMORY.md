@@ -12,7 +12,7 @@ source_docs:
   - "USER.md"
   - "FACTS.md"
   - "TODO.md"
-  - "KNOWLEDGE-GRAPH.md"
+  - "AGENTIC-GRAPH.md"
   - "$GITHUB_ROOT/huijoohwee/docs/knowgrph-strybldr-starter-template.md"
   - "$GITHUB_ROOT/huijoohwee.github.io/guidelines/prd-tad-guidelines.md"
 implementation_contract: "FACTS.md owns shared truth; MEMORY.md persists bounded agent notes; USER.md persists bounded explicit operator profile; frontmatter and authored Markdown body are SSOT"
@@ -37,7 +37,7 @@ agentic_os_memory:
   owner: "operator"
   default_scope: "local-dev"
   deployment_boundaries:
-    dev: "$KNOWGRPH_ROOT"
+    dev: "$AGENTICGRAPH_ROOT"
     prod_mirror: "$PROD_MIRROR_ROOT"
     cloudflare_routes: ["airvio.co", "airvio.co/knowgrph"]
     deploy_gate: "forbid Prod and Cloudflare deploy until explicit operator instruction"
@@ -101,11 +101,12 @@ agentic_os_memory:
     guards: ["bounded stores", "frozen session snapshot", "scan before write", "capacity error before overflow", "explicit user profile only", "no silent auto-compact", "no deploy"]
   planning_history:
     index: "TODO.md"
-    shard_pattern: "../todo/YYYY-MM.md"
-    active_shard: "../todo/2026-08.md"
-    schema: "todo-log/v1"
+    legacy_shard_pattern: "../todo/YYYY-MM.md"
+    context_record_pattern: "../todo/YYYY-MM/<context>.md"
+    active_period: "2026-08"
+    schema: "todo-context-record/v2"
     scope: "cross-repository"
-    guards: ["append-only", "closed-month immutability", "exact-first retrieval", "500000-byte cap", "599-line cap", "no deploy"]
+    guards: ["immutable records", "legacy immutability", "unique Context", "exact-first retrieval", "deterministic projection", "no deploy"]
   skill_system:
     source_policy: "external-pattern-reference-only; forbid copied skills, code, examples, tests, prompt text, layouts, and prose"
     commands: ["/skill.discover", "/skill.load", "/skill.bundle", "/skill.manage", "/skill.propose", "/skill.evolve"]
@@ -161,11 +162,11 @@ agentic_os_memory:
     semantics: ["#orchestration-graph", "#stateful-agent", "#durable-execution", "#human-in-loop", "#long-horizon-harness", "#sandboxed-workspace", "#message-gateway"]
     bindings: ["@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@message-gateway"]
     guards: ["typed state", "explicit nodes and edges", "checkpoint and resume", "human review gate", "sandbox scope", "message gateway", "bounded trace", "no deploy"]
-  deterministic_knowledge_graph:
+  deterministic_agentic_graph:
     source_policy: "Agentic Canvas OS owns invocation and client policy only; Knowgrph owns the executable parser, graph, store, query, explanation, import, and Canvas projection without a duplicate runtime here"
-    commands: ["/knowledge.graph.ingest", "/knowledge.graph.query", "/knowledge.graph.explain"]
-    semantics: ["#knowledge-graph"]
-    bindings: ["@working-directory", "@knowledge-graph", "@runtime-proof", "@operator"]
+    commands: ["/agentic.graph.ingest", "/agentic.graph.query", "/agentic.graph.explain"]
+    semantics: ["#agentic-graph"]
+    bindings: ["@working-directory", "@agentic-graph", "@runtime-proof", "@operator"]
     guards: ["bounded workspace", "opaque graph id", "expected snapshot digest", "source evidence for every edge", "stored deterministic explanations", "typed omissions", "no artifact path", "no model", "no embedding", "no vector store", "metadata lookup is not execution", "no duplicate runtime", "no deploy"]
 socket_types:
   agentic_os_source_signal: {color: "#14b8a6", edgeWidthPx: 2, handleStrokeWidthPx: 2, accepts: [agentic_os_source_signal]}
@@ -315,7 +316,7 @@ The file is spec-complete when its frontmatter can be parsed as the source of tr
 
 ## Operating Defaults
 
-- Work Dev-first in `$KNOWGRPH_ROOT`.
+- Work Dev-first in `$AGENTICGRAPH_ROOT`.
 - Treat `$PROD_MIRROR_ROOT` as a Prod mirror, not a working default.
 - Treat `airvio.co` and `airvio.co/knowgrph` as Cloudflare deployment targets, not completion criteria.
 - Forbid Prod or Cloudflare deploy unless the operator explicitly opens that gate.
@@ -431,8 +432,8 @@ MoA memory records the local one-shot deliberation contract. It does not switch 
 
 | Stage | Command | Memory role | Guard |
 |---|---|---|---|
-| Preset | `/moa` | Remember local preset identity, reference roles, aggregator role, caps, and failure policy. | Reject recursive MoA aggregators and copied external preset examples. |
-| References | `/moa` | Remember advisory reference outputs as private context for the run. | No tools, no mutation, capped output, typed failure, and cost logging. |
+| Preset | `/moa` | Remember local preset identity, reference roles, aggregator role, caps, and fail-soft failure policy. | Reject recursive MoA aggregators and copied external preset examples. |
+| References | `/moa` | Remember advisory reference outcomes as private context for the run. | No tools, no mutation, capped output, input-ordered all-settled success or typed failure, aggregate counts, and cost logging. |
 | Aggregator | `/moa` | Remember that one acting agent produced the final response or tool request. | Normal approval gates, transcript persistence, and follow-up iteration apply. |
 | Cost | `/moa` | Remember reference tokens, aggregator tokens, cache hits, failures, and estimated cost. | Missing budget or approval blocks before paid calls. |
 
@@ -557,7 +558,7 @@ Good VCCs name an exit code, parsed field, file count, response shape, latency t
 | `@soul-profile` | Durable identity source from `SOUL.md`. | Identity only; no project operations, secrets, or deploy approvals. |
 | `@identity-slot` | Prompt slot 1 identity position. | Source-backed identity or typed fallback; no silent hardcode. |
 | `@personality-overlay` | Session-level style overlay. | Temporary and subordinate to facts, roles, memory, safety, and gates. |
-| `@moa-preset` | Local MoA preset for reference roles, aggregator, caps, and failover. | No copied external preset examples, provider names, or recursive aggregator. |
+| `@moa-preset` | Local MoA preset for reference roles, aggregator, caps, and fail-soft failure classification. | No copied external preset examples, provider names, or recursive aggregator. |
 | `@reference-agents` | Bounded advisory agents in `/moa`. | No tools, no mutation, capped output, private context only. |
 | `@aggregator-agent` | Acting agent that produces the `/moa` response. | Owns final answer, tool calls, approvals, and transcript persistence. |
 | `@operator` | Human approval authority. | Required before paid, mutating, Prod, or Cloudflare actions. |

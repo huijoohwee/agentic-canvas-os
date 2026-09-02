@@ -1,11 +1,11 @@
-const MCP_TOOL = "knowgrph.agentic_canvas_os.docs.invoke";
+const MCP_TOOL = "agenticgraph.agentic_canvas_os.docs.invoke";
 const ACTIVE_CHAT_ROUTE = "active Chat provider, endpoint, and model";
 
 export const REQUIRED_PROMPT_PRESET_IDS = Object.freeze([
   "video-agent",
   "image-to-threejs",
   "image-to-glb",
-  "knowgrph-probe-tree",
+  "agenticgraph-probe-tree",
   "sme-care-agent",
   "investment-research-agent",
   "crawler-agent",
@@ -17,7 +17,7 @@ export const REQUIRED_PROMPT_PRESET_IDS = Object.freeze([
 
 const LLM_RESPONSE_PRESET_IDS = new Set([
   "video-agent",
-  "knowgrph-probe-tree",
+  "agenticgraph-probe-tree",
   "sme-care-agent",
   "investment-research-agent",
   "sme-risk-assessment",

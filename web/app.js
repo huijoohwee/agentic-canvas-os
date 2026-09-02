@@ -860,7 +860,7 @@
   }
 
   async function exportStandaloneHtml() {
-    const fileName = `knowledge-graph-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.html`;
+    const fileName = `agentic-graph-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.html`;
     const graphJson = JSON.stringify(
       {
         nodes: graph.nodes.map((n) => ({
@@ -905,13 +905,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Knowledge Graph (Exported)</title>
+    <title>Agentic Graph (Exported)</title>
     <style data-kg-style>${cssText.replaceAll("</style>", "<\\/style>")}</style>
   </head>
   <body>
     <header class="topbar">
       <div class="topbar__left">
-        <div class="brand">Knowledge Graph</div>
+        <div class="brand">Agentic Graph</div>
         <div class="chip" id="modeChip" title="Graph mode / Geospatial mode">Mode: Graph</div>
       </div>
       <div class="topbar__right">
@@ -923,7 +923,7 @@
     </header>
     <main class="main">
       <section class="canvas" aria-label="Graph canvas">
-        <svg id="svgRoot" class="svgRoot" role="img" aria-label="Interactive knowledge graph"></svg>
+        <svg id="svgRoot" class="svgRoot" role="img" aria-label="Interactive agentic graph"></svg>
       </section>
       <aside class="side">
         <div class="panel">

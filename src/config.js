@@ -15,13 +15,13 @@ export function readEnv(names, fallback = "") {
   return fallback;
 }
 
-/** knowgrph MCP Streamable HTTP endpoint (the control plane this tier forwards to). */
+/** AgenticGraph MCP Streamable HTTP endpoint (the control plane this tier forwards to). */
 export const KNOWGRPH_MCP_ENDPOINT = readEnv(
   ["KNOWGRPH_MCP_ENDPOINT", "MCP_ENDPOINT", "NEXT_PUBLIC_KNOWGRPH_MCP_ENDPOINT"],
   "https://airvio.co/knowgrph/control-plane/mcp",
 );
 
-/** knowgrph control-plane canvas base; the product embeds its run-scoped doc-view. */
+/** AgenticGraph control-plane canvas base; the product embeds its run-scoped doc-view. */
 export const CANVAS_BASE_URL = readEnv(
   ["CANVAS_BASE_URL", "NEXT_PUBLIC_CANVAS_BASE_URL", "PUBLIC_CANVAS_BASE_URL"],
   "https://airvio.co/knowgrph",
@@ -33,5 +33,5 @@ export const AGENT_API_BASE_URL = readEnv(
   "",
 );
 
-/** The hero MCP tool exposed by the knowgrph control plane. */
-export const KNOWGRPH_RUN_TOOL = "knowgrph.video_remix.run";
+/** The hero MCP tool exposed by the AgenticGraph control plane. */
+export const KNOWGRPH_RUN_TOOL = "agenticgraph.video_remix.run";

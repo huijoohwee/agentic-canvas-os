@@ -7,12 +7,12 @@ lang: "en-US"
 schema: "agentic-os-probe-tree/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
-authority: "semantic clarification classification for /knowgrph.probe-tree"
+authority: "semantic clarification classification for /agenticgraph.probe-tree"
 runtime_scope: "source-backed Probe-Tree question generation and selected-child continuation"
 runtime_claim: "model-free contract validation only; card generation requires the active Chat provider, endpoint, and model"
 publish_policy: "Dev-only until explicit operator approval"
-runtime_command: "/knowgrph.probe-tree"
-prompt_preset: "PROMPT-PRESETS.md#knowgrph-probe-tree"
+runtime_command: "/agenticgraph.probe-tree"
+prompt_preset: "PROMPT-PRESETS.md#agenticgraph-probe-tree"
 clarification_topics: ["RECOMMEND", "COMPARE", "ASSESS", "PLAN"]
 clarification_topic_match: "semantic and case-insensitive"
 clarification_card_kind: "semantic"
@@ -24,16 +24,16 @@ root_role: "lineage only"
 model_route: "active Chat provider, endpoint, and model"
 fallback_policy: "fail closed; query-specific hardcoding and zero-model fallback cards are forbidden"
 dictionary_links:
-  command: "DICTIONARY-COMMAND.md#/knowgrph.probe-tree"
-  semantic: "DICTIONARY-SEMANTIC.md#knowgrph.probe-tree"
-  binding: "DICTIONARY-BINDING.md#knowgrph.probe-tree"
+  command: "DICTIONARY-COMMAND.md#/agenticgraph.probe-tree"
+  semantic: "DICTIONARY-SEMANTIC.md#agenticgraph.probe-tree"
+  binding: "DICTIONARY-BINDING.md#agenticgraph.probe-tree"
 runtime_proof: "RUNTIME-PROOF.md"
 ---
 
 # Probe-Tree
 
 `PROBE-TREE.md` is the semantic clarification authority for
-`/knowgrph.probe-tree`. `PROMPT-PRESETS.md` projects this contract into the
+`/agenticgraph.probe-tree`. `PROMPT-PRESETS.md` projects this contract into the
 source-backed preset consumed by Knowgrph; the three dictionaries project its
 command, semantic, and binding tokens. None of those projections may redefine
 the classification rules.

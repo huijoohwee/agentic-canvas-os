@@ -1,4 +1,5 @@
 name: CI
+run-name: ${{ github.event.pull_request.title || github.event.head_commit.message || format('CI {0} {1}', github.event_name, github.ref_name) }}
 
 on:
   pull_request:
@@ -15,24 +16,69 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  authorization:
+    name: ci-authorization
+    runs-on: 'ubuntu-slim'
+    timeout-minutes: 5
+    steps:
+      - name: Accept the provider-selected candidate
+        run: test -n "${{ github.sha }}"
+
   test:
     name: test
+    needs: authorization
+    if: ${{ always() }}
     runs-on: ubuntu-slim
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
+      - name: Require exact CI authorization
+        env:
+          AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - run: node --test --test-shard=${{ matrix.shard }}/4 __tests__/*.test.mjs
 
-  build:
-    name: build
+  test_aggregate:
+    name: test
+    needs: [authorization, test]
+    if: ${{ always() }}
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
+      - name: Require authorization and every test shard
+        env:
+          AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
+          TEST_SHARDS_RESULT: ${{ needs.test.result }}
+        run: |
+          [ "$AUTHORIZATION_RESULT" = "success" ] || exit 1
+          [ "$TEST_SHARDS_RESULT" = "success" ] || exit 1
+
+  build:
+    name: build
+    needs: authorization
+    if: ${{ always() }}
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Require exact CI authorization
+        env:
+          AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
@@ -40,10 +86,19 @@ jobs:
 
   docs-contract:
     name: docs-contract
+    needs: authorization
+    if: ${{ always() }}
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
+      - name: Require exact CI authorization
+        env:
+          AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
@@ -51,60 +106,46 @@ jobs:
 
   collaboration-integration:
     name: collaboration-integration
+    needs: authorization
+    if: ${{ always() }}
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
+      - name: Require exact CI authorization
+        env:
+          AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
       - run: npm run collab:test
 
-  evaluate:
-    name: policy-runtime-readiness
+  budgets:
+    name: budgets
+    needs: authorization
+    if: ${{ always() }}
     runs-on: ubuntu-slim
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
+      - name: Require exact CI authorization
+        env:
+          AUTHORIZATION_RESULT: ${{ needs.authorization.result }}
+        run: test "$AUTHORIZATION_RESULT" = "success"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Resolve the pinned guideline source revision
-        id: guideline-source
-        run: >-
-          node --input-type=module -e
-          'import { appendFileSync } from "node:fs";
-          import { LIFECYCLE_POLICY_SOURCE } from "./scripts/lifecycle-conformance-policy.mjs";
-          const revision = String(LIFECYCLE_POLICY_SOURCE.revision ?? "");
-          if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error("guideline source revision must be a full commit SHA");
-          appendFileSync(process.env.GITHUB_OUTPUT, `revision=${revision}\n`);'
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          repository: huijoohwee/huijoohwee.github.io
-          ref: ${{ steps.guideline-source.outputs.revision }}
-          path: .agentic-sdlc-source/huijoohwee.github.io
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Verify repository policy-runtime readiness
-        env:
-          GITHUB_ROOT: ${{ github.workspace }}/.agentic-sdlc-source
+      - name: Verify bounded repository contracts
         run: |
-          npm run lifecycle:conformance:check
-          npm run agentic-sdlc:source:check
-
-  conformance:
-    name: agentic-sdlc-policy-runtime
-    needs: evaluate
-    if: ${{ always() }}
-    runs-on: ubuntu-slim
-    timeout-minutes: 5
-    steps:
-      - name: Require policy-runtime readiness
-        env:
-          EVALUATE_RESULT: ${{ needs.evaluate.result }}
-        run: |
-          if [ "$EVALUATE_RESULT" != "success" ]; then
-            echo "policy-runtime readiness did not succeed: $EVALUATE_RESULT" >&2
-            exit 1
-          fi
+          npm --prefix node_modules/agentic-os run evals
+          npm run authored-line-budget:check
+          node --test __tests__/adlc-compatibility.test.mjs __tests__/agentic-os-profile.test.mjs
+          npm run dictionary-catalog:check

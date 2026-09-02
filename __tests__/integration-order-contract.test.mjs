@@ -303,26 +303,32 @@ test("documentation binds runtime readiness to immutable protected source proven
   assert.match(documentation, /\nstatus: "runtime-ready"\n/);
   assert.match(documentation, /\nruntime_readiness_policy: "fail-closed"\n/);
   assert.match(documentation, /\nruntime_readiness_finding: "runtime-readiness-unproven"\n/);
-  assert.match(documentation, /\nguideline_source_version: "1\.14\.0"\n/);
+  assert.match(documentation, /\nguideline_source_version: "1\.23\.0"\n/);
   assert.match(
     documentation,
-    /\nguideline_source_revision: "8a2e5e0711f7193535b9aac2aee285e0ee705111"\n/,
+    /\nguideline_source_revision: "76903aba2a8f8a4e693dd51de580707affb3dfdc"\n/,
   );
   assert.match(
     documentation,
-    /\nguideline_source_tree: "63c13dcfb3ce01aa60213f4f6fa214bfa0e76778"\n/,
+    /\nguideline_source_tree: "609ef617362d4949ede63e56f92c955ebc28ce91"\n/,
   );
   assert.match(
     documentation,
-    /\nguideline_source_digest: "ff4f0dc41209bdacb05001b6fd5a450883736118f89fcff6fab331cedca8c2bd"\n/,
+    /\nguideline_source_digest: "1b0e040a3600ca3f8d92517bf42d55830e6192c0acff91fbe3a489d1d392eedd"\n/,
   );
   assert.match(
     documentation,
-    /\ngit_companion_digest: "c8831f6c6642f89c3e5f51af55523e1e4db1ed08b118840daa0d4f28289806e5"\n/,
+    /\ngit_companion_digest: "7de6a1130f033bbe8fd263b5fc29b9160c96cbdf25723309996058f3de74b516"\n/,
   );
   assert.doesNotMatch(documentation, /guideline_candidate_revision/);
   assert.match(
     documentation,
     /`runtime-ready` applies only to this pure local\s+contract at the bound source revision/,
   );
+  for (const contract of [
+    /owns no repository claim, worktree, branch, lease, review request/i,
+    /Each\s+repository executes its own pinned ADLC start and release workflows/i,
+    /installed ADLC release workflow remains the sole owner/i,
+    /performs no filesystem, network,\s+repository, merge, release, or deployment mutation/i,
+  ]) assert.match(documentation, contract);
 });

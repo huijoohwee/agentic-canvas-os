@@ -8,7 +8,7 @@ import {
   stableStringify,
 } from "./knowgrph-mcp-contract-utils.js";
 
-const PARSER_REGISTRY_SCHEMA = "knowgrph-knowledge-graph-parser-registry/v2";
+const PARSER_REGISTRY_SCHEMA = "agenticgraph-knowledge-graph-parser-registry/v2";
 const DECLARATIVE_GRAMMAR_SCHEMA = "knowgrph-declarative-grammar/v1";
 const ADAPTER_FIDELITIES = Object.freeze({
   "brace-code": "structural-parser",

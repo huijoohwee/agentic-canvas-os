@@ -33,7 +33,7 @@ export function privatePathFields(value, prefix = "", fields = [], depth = 0) {
   return fields;
 }
 
-export function validKnowledgeGraphCounts(value) {
+export function validAgenticGraphCounts(value) {
   return isPlainObject(value)
     && Object.values(value).every((count) => Number.isInteger(count) && count >= 0)
     && ["sources", "nodes", "edges"].every((key) => (
@@ -68,7 +68,7 @@ function validGraphEdge(value) {
 
 function validGraphData(value) {
   if (!hasExactKeys(value, ["context", "type", "nodes", "edges"])
-    || value.context !== "knowgrph-knowledge-graph-projection"
+    || value.context !== "agenticgraph-knowledge-graph-projection"
     || value.type !== "Graph"
     || !Array.isArray(value.nodes)
     || !Array.isArray(value.edges)
@@ -228,7 +228,7 @@ export function validExplainSuccess(request, value) {
     && validCost(value.cost);
 }
 
-export function validateKnowledgeGraphProjection(value, counts, fields) {
+export function validateAgenticGraphProjection(value, counts, fields) {
   const invalid = !isPlainObject(value)
     || !hasExactKeys(value, [
       "token", "readOnly", "graphData", "complete", "truncated", "limit", "reason",

@@ -277,6 +277,8 @@ test("text and structured output validation report configuration honestly", asyn
     sourceVerifierConfigured: true,
     capabilityAuthorizerConfigured: true,
     outputValidatorConfigured: false,
+    statusCounts: { proposed: 0, active: 1, deprecated: 0 },
+    snapshotDigestAlgorithm: "sha-256",
     maxAgents: 64,
     maxInstructions: 16,
     maxReferences: 64,

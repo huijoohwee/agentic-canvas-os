@@ -37,8 +37,8 @@ test("repository keeps one canonical URL ingest invocation", () => {
     semantic: "#canvas",
     skill: "url.ingest",
     text: "/ingest-url @url:https://example.com @reference-policy #canvas",
-    discoveryTool: "knowgrph.agentic_canvas_os.docs.invoke",
-    executionTool: "knowgrph.control_local_import_url",
+    discoveryTool: "agenticgraph.agentic_canvas_os.docs.invoke",
+    executionTool: "agenticgraph.control_local_import_url",
   });
   assert.deepEqual(validateUrlIngestContractDocuments(repositoryDocuments), []);
 });
@@ -80,11 +80,11 @@ test("the command requires exactly the URL, policy, and Canvas invocation tokens
 test("the docs resolver cannot replace the guarded browser executor", () => {
   const documents = withReplacement(
     "DICTIONARY-COMMAND.md",
-    "knowgrph.control_local_import_url",
-    "knowgrph.agentic_canvas_os.docs.invoke",
+    "agenticgraph.control_local_import_url",
+    "agenticgraph.agentic_canvas_os.docs.invoke",
   );
   const failures = validateUrlIngestContractDocuments(documents);
-  assert.equal(failures.some((failure) => failure.includes("knowgrph.control_local_import_url")), true);
+  assert.equal(failures.some((failure) => failure.includes("agenticgraph.control_local_import_url")), true);
 });
 
 test("Import URL aliases fail the single-route contract", () => {

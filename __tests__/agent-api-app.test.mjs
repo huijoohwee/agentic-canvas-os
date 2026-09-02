@@ -3,6 +3,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 import { createAgentApiApp } from "../agent-api/src/app.js";
 import { createAgentSwarmRuntime } from "../agent-api/src/agent-swarm.js";
@@ -21,6 +22,53 @@ const ENV = Object.freeze({
   AGENT_MODEL_TRANSPORT_CONNECTION: "reusable",
   AGENT_MODEL_FEATURES: "tool-calling,structured-output",
   WORKSPACE_MODEL_KEY: "server-side-model-key",
+});
+
+const UPSTREAM_RUNTIME_SOURCE = JSON.stringify({
+  name: "Operator Runtime Agent",
+  instructions: [{ name: "purpose", content: "Return one bounded answer for the authenticated caller." }],
+});
+const UPSTREAM_RUNTIME_SOURCE_DIGEST = createHash("sha256").update(UPSTREAM_RUNTIME_SOURCE).digest("hex");
+
+const UPSTREAM_RUNTIME_ENV = Object.freeze({
+  AGENT_API_JWT_SECRET: "server-side-secret",
+  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
+  KNOWGRPH_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note",
+  KNOWGRPH_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note",
+  OPENAI_FUNCTION_CALLING_ENDPOINT: "https://api.openai.com/v1/responses",
+  OPENAI_FUNCTION_CALLING_API_KEY_ENV: "OPENAI_API_KEY",
+  OPENAI_FUNCTION_CALLING_MODEL: "gpt-5.6-luna",
+  OPENAI_FUNCTION_CALLING_INPUT_USD_PER_MILLION: "1",
+  OPENAI_FUNCTION_CALLING_CACHED_INPUT_USD_PER_MILLION: "0.1",
+  OPENAI_FUNCTION_CALLING_CACHE_WRITE_USD_PER_MILLION: "1.25",
+  OPENAI_FUNCTION_CALLING_OUTPUT_USD_PER_MILLION: "2",
+  OPENAI_FUNCTION_CALLING_REASONING_EFFORT: "low",
+  OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS: "256",
+  AGENT_MODEL_PROVIDER: "openai",
+  AGENT_MODEL_PROVIDER_REVISION: "openai-agent-v1",
+  AGENT_MODEL_ADAPTER: "openai-responses-agent",
+  AGENT_MODEL_ENDPOINT: "https://api.openai.com/v1/responses",
+  AGENT_MODEL_ID: "gpt-5.6-sol",
+  AGENT_MODEL_API_KEY_ENV: "OPENAI_API_KEY",
+  AGENT_MODEL_TRANSPORT: "responses-http",
+  AGENT_MODEL_TRANSPORT_DELIVERY: "complete",
+  AGENT_MODEL_TRANSPORT_CONNECTION: "per-run",
+  AGENT_MODEL_FEATURES: "tool-calling,structured-output",
+  OPENAI_API_KEY: "server-side-openai-key",
+  OPENAI_AGENT_MODEL: "gpt-5.6-sol",
+  OPENAI_AGENT_ENDPOINT: "https://api.openai.com/v1/responses",
+  OPENAI_AGENT_INPUT_USD_PER_MILLION: "5",
+  OPENAI_AGENT_CACHED_INPUT_USD_PER_MILLION: "0.5",
+  OPENAI_AGENT_OUTPUT_USD_PER_MILLION: "30",
+  OPENAI_AGENT_MAX_OUTPUT_TOKENS: "128",
+  AGENT_RUNTIME_ENABLED: "true",
+  AGENT_RUNTIME_SPEND_APPROVED: "true",
+  AGENT_RUNTIME_AGENT_ID: "operator-runtime-agent",
+  AGENT_RUNTIME_AGENT_REVISION: "operator-runtime-agent-v1",
+  AGENT_RUNTIME_AGENT_SOURCE_URI: "operator-source:/agent/runtime.json",
+  AGENT_RUNTIME_AGENT_SOURCE_SHA256: UPSTREAM_RUNTIME_SOURCE_DIGEST,
+  AGENT_RUNTIME_AGENT_SOURCE: UPSTREAM_RUNTIME_SOURCE,
+  AGENT_RUNTIME_MAX_PROVIDER_CALLS: "4",
 });
 
 function mcpStub(structuredContent) {
@@ -72,6 +120,18 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().agentDefinitions.capabilityPolicy, "reference-only-with-application-authorization");
   assert.equal(app.readiness().agentDefinitions.executionOwner, "running-agents-adapter");
   assert.equal(app.readiness().agentDefinitions.providerExecutionStatus, "unverified");
+  assert.deepEqual(app.readiness().agentDefinitions.statusCounts, {
+    proposed: 0,
+    active: 0,
+    deprecated: 0,
+  });
+  assert.equal(app.readiness().agentDefinitions.snapshotDigestAlgorithm, "sha-256");
+  assert.equal(
+    app.readiness().agentDefinitions.statusCounts.proposed
+      + app.readiness().agentDefinitions.statusCounts.active
+      + app.readiness().agentDefinitions.statusCounts.deprecated,
+    app.readiness().agentDefinitions.agents,
+  );
   assert.equal(app.readiness().guardrailsHumanReview.contractReady, true);
   assert.equal(app.readiness().guardrailsHumanReview.configured, false);
   assert.equal(app.readiness().guardrailsHumanReview.reviewStoreConfigured, true);
@@ -204,6 +264,29 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().toolSearch.loadedDefinitionPlacement, "append-only-search-output");
   assert.equal(app.readiness().toolSearch.programSearchPolicy, "top-level-before-hosted-program");
   assert.equal(app.readiness().toolSearch.providerContextReduction, "unverified");
+  assert.equal(app.readiness().skillProposer.contractReady, true);
+  assert.equal(app.readiness().skillProposer.configured, false);
+  assert.equal(app.readiness().skillProposer.proposalOwner, "acos-skill-proposer");
+  assert.equal(app.readiness().skillProposer.registryWriteCapability, false);
+  assert.equal(app.readiness().skillProposer.iterationBound, 5);
+  assert.equal(app.readiness().skillProposer.circuitBreakerConsecutiveNoCandidate, 2);
+  assert.equal(app.readiness().skillProposer.p95GapToDraftMs, 12000);
+  assert.equal(app.readiness().skillProposer.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().skillRegistryGate.contractReady, true);
+  assert.equal(app.readiness().skillRegistryGate.configured, false);
+  assert.equal(app.readiness().skillRegistryGate.boundaryState, "closed");
+  assert.equal(app.readiness().skillRegistryGate.promotionOwner, "acos-skill-registry-gate");
+  assert.equal(app.readiness().skillRegistryGate.artifactType, "agent-definition");
+  assert.equal(app.readiness().skillRegistryGate.modelCallCapability, false);
+  assert.equal(app.readiness().skillRegistryGate.registryConfigured, true);
+  assert.equal(app.readiness().skillRegistryGate.providerExecutionStatus, "unverified");
+  assert.equal(app.readiness().adapterRegistration.contractReady, true);
+  assert.equal(app.readiness().adapterRegistration.configured, false);
+  assert.equal(app.readiness().adapterRegistration.registrationOwner, "acos-adapter-registration");
+  assert.equal(app.readiness().adapterRegistration.sharedEntrypointAdapterNames, 0);
+  assert.equal(app.readiness().adapterRegistration.requestScopedState, false);
+  assert.equal(app.readiness().adapterRegistration.registryConfigured, true);
+  assert.equal(app.readiness().adapterRegistration.providerExecutionStatus, "unverified");
 
   const session = await app.authSession({ body: { subject: "s1" } });
   assert.equal(session.statusCode, 200);
@@ -238,6 +321,38 @@ test("createAgentApiApp wires an invoke handler for grammar queries", async () =
   assert.equal(invoke.statusCode, 200);
   assert.equal(invoke.body.ok, true);
   assert.equal(invoke.body.catalog[0].token, "/soul.load");
+});
+
+test("createAgentApiApp configures the upstream runtime surfaces when the full env is present", () => {
+  const app = createAgentApiApp({
+    env: UPSTREAM_RUNTIME_ENV,
+    fetchImpl: mcpStub({ state: "blocked", approvalGates: [1, 2, 3, 4, 5] }),
+  });
+  const readiness = app.readiness();
+  assert.equal(app.configured, true);
+  assert.equal(readiness.modelProviders.configured, true);
+  assert.equal(readiness.modelProviders.environment.providerId, "openai");
+  assert.equal(readiness.agentDefinitions.configured, true);
+  assert.deepEqual(readiness.agentDefinitions.statusCounts, {
+    proposed: 0,
+    active: 1,
+    deprecated: 0,
+  });
+  assert.equal(readiness.functionCalling.configured, true);
+  assert.equal(readiness.functionCalling.adapter.configured, true);
+  assert.equal(readiness.functionCalling.adapter.apiKeyPresent, true);
+  assert.equal(readiness.functionCalling.gateway.configured, true);
+  assert.equal(readiness.toolSearch.configured, true);
+  assert.equal(readiness.toolSearch.clientSearchConfigured, true);
+  assert.equal(readiness.autonomousRuntime.configured, true);
+  assert.equal(readiness.agentRuntimeComposition.configured, true);
+  assert.equal(readiness.runningAgents.configured, true);
+  assert.equal(readiness.progressiveAgents.configured, true);
+  assert.equal(readiness.functionCalling.providerExecutionStatus, "unverified");
+  assert.equal(readiness.agentDefinitions.providerExecutionStatus, "unverified");
+  assert.equal(readiness.autonomousRuntime.providerExecutionStatus, "unverified");
+  assert.equal(JSON.stringify(readiness).includes("server-side-openai-key"), false);
+  assert.equal(JSON.stringify(readiness).includes(UPSTREAM_RUNTIME_SOURCE), false);
 });
 
 test("run fails closed (501) when no MCP endpoint is configured", async () => {

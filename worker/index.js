@@ -11,8 +11,16 @@ import {
 } from "../agent-api/src/autonomous-runtime-config.js";
 import { isSecureRoomCapability, sessionCanJoinRoom, verifySessionToken } from "../agent-api/src/auth.js";
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
+import { createCommerceAdmissionAuthority } from "../agent-api/src/commerce-admission-authority.js";
+import { COMMERCE_ADMISSION_PATH } from "../agent-api/src/commerce-admission-contract.js";
+import {
+  createCommerceAdmissionProvider,
+  createCommerceInvocationRegister,
+  createCommerceToolAllowlistProjection,
+} from "../agent-api/src/commerce-admission-provider.js";
 import {
   createDurableObjectAgentToolkitStore,
+  createDurableObjectCommerceAdmissionStore,
   createDurableObjectFunctionExecutionReceiptStore,
   createDurableObjectFunctionContinuationStore,
   createDurableObjectHumanReviewStore,
@@ -70,6 +78,7 @@ const TOOL_SEARCH_BY_ENV = new WeakMap();
 const SKILL_PROPOSER_BY_ENV = new WeakMap();
 const SKILL_REGISTRY_GATE_BY_ENV = new WeakMap();
 const ADAPTER_REGISTRATION_BY_ENV = new WeakMap();
+const COMMERCE_ADMISSION_BY_ENV = new WeakMap();
 
 function json(statusCode, body) {
   return new Response(JSON.stringify(body ?? {}), {
@@ -189,6 +198,9 @@ function createWorkerApp(env) {
   const skillDraftStore = durableStateConfigured
     ? createDurableObjectSkillDraftStore({ namespace: env.AGENT_STATE })
     : undefined;
+  const commerceAdmissionStore = durableStateConfigured
+    ? createDurableObjectCommerceAdmissionStore({ namespace: env.AGENT_STATE })
+    : undefined;
   const agentToolkitTelemetry = env?.AGENT_TOOLKIT_TELEMETRY_ENABLED === "true"
     ? async (event) => {
       console.log(JSON.stringify(event));
@@ -268,6 +280,26 @@ function createWorkerApp(env) {
       });
       ADAPTER_REGISTRATION_BY_ENV.set(env, adapterRegistration);
     }
+    if (!COMMERCE_ADMISSION_BY_ENV.has(env)) {
+      const authority = createCommerceAdmissionAuthority({
+        authorityRef: env.AGENTIC_OS_ADMISSION_AUTHORITY_REF,
+        operatorInstructionRef: env.AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF,
+        evidence: env.AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE,
+        secret: env.AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET,
+      });
+      const commerceRegistration = createAdapterRegistrationInterface({
+        ...(agentDefinitions ? { agentDefinitionRegistry: agentDefinitions } : {}),
+        toolAllowlist: createCommerceToolAllowlistProjection(),
+        invocationRegister: createCommerceInvocationRegister(),
+        resolveOperatorInstruction: authority.resolveOperatorInstruction,
+      });
+      COMMERCE_ADMISSION_BY_ENV.set(env, createCommerceAdmissionProvider({
+        store: commerceAdmissionStore,
+        registrationInterface: commerceRegistration,
+        authority,
+        authSecret: env.AGENTIC_OS_ADMISSION_AUTH_SECRET,
+      }));
+    }
   }
   const app = createAgentApiApp({
     env,
@@ -298,6 +330,16 @@ function createWorkerApp(env) {
 
 async function dispatchCloudflareRequest(request, env = {}) {
   const url = new URL(request.url);
+
+  if (url.hostname === "agentic-os-admission.internal") {
+    createWorkerApp(env);
+    const provider = env && typeof env === "object" ? COMMERCE_ADMISSION_BY_ENV.get(env) : null;
+    return provider ? provider.handle(request) : json(503, { ok: false, code: "runtime_unconfigured" });
+  }
+  if (url.pathname === "/agentic-os/internal"
+    || url.pathname.startsWith("/agentic-os/internal/")) {
+    return json(404, { error: "not found" });
+  }
 
   if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {
     if (request.method !== "GET") return json(405, { error: "method not allowed" });
@@ -333,6 +375,12 @@ async function dispatchCloudflareRequest(request, env = {}) {
 
   if (url.pathname === "/api/ready" || url.pathname === "/ready") {
     if (request.method !== "GET") return json(405, { error: "method not allowed" });
+    const commerceAdmission = env && typeof env === "object" ? COMMERCE_ADMISSION_BY_ENV.get(env) : null;
+    if (commerceAdmission?.stats().configured) {
+      // A failed private projection must not turn the public readiness surface
+      // into a false negative, but a healthy warm isolate should catch up.
+      try { await commerceAdmission.rehydrate(); } catch {}
+    }
     return json(200, app.readiness());
   }
 

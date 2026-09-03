@@ -42,9 +42,8 @@ export async function createPr825LiveSuccessorTransitionInput({
   if (authorization !== plan.exactAuthorization) {
     fail(`Exact authorization required: ${plan.exactAuthorization}`);
   }
-  const [blockedIntegrate, replacementAuthority, executorRequest, transitionClient] =
+  const [replacementAuthority, executorRequest, transitionClient] =
     await Promise.all([
-      readPr825IntegrateTransitionInput({ repoRoot, observedAt, expiresAt }),
       createPr825ReplacementTransitionAuthority({ repoRoot, authorization }),
       createPr825SuccessorExecutorRequest({ repoRoot, authorization }),
       loadAgenticOsModule("github-transition-client.mjs", { repoRoot }),
@@ -73,15 +72,18 @@ export async function createPr825LiveSuccessorTransitionInput({
     issuedAt: authorityIssuedAt,
     expiresAt: authorityExpiresAt,
   });
-
-  const operationInput = transitionClient.createGitHubTransitionInput({
-    request: blockedIntegrate.request,
-    plan: blockedIntegrate.plan,
-    planByteDigest: blockedIntegrate.planByteDigest,
-    predecessorIssuance: null,
+  const liveIntegrate = await readPr825IntegrateTransitionInput({
+    repoRoot,
+    observedAt,
+    expiresAt,
     predecessorAuthority,
-    integrationMode: transitionClient.GITHUB_RETROSPECTIVE_INTEGRATION_MODE,
   });
+
+  if (liveIntegrate.validationError !== null) {
+    fail(`PR825 live successor transition input is not dispatchable: ${liveIntegrate.validationError}`);
+  }
+
+  const operationInput = liveIntegrate.operationInput;
   const operationPayload = transitionClient.encodeGitHubTransitionInput(operationInput)
     .toString("utf8");
   const operationInputDigest = transitionClient.deriveGitHubTransitionInputDigest(operationPayload);
@@ -91,8 +93,9 @@ export async function createPr825LiveSuccessorTransitionInput({
     seedDigest: seed.seedDigest,
     planDigest: plan.planDigest,
     replacementAuthorityDigest: replacementAuthority.replacementAuthorityDigest,
-    requestDigest: blockedIntegrate.request.requestDigest,
-    planByteDigest: blockedIntegrate.planByteDigest,
+    requestDigest: liveIntegrate.request.requestDigest,
+    planByteDigest: liveIntegrate.planByteDigest,
+    providerProofDigest: liveIntegrate.providerProofDigest,
     predecessorAuthority,
     operationInput,
     operationPayload,

@@ -39,9 +39,26 @@ test("builds live PR825 successor transition payload bytes from the replacement 
   assert.equal(record.operationInput.integrationMode, "retrospective-recovery");
   assert.equal(record.dispatch.inputs.operation_payload, record.operationPayload);
   assert.equal(record.dispatch.inputs.operation_input_digest, record.operationInputDigest);
+  assert.equal(record.providerProofDigest, record.operationInput.plan.parametersDigest);
   assert.match(record.operationPayload, /"predecessorAuthority"/u);
   assert.match(record.operationInputDigest, /^[0-9a-f]{64}$/u);
   assert.match(record.recordDigest, /^[0-9a-f]{64}$/u);
+});
+
+test("rebuilds the published PR825 live successor payload exactly", async () => {
+  const seed = await readPr825TerminalizerSeed();
+  const plan = createPr825TerminalizerPlan(seed);
+  const record = await createPr825LiveSuccessorTransitionInput({
+    authorization: plan.exactAuthorization,
+    observedAt: "2026-09-03T08:26:35.861Z",
+    expiresAt: "2026-09-03T08:41:35.861Z",
+    authorityIssuedAt: "2026-09-03T08:26:35.861Z",
+    authorityExpiresAt: "2026-09-03T08:41:35.861Z",
+  });
+
+  assert.equal(record.providerProofDigest, "9ab7c7755abb0f078c89a9a9e209a52d5b5ac512200c82156b7572a645773a96");
+  assert.equal(record.planByteDigest, "c1c36b4f3a17fcfa70316e9c2c396a2417dd0465702227a23ce368f4f8f8d152");
+  assert.equal(record.operationInputDigest, "241a0e1dba3d7c0e314229b4f953ca31c5dd01af57169edd89091c90274b2080");
 });
 
 test("live successor transition payload fails closed without the exact authorization line", async () => {

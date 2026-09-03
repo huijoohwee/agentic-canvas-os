@@ -39,6 +39,23 @@ test("builds a dispatch-ready PR825 successor executor request", async () => {
   assert.match(request.requestDigest, /^[0-9a-f]{64}$/u);
 });
 
+test("rebuilds the published PR825 live successor executor request dispatch inputs", async () => {
+  const seed = await readPr825TerminalizerSeed();
+  const plan = createPr825TerminalizerPlan(seed);
+  const request = await createPr825LiveSuccessorExecutorRequest({
+    authorization: plan.exactAuthorization,
+    observedAt: "2026-09-03T08:26:35.861Z",
+    expiresAt: "2026-09-03T08:41:35.861Z",
+    authorityIssuedAt: "2026-09-03T08:26:35.861Z",
+    authorityExpiresAt: "2026-09-03T08:41:35.861Z",
+  });
+
+  assert.equal(
+    request.dispatch.inputs.operation_input_digest,
+    "241a0e1dba3d7c0e314229b4f953ca31c5dd01af57169edd89091c90274b2080",
+  );
+});
+
 test("dispatch-ready executor request fails closed without the exact authorization line", async () => {
   const seed = await readPr825TerminalizerSeed();
   const plan = createPr825TerminalizerPlan(seed);

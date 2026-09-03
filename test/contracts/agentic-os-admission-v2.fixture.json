@@ -1,0 +1,191 @@
+{
+  "$schema": "commerce.agentic-os-admission-v2-request-fixture/v1",
+  "commerceAgentDefinition": {
+    "id": "agent-acceptance-fixture",
+    "revision": "agent-acceptance-fixture-v1",
+    "name": "Acceptance fixture discovery",
+    "source": {
+      "uri": "workspace:/agents/agent-acceptance-fixture.json",
+      "digest": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "model": {
+      "providerId": "workspace-provider",
+      "modelId": "workspace-model"
+    },
+    "instructions": [
+      {
+        "name": "purpose",
+        "content": "Discover bounded commerce offers."
+      }
+    ],
+    "executableTarget": {
+      "contract": "agentic-graph-sandbox-executable/v1",
+      "kind": "javascript-module",
+      "source": "export async function executeTool() { return null }",
+      "sourceDigest": "d28f7dde24abde6f725bb12d76fdf7f4ba3794eb63bb26a748fd29c208b5373a"
+    }
+  },
+  "request": {
+    "url": "https://agentic-os-admission.internal/agentic-os/internal/v2/adapter-registrations",
+    "method": "POST",
+    "headers": {
+      "content-type": "application/json",
+      "x-agentic-os-admission-auth-schema": "commerce-agentic-os-admission-auth/v1",
+      "x-agentic-os-admission-auth-signature": "b151e4ac0202b4e5eb412080d72ce55e02bfcc55657ce3529394e57c94b9dcc3",
+      "x-authoring-mutation-contract": "agentic-os-authoring-mutation-permit/v2",
+      "x-authoring-mutation-id": "mutation:41:7:fec4d3f616fbda388e6392be63e9b5fb",
+      "x-authoring-operation-id": "operation:fec4d3f616fbda388e6392be63e9b5fb5bbe8f899901aacb3407ad7fb60de7f2",
+      "x-authoring-request-digest": "fec4d3f616fbda388e6392be63e9b5fb5bbe8f899901aacb3407ad7fb60de7f2",
+      "x-authoring-mutation-sequence": "7",
+      "x-authoring-semantic-scope": "operator-registry",
+      "x-authoring-claim-id": "claim-agentic-os-v2-fixture",
+      "x-authoring-lease-epoch": "41",
+      "x-authoring-lease-expires-at-ms": "4102444800000",
+      "x-authoring-fence-revision": "fence-agentic-os-v2-fixture",
+      "x-authoring-write-target": "registry",
+      "x-authoring-reserved-at-ms": "1788396300000"
+    },
+    "body": {
+      "agent_definition": {
+        "id": "agent-acceptance-fixture",
+        "revision": "agent-acceptance-fixture-v1",
+        "name": "Acceptance fixture discovery",
+        "source": {
+          "uri": "workspace:/agents/agent-acceptance-fixture.json",
+          "digest": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "model": {
+          "providerId": "workspace-provider",
+          "modelId": "workspace-model"
+        },
+        "instructions": [
+          {
+            "name": "purpose",
+            "content": "Discover bounded commerce offers."
+          }
+        ]
+      },
+      "authoring_mutation_intent": {
+        "admissionInputs": {
+          "agentDefinition": {
+            "id": "agent-acceptance-fixture",
+            "revision": "agent-acceptance-fixture-v1",
+            "name": "Acceptance fixture discovery",
+            "source": {
+              "uri": "workspace:/agents/agent-acceptance-fixture.json",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "providerId": "workspace-provider",
+              "modelId": "workspace-model"
+            },
+            "instructions": [
+              {
+                "name": "purpose",
+                "content": "Discover bounded commerce offers."
+              }
+            ]
+          },
+          "toolAllowlistEntry": {
+            "entry_id": "allowlist-agent-acceptance-fixture",
+            "agent_definition_id": "agent-acceptance-fixture",
+            "adapter_identity": "commerce-discovery",
+            "tool_names": [
+              "commerce.flight.discover"
+            ],
+            "review_required": true
+          },
+          "invocationRegisterEntry": {
+            "route": "/tool.route",
+            "tag": "#mcp",
+            "binding": "@mcp-gateway",
+            "tool_identity": "agentic-os.adapter.register"
+          },
+          "operatorInstructionRef": "operator://agentic-graph/commerce-adapter-admission/2026-09-03"
+        },
+        "invocationProof": {
+          "sourceRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "catalogDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "routingSchema": "agentic-canvas-os-docs-routing/v1",
+          "routingDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "counts": {
+            "command": 1,
+            "semantic": 1,
+            "binding": 1
+          },
+          "requiredTokens": [
+            "/tool.route",
+            "#mcp",
+            "@mcp-gateway"
+          ]
+        },
+        "commerceProjection": {
+          "category": "flight",
+          "discoveryTool": "commerce.flight.discover",
+          "declaredAttributes": {
+            "priceMinor": 100,
+            "qualityScore": 100,
+            "latencyMs": 10
+          },
+          "fallbackAgentId": null
+        },
+        "expectedPreviousContentHash": null,
+        "sandboxDryRun": {
+          "instanceId": "registration-agent-acceptance-fixture",
+          "purpose": "registration-dry-run",
+          "outcome": "completed",
+          "exceededLimit": null,
+          "configuredValue": null,
+          "attemptedCalls": [
+            {
+              "toolId": "commerce.flight.discover",
+              "allowlisted": true,
+              "outcome": "executed"
+            }
+          ]
+        }
+      },
+      "tool_allowlist_entry": {
+        "entry_id": "allowlist-agent-acceptance-fixture",
+        "agent_definition_id": "agent-acceptance-fixture",
+        "adapter_identity": "commerce-discovery",
+        "tool_names": [
+          "commerce.flight.discover"
+        ],
+        "review_required": true
+      },
+      "invocation_register_entry": {
+        "route": "/tool.route",
+        "tag": "#mcp",
+        "binding": "@mcp-gateway",
+        "tool_identity": "agentic-os.adapter.register"
+      },
+      "operator_instruction_ref": "operator://agentic-graph/commerce-adapter-admission/2026-09-03"
+    }
+  },
+  "expectedReceiptIdentity": {
+    "schema": "agentic-os-adapter-registration/v2",
+    "adapter_identity": "commerce-discovery",
+    "agent_definition_id": "agent-acceptance-fixture",
+    "tool_allowlist_entry_id": "allowlist-agent-acceptance-fixture",
+    "invocation_register_tokens": [
+      "/tool.route",
+      "#mcp",
+      "@mcp-gateway",
+      "agentic-os.adapter.register"
+    ],
+    "resulting_status": "active",
+    "operator_instruction_reference": "operator://agentic-graph/commerce-adapter-admission/2026-09-03",
+    "agentic_graph_authority": {
+      "schema": "agentic-graph-commerce-admission-authority-projection/v1",
+      "admission_inputs_digest": "19d3e17d32872ef4d7acd218bf3eb591ed7db097c638c2ab9a90f6d94ab391eb",
+      "admission_request_digest": "fec4d3f616fbda388e6392be63e9b5fb5bbe8f899901aacb3407ad7fb60de7f2",
+      "authority_ref": "authority://agentic-graph/commerce-admission/fixture-20260903",
+      "evidence_digest": "9c9b05a417290037f36b06b859010d1c065e7d72fd01e5da2fbbc1c59baad319",
+      "issuer_repository": "huijoohwee/agentic-graph",
+      "issuer_revision": "dddddddddddddddddddddddddddddddddddddddd",
+      "permit_digest": "97596dbeb489c81faabdf78e492fd6e0028810731cd2b55e7aee742cf0df2f8f",
+      "expires_at_ms": 1788396460000
+    }
+  }
+}

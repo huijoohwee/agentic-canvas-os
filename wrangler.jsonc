@@ -45,7 +45,9 @@
       "/function-call",
       "/function-call/recover",
       "/function-call/resume",
-      "/canvas/room"
+      "/canvas/room",
+      "/agentic-os/internal",
+      "/agentic-os/internal/*"
     ]
   },
   // One SQLite-backed room owner per room id and one atomic agent-state owner
@@ -62,11 +64,14 @@
   ],
   "vars": {
     "AGENTIC_OS_MCP_ENDPOINT": "https://airvio.co/agentic-os/control-plane/mcp",
+    "AGENTIC_OS_ADMISSION_AUTHORITY_REF": "__AGENTIC_OS_ADMISSION_AUTHORITY_REF__",
+    "AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF": "__AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF__",
+    "AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE": "__AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE__",
     "CANVAS_BASE_URL": "https://airvio.co/agentic-os",
     "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
   },
   "secrets": {
-    "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET"]
+    "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "AGENTIC_OS_ADMISSION_AUTH_SECRET", "AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET"]
   },
   "env": {
     "dev": {
@@ -112,7 +117,9 @@
           "/function-call",
           "/function-call/recover",
           "/function-call/resume",
-          "/canvas/room"
+          "/canvas/room",
+          "/agentic-os/internal",
+          "/agentic-os/internal/*"
         ]
       },
       "durable_objects": {
@@ -136,11 +143,14 @@
         "OPENAI_FUNCTION_CALLING_API_KEY_ENV": "OPENAI_API_KEY",
         "OPENAI_FUNCTION_CALLING_REASONING_EFFORT": "low",
         "OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS": "256",
+        "AGENTIC_OS_ADMISSION_AUTHORITY_REF": "__AGENTIC_OS_ADMISSION_AUTHORITY_REF__",
+        "AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF": "__AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF__",
+        "AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE": "__AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE__",
         "CANVAS_BASE_URL": "https://airvio.co/agentic-os",
         "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
       },
       "secrets": {
-        "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "AGENTIC_OS_MCP_FUNCTION_BEARER_TOKEN"]
+        "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "AGENTIC_OS_MCP_FUNCTION_BEARER_TOKEN", "AGENTIC_OS_ADMISSION_AUTH_SECRET", "AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET"]
       }
     }
   }

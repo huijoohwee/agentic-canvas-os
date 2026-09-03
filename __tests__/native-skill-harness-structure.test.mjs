@@ -17,7 +17,7 @@ import {
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // Pinned identity-migration digests: later work must not broaden this narrow rename.
-const WRANGLER_SHA256 = "614a632447b89dd157007ca56311b86948d51625a67c556ac1be9cbb9137e330";
+const WRANGLER_SHA256 = "66c445c9e5a8bd0e67786bce4c2113e7f0a68fc70add9341a7518ca052d7d59c";
 const SKILL_EVOLUTION_SHA256 = "e2c17a57a15de7ad47699908739abfc4c8f4b42760cc280d937be6ad2d521a08";
 const PROPERTY_SEED = 20260817;
 const retiredNamespace = ["k", "now", "grph"].join("");
@@ -77,12 +77,12 @@ test("the gate accepts no model-adapter-shaped and no fetch-shaped parameter", (
   assert.equal(gate.stats().modelCallCapability, false);
 });
 
-test("wrangler.jsonc pins the identity migration with unchanged binding counts", async () => {
+test("wrangler.jsonc pins the identity migration and private admission boundary", async () => {
   const text = await readFile(path.join(REPOSITORY_ROOT, "wrangler.jsonc"), "utf8");
   assert.equal(
     createHash("sha256").update(text).digest("hex"),
     WRANGLER_SHA256,
-    "wrangler.jsonc drifted beyond the reviewed identity migration",
+    "wrangler.jsonc drifted beyond the reviewed identity and admission boundary",
   );
   assert.match(text, /AGENTIC_OS_MCP_ENDPOINT/);
   assert.match(text, /agentic-mcp-dev/);
@@ -104,6 +104,17 @@ test("wrangler.jsonc pins the identity migration with unchanged binding counts",
     parsed.env.dev.vars.AGENTIC_OS_MCP_ENDPOINT,
     "https://agentic-mcp-dev.huijoohwee.workers.dev/agentic-os/control-plane/mcp",
   );
+  for (const config of [parsed, parsed.env.dev]) {
+    assert.match(config.vars.AGENTIC_OS_ADMISSION_AUTHORITY_REF, /^__AGENTIC_OS_/u);
+    assert.match(config.vars.AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF, /^__AGENTIC_OS_/u);
+    assert.match(config.vars.AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE, /^__AGENTIC_OS_/u);
+    assert.ok(config.assets.run_worker_first.includes("/agentic-os/internal"));
+    assert.ok(config.assets.run_worker_first.includes("/agentic-os/internal/*"));
+    assert.ok(config.assets.run_worker_first.includes("/agentic-os/internal/*"));
+    assert.ok(config.secrets.required.includes("AGENTIC_OS_ADMISSION_AUTH_SECRET"));
+    assert.ok(config.secrets.required.includes("AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET"));
+  }
+  assert.equal(/\bACOS_ADMISSION\b/.test(text), false, "legacy admission runtime variables must not return");
   assert.equal("kv_namespaces" in parsed, false);
   assert.equal("d1_databases" in parsed, false);
 });

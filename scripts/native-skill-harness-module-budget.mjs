@@ -14,11 +14,12 @@ const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 
 // Pre-feature baseline, verified 2026-08-17 on main at 436cd8250.
 const BASELINE = Object.freeze({ agentApiModules: 59, totalLines: 19_834 });
-// Recorded projection for this feature: +4 modules and roughly
-// +1,250 lines of module, store, registry, runtime wiring, and audit surface.
-// The fourth module is the env-aware Tool Search runtime owner added so the
-// configured upstream runtime can truthfully report toolSearch.configured.
-const PROJECTION = Object.freeze({ agentApiModules: 63, totalLines: 21_100 });
+// The original native-skill projection added four modules and roughly 1,250
+// lines. The separately bounded commerce-admission contract adds three
+// modules and 1,449 observed lines for its HMAC boundary, request-bound
+// admission evidence, durable projection, and Worker wiring. Keep this exact
+// audited ceiling rather than allowing either surface to drift silently.
+const PROJECTION = Object.freeze({ agentApiModules: 66, totalLines: 22_549 });
 
 async function countLines(files) {
   let lines = 0;

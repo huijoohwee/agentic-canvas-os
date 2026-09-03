@@ -50,13 +50,12 @@ function clone(value) {
 }
 
 export function resolveAgenticOsModule(modulePath, { repoRoot = REPO_ROOT } = {}) {
-  const candidates = [];
+  const candidates = [path.join(repoRoot, "node_modules", "agentic-os", "src", modulePath)];
   for (let current = repoRoot; ; current = path.dirname(current)) {
     candidates.push(path.join(current, "agentic-os", "src", modulePath));
     const parent = path.dirname(current);
     if (parent === current) break;
   }
-  candidates.push(path.join(repoRoot, "node_modules", "agentic-os", "src", modulePath));
   for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate;
   }

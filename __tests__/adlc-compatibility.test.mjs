@@ -6,9 +6,9 @@ import test from "node:test";
 import { TextDecoder } from "node:util";
 import { fileURLToPath } from "node:url";
 
+import { AGENTIC_OS_INTEGRITY, AGENTIC_OS_PIN } from "./fixtures/agentic-os-pin.mjs";
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PIN = "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/89256623e4a09a4b8e337c9d3572593c0d188700";
-const INTEGRITY = "sha512-Vsa3kF+rr9/aY5h4XpvM9TsaXyJRuvCz2kX1LAgcpVI48ZTrZFPKoiAAmlrg0uGxHDf75C3i/PNJ/sti9rBY/g==";
 const UPSTREAM = path.join(ROOT, "node_modules", "agentic-os");
 const read = relativePath => readFileSync(path.join(ROOT, relativePath), "utf8");
 
@@ -23,10 +23,10 @@ function markdownUnder(directory) {
 test("ACOS pins one reviewed ADLC package and delegates lifecycle commands directly", () => {
   const pkg = JSON.parse(read("package.json"));
   const lock = JSON.parse(read("package-lock.json"));
-  assert.equal(pkg.devDependencies["agentic-os"], PIN);
-  assert.equal(lock.packages[""].devDependencies["agentic-os"], PIN);
-  assert.equal(lock.packages["node_modules/agentic-os"].resolved, PIN);
-  assert.equal(lock.packages["node_modules/agentic-os"].integrity, INTEGRITY);
+  assert.equal(pkg.devDependencies["agentic-os"], AGENTIC_OS_PIN);
+  assert.equal(lock.packages[""].devDependencies["agentic-os"], AGENTIC_OS_PIN);
+  assert.equal(lock.packages["node_modules/agentic-os"].resolved, AGENTIC_OS_PIN);
+  assert.equal(lock.packages["node_modules/agentic-os"].integrity, AGENTIC_OS_INTEGRITY);
   assert.deepEqual(Object.fromEntries([
     "setup", "doctor", "lane", "land", "status", "reap", "queue:show",
     "autonomy-class", "git:configure", "sync:canonical",

@@ -159,11 +159,17 @@ Recorded accounting:
 - Pre-feature baseline: `59` `agent-api/src/` modules
 - Pre-feature line count across `worker/`, `src/`, and `agent-api/src/`:
   `19,834`
-- Post-feature projection: `63` `agent-api/src/` modules and roughly `21,100`
+- Native-skill projection: `63` `agent-api/src/` modules and roughly `21,100`
   lines, plus four scripts and the focused new tests
 - The fourth added module is `agent-api/src/tool-search-config.js`, introduced
   so a fully configured upstream runtime can report `toolSearch.configured`
   truthfully without changing the shipped fail-closed default
+- Commerce-admission extension: three independently owned modules for the
+  private HMAC boundary, local admission configuration evidence, and provider;
+  the resulting audited ceiling is `66` `agent-api/src/` modules and `22,549`
+  lines across `worker/`, `src/`, and `agent-api/src/`. It remains source-ready
+  only: a later agentic-graph-owned protected release authority is required
+  before any production admission or deployment claim.
 
 Ownership decision:
 

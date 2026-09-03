@@ -21,6 +21,7 @@
     "agentic-graph-contract:check": "node --test __tests__/agentic-graph-client.test.mjs __tests__/agentic-graph-parser-client.test.mjs __tests__/agentic-graph-contract.test.mjs",
     "build": "npm run web:build",
     "cache-context:check": "node --test __tests__/cache-context.test.mjs",
+    "commerce-admission-provider:check": "node --test __tests__/commerce-admission-auth.test.mjs __tests__/commerce-admission-authority.test.mjs __tests__/commerce-admission-contract-fixture.test.mjs __tests__/commerce-admission-warm-isolate.test.mjs __tests__/commerce-admission-provider.test.mjs __tests__/commerce-admission-durability.test.mjs __tests__/native-skill-harness-registration.test.mjs __tests__/agent-definitions.test.mjs",
     "programmatic-tool-calling:check": "node --test __tests__/programmatic-tool-calling.test.mjs",
     "progressive-agents:check": "node --test __tests__/progressive-agents.test.mjs",
     "running-agents:check": "node --test __tests__/running-agents.test.mjs",

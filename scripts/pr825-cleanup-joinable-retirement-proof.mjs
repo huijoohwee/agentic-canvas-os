@@ -38,11 +38,36 @@ function fail(message) {
   throw new Error(message);
 }
 
-function readCanonicalRevision(repoRoot) {
-  return execFileSync("git", ["rev-parse", CANONICAL_REF], {
-    cwd: repoRoot,
+function git(cwd, args) {
+  return execFileSync("git", args, {
+    cwd,
     encoding: "utf8",
   }).trim();
+}
+
+function tryGit(cwd, args) {
+  try {
+    return git(cwd, args);
+  } catch {
+    return null;
+  }
+}
+
+function readCanonicalRevision(repoRoot) {
+  const refs = [CANONICAL_REF, "refs/remotes/origin/main"];
+  for (const ref of refs) {
+    const revision = tryGit(repoRoot, ["rev-parse", ref]);
+    if (revision !== null) return revision;
+  }
+  git(repoRoot, [
+    "fetch",
+    "--no-tags",
+    "origin",
+    `${CANONICAL_REF}:refs/remotes/origin/main`,
+  ]);
+  const revision = tryGit(repoRoot, ["rev-parse", "refs/remotes/origin/main"]);
+  if (revision === null) fail("PR825 cleanup join could not resolve the canonical main revision.");
+  return revision;
 }
 
 function freeze(value) {

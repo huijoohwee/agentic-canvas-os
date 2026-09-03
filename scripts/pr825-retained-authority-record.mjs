@@ -18,6 +18,10 @@ export const PR825_RETAINED_AUTHORITY = Object.freeze({
 const RECORD_SCHEMA = "agentic-canvas-os/pr825-retained-authority-record/v1";
 const DIGEST = /^[0-9a-f]{64}$/u;
 const REPO_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
+const AUTHORITY_HEAD_REF = PR825_RETAINED_AUTHORITY.authorityRef.replace(
+  "refs/remotes/origin/",
+  "refs/heads/",
+);
 
 function fail(message) {
   throw new Error(message);
@@ -31,6 +35,14 @@ function git(cwd, args) {
       maxBuffer: 64 * 1024 * 1024,
     }),
   ).trim();
+}
+
+function tryGit(cwd, args) {
+  try {
+    return git(cwd, args);
+  } catch {
+    return null;
+  }
 }
 
 function clone(value) {
@@ -59,6 +71,29 @@ export async function loadAuthorityIssuerModule(options = {}) {
   return loadAgenticOsModule("github-authority-issuer.mjs", options);
 }
 
+function ensurePr825AuthorityRef(repoRoot) {
+  if (tryGit(repoRoot, ["rev-parse", "--verify", `${PR825_RETAINED_AUTHORITY.authorityRef}^{commit}`])) {
+    return PR825_RETAINED_AUTHORITY.authorityRef;
+  }
+  try {
+    git(repoRoot, [
+      "fetch",
+      "--no-tags",
+      "--depth=1",
+      "origin",
+      `${AUTHORITY_HEAD_REF}:${PR825_RETAINED_AUTHORITY.authorityRef}`,
+    ]);
+  } catch (error) {
+    fail(
+      `PR825 retained authority ref is unavailable locally and exact fetch failed: ${error.message}`,
+    );
+  }
+  if (!tryGit(repoRoot, ["rev-parse", "--verify", `${PR825_RETAINED_AUTHORITY.authorityRef}^{commit}`])) {
+    fail(`PR825 retained authority ref is still unavailable after fetching ${AUTHORITY_HEAD_REF}.`);
+  }
+  return PR825_RETAINED_AUTHORITY.authorityRef;
+}
+
 export async function readPr825RetainedAuthorityIssuance({
   repoRoot = REPO_ROOT,
 } = {}) {
@@ -67,10 +102,11 @@ export async function readPr825RetainedAuthorityIssuance({
     createGitHubPublicationReceipt,
     validateGitHubStoredAuthorityBundle,
   } = await loadAuthorityIssuerModule({ repoRoot });
+  const authorityRef = ensurePr825AuthorityRef(repoRoot);
 
   const storedBundle = validateGitHubStoredAuthorityBundle(
     JSON.parse(
-      git(repoRoot, ["show", `${PR825_RETAINED_AUTHORITY.authorityRef}:${PR825_RETAINED_AUTHORITY.evidencePath}`]),
+      git(repoRoot, ["show", `${authorityRef}:${PR825_RETAINED_AUTHORITY.evidencePath}`]),
     ),
   );
   const request = storedBundle.authorityBundle.request;
@@ -99,7 +135,7 @@ export async function readPr825RetainedAuthorityIssuance({
     "show",
     "--no-patch",
     "--format=%H%n%P%n%cI",
-    PR825_RETAINED_AUTHORITY.authorityRef,
+    authorityRef,
   ]).split("\n");
 
   const publicationReceipt = createGitHubPublicationReceipt({

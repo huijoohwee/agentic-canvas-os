@@ -15,9 +15,9 @@ import * as githubTransitionClient from 'agentic-os/adapters/github-transition-c
 import * as githubTransitionPolicy from 'agentic-os/adapters/github-transition-policy'
 import { createEffectPlan, encodeEffectPlan } from 'agentic-os/records/completion'
 
+import { AGENTIC_OS_INTEGRITY, AGENTIC_OS_PIN } from './fixtures/agentic-os-pin.mjs'
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PIN = 'https://codeload.github.com/huijoohwee/agentic-os/tar.gz/89256623e4a09a4b8e337c9d3572593c0d188700'
-const INTEGRITY = 'sha512-Vsa3kF+rr9/aY5h4XpvM9TsaXyJRuvCz2kX1LAgcpVI48ZTrZFPKoiAAmlrg0uGxHDf75C3i/PNJ/sti9rBY/g=='
 const read = relativePath => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
 const digest = relativePath => createHash('sha256')
   .update(fs.readFileSync(path.join(ROOT, relativePath)))
@@ -95,10 +95,10 @@ test('ACOS consumes one protected immutable agentic-os authority adapter', () =>
   const pkg = JSON.parse(read('package.json'))
   const lock = JSON.parse(read('package-lock.json'))
   const installed = lock.packages['node_modules/agentic-os']
-  assert.equal(pkg.devDependencies['agentic-os'], PIN)
-  assert.equal(lock.packages[''].devDependencies['agentic-os'], PIN)
-  assert.equal(installed.resolved, PIN)
-  assert.equal(installed.integrity, INTEGRITY)
+  assert.equal(pkg.devDependencies['agentic-os'], AGENTIC_OS_PIN)
+  assert.equal(lock.packages[''].devDependencies['agentic-os'], AGENTIC_OS_PIN)
+  assert.equal(installed.resolved, AGENTIC_OS_PIN)
+  assert.equal(installed.integrity, AGENTIC_OS_INTEGRITY)
   assert.equal(installed.bin['agentic-os-authority'], 'bin/agentic-os-authority.mjs')
   assert.equal(installed.bin['agentic-os-transition'], 'bin/agentic-os-transition.mjs')
   assert.equal(Object.hasOwn(githubAuthority, 'GITHUB_ACTIONS_RULESET_BYPASS'), false)

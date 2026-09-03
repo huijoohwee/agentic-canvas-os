@@ -42,7 +42,7 @@ The digest grammar is `sha256:<64-lowercase-hex>`.
 The request fields are `runId`, `view`, `expectedRevision`, `expectedLedgerDigest`, `cursor`, and `limit`.
 The route requires action `/sdlc.observe`, semantic `#agentic-sdlc-observability`, and bindings ordered as `@implementation-run`, `@canvas`, `@runtime-proof`.
 
-The result is `agenticgraph-agentic-sdlc-observation/v1` with `source`, `status`, `conformance`, `projection`, `cache`, and `economics`. It validates and projects
+The result is `agentic-graph-agentic-sdlc-observation/v1` with `source`, `status`, `conformance`, `projection`, `cache`, and `economics`. It validates and projects
 the supplied receipt; it never repairs, grades, promotes, or mutates it.
 
 ## Existing Canvas projection
@@ -58,13 +58,13 @@ through existing KGC, GraphData, and Canvas owners.
 
 ## Non-promoting states
 
-Only the named Evaluator may set `verified`. Knowgrph `delivery_ready` is a review handoff only; never translate it into `verified`, merged, accepted, or deployed.
+Only the named Evaluator may set `verified`. agentic-graph `delivery_ready` is a review handoff only; never translate it into `verified`, merged, accepted, or deployed.
 `deployed` requires the existing exact product release receipts; observation creates no authorization, deployment attempt, or publication evidence.
 
 ## Economics and proof boundary
 
 The focused source contract records exact zeros for network calls, model calls,
 prompt tokens, completion tokens, and estimated cost. It is spec-complete, not
-runtime-ready. It does not claim current-guideline, protected Knowgrph,
+runtime-ready. It does not claim current-guideline, protected agentic-graph,
 cross-device, Prod, or Cloudflare runtime parity. Live source authenticity and
 rendering remain separate evidence.

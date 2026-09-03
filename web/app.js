@@ -53,7 +53,7 @@
     };
   }
 
-  const initialGraph = window.__KG_STANDALONE_INITIAL__ ? structuredClone(window.__KG_STANDALONE_INITIAL__) : defaultGraph();
+  const initialGraph = window.__AG_STANDALONE_INITIAL__ ? structuredClone(window.__AG_STANDALONE_INITIAL__) : defaultGraph();
   const graph = {
     nodes: initialGraph.nodes.map((n) => ({ ...n, r: typeof n.r === "number" ? n.r : 18 })),
     links: initialGraph.links.map((l) => ({ ...l })),
@@ -951,7 +951,7 @@
     </main>
     <div id="toastHost" class="toastHost" aria-live="polite"></div>
     <script>
-      window.__KG_STANDALONE_INITIAL__ = ${graphJson};
+      window.__AG_STANDALONE_INITIAL__ = ${graphJson};
     </script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script data-kg-app>${jsText.replaceAll("</script>", "<\\/script>")}</script>

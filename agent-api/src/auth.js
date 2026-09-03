@@ -4,15 +4,15 @@
 // `node:crypto` HMAC-SHA256 — zero external dependencies, offline-testable. The
 // signing secret is SERVER-SIDE ONLY (Cloudflare secret binding); it is never
 // logged, returned, or shipped to the client. This token gates *access* to the
-// run/state endpoints; it is DISTINCT from a knowgrph Approval_Token and NEVER
-// authorizes spend (auth ≠ approval — mirrors knowgrph R15.9).
+// run/state endpoints; it is DISTINCT from a agentic-graph Approval_Token and NEVER
+// authorizes spend (auth ≠ approval — mirrors agentic-graph R15.9).
 //
 // Interface is intentionally swappable: a future deploy can replace this with
 // `jsonwebtoken`, OIDC, or Cloudflare Access without changing callers.
 
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
-const DEFAULT_EXPIRY_SECONDS = 3600; // 60 min (knowgrph R15.8 default)
+const DEFAULT_EXPIRY_SECONDS = 3600; // 60 min (agentic-graph R15.8 default)
 const MIN_EXPIRY_SECONDS = 300; // 5 min
 const MAX_EXPIRY_SECONDS = 86400; // 24 h
 const DEFAULT_REVIEW_EXPIRY_SECONDS = 900;

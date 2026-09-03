@@ -117,4 +117,4 @@ VCC: verify positive `cached_tokens` produces one cache hit, positive `cache_wri
 
 ## Promotion Boundary
 
-The stable-prefix registry and offline tests are runtime-ready in Dev. A live provider cache-hit claim remains gated because this Worker forwards to the `knowgrph` MCP control plane and does not own the model request. Promotion requires the downstream model owner to map the routing key through a supported adapter, send an eligible exact prefix, return cache read/write usage, and pass a bounded live test with approved spend.
+The stable-prefix registry and offline tests are runtime-ready in Dev. A live provider cache-hit claim remains gated because this Worker forwards to the `agentic-graph` MCP control plane and does not own the model request. Promotion requires the downstream model owner to map the routing key through a supported adapter, send an eligible exact prefix, return cache read/write usage, and pass a bounded live test with approved spend.

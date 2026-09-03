@@ -16,7 +16,7 @@ export const SKILL_EVOLUTION_INVOCATION = Object.freeze({
   text: "/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator",
 });
 
-export const SKILL_EVOLUTION_MCP_TOOL = "agenticgraph.skill.evolve";
+export const SKILL_EVOLUTION_MCP_TOOL = "agentic-graph.skill.evolve";
 export const SKILL_EVOLUTION_OPERATIONS = Object.freeze([
   "plan",
   "start",
@@ -112,7 +112,7 @@ export function validateSkillEvolutionContractDocuments(documents) {
   const harnessRow = findPlainTableRow(required["HARNESS-CONTRACTS.md"], "Skill evolution");
   requireMarkers(harnessRow, "Learning Harness Skill Evolution redirect", [
     "SKILL-EVOLUTION.md",
-    "knowgrph-skill-evolution-result/v1",
+    "agentic-graph-skill-evolution-result/v1",
     "exclusively defines",
     "no alternate input contract",
   ], failures);
@@ -130,8 +130,8 @@ export function validateSkillEvolutionContractDocuments(documents) {
     'status: "spec-complete"',
     SKILL_EVOLUTION_INVOCATION.text,
     SKILL_EVOLUTION_MCP_TOOL,
-    "knowgrph-skill-evolution-request/v1",
-    "knowgrph-skill-evolution-result/v1",
+    "agentic-graph-skill-evolution-request/v1",
+    "agentic-graph-skill-evolution-result/v1",
     "sourceRevision",
     "candidateAdapter",
     "normalizedChars",
@@ -192,13 +192,13 @@ export function validateSkillEvolutionContractDocuments(documents) {
   requireMarkers(required["RUNTIME-READINESS.md"], "Skill Evolution readiness boundary", [
     "SKILL-EVOLUTION.md",
     SKILL_EVOLUTION_MCP_TOOL,
-    "Knowgrph",
+    "agentic-graph",
   ], failures);
   requireMarkers(required["RUNTIME-PROOF.md"], "Skill Evolution proof boundary", [
     "skill-evolution:check",
     "model-free",
-    "Knowgrph",
-    "no Knowgrph runtime-readiness claim",
+    "agentic-graph",
+    "no agentic-graph runtime-readiness claim",
   ], failures);
   return failures;
 }

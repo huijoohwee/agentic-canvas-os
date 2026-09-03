@@ -64,10 +64,10 @@ test("frontmatter validator reports missing, misplaced, wrong-path, and uncovere
     nearestHeading: "Product Requirements",
   });
   const escapedModule = validateFrontmatterContract(
-    contractDocument("Use `knowgrph/src/escape.js`.\n"),
+    contractDocument("Use `agentic-graph/src/escape.js`.\n"),
   );
   assert.ok(escapedModule.violations[0].references.some(({ literal }) => (
-    literal === "knowgrph/src/escape.js"
+    literal === "agentic-graph/src/escape.js"
   )));
   const wrongPath = validateAuthoredDocument({ path: "docs/wrong-location.md",
     text: fullDocument() });
@@ -160,7 +160,7 @@ test("readiness rung validation enforces closed order, component coverage, and e
 });
 test("duplicate auditor is exhaustive, fail-closed, and does not let delegation mask code", () => {
   const modules = [
-    moduleFixture("knowgrph/src/camera.ts", "implementation", "camera"),
+    moduleFixture("agentic-graph/src/camera.ts", "implementation", "camera"),
     moduleFixture("GameXR/src/view.ts", "delegation", "camera"),
     {
       ...moduleFixture("GameXR/src/camera.ts", "implementation", "camera"),
@@ -171,11 +171,11 @@ test("duplicate auditor is exhaustive, fail-closed, and does not let delegation 
     .map(({ path }) => path)
     .filter((path) => path.startsWith("GameXR/"));
   const authoritativeAssignments = {
-    "knowgrph/src/camera.ts": assignmentFor(
-      modules[0], "implementation", ["camera"], "@knowgrph/camera",
+    "agentic-graph/src/camera.ts": assignmentFor(
+      modules[0], "implementation", ["camera"], "@agentic-graph/camera",
     ),
     "GameXR/src/view.ts": assignmentFor(
-      modules[1], "delegation", ["camera"], "@knowgrph/camera",
+      modules[1], "delegation", ["camera"], "@agentic-graph/camera",
     ),
     "GameXR/src/camera.ts": assignmentFor(modules[2], "implementation", ["camera"]),
   };
@@ -197,9 +197,9 @@ test("duplicate auditor is exhaustive, fail-closed, and does not let delegation 
   });
   assert.deepEqual(reversed, result);
   const wrongSurface = structuredClone(authoritativeAssignments);
-  wrongSurface["GameXR/src/view.ts"].publicSurface = "@knowgrph/wrong";
+  wrongSurface["GameXR/src/view.ts"].publicSurface = "@agentic-graph/wrong";
   assert.equal(auditDuplicateLogic({ modules, expectedModulePaths, authoritativeAssignments: wrongSurface, capabilities: ["camera"] }).outcome, "audit-incomplete");
-  const undeclaredOwner = moduleFixture("knowgrph/src/other-camera.ts", "implementation", "camera");
+  const undeclaredOwner = moduleFixture("agentic-graph/src/other-camera.ts", "implementation", "camera");
   assert.equal(auditDuplicateLogic({ modules: [...modules, undeclaredOwner], expectedModulePaths,
     authoritativeAssignments, capabilities: ["camera"] }).outcome, "audit-incomplete");
 });
@@ -216,7 +216,7 @@ test("duplicate auditor never reports omitted, unlabeled, unreadable, or late sc
     modules: [noOwner], expectedModulePaths: [noOwner.path], capabilities: ["camera"],
     authoritativeAssignments: { [noOwner.path]: assignmentFor(noOwner, "frontend-only") },
   });
-  assert.ok(missingOwner.unscannedModules.some(({ reason }) => /knowgrph owner/u.test(reason)));
+  assert.ok(missingOwner.unscannedModules.some(({ reason }) => /agentic-graph owner/u.test(reason)));
   const unreadable = auditDuplicateLogic({
     modules: [{ path: "GameXR/src/view.ts", readError: "permission denied" }],
     expectedModulePaths: ["GameXR/src/view.ts", "GameXR/src/missing.ts"],
@@ -245,7 +245,7 @@ test("duplicate auditor never reports omitted, unlabeled, unreadable, or late sc
   assert.ok(late.unscannedModules.some(({ reason }) => /deadline exceeded/u.test(reason)));
 });
 test("path auditor detects rooted, account, unrooted, and unresolved references", () => {
-  const knownPath = "knowgrph/src/portability/camera.ts";
+  const knownPath = "agentic-graph/src/portability/camera.ts";
   const portable = auditPathPortability({
     files: [{ path: "docs/portable.md", text: `See $GITHUB_ROOT/${knownPath}.` }],
     repositoryPaths: [knownPath],
@@ -257,7 +257,7 @@ test("path auditor detects rooted, account, unrooted, and unresolved references"
     files: [{
       path: "src/paths.mjs",
       text: [`"${posixPath}"`, `"${windowsPath}"`, '{"username":"fixture-account"}',
-        `"${knownPath}"`, '"$GITHUB_ROOT/knowgrph/src/missing.ts"'].join("\n"),
+        `"${knownPath}"`, '"$GITHUB_ROOT/agentic-graph/src/missing.ts"'].join("\n"),
     }],
     accountNames: ["fixture-account"],
     repositoryPaths: [knownPath],
@@ -287,10 +287,10 @@ test("path auditor detects rooted, account, unrooted, and unresolved references"
   const webReferences = auditPathPortability({
     files: [{
       path: "src/web.ts",
-      text: 'const pattern = /run id/; const matcher = /username=huijoohwee/; const ratio = knowgrph/docs; const rooted = "$GITHUB_ROOT/huijoohwee/content/file.md"; https://example.com/docs/path [docs](/docs/path) /api/run workspace:/agents/run /network down/ GitHub owner huijoohwee',
+      text: 'const pattern = /run id/; const matcher = /username=huijoohwee/; const ratio = agentic-graph/docs; const rooted = "$GITHUB_ROOT/huijoohwee/content/file.md"; https://example.com/docs/path [docs](/docs/path) /api/run workspace:/agents/run /network down/ GitHub owner huijoohwee',
     }],
     accountNames: ["huijoohwee"],
-    repositoryPaths: ["src/web.ts", "knowgrph/docs", "huijoohwee/content/file.md"],
+    repositoryPaths: ["src/web.ts", "agentic-graph/docs", "huijoohwee/content/file.md"],
   });
   assert.equal(webReferences.status, "passed");
 });
@@ -348,7 +348,7 @@ test("tracked duplicate audit covers every GameXR source classification", (t) =>
     "agentic-canvas-os": {
       "README.md": "<!-- Responsibility: Describe the fixture. -->\n",
     },
-    knowgrph: {
+    "agentic-graph": {
       "src/camera.ts": ownerSource,
     },
     GameXR: {
@@ -358,12 +358,12 @@ test("tracked duplicate audit covers every GameXR source classification", (t) =>
   assert.equal(auditTrackedDuplicateLogic({ githubRoot, capabilities: ["camera"] })
     .outcome, "audit-incomplete");
   const ownerAssignment = assignmentFor(
-    { text: ownerSource }, "implementation", ["camera"], "@knowgrph/camera",
+    { text: ownerSource }, "implementation", ["camera"], "@agentic-graph/camera",
   );
   assert.equal(auditTrackedDuplicateLogic({
     githubRoot, capabilities: ["camera"],
     authoritativeAssignments: {
-      "knowgrph/src/camera.ts": ownerAssignment,
+      "agentic-graph/src/camera.ts": ownerAssignment,
       "GameXR/src/view.ts": assignmentFor({ text: viewSource }, "frontend-only"),
     },
   }).status, "passed");
@@ -372,7 +372,7 @@ test("tracked duplicate audit covers every GameXR source classification", (t) =>
   const stale = auditTrackedDuplicateLogic({
     githubRoot, capabilities: ["camera"],
     authoritativeAssignments: {
-      "knowgrph/src/camera.ts": ownerAssignment,
+      "agentic-graph/src/camera.ts": ownerAssignment,
       "GameXR/src/view.ts": assignmentFor({ text: viewSource }, "frontend-only"),
     },
   });

@@ -102,7 +102,7 @@ async function executeTriples(triples, order) {
       switch (triple.definition_state) {
         case "valid":
           return createValidAgentDefinition({
-            id: `knowgrph-${triple.suffix}-agent`,
+            id: `agentic-graph-${triple.suffix}-agent`,
             revision: `${triple.suffix}-v1`,
           });
         case "missing":
@@ -118,7 +118,7 @@ async function executeTriples(triples, order) {
         case "valid":
           return createValidToolAllowlistEntry({
             entry_id: `allowlist-${triple.suffix}`,
-            agent_definition_id: `knowgrph-${triple.suffix}-agent`,
+            agent_definition_id: `agentic-graph-${triple.suffix}-agent`,
           });
         case "missing":
           return undefined;
@@ -161,8 +161,8 @@ test("REGISTRATION_FINDING_TYPES is the closed two-value set", () => {
   assert.deepEqual(REGISTRATION_FINDING_TYPES, ["unfederated-tool", "uncatalogued-tool"]);
 });
 
-test("a knowgrph-shaped registration with a resolved reference produces a Registration_Record", async () => {
-  // Min-Viable Scope is proven against the existing knowgrph adapter only;
+test("a agentic-graph-shaped registration with a resolved reference produces a Registration_Record", async () => {
+  // Min-Viable Scope is proven against the existing agentic-graph adapter only;
   // the second-adapter genericity proof is outside this increment.
   const { registry, registrationInterface } = createInterface();
   const outcome = await registrationInterface.register(
@@ -175,14 +175,14 @@ test("a knowgrph-shaped registration with a resolved reference produces a Regist
   assert.equal(outcome.finding, null);
   const record = outcome.record;
   assert.equal(record.schema, REGISTRATION_RECORD_SCHEMA);
-  assert.equal(record.adapter_identity, "knowgrph");
-  assert.equal(record.agent_definition_id, "knowgrph-note-agent");
-  assert.equal(record.tool_allowlist_entry_id, "allowlist-knowgrph-note-agent-1");
+  assert.equal(record.adapter_identity, "agentic-graph");
+  assert.equal(record.agent_definition_id, "agentic-graph-note-agent");
+  assert.equal(record.tool_allowlist_entry_id, "allowlist-agentic-graph-note-agent-1");
   assert.deepEqual(record.invocation_register_tokens, REGISTERED_TOKENS);
   assert.equal(record.resulting_status, "active");
   assert.equal(record.operator_instruction_reference, OPERATOR_REF);
   assert.ok(Number.isFinite(record.registered_at_ms));
-  assert.ok(captureSnapshot(registry).includes("knowgrph-note-agent"));
+  assert.ok(captureSnapshot(registry).includes("agentic-graph-note-agent"));
 });
 
 test("a missing or malformed tool allowlist entry is an unfederated-tool finding", async () => {
@@ -255,14 +255,14 @@ test("a proposed-status registration needs no operator reference and never activ
   assert.equal(outcome.status, "registered");
   assert.equal(outcome.record.resulting_status, "proposed");
   assert.equal(outcome.record.operator_instruction_reference, null);
-  assert.equal(captureSnapshot(registry).includes("knowgrph-note-agent"), false);
+  assert.equal(captureSnapshot(registry).includes("agentic-graph-note-agent"), false);
   assert.equal(registry.stats().statusCounts.proposed, 1);
 });
 
 test("concurrent registrations for distinct ids all settle with one terminal outcome each", async () => {
   const { registrationInterface } = createInterface();
   const definitions = ["a", "b", "c", "d"].map((suffix) => createValidAgentDefinition({
-    id: `knowgrph-${suffix}-agent`,
+    id: `agentic-graph-${suffix}-agent`,
     revision: `${suffix}-v1`,
   }));
   const outcomes = await Promise.all(definitions.map((definition, index) => registrationInterface.register(
@@ -300,7 +300,7 @@ test("a conflicting revision surfaces as a typed agent_revision_conflict finding
 
 test("an unknown factory option is rejected at construction", () => {
   assert.throws(
-    () => createAdapterRegistrationInterface({ adapterName: "knowgrph" }),
+    () => createAdapterRegistrationInterface({ adapterName: "agentic-graph" }),
     (error) => error instanceof TypeError && /adapterName/.test(error.message),
   );
   assert.equal(typeof RegistrationBlock, "function");

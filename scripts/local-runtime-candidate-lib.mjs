@@ -9,7 +9,7 @@ import { parseWorktreeRecords } from "./repository-guards.mjs";
 export const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const REQUIRED_CHECKS = Object.freeze({
   "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration", "budgets"],
-  knowgrph: ["Integration Gate"],
+  "agentic-graph": ["Integration Gate"],
 });
 const BLOCKING_CONFIG_FILES = Object.freeze([
   /^\.env(?:\..+)?$/u,
@@ -30,7 +30,7 @@ const BLOCKING_AUTHORITY_ROOTS = Object.freeze({
     "scripts",
     ".github/workflows",
   ]),
-  knowgrph: Object.freeze([
+  "agentic-graph": Object.freeze([
     "app",
     "src",
     "api",
@@ -46,7 +46,7 @@ const BLOCKING_AUTHORITY_ROOTS = Object.freeze({
 });
 
 export function validateCanonicalRuntimeCandidate(evidence) {
-  for (const repository of [evidence.agenticCanvasOs, evidence.knowgrph]) {
+  for (const repository of [evidence.agenticCanvasOs, evidence.agenticGraph]) {
     if (repository.branch !== "main") throw new Error(`${repository.id} canonical runtime checkout must be on main.`);
     const residue = normalizeCanonicalRuntimeResidue(repository);
     if (!residue.runtimeSafe) {
@@ -55,14 +55,14 @@ export function validateCanonicalRuntimeCandidate(evidence) {
       );
     }
     if (!SHA_PATTERN.test(String(repository.headSha || ""))) throw new Error(`${repository.id} requires an exact 40-character SHA.`);
-    if (repository === evidence.knowgrph && repository.headSha !== repository.remoteSha) {
+    if (repository === evidence.agenticGraph && repository.headSha !== repository.remoteSha) {
       throw new Error(`${repository.id} canonical HEAD must equal fetched origin/main.`);
     }
     if (!repository.protectedChecksVerified) throw new Error(`${repository.id} protected checks are not verified for ${repository.headSha}.`);
   }
   const revisionBinding = resolveAgenticCanvasOsRevisionBinding(evidence.agenticCanvasOs);
-  if (!evidence.knowgrph.hasDevApexScript || !evidence.knowgrph.hasStorageWorkerScript) {
-    throw new Error("Knowgrph must expose repository-owned dev:apex and storage:worker:dev scripts.");
+  if (!evidence.agenticGraph.hasDevApexScript || !evidence.agenticGraph.hasStorageWorkerScript) {
+    throw new Error("agentic-graph must expose repository-owned dev:apex and storage:worker:dev scripts.");
   }
   return { ...evidence, agenticCanvasOs: { ...evidence.agenticCanvasOs, revisionBinding } };
 }
@@ -102,10 +102,10 @@ export function parseConsumerPinnedDocsRef(markdown) {
   return null;
 }
 
-function readConsumerPinnedDocsRef(knowgrphRoot) {
+function readConsumerPinnedDocsRef(agenticGraphRoot) {
   try {
     return parseConsumerPinnedDocsRef(
-      readFileSync(path.join(knowgrphRoot, "docs", "runtime-readiness-contract.md"), "utf8"),
+      readFileSync(path.join(agenticGraphRoot, "docs", "runtime-readiness-contract.md"), "utf8"),
     );
   } catch {
     return null;
@@ -121,8 +121,8 @@ function isAncestorCommit(root, ancestorSha, descendantSha, deps) {
   }
 }
 
-function withConsumerPinEvidence(repository, knowgrphRoot, deps) {
-  const consumerPinnedRef = readConsumerPinnedDocsRef(knowgrphRoot);
+function withConsumerPinEvidence(repository, agenticGraphRoot, deps) {
+  const consumerPinnedRef = readConsumerPinnedDocsRef(agenticGraphRoot);
   return {
     ...repository,
     consumerPinnedRef,
@@ -133,22 +133,22 @@ function withConsumerPinEvidence(repository, knowgrphRoot, deps) {
 
 
 function inspectCanonicalCandidate(options, deps, { verifyProtected }) {
-  const { workspaceRoot, agenticCanvasOsRoot, knowgrphRoot } = resolveCanonicalRuntimeRoots(options, deps);
+  const { workspaceRoot, agenticCanvasOsRoot, agenticGraphRoot } = resolveCanonicalRuntimeRoots(options, deps);
   const repositories = [
     inspectRepository("agentic-canvas-os", agenticCanvasOsRoot, deps, verifyProtected),
-    inspectRepository("knowgrph", knowgrphRoot, deps, verifyProtected),
+    inspectRepository("agentic-graph", agenticGraphRoot, deps, verifyProtected),
   ];
-  const packageJson = JSON.parse(readFileSync(path.join(knowgrphRoot, "package.json"), "utf8"));
+  const packageJson = JSON.parse(readFileSync(path.join(agenticGraphRoot, "package.json"), "utf8"));
   const protectedChecks = Object.fromEntries(repositories.map(repository => [repository.id, repository.checks]));
   const evidence = validateCanonicalRuntimeCandidate({
-    agenticCanvasOs: withConsumerPinEvidence(repositories[0], knowgrphRoot, deps),
-    knowgrph: {
+    agenticCanvasOs: withConsumerPinEvidence(repositories[0], agenticGraphRoot, deps),
+    agenticGraph: {
       ...repositories[1],
       hasDevApexScript: typeof packageJson.scripts?.["dev:apex"] === "string",
       hasStorageWorkerScript: typeof packageJson.scripts?.["storage:worker:dev"] === "string",
     },
   });
-  return { workspaceRoot, agenticCanvasOsRoot, knowgrph: { ...evidence.knowgrph, root: knowgrphRoot }, agenticCanvasOs: evidence.agenticCanvasOs, protectedChecks };
+  return { workspaceRoot, agenticCanvasOsRoot, agenticGraph: { ...evidence.agenticGraph, root: agenticGraphRoot }, agenticCanvasOs: evidence.agenticCanvasOs, protectedChecks };
 }
 
 export function resolveCanonicalCandidate(options, deps, settings) {
@@ -164,15 +164,15 @@ export function resolveOwnershipCandidate(options, deps) {
 }
 
 export function inspectOwnershipCandidate(options, deps) {
-  const { workspaceRoot, agenticCanvasOsRoot, knowgrphRoot } = resolveCanonicalRuntimeRoots(options, deps);
+  const { workspaceRoot, agenticCanvasOsRoot, agenticGraphRoot } = resolveCanonicalRuntimeRoots(options, deps);
   return {
     workspaceRoot,
     agenticCanvasOsRoot,
     agenticCanvasOs: { headSha: deps.gitText(agenticCanvasOsRoot, ["rev-parse", "HEAD"]).trim() },
-    knowgrph: {
-      root: knowgrphRoot,
-      headSha: deps.gitText(knowgrphRoot, ["rev-parse", "HEAD"]).trim(),
-      gitCommonDir: resolveGitCommonDir(knowgrphRoot, deps),
+    agenticGraph: {
+      root: agenticGraphRoot,
+      headSha: deps.gitText(agenticGraphRoot, ["rev-parse", "HEAD"]).trim(),
+      gitCommonDir: resolveGitCommonDir(agenticGraphRoot, deps),
     },
   };
 }
@@ -183,11 +183,11 @@ function resolveCanonicalRuntimeRoots(options, deps) {
   const agenticCanvasOsRoot = realpathSync(resolveCanonicalMainWorktree(
     deps.gitText(invokingRoot, ["worktree", "list", "--porcelain", "-z"]),
   ));
-  const requestedKnowgrphRoot = realpathSync(options.repository || path.join(workspaceRoot, "knowgrph"));
-  const knowgrphRoot = realpathSync(resolveCanonicalMainWorktree(
-    deps.gitText(requestedKnowgrphRoot, ["worktree", "list", "--porcelain", "-z"]),
+  const requestedAgenticGraphRoot = realpathSync(options.repository || path.join(workspaceRoot, "agentic-graph"));
+  const agenticGraphRoot = realpathSync(resolveCanonicalMainWorktree(
+    deps.gitText(requestedAgenticGraphRoot, ["worktree", "list", "--porcelain", "-z"]),
   ));
-  return { workspaceRoot, agenticCanvasOsRoot, knowgrphRoot };
+  return { workspaceRoot, agenticCanvasOsRoot, agenticGraphRoot };
 }
 
 function inspectRepository(id, root, deps, verifyProtected) {

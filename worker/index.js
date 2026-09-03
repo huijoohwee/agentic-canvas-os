@@ -39,9 +39,9 @@ import { AgentState } from "./agent-state.js";
 export { AgentState, CanvasRoom };
 
 export function createWorkerFetch(env = {}, publicFetch) {
-  const mcpEndpoint = typeof env.KNOWGRPH_MCP_ENDPOINT === "string" ? env.KNOWGRPH_MCP_ENDPOINT : "";
+  const mcpEndpoint = typeof env.AGENTIC_OS_MCP_ENDPOINT === "string" ? env.AGENTIC_OS_MCP_ENDPOINT : "";
   const mcpOrigin = mcpEndpoint ? new URL(mcpEndpoint).origin : "";
-  const mcpService = env.KNOWGRPH_MCP_SERVICE;
+  const mcpService = env.AGENTIC_OS_MCP_SERVICE;
   return (req) => {
     const init = {
       method: req.method,

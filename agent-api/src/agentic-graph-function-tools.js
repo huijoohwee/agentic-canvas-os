@@ -1,9 +1,9 @@
 const STATUS_TOOL_NAME = "read_agentic_os_status";
 const RUN_NOTE_TOOL_NAME = "update_agent_run_note";
-const STATUS_INPUT_GUARDRAIL = "knowgrph-status-tool-input";
-const STATUS_OUTPUT_GUARDRAIL = "knowgrph-status-tool-output";
-const RUN_NOTE_INPUT_GUARDRAIL = "knowgrph-run-note-tool-input";
-const RUN_NOTE_OUTPUT_GUARDRAIL = "knowgrph-run-note-tool-output";
+const STATUS_INPUT_GUARDRAIL = "agentic-graph-status-tool-input";
+const STATUS_OUTPUT_GUARDRAIL = "agentic-graph-status-tool-output";
+const RUN_NOTE_INPUT_GUARDRAIL = "agentic-graph-run-note-tool-input";
+const RUN_NOTE_OUTPUT_GUARDRAIL = "agentic-graph-run-note-tool-output";
 
 const STATUS_VIEWS = Object.freeze([
   "process_list",
@@ -60,10 +60,10 @@ function validRunNoteOutput(value) {
 }
 
 const GUARDRAIL_CHECKS = Object.freeze({
-  [`${STATUS_INPUT_GUARDRAIL}:tool-input`]: Object.freeze([validStatusArguments, "tool_arguments_invalid", "Knowgrph status arguments failed the application guardrail."]),
-  [`${STATUS_OUTPUT_GUARDRAIL}:tool-output`]: Object.freeze([validStatusOutput, "tool_output_invalid", "Knowgrph status output failed the application guardrail."]),
-  [`${RUN_NOTE_INPUT_GUARDRAIL}:tool-input`]: Object.freeze([validRunNoteArguments, "tool_arguments_invalid", "Knowgrph run-note arguments failed the application guardrail."]),
-  [`${RUN_NOTE_OUTPUT_GUARDRAIL}:tool-output`]: Object.freeze([validRunNoteOutput, "tool_output_invalid", "Knowgrph run-note output failed the application guardrail."]),
+  [`${STATUS_INPUT_GUARDRAIL}:tool-input`]: Object.freeze([validStatusArguments, "tool_arguments_invalid", "agentic-graph status arguments failed the application guardrail."]),
+  [`${STATUS_OUTPUT_GUARDRAIL}:tool-output`]: Object.freeze([validStatusOutput, "tool_output_invalid", "agentic-graph status output failed the application guardrail."]),
+  [`${RUN_NOTE_INPUT_GUARDRAIL}:tool-input`]: Object.freeze([validRunNoteArguments, "tool_arguments_invalid", "agentic-graph run-note arguments failed the application guardrail."]),
+  [`${RUN_NOTE_OUTPUT_GUARDRAIL}:tool-output`]: Object.freeze([validRunNoteOutput, "tool_output_invalid", "agentic-graph run-note output failed the application guardrail."]),
 });
 
 function entryId(entry) {
@@ -151,12 +151,12 @@ const runNoteOutputSchema = Object.freeze({
   additionalProperties: false,
 });
 
-export const KNOWGRPH_TOOL_RECORDS = Object.freeze({
+export const AGENTIC_GRAPH_TOOL_RECORDS = Object.freeze({
   [STATUS_TOOL_NAME]: Object.freeze({
     type: "function",
     name: STATUS_TOOL_NAME,
-    revision: "knowgrph-status-function/v1",
-    description: "Read one existing Knowgrph Agentic OS status view without mutating state or invoking a model-bearing tool.",
+    revision: "agentic-graph-status-function/v1",
+    description: "Read one existing agentic-graph Agentic OS status view without mutating state or invoking a model-bearing tool.",
     parameters: statusParameters,
     strict: true,
     outputSchema: statusOutputSchema,
@@ -169,13 +169,13 @@ export const KNOWGRPH_TOOL_RECORDS = Object.freeze({
     mapOutput: (payload, argumentsValue) => statusOutput(payload, argumentsValue.view),
     inputGuardrails: Object.freeze([{ name: STATUS_INPUT_GUARDRAIL, stage: "tool-input" }]),
     outputGuardrails: Object.freeze([{ name: STATUS_OUTPUT_GUARDRAIL, stage: "tool-output" }]),
-    mcpToolName: "agenticgraph.os.status",
+    mcpToolName: "agentic-graph.os.status",
   }),
   [RUN_NOTE_TOOL_NAME]: Object.freeze({
     type: "function",
     name: RUN_NOTE_TOOL_NAME,
-    revision: "knowgrph-run-note-function/v1",
-    description: "Replace the operator note on one persisted Knowgrph run after human review.",
+    revision: "agentic-graph-run-note-function/v1",
+    description: "Replace the operator note on one persisted agentic-graph run after human review.",
     parameters: runNoteParameters,
     strict: true,
     outputSchema: runNoteOutputSchema,
@@ -188,16 +188,16 @@ export const KNOWGRPH_TOOL_RECORDS = Object.freeze({
     mapOutput: runNoteOutput,
     inputGuardrails: Object.freeze([{ name: RUN_NOTE_INPUT_GUARDRAIL, stage: "tool-input" }]),
     outputGuardrails: Object.freeze([{ name: RUN_NOTE_OUTPUT_GUARDRAIL, stage: "tool-output" }]),
-    mcpToolName: "agenticgraph.run_manifest.note.update",
+    mcpToolName: "agentic-graph.run_manifest.note.update",
   }),
 });
 
-export function parseKnowgrphFunctionToolAllowlist(value) {
+export function parseAgenticGraphFunctionToolAllowlist(value) {
   const names = [...new Set(cleanText(value).split(",").map(cleanText).filter(Boolean))];
-  return Object.freeze(names.filter((name) => Object.hasOwn(KNOWGRPH_TOOL_RECORDS, name)));
+  return Object.freeze(names.filter((name) => Object.hasOwn(AGENTIC_GRAPH_TOOL_RECORDS, name)));
 }
 
-export function createKnowgrphGuardrailEvaluator() {
+export function createAgenticGraphGuardrailEvaluator() {
   return async function evaluate({ guardrail, stage, value }) {
     const check = GUARDRAIL_CHECKS[`${guardrail?.name}:${stage}`];
     if (!check) return Object.freeze({
@@ -209,7 +209,7 @@ export function createKnowgrphGuardrailEvaluator() {
   };
 }
 
-export const KNOWGRPH_FUNCTION_TOOL_NAMES = Object.freeze({
+export const AGENTIC_GRAPH_FUNCTION_TOOL_NAMES = Object.freeze({
   status: STATUS_TOOL_NAME,
   runNote: RUN_NOTE_TOOL_NAME,
 });

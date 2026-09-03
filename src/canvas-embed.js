@@ -1,12 +1,12 @@
-// Run-scoped AgenticGraph canvas embed for the agentic-canvas-os product tier.
+// Run-scoped agentic-graph canvas embed for the agentic-canvas-os product tier.
 //
-// The AgenticGraph Storyboard_Harness emits a Kgc_Document (`kgc-computing-flow/v1`,
-// one node per planned shot). This product tier EMBEDS the live AgenticGraph canvas
-// doc-view scoped to the run rather than reimplementing the renderer — AgenticGraph
+// The agentic-graph Storyboard_Harness emits a Kgc_Document (`kgc-computing-flow/v1`,
+// one node per planned shot). This product tier EMBEDS the live agentic-graph canvas
+// doc-view scoped to the run rather than reimplementing the renderer — agentic-graph
 // owns the canvas engine, agentic-canvas-os is the shell around it.
 //
 // SCHEME MIRROR: the doc-view URL scheme + embed security attributes mirror the
-// knowgrph SSOT (`knowgrph/mcp/video-remix/canvas-embed.js`):
+// agentic-graph SSOT (`agentic-graph/mcp/video-remix/canvas-embed.js`):
 //   `${base}/doc-view?run=<runId>[&doc=<docId>]`
 // Keep this in step with that source. PURE: no I/O, no model/provider calls.
 
@@ -16,7 +16,7 @@ export const CANVAS_DOC_PARAM = "doc";
 
 // Cross-origin embed attributes. The doc-view route must allow `frame-ancestors`
 // of the Cloudflare Worker origin AND scope the run to the entitled caller
-// (same check as knowgrph GET /runs/{id}); the embed never authorizes spend.
+// (same check as agentic-graph GET /runs/{id}); the embed never authorizes spend.
 export const CANVAS_EMBED_SANDBOX = "allow-scripts allow-same-origin";
 export const CANVAS_EMBED_REFERRER_POLICY = "no-referrer";
 
@@ -100,7 +100,7 @@ export function resolveCanvasDocViewUrl({ baseUrl, runId, docId } = {}) {
 }
 
 /**
- * Build the embedded-canvas descriptor from a knowgrph Run_Manifest + the
+ * Build the embedded-canvas descriptor from a agentic-graph Run_Manifest + the
  * configured canvas base. `available` is true only when a base + runId are
  * present and the storyboard produced a Kgc_Document. Pure; never throws.
  *
@@ -119,7 +119,7 @@ export function buildCanvasEmbed(manifest, opts = {}) {
     docId: "",
     sandbox: CANVAS_EMBED_SANDBOX,
     referrerPolicy: CANVAS_EMBED_REFERRER_POLICY,
-    title: "AgenticGraph canvas",
+    title: "agentic-graph canvas",
     reason: "",
   };
 
@@ -131,5 +131,5 @@ export function buildCanvasEmbed(manifest, opts = {}) {
   const src = resolveCanvasDocViewUrl({ baseUrl, runId, docId });
   if (!src) return { ...base, reason: "canvas URL could not be resolved" };
 
-  return { ...base, available: true, src, docId, title: `AgenticGraph canvas — run ${runId}` };
+  return { ...base, available: true, src, docId, title: `agentic-graph canvas — run ${runId}` };
 }

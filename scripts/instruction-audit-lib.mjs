@@ -47,7 +47,7 @@ export const DEFAULT_INSTRUCTION_POLICIES = Object.freeze({
       Object.freeze({ owner: "SOUL.md", pattern: /^## Soul Contract$/m }),
       Object.freeze({ owner: "MEMORY.md", pattern: /^## Persistent Memory Contract$/m }),
       Object.freeze({ owner: "HARNESS-CONTRACTS.md", pattern: /^## (?:Mixture Of Agents|Stateful Orchestration|Tool Gateway|Tool Search) Contract$/m }),
-      Object.freeze({ owner: "Knowgrph UI owners", pattern: /^## FloatingPanel Chat/m }),
+      Object.freeze({ owner: "agentic-graph UI owners", pattern: /^## FloatingPanel Chat/m }),
     ]),
   }),
 });

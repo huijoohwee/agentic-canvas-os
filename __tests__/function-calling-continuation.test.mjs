@@ -15,10 +15,10 @@ import { createFunctionCallingManager } from "../agent-api/src/function-calling-
 import { createFunctionCallingRuntime } from "../agent-api/src/function-calling.js";
 import { createGuardrailsHumanReviewRuntime } from "../agent-api/src/guardrails-human-review.js";
 import {
-  createKnowgrphFunctionGateway,
-  createKnowgrphGuardrailEvaluator,
-  KNOWGRPH_FUNCTION_TOOL_NAMES,
-} from "../agent-api/src/knowgrph-function-gateway.js";
+  createAgenticGraphFunctionGateway,
+  createAgenticGraphGuardrailEvaluator,
+  AGENTIC_GRAPH_FUNCTION_TOOL_NAMES,
+} from "../agent-api/src/agentic-graph-function-gateway.js";
 import { AgentState } from "../worker/agent-state.js";
 
 const CAPABILITIES = Object.freeze({
@@ -82,7 +82,7 @@ function statusPayload() {
   return {
     ok: true,
     view: "capabilities",
-    entries: [{ toolId: "agenticgraph.os.status" }],
+    entries: [{ toolId: "agentic-graph.os.status" }],
     unavailableSources: [],
     cost_log: {
       model: "none", prompt_tokens: 0, completion_tokens: 0,
@@ -93,7 +93,7 @@ function statusPayload() {
 
 function reviewRuntime(reviewSecret, captured) {
   return createGuardrailsHumanReviewRuntime({
-    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    evaluateGuardrail: createAgenticGraphGuardrailEvaluator(),
     createReviewId: () => "review-durable-1",
     reviewStore: {
       put(record) {
@@ -120,9 +120,9 @@ function reviewRuntime(reviewSecret, captured) {
 }
 
 function reviewedGateway(guardrailsHumanReview, onMcpCall, executionReceiptStore) {
-  return createKnowgrphFunctionGateway({
-    allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
-    reviewRequiredToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
+  return createAgenticGraphFunctionGateway({
+    allowedToolNames: [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status],
+    reviewRequiredToolNames: [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status],
     guardrailsHumanReview,
     executionReceiptStore,
     mcpClient: { callTool: async () => { onMcpCall(); return statusPayload(); } },
@@ -151,7 +151,7 @@ test("resumes an exact provider chain through a fresh durable manager after sign
           {
             type: "function_call",
             callId: "call-before-review",
-            name: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
+            name: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status,
             arguments: { view: "capabilities" },
           },
         ]);
@@ -165,7 +165,7 @@ test("resumes an exact provider chain through a fresh durable manager after sign
   const paused = await firstManager.run({
     runId: "durable-function-run",
     input: { prompt: "Read capabilities." },
-    toolChoice: { mode: "forced", name: KNOWGRPH_FUNCTION_TOOL_NAMES.status },
+    toolChoice: { mode: "forced", name: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status },
     parallelToolCalls: false,
   });
   assert.equal(paused.status, "paused");

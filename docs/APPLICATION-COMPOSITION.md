@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "provider-neutral composition grammar and ownership boundaries for agent and LLM applications"
 runtime_scope: "exact component resolution, compatibility planning, deterministic dependency sequencing, and migration diagnostics"
-runtime_claim: "Knowgrph owns the local MCP compiler and bounded sequencer; existing agent, model, tool, integration, policy, and persistence owners retain execution authority"
+runtime_claim: "agentic-graph owns the local MCP compiler and bounded sequencer; existing agent, model, tool, integration, policy, and persistence owners retain execution authority"
 runtime_proof: "RUNTIME-PROOF.md"
 publish_policy: "Dev-only until explicit operator approval"
 invocation:
@@ -17,9 +17,9 @@ invocation:
   semantics: ["#application-composition", "#runtime-ready"]
   bindings: ["@application-manifest", "@component-catalog", "@integration-profile", "@runtime-proof"]
 mcp_tools:
-  - "agenticgraph.application.catalog"
-  - "agenticgraph.application.plan"
-  - "agenticgraph.application.execute"
+  - "agentic-graph.application.catalog"
+  - "agentic-graph.application.plan"
+  - "agentic-graph.application.execute"
 external_pattern_sources: ["https://github.com/langchain-ai/langchain"]
 external_dependency: "forbidden"
 ---
@@ -40,7 +40,7 @@ The referenced [LangChain repository](https://github.com/langchain-ai/langchain)
 /application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof
 ```
 
-The `/`, `#`, and `@` tokens are host-side invocation aliases and metadata, never MCP wire methods. The host resolves them before calling the exact `agenticgraph.application.*` tools.
+The `/`, `#`, and `@` tokens are host-side invocation aliases and metadata, never MCP wire methods. The host resolves them before calling the exact `agentic-graph.application.*` tools.
 
 `@operator` is required only when execution can spend, mutate, use authenticated or external services, or cross another existing approval boundary. Catalog and plan remain read-only and zero-spend. Dictionary resolution exposes metadata; it never grants execution.
 
@@ -48,8 +48,8 @@ The `/`, `#`, and `@` tokens are host-side invocation aliases and metadata, neve
 
 | Owner | Responsibility | Forbidden ownership |
 |---|---|---|
-| Agentic Canvas OS | Invocation grammar, component interface rules, plan invariants, proof vocabulary, and owner separation. | Knowgrph state, provider calls, tool execution, integration transport, secrets, or deployment. |
-| Knowgrph local MCP | Bounded catalog projection, exact plan compilation, immutable plan digest, dependency admission, sequencing, and sanitized results. | A second agent loop, provider registry, tool gateway, external proxy, silent retry, automatic migration, or deploy path. |
+| Agentic Canvas OS | Invocation grammar, component interface rules, plan invariants, proof vocabulary, and owner separation. | agentic-graph state, provider calls, tool execution, integration transport, secrets, or deployment. |
+| agentic-graph local MCP | Bounded catalog projection, exact plan compilation, immutable plan digest, dependency admission, sequencing, and sanitized results. | A second agent loop, provider registry, tool gateway, external proxy, silent retry, automatic migration, or deploy path. |
 | Existing runtime owners | Agent definitions, model selection, Running Agents lifecycle, orchestration, tools, guardrails, memory, integration transport, authorization, receipts, and cost. | Treating a composition edge or catalog record as approval. |
 | Operator | Authorize paid, mutating, authenticated, external, or otherwise gated execution. | Approval inferred from a valid manifest or plan. |
 
@@ -65,17 +65,17 @@ The `/`, `#`, and `@` tokens are host-side invocation aliases and metadata, neve
 
 An embedding host may expand `@component-catalog` at process initialization with at most 16 component packs. Each pack is pure JSON data with a pack id, exact pack revision, inert source URI, a `source.sha256` field containing exactly 64 lowercase hexadecimal characters, and no more than 16 component records. The complete admitted set may contain at most 100 components. A non-JSON value, unknown field, mutable revision, invalid digest, per-pack overflow, total overflow, or partial pack blocks the complete admission; admission never truncates input.
 
-The only admitted source namespaces are `workspace:/`, `kgdoc:`, and `urn:agenticgraph:`. Let `SEG` be the exact lowercase ASCII grammar `[a-z0-9]+(?:[._-][a-z0-9]+)*`. The closed forms are `workspace:/SEG[/SEG...]`, `kgdoc:SEG[/SEG...]`, and `urn:agenticgraph:SEG[:SEG...]`; the first URN segment cannot be `http`, `https`, `file`, `ftp`, `ws`, or `wss`. Empty, dot-only, traversal, consecutive or trailing punctuation, uppercase, tilde, backslash, authority, query, fragment, percent-encoded, nested-scheme, and network-shaped values are invalid. These values identify already-authorized host content and are never dereferenced by the composition subsystem. Filesystem paths, environment-derived paths, package names, network URLs, redirects, registry coordinates, and mutable aliases are invalid. The host supplies the complete JSON values directly through its private initialization boundary; MCP callers and application manifests cannot provide, select, or override packs.
+The only admitted source namespaces are `workspace:/`, `kgdoc:`, and `urn:agentic-graph:`. Let `SEG` be the exact lowercase ASCII grammar `[a-z0-9]+(?:[._-][a-z0-9]+)*`. The closed forms are `workspace:/SEG[/SEG...]`, `kgdoc:SEG[/SEG...]`, and `urn:agentic-graph:SEG[:SEG...]`; the first URN segment cannot be `http`, `https`, `file`, `ftp`, `ws`, or `wss`. Empty, dot-only, traversal, consecutive or trailing punctuation, uppercase, tilde, backslash, authority, query, fragment, percent-encoded, nested-scheme, and network-shaped values are invalid. These values identify already-authorized host content and are never dereferenced by the composition subsystem. Filesystem paths, environment-derived paths, package names, network URLs, redirects, registry coordinates, and mutable aliases are invalid. The host supplies the complete JSON values directly through its private initialization boundary; MCP callers and application manifests cannot provide, select, or override packs.
 
 One pack's `source.sha256` covers canonical JSON for that pack envelope after removing only `source.sha256`, sorting object keys, and sorting its components by `(component id, exact revision)` after duplicate detection. Canonical JSON here means the exact `stableApplicationJson/v1` projection: pure JSON data only; finite numbers serialized with ECMAScript `JSON.stringify`; string code units preserved without Unicode normalization; object keys recursively sorted by ascending UTF-16 code units; array order retained except for the named component ordering; and accessors, symbols, custom prototypes, cycles, sparse arrays, hidden properties, non-finite numbers, and non-JSON values rejected. SHA-256 hashes the UTF-8 bytes of that exact serialization.
 
 Admission selects exactly one revision per pack id and orders packs by `(pack id, exact revision, source URI)`. The composite `catalogDigest` covers the complete normalized catalog, including those ordered pack bindings and all ordered built-in and pack components. Caller order and equivalent JSON object key order cannot change either digest.
 
-Within one admission, the same pack or component exact reference cannot appear twice, and different content under one exact reference is a conflict. A pack-content digest mismatch is admission drift. Either condition prevents registry startup, so none of the three tools becomes available for that rejected set; there is no last-known-good fallback, partial acceptance, or silent replacement. A stale caller-supplied `@runtime-proof` does not hide the active read-only catalog: `agenticgraph.application.catalog` returns its current digests, while plan and execute reject the stale proof. A later process may admit a different exact set, but it produces a different `catalogDigest` and requires explicit proof refresh and replanning; this contract does not claim a persisted cross-process baseline.
+Within one admission, the same pack or component exact reference cannot appear twice, and different content under one exact reference is a conflict. A pack-content digest mismatch is admission drift. Either condition prevents registry startup, so none of the three tools becomes available for that rejected set; there is no last-known-good fallback, partial acceptance, or silent replacement. A stale caller-supplied `@runtime-proof` does not hide the active read-only catalog: `agentic-graph.application.catalog` returns its current digests, while plan and execute reject the stale proof. A later process may admit a different exact set, but it produces a different `catalogDigest` and requires explicit proof refresh and replanning; this contract does not claim a persisted cross-process baseline.
 
 Each component's source and definition digests cover its normalized component definition independently of unrelated members. Pack id, revision, URI, source digest, and membership remain separately bound by the composite `catalogDigest`. Adding an unrelated component therefore changes the catalog proof but cannot silently rewrite the unchanged member's content digests.
 
-Component packs carry metadata only. Runtime adapters and owner resolvers are supplied privately and process-locally by the embedding host, never through MCP arguments, manifests, source URIs, URLs, environment paths, filesystem scans, package discovery, or pack fields. Pack admission performs no discovery, download, install, upgrade, migration, or fallback, and grants no execution authority. `agenticgraph.application.execute` still delegates only to an already-injected existing runtime owner under its normal approval and side-effect policy.
+Component packs carry metadata only. Runtime adapters and owner resolvers are supplied privately and process-locally by the embedding host, never through MCP arguments, manifests, source URIs, URLs, environment paths, filesystem scans, package discovery, or pack fields. Pack admission performs no discovery, download, install, upgrade, migration, or fallback, and grants no execution authority. `agentic-graph.application.execute` still delegates only to an already-injected existing runtime owner under its normal approval and side-effect policy.
 
 ## Deterministic Plan
 
@@ -93,9 +93,9 @@ Equivalent JSON object key order cannot change the plan digest. Slot ids and edg
 
 | Tool | Role | Boundary |
 |---|---|---|
-| `agenticgraph.application.catalog` | Return bounded built-in, source-bound host-pack, and integration metadata plus current exact revisions. | Read-only, zero model spend, sanitized, and no global or copied registry scan; absent negotiated capabilities are unsupported. |
-| `agenticgraph.application.plan` | Validate the canonical invocation, resolve exact records, negotiate compatibility, compile the DAG, and return its immutable digest. | Read-only; no component execution, persistence mutation, external connection, install, or upgrade. |
-| `agenticgraph.application.execute` | Revalidate the exact plan and sequence ready dependency steps through injected host-owned runtime adapters. | Bounded and idempotency-fenced; every owner retains its schema, approval, receipt, cost, retry, and side-effect policy. No automatic retry, migration, provider fallback, deploy, or continuation beyond the plan bounds. |
+| `agentic-graph.application.catalog` | Return bounded built-in, source-bound host-pack, and integration metadata plus current exact revisions. | Read-only, zero model spend, sanitized, and no global or copied registry scan; absent negotiated capabilities are unsupported. |
+| `agentic-graph.application.plan` | Validate the canonical invocation, resolve exact records, negotiate compatibility, compile the DAG, and return its immutable digest. | Read-only; no component execution, persistence mutation, external connection, install, or upgrade. |
+| `agentic-graph.application.execute` | Revalidate the exact plan and sequence ready dependency steps through injected host-owned runtime adapters. | Bounded and idempotency-fenced; every owner retains its schema, approval, receipt, cost, retry, and side-effect policy. No automatic retry, migration, provider fallback, deploy, or continuation beyond the plan bounds. |
 
 Execution never accepts a caller-supplied adapter, command, endpoint, credential, raw MCP transport, provider object, approval array, or tool result. A step can start only after all declared predecessors have terminal valid outputs and its exact owner and schema evidence still match the plan. A failed, paused, blocked, or approval-required step stops admission of dependents and returns bounded owner evidence without synthesizing success.
 
@@ -107,7 +107,7 @@ Future component kinds use the same port, capability, owner, and evidence contra
 
 ## Runtime And Proof Boundary
 
-Runtime readiness requires a Knowgrph local stdio proof that catalogs registered fixtures without spend, produces the same digest for equivalent manifests, blocks drift and incompatibility, executes one bounded offline dependency chain through injected owners, and exposes all three MCP tools with strict schemas. Live provider quality, third-party reachability, external SDK compatibility, paid usage, production operation, and deployment remain unverified until separately authorized and evidenced.
+Runtime readiness requires a agentic-graph local stdio proof that catalogs registered fixtures without spend, produces the same digest for equivalent manifests, blocks drift and incompatibility, executes one bounded offline dependency chain through injected owners, and exposes all three MCP tools with strict schemas. Live provider quality, third-party reachability, external SDK compatibility, paid usage, production operation, and deployment remain unverified until separately authorized and evidenced.
 
 The composition subsystem's catalog, plan, and bounded offline proof must pass with network access unavailable and without any LangChain package or service. This narrow independence proof does not remove, redefine, or attest separately owned optional host integrations.
 
@@ -115,7 +115,7 @@ Before catalog or tool availability is claimed, the MCP host and server negotiat
 
 ## Acceptance Contract
 
-- The exact `/`, `#`, and `@` invocation resolves from canonical dictionaries and Knowgrph rejects any mismatch before planning.
+- The exact `/`, `#`, and `@` invocation resolves from canonical dictionaries and agentic-graph rejects any mismatch before planning.
 - Exact component, profile, capability, interface, and schema revisions produce one deterministic immutable plan digest.
 - Missing, mutable, stale, incompatible, cyclic, orphaned, unreachable, over-bound, or ownerless composition input fails before execution.
 - Source-bound host packs admit only bounded pure JSON with exact pack and component revisions, approved inert namespaces, matching SHA-256 bindings, deterministic ordering, and no conflict or drift.

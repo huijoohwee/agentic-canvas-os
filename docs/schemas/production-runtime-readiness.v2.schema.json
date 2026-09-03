@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agentic-canvas-os.dev/schemas/production-runtime-readiness/v2",
-  "title": "Knowgrph Production Runtime Readiness v2",
+  "title": "agentic-graph Production Runtime Readiness v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,7 +16,7 @@
     "surfaces"
   ],
   "properties": {
-    "schema": { "const": "agenticgraph-production-runtime-readiness/v2" },
+    "schema": { "const": "agentic-os-production-runtime-readiness/v2" },
     "status": { "const": "verified-build" },
     "source": {
       "type": "object",
@@ -52,10 +52,10 @@
       "type": "array",
       "minItems": 2,
       "uniqueItems": true,
-      "items": { "enum": ["/", "/agenticgraph"] },
+      "items": { "enum": ["/", "/agentic-graph"] },
       "allOf": [
         { "contains": { "const": "/" } },
-        { "contains": { "const": "/agenticgraph" } }
+        { "contains": { "const": "/agentic-graph" } }
       ]
     }
   },

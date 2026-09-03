@@ -5,9 +5,9 @@
 //
 // Env (server-side only; never shipped to the client):
 //   AGENT_API_JWT_SECRET   — HS256 signing secret (required to mint/verify)
-//   KNOWGRPH_MCP_ENDPOINT  — knowgrph control-plane MCP Streamable HTTP endpoint
-//   KNOWGRPH_FUNCTION_TOOL_ALLOWLIST — explicit application function names
-//   KNOWGRPH_FUNCTION_REVIEW_REQUIRED — enabled functions that require signed human review
+//   AGENTIC_OS_MCP_ENDPOINT  — agentic-graph control-plane MCP Streamable HTTP endpoint
+//   AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST — explicit application function names
+//   AGENTIC_OS_FUNCTION_REVIEW_REQUIRED — enabled functions that require signed human review
 //   OPENAI_FUNCTION_CALLING_* — Responses adapter model, pricing, and key route
 //   OPENAI_AGENT_*        — opt-in Responses agent adapter model, pricing, and bounds
 //   AGENT_MODEL_*          — explicit provider, model, transport, and secret route
@@ -37,10 +37,10 @@ import { createFunctionCallingManager } from "./function-calling-manager.js";
 import { createFunctionCallingRuntime } from "./function-calling.js";
 import { createGuardrailsHumanReviewRuntime } from "./guardrails-human-review.js";
 import {
-  createKnowgrphFunctionGateway,
-  createKnowgrphGuardrailEvaluator,
-  parseKnowgrphFunctionToolAllowlist,
-} from "./knowgrph-function-gateway.js";
+  createAgenticGraphFunctionGateway,
+  createAgenticGraphGuardrailEvaluator,
+  parseAgenticGraphFunctionToolAllowlist,
+} from "./agentic-graph-function-gateway.js";
 import { createAdapterRegistrationInterface } from "./adapter-registration.js";
 import { createDurableObjectSkillDraftStore } from "./durable-object-state-store.js";
 import { resolveModelProviderEnvironment } from "./model-config.js";
@@ -63,7 +63,7 @@ import { createSkillProposerRuntime } from "./skill-proposer.js";
 import { createSkillRegistryGate } from "./skill-registry-gate.js";
 import { createConfiguredToolSearchRuntime } from "./tool-search-config.js";
 import { createUpstreamDependencyAdmissionHandler } from "./upstream-dependency-admission-handler.js";
-import { createKnowgrphMcpClient } from "../../src/knowgrph-mcp-client.js";
+import { createAgenticGraphMcpClient } from "../../src/agentic-graph-mcp-client.js";
 
 /**
  * Build the configured Agent-API handlers from an env bag (defaults to
@@ -140,7 +140,7 @@ export function createAgentApiApp({
 } = {}) {
   const e = env || (typeof process !== "undefined" ? process.env : {}) || {};
   const secret = typeof e.AGENT_API_JWT_SECRET === "string" ? e.AGENT_API_JWT_SECRET : "";
-  const endpoint = typeof e.KNOWGRPH_MCP_ENDPOINT === "string" ? e.KNOWGRPH_MCP_ENDPOINT.trim() : "";
+  const endpoint = typeof e.AGENTIC_OS_MCP_ENDPOINT === "string" ? e.AGENTIC_OS_MCP_ENDPOINT.trim() : "";
   const expiry = Number(e.AGENT_API_AUTH_EXPIRY);
   const modelProviderEnvironment = resolveModelProviderEnvironment(e);
   const openAiAgentConfig = resolveOpenAiResponsesAgentConfig(e);
@@ -179,7 +179,7 @@ export function createAgentApiApp({
     }
     : undefined;
   const guardrailsHumanReview = providedGuardrailsHumanReview || createGuardrailsHumanReviewRuntime({
-    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    evaluateGuardrail: createAgenticGraphGuardrailEvaluator(),
     authenticateReviewer,
     ...(reviewStore ? { reviewStore } : {}),
   });
@@ -243,18 +243,18 @@ export function createAgentApiApp({
 
   let mcpClient = null;
   if (endpoint) {
-    mcpClient = createKnowgrphMcpClient({
+    mcpClient = createAgenticGraphMcpClient({
       endpoint,
       fetchImpl,
-      authToken: typeof e.KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN === "string"
-        ? e.KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN.trim()
+      authToken: typeof e.AGENTIC_OS_MCP_FUNCTION_BEARER_TOKEN === "string"
+        ? e.AGENTIC_OS_MCP_FUNCTION_BEARER_TOKEN.trim()
         : "",
     });
   }
-  const functionGateway = createKnowgrphFunctionGateway({
+  const functionGateway = createAgenticGraphFunctionGateway({
     mcpClient,
-    allowedToolNames: parseKnowgrphFunctionToolAllowlist(e.KNOWGRPH_FUNCTION_TOOL_ALLOWLIST),
-    reviewRequiredToolNames: parseKnowgrphFunctionToolAllowlist(e.KNOWGRPH_FUNCTION_REVIEW_REQUIRED),
+    allowedToolNames: parseAgenticGraphFunctionToolAllowlist(e.AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST),
+    reviewRequiredToolNames: parseAgenticGraphFunctionToolAllowlist(e.AGENTIC_OS_FUNCTION_REVIEW_REQUIRED),
     guardrailsHumanReview,
     ...(functionExecutionReceiptStore ? { executionReceiptStore: functionExecutionReceiptStore } : {}),
   });

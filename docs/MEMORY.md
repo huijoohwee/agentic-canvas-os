@@ -13,7 +13,7 @@ source_docs:
   - "FACTS.md"
   - "TODO.md"
   - "AGENTIC-GRAPH.md"
-  - "$GITHUB_ROOT/huijoohwee/docs/knowgrph-strybldr-starter-template.md"
+  - "$GITHUB_ROOT/huijoohwee/docs/agentic-graph-strybldr-starter-template.md"
   - "$GITHUB_ROOT/huijoohwee.github.io/guidelines/prd-tad-guidelines.md"
 implementation_contract: "FACTS.md owns shared truth; MEMORY.md persists bounded agent notes; USER.md persists bounded explicit operator profile; frontmatter and authored Markdown body are SSOT"
 publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloudflare"
@@ -37,9 +37,9 @@ agentic_os_memory:
   owner: "operator"
   default_scope: "local-dev"
   deployment_boundaries:
-    dev: "$AGENTICGRAPH_ROOT"
+    dev: "$AGENTIC_GRAPH_ROOT"
     prod_mirror: "$PROD_MIRROR_ROOT"
-    cloudflare_routes: ["airvio.co", "airvio.co/knowgrph"]
+    cloudflare_routes: ["airvio.co", "airvio.co/agentic-os"]
     deploy_gate: "forbid Prod and Cloudflare deploy until explicit operator instruction"
   invocation_prefixes:
     slash:
@@ -137,7 +137,7 @@ agentic_os_memory:
     commands: ["/tool.catalog", "/tool.route", "/tool.provider.select", "/tool.gateway.audit", "/toolset.enable", "/toolset.disable"]
     semantics: ["#tool-gateway", "#tool-routing", "#tool-function", "#toolset", "#platform-toolset", "#web-search", "#image-generation", "#text-to-speech", "#cloud-browser"]
     bindings: ["@tool-gateway", "@tool-provider", "@tool-function", "@toolset", "@platform-surface", "@web-search-tool", "@image-tool", "@tts-tool", "@browser-tool", "@tool-policy"]
-    guards: ["existing knowgrph infrastructure only", "typed tool functions", "logical toolsets", "platform-scoped enablement", "per-tool provider state", "server-managed secrets", "approval before paid or browser-auth tools", "cost log", "no deploy"]
+    guards: ["existing agentic-graph infrastructure only", "typed tool functions", "logical toolsets", "platform-scoped enablement", "per-tool provider state", "server-managed secrets", "approval before paid or browser-auth tools", "cost log", "no deploy"]
   tool_search:
     source_policy: "external-pattern-reference-only; forbid copied tool-search code, retrieval implementation, bridge prompt text, examples, tests, fixtures, and prose"
     commands: ["/tool.search", "/tool.describe", "/tool.call"]
@@ -163,7 +163,7 @@ agentic_os_memory:
     bindings: ["@orchestration-graph", "@state-store", "@checkpoint-store", "@human-review", "@sandbox-workspace", "@message-gateway"]
     guards: ["typed state", "explicit nodes and edges", "checkpoint and resume", "human review gate", "sandbox scope", "message gateway", "bounded trace", "no deploy"]
   deterministic_agentic_graph:
-    source_policy: "Agentic Canvas OS owns invocation and client policy only; Knowgrph owns the executable parser, graph, store, query, explanation, import, and Canvas projection without a duplicate runtime here"
+    source_policy: "Agentic Canvas OS owns invocation and client policy only; agentic-graph owns the executable parser, graph, store, query, explanation, import, and Canvas projection without a duplicate runtime here"
     commands: ["/agentic.graph.ingest", "/agentic.graph.query", "/agentic.graph.explain"]
     semantics: ["#agentic-graph"]
     bindings: ["@working-directory", "@agentic-graph", "@runtime-proof", "@operator"]
@@ -316,9 +316,9 @@ The file is spec-complete when its frontmatter can be parsed as the source of tr
 
 ## Operating Defaults
 
-- Work Dev-first in `$AGENTICGRAPH_ROOT`.
+- Work Dev-first in `$AGENTIC_GRAPH_ROOT`.
 - Treat `$PROD_MIRROR_ROOT` as a Prod mirror, not a working default.
-- Treat `airvio.co` and `airvio.co/knowgrph` as Cloudflare deployment targets, not completion criteria.
+- Treat `airvio.co` and `airvio.co/agentic-os` as Cloudflare deployment targets, not completion criteria.
 - Forbid Prod or Cloudflare deploy unless the operator explicitly opens that gate.
 - Prefer FOSS, zero-egress, local, and dry-run paths until ROI, TCO, token budget, and approval gates justify live spend.
 - Reuse shared semantic-key, parser, headless, and renderer helpers. Do not add surface-local aliases, stale remaps, or hardcoded fixtures.

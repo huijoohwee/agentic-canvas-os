@@ -17,29 +17,29 @@ const docsTree = "d".repeat(40);
 const runtime = {
   status: "runtime-ready",
   ready: true,
-  source: { repository: "huijoohwee/knowgrph", revision: sourceRevision },
+  source: { repository: "huijoohwee/agentic-graph", revision: sourceRevision },
   agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: docsRevision },
   catalogRevision: docsRevision,
   probes: { apex: 200, storage: 200, storageProxy: 200 },
-  protectedChecks: { knowgrph: ["Integration Gate"], "agentic-canvas-os": ["test"] },
+  protectedChecks: { "agentic-graph": ["Integration Gate"], "agentic-canvas-os": ["test"] },
   ownershipTokenDigest: "e".repeat(64),
   host: "127.0.0.1",
   ports: { apex: 5173, storage: 8787 },
 };
 const trees = {
-  source: { repository: "huijoohwee/knowgrph", revision: sourceRevision, tree: sourceTree },
+  source: { repository: "huijoohwee/agentic-graph", revision: sourceRevision, tree: sourceTree },
   agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: docsRevision, tree: docsTree },
 };
 const readiness = {
-  schema: "agenticgraph-production-runtime-readiness/v2",
+  schema: "agentic-os-production-runtime-readiness/v2",
   status: "verified-build",
-  source: { repository: "huijoohwee/knowgrph", revision: sourceRevision, tree: sourceTree },
+  source: { repository: "huijoohwee/agentic-graph", revision: sourceRevision, tree: sourceTree },
   agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: docsRevision },
   catalogRevision: docsRevision,
   artifact: { algorithm: "sha256", digest: "f".repeat(64) },
   immutableManifest: { algorithm: "sha256", digest: "1".repeat(64) },
   mirror: { repository: "huijoohwee/huijoohwee" },
-  surfaces: ["/", "/agenticgraph"],
+  surfaces: ["/", "/agentic-graph"],
 };
 function authorized(candidate) {
   return {
@@ -66,15 +66,15 @@ test("localhost review and production candidate bind exact source, trees, artifa
     true,
   );
 });
-test("shared canonical hashing preserves the existing Knowgrph digest contract", () => {
+test("shared canonical hashing preserves the migrated runtime digest contract", () => {
   const localReview = createLocalReviewCandidate(runtime, trees);
   const candidate = createProductionReleaseCandidate(localReview, readiness);
   const prompt = createProductionAuthorizationPrompt(runtime, localReview, candidate, {
     runRef: "run:30426035584",
   });
-  assert.equal(localReview.candidateDigest, "ce697b1b3f7b6221e2d18d0c0e07df78faae28a663ad8c14d3bbb56bd0d5988d");
-  assert.equal(candidate.candidateDigest, "a4eedb8d801733fa0c16520673750dd2892d22a178c75c920d421f2e031393dd");
-  assert.equal(prompt.promptDigest, "d49e0948e38545aa664559aad27e28800519a40f04a7aeb45968042fe20bf670");
+  assert.equal(localReview.candidateDigest, "580e3778b93ae7c0b925cc353de76369b1f74e54b6ce823f4c0e96445812b2ed");
+  assert.equal(candidate.candidateDigest, "91be61ed6dd10929e6b10d604a8bc345c94c92f0c6ba7a3ef6d9653dde2c7a3b");
+  assert.equal(prompt.promptDigest, "3c84d92cd735bb47ced309923feaa4e65004178992cee130c6122c05f3a35a78");
 });
 for (const [name, mutate] of [
   ["source drift", current => { current.readiness = { ...current.readiness, source: { ...current.readiness.source, revision: "2".repeat(40) } }; }],

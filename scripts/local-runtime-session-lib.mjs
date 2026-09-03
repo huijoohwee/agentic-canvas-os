@@ -89,7 +89,7 @@ export function validateOwnedSessionService({ state, processEvidence, token, can
   if (!service.listenerCwd || path.resolve(processEvidence.cwd || "") !== path.resolve(service.listenerCwd)) {
     throw new Error("Session Vite working directory changed.");
   }
-  if (path.resolve(processEvidence.gitCommonDir || "") !== path.resolve(candidate.knowgrph.gitCommonDir)) {
+  if (path.resolve(processEvidence.gitCommonDir || "") !== path.resolve(candidate.agenticGraph.gitCommonDir)) {
     throw new Error("Session Vite listener belongs to an unrelated repository.");
   }
   if (!String(processEvidence.command || "").includes(service.commandMarker)) {
@@ -101,11 +101,11 @@ export function validateOwnedSessionService({ state, processEvidence, token, can
   if (!String(processEvidence.listenerEnvironment || "").includes(`AGENTIC_SESSION_ID=${sessionId}`)) {
     throw new Error("Session Vite process session identity is missing or changed.");
   }
-  if (!String(processEvidence.listenerEnvironment || "").includes(`AGENTICGRAPH_SOURCE_REVISION=${state.source?.revision}`)) {
+  if (!String(processEvidence.listenerEnvironment || "").includes(`AGENTIC_OS_SOURCE_REVISION=${state.source?.revision}`)) {
     throw new Error("Session Vite source revision evidence is missing or changed.");
   }
   if (!String(processEvidence.listenerEnvironment || "").includes(
-    `AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${state.agenticCanvasOs?.revision}`,
+    `AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION=${state.agenticCanvasOs?.revision}`,
   )) {
     throw new Error("Session Vite Agentic Canvas OS revision evidence is missing or changed.");
   }
@@ -137,9 +137,9 @@ async function launchSessionRuntime(candidate, options, locations, deps) {
     ...process.env,
     AGENTIC_SESSION_ID: options.sessionId,
     AGENTIC_SESSION_RUNTIME_TOKEN: token,
-    AGENTICGRAPH_SOURCE_REVISION: candidate.knowgrph.headSha,
-    AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
-    AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
+    AGENTIC_OS_SOURCE_REVISION: candidate.agenticGraph.headSha,
+    AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
+    AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
     VITE_WORKSPACE_INITIALIZATION_AGENTIC_CANVAS_OS_DOCS_ABS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
   };
   try {
@@ -156,7 +156,7 @@ async function launchSessionRuntime(candidate, options, locations, deps) {
       status: "session-dev",
       ready: false,
       sessionId: options.sessionId,
-      source: { repository: "huijoohwee/knowgrph", revision: candidate.knowgrph.headSha },
+      source: { repository: "huijoohwee/agentic-graph", revision: candidate.agenticGraph.headSha },
       agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: candidate.agenticCanvasOs.headSha },
       host: LOCAL_RUNTIME_HOST,
       ports: { apex: APEX_PORT },
@@ -178,7 +178,7 @@ async function inspectSessionRuntimeState(state, candidate, options, locations, 
   const listenerPid = deps.readListenerPid(APEX_PORT);
   const processEvidence = listenerPid ? deps.inspectListenerProcess(listenerPid) : null;
   validateOwnedSessionService({ state, processEvidence, token, candidate, sessionId: options.sessionId });
-  if (state.source.revision !== candidate.knowgrph.headSha ||
+  if (state.source.revision !== candidate.agenticGraph.headSha ||
       state.agenticCanvasOs.revision !== candidate.agenticCanvasOs.headSha) {
     throw new Error("Session Vite revisions no longer match canonical main.");
   }
@@ -242,10 +242,9 @@ function stoppedSessionProjection(candidate, sessionId) {
     status: "session-stopped",
     ready: false,
     sessionId,
-    source: { repository: "huijoohwee/knowgrph", revision: candidate.knowgrph.headSha },
+    source: { repository: "huijoohwee/agentic-graph", revision: candidate.agenticGraph.headSha },
     agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: candidate.agenticCanvasOs.headSha },
     host: LOCAL_RUNTIME_HOST,
     ports: { apex: APEX_PORT },
   };
 }
-

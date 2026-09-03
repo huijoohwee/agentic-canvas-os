@@ -15,16 +15,16 @@ export function readEnv(names, fallback = "") {
   return fallback;
 }
 
-/** AgenticGraph MCP Streamable HTTP endpoint (the control plane this tier forwards to). */
-export const KNOWGRPH_MCP_ENDPOINT = readEnv(
-  ["KNOWGRPH_MCP_ENDPOINT", "MCP_ENDPOINT", "NEXT_PUBLIC_KNOWGRPH_MCP_ENDPOINT"],
-  "https://airvio.co/knowgrph/control-plane/mcp",
+/** agentic-graph MCP Streamable HTTP endpoint (the control plane this tier forwards to). */
+export const AGENTIC_OS_MCP_ENDPOINT = readEnv(
+  ["AGENTIC_OS_MCP_ENDPOINT", "MCP_ENDPOINT", "NEXT_PUBLIC_AGENTIC_OS_MCP_ENDPOINT"],
+  "https://airvio.co/agentic-os/control-plane/mcp",
 );
 
-/** AgenticGraph control-plane canvas base; the product embeds its run-scoped doc-view. */
+/** agentic-graph control-plane canvas base; the product embeds its run-scoped doc-view. */
 export const CANVAS_BASE_URL = readEnv(
   ["CANVAS_BASE_URL", "NEXT_PUBLIC_CANVAS_BASE_URL", "PUBLIC_CANVAS_BASE_URL"],
-  "https://airvio.co/knowgrph",
+  "https://airvio.co/agentic-os",
 );
 
 /** Agent-API base the Cloudflare-hosted frontend calls; empty = same Worker origin. */
@@ -33,5 +33,5 @@ export const AGENT_API_BASE_URL = readEnv(
   "",
 );
 
-/** The hero MCP tool exposed by the AgenticGraph control plane. */
-export const KNOWGRPH_RUN_TOOL = "agenticgraph.video_remix.run";
+/** The hero MCP tool exposed by the agentic-graph control plane. */
+export const AGENTIC_GRAPH_RUN_TOOL = "agentic-graph.video_remix.run";

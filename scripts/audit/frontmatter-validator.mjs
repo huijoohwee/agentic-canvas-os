@@ -57,7 +57,7 @@ export const GLOSSARY_COMPONENTS = Object.freeze([
 export const SIBLING_DOCUMENT_PATHS = Object.freeze([
   "huijoohwee.github.io/docs/documents/agentic-game-os-prd-tad-adr.md",
   "huijoohwee.github.io/docs/documents/sandbox-prd-tad-adr.md",
-  "knowgrph/docs/documents/knowgrph-ar-vr-xr-prd-tad-adr.md",
+  "agentic-graph/docs/documents/agentic-graph-ar-vr-xr-prd-tad-adr.md",
 ]);
 
 const REQUIREMENT_CRITERION_COUNTS = Object.freeze([

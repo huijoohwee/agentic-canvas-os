@@ -1,6 +1,6 @@
 ---
-title: "Knowgrph Agentic Canvas OS MCP Gateway"
-graphId: "md:knowgrph-agentic-canvas-os-mcp-gateway"
+title: "agentic-graph Agentic Canvas OS MCP Gateway"
+graphId: "md:agentic-graph-agentic-canvas-os-mcp-gateway"
 doc_type: "MCP Gateway Contract"
 date: "2026-07-31"
 lang: "en-US"
@@ -95,7 +95,7 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 | Local stdio MCP | Richest local/dev tool surface | Local workstation | 0 for discovery |
 | Pages HTTP MCP | Read-only public discovery and source fetch | Cloudflare Pages | 0 for discovery |
 | Browser WebMCP | In-page inspection and local browser surface, bound to `@webmcp-surface` and `#webmcp` for its recorded W3C Model Context API revision | Browser session | 0 for discovery |
-| MainPanel MCP | Browser-local readiness and non-secret setup view for Knowgrph-owned and external tool servers | Browser session | 0 for discovery |
+| MainPanel MCP | Browser-local readiness and non-secret setup view for agentic-graph-owned and external tool servers | Browser session | 0 for discovery |
 | Cloudflare McpAgent | Approval-gated control-plane orchestration where deployed | Cloudflare Worker | 0 for discovery; spend only behind gates |
 | External provider MCP | Federated third-party tool surface registered as one transport, never absorbed into a proxy tier | Provider-operated | 0 for discovery; mutating tools require human confirmation plus the existing approval gate |
 
@@ -108,40 +108,40 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 - Read-only discovery never invokes paid models.
 - Spend-bearing orchestration routes through approval-gated control-plane owners.
 - Browser-local surfaces never own provider secrets.
-- MainPanel MCP renders Knowgrph-owned server templates, provider-neutral external-server templates, session-scoped allowlist rules, and deferred-tool bridge routes; it does not execute tools or store credentials.
+- MainPanel MCP renders agentic-graph-owned server templates, provider-neutral external-server templates, session-scoped allowlist rules, and deferred-tool bridge routes; it does not execute tools or store credentials.
 - New remote proxies require an ADR with TCO, token, latency, and schema-drift comparison.
 
 ## Invocation Grammar Projection
 
 | Consumer surface | Route owner | Source and boundary |
 |---|---|---|
-| Knowgrph Skills & Commands and shared composer menus | `agenticgraph.agentic_canvas_os.docs.invoke` through the existing local or deployed `/knowgrph/control-plane/mcp` owner | Read-only discovery reads the three dictionary files from this canonical docs revision and returns metadata, exact full-catalog counts, and one deterministic SHA-256 `catalogDigest`; it never executes `/ingest-url` or another grammar command. Every filtered `/`, `#`, or `@` response carries the same digest; the browser replaces each sigil slice and recomputes the assembled catalog before marking hydration fresh. No downstream registry is copied, and local Vite dev/preview grants no mutation, spend, Prod, or Cloudflare authority. |
+| agentic-graph Skills & Commands and shared composer menus | `agentic-graph.agentic_canvas_os.docs.invoke` through the existing local or deployed `/agentic-os/control-plane/mcp` owner | Read-only discovery reads the three dictionary files from this canonical docs revision and returns metadata, exact full-catalog counts, and one deterministic SHA-256 `catalogDigest`; it never executes `/ingest-url` or another grammar command. Every filtered `/`, `#`, or `@` response carries the same digest; the browser replaces each sigil slice and recomputes the assembled catalog before marking hydration fresh. No downstream registry is copied, and local Vite dev/preview grants no mutation, spend, Prod, or Cloudflare authority. |
 
 ## Tool Gateway Capabilities
 
-Tool capabilities expose callable functions and platform-scoped toolsets through existing `knowgrph` infrastructure. Gateway routing is one provider path for selected tools; it is not a fifth proxy, copied external registry, or Cloudflare deployment requirement for docs proof.
+Tool capabilities expose callable functions and platform-scoped toolsets through existing `agentic-graph` infrastructure. Gateway routing is one provider path for selected tools; it is not a fifth proxy, copied external registry, or Cloudflare deployment requirement for docs proof.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.tool.catalog` | List tool functions, toolsets, platform state, and per-tool gateway/direct/local/unavailable provider states. | Read-only; zero token discovery and no tool execution. |
-| `agenticgraph.tool.route` | Route one approved web, image, TTS, or browser tool call. | Schema, approval, egress, cost, and fallback checks run before execution. |
-| `agenticgraph.tool.provider.select` | Set non-secret provider preference per tool category. | Credentials stay server-managed; browser secrets are rejected. |
-| `agenticgraph.tool.gateway.audit` | Report routing, usage, cost, egress, approval, and deploy boundary state. | Read-only; no tool calls or deploy. |
-| `agenticgraph.toolset.enable` | Enable an existing logical toolset for one platform surface. | Requires tool policy, platform scope, and approval for risky toolsets. |
-| `agenticgraph.toolset.disable` | Disable a logical toolset for one platform surface. | Does not delete tool functions, credentials, history, or unrelated provider state. |
-| `agenticgraph.tool.search` | Search eligible deferred tool metadata from the current session catalog. | Opt-in bridge route; no schema disclosure, execution, or global registry scan. |
-| `agenticgraph.tool.describe` | Load one deferred tool schema on demand. | Schema must resolve from the current granted toolsets and policy. |
-| `agenticgraph.tool.call` | Invoke a selected deferred tool through a bridge. | Unwraps to real tool identity for schema validation, approval, hooks, audit, cost, and fallback. |
+| `agentic-graph.tool.catalog` | List tool functions, toolsets, platform state, and per-tool gateway/direct/local/unavailable provider states. | Read-only; zero token discovery and no tool execution. |
+| `agentic-graph.tool.route` | Route one approved web, image, TTS, or browser tool call. | Schema, approval, egress, cost, and fallback checks run before execution. |
+| `agentic-graph.tool.provider.select` | Set non-secret provider preference per tool category. | Credentials stay server-managed; browser secrets are rejected. |
+| `agentic-graph.tool.gateway.audit` | Report routing, usage, cost, egress, approval, and deploy boundary state. | Read-only; no tool calls or deploy. |
+| `agentic-graph.toolset.enable` | Enable an existing logical toolset for one platform surface. | Requires tool policy, platform scope, and approval for risky toolsets. |
+| `agentic-graph.toolset.disable` | Disable a logical toolset for one platform surface. | Does not delete tool functions, credentials, history, or unrelated provider state. |
+| `agentic-graph.tool.search` | Search eligible deferred tool metadata from the current session catalog. | Opt-in bridge route; no schema disclosure, execution, or global registry scan. |
+| `agentic-graph.tool.describe` | Load one deferred tool schema on demand. | Schema must resolve from the current granted toolsets and policy. |
+| `agentic-graph.tool.call` | Invoke a selected deferred tool through a bridge. | Unwraps to real tool identity for schema validation, approval, hooks, audit, cost, and fallback. |
 
 Tool Search capabilities are model-visible bridge routes for eligible MCP and non-core plugin tools only. Core direct tools remain exposed directly; deferred catalogs are rebuilt from session-scoped granted toolsets and cannot reveal disabled or out-of-scope tools.
 
 ## Voice Studio Capability
 
-`/voice.studio` plus `#voice-clone`, `#speech-to-text`, or `#text-to-speech` and their route-specific bindings are host metadata, not MCP wire methods. Agentic Canvas OS owns the canonical operation and safety contract in `VOICE-STUDIO.md`; Knowgrph owns execution, media identity, persistence, and proof through one local stdio tool.
+`/voice.studio` plus `#voice-clone`, `#speech-to-text`, or `#text-to-speech` and their route-specific bindings are host metadata, not MCP wire methods. Agentic Canvas OS owns the canonical operation and safety contract in `VOICE-STUDIO.md`; agentic-graph owns execution, media identity, persistence, and proof through one local stdio tool.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.voice.studio` | Validate and execute exactly one discriminated `clone`, `dictate`, or `create` request through an injected bounded voice adapter. | Consent, recording rights, permitted use, revocation, disclosure, approval, capability, source digest, bounds, idempotency, cost, provenance, and read-back must pass; missing live configuration fails before audio read, adapter work, spend, or persistence. |
+| `agentic-graph.voice.studio` | Validate and execute exactly one discriminated `clone`, `dictate`, or `create` request through an injected bounded voice adapter. | Consent, recording rights, permitted use, revocation, disclosure, approval, capability, source digest, bounds, idempotency, cost, provenance, and read-back must pass; missing live configuration fails before audio read, adapter work, spend, or persistence. |
 
 ## Soul Identity Capabilities
 
@@ -149,9 +149,9 @@ Soul identity tools are discoverable without model spend. Runtime prompt assembl
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.soul.load` | Read and validate durable identity from `SOUL.md` for prompt slot 1. | Read-only discovery is zero-token; prompt inclusion requires scan and bounds. |
-| `agenticgraph.personality.overlay` | Apply a temporary session-level voice or mode overlay. | Session-scoped; cannot mutate `SOUL.md` or bypass gates. |
-| `agenticgraph.soul.audit` | Check separation between identity, facts, agent rules, and memory. | Read-only; reports hardcoded identity or project-operation drift. |
+| `agentic-graph.soul.load` | Read and validate durable identity from `SOUL.md` for prompt slot 1. | Read-only discovery is zero-token; prompt inclusion requires scan and bounds. |
+| `agentic-graph.personality.overlay` | Apply a temporary session-level voice or mode overlay. | Session-scoped; cannot mutate `SOUL.md` or bypass gates. |
+| `agentic-graph.soul.audit` | Check separation between identity, facts, agent rules, and memory. | Read-only; reports hardcoded identity or project-operation drift. |
 
 ## Learning Capabilities
 
@@ -159,31 +159,31 @@ Learning-loop tools are discoverable like other capabilities, but mutation remai
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.memory.write` | Add, replace, or remove bounded memory/profile entries. | Writes require scan, capacity check, target separation, and optional approval policy. |
-| `agenticgraph.memory.compact` | Consolidate bounded memory/profile targets before overflow. | Mutation is scoped; no silent drops. |
-| `agenticgraph.memory.search` | Read scoped memory and past conversation indexes. | Read-only; zero token discovery. |
-| `agenticgraph.session.search` | Search prior conversations on demand. | Read-only; results are not persisted automatically. |
-| `agenticgraph.user.profile` | Manage explicit user preferences, communication style, and expectations. | Writes require explicit evidence and reject unsupported inference. |
-| `agenticgraph.skill.discover` | List lightweight skill metadata without loading full skill bodies. | Read-only; zero token discovery. |
-| `agenticgraph.skill.load` | Load selected skill instructions and optional resources on demand. | Reads are bounded, scanned, and path-safe. |
-| `agenticgraph.skill.bundle` | Resolve grouped skills under one invocation. | Missing skills are reported; bundles do not install or bypass gates. |
-| `agenticgraph.skill.manage` | Create, patch, edit, delete, or update skill support files. | Writes require scan, validation, approval policy, and no-copy guard. |
-| `agenticgraph.context.discover` | Discover scoped project-local context files from working directory and touched paths. | Read-only; no model spend, no global scan, and no mutation. |
-| `agenticgraph.context.load` | Load one scanned and bounded context file. | Blocks injection, secrets, invisible controls, and over-budget content before inclusion. |
-| `agenticgraph.context.audit` | Report effective context precedence, skipped matches, blocks, truncation, and stale risks. | Read-only; context cannot override facts, identity, approval, or deploy gates. |
-| `agenticgraph.reference.expand` | Expand explicit inline `@` references into bounded attached context. | Supported surfaces only; sensitive paths, binary content, disallowed egress, and hard-limit overflow fail closed. |
-| `agenticgraph.reference.audit` | Report reference expansion source, size, warning, refusal, and truncation state. | Read-only; no extra fetch, mutation, memory write, or deploy. |
-| `agenticgraph.kanban.task` | Create or update one durable task row in `kanban.md`. | Uses shared table/Kanban utilities; no second board store. |
-| `agenticgraph.kanban.handoff` | Create one handoff row between named profiles. | Requires source profile, target profile, context refs, blockers, resume state, and acceptance. |
-| `agenticgraph.kanban.sync` | Reconcile board rows across full OS worker processes. | Read/write is conflict-aware and deploy-free. |
-| `agenticgraph.experience.capture` | Persist typed lessons from source-backed proof or operator correction. | Write requires explicit scope and no-copy validation. |
-| `agenticgraph.skill.propose` | Draft a new reusable skill contract from repeated experience. | Proposal-only until operator review. |
-| `agenticgraph.skill.evolve` | Run source-fenced `plan/start/step/status/cancel` skill-text optimization with epochs, mini-batches, learning-rate mutation budgets, and held-out gates. | Resumable revisions and explicit bounds are required; output stays review-pending with no apply, model-weight mutation, merge, or deploy. |
-| `agenticgraph.identity.reflect` | Persist stable non-secret operator and project facts. | Operator authority required; unsupported inference rejected. |
+| `agentic-graph.memory.write` | Add, replace, or remove bounded memory/profile entries. | Writes require scan, capacity check, target separation, and optional approval policy. |
+| `agentic-graph.memory.compact` | Consolidate bounded memory/profile targets before overflow. | Mutation is scoped; no silent drops. |
+| `agentic-graph.memory.search` | Read scoped memory and past conversation indexes. | Read-only; zero token discovery. |
+| `agentic-graph.session.search` | Search prior conversations on demand. | Read-only; results are not persisted automatically. |
+| `agentic-graph.user.profile` | Manage explicit user preferences, communication style, and expectations. | Writes require explicit evidence and reject unsupported inference. |
+| `agentic-graph.skill.discover` | List lightweight skill metadata without loading full skill bodies. | Read-only; zero token discovery. |
+| `agentic-graph.skill.load` | Load selected skill instructions and optional resources on demand. | Reads are bounded, scanned, and path-safe. |
+| `agentic-graph.skill.bundle` | Resolve grouped skills under one invocation. | Missing skills are reported; bundles do not install or bypass gates. |
+| `agentic-graph.skill.manage` | Create, patch, edit, delete, or update skill support files. | Writes require scan, validation, approval policy, and no-copy guard. |
+| `agentic-graph.context.discover` | Discover scoped project-local context files from working directory and touched paths. | Read-only; no model spend, no global scan, and no mutation. |
+| `agentic-graph.context.load` | Load one scanned and bounded context file. | Blocks injection, secrets, invisible controls, and over-budget content before inclusion. |
+| `agentic-graph.context.audit` | Report effective context precedence, skipped matches, blocks, truncation, and stale risks. | Read-only; context cannot override facts, identity, approval, or deploy gates. |
+| `agentic-graph.reference.expand` | Expand explicit inline `@` references into bounded attached context. | Supported surfaces only; sensitive paths, binary content, disallowed egress, and hard-limit overflow fail closed. |
+| `agentic-graph.reference.audit` | Report reference expansion source, size, warning, refusal, and truncation state. | Read-only; no extra fetch, mutation, memory write, or deploy. |
+| `agentic-graph.kanban.task` | Create or update one durable task row in `kanban.md`. | Uses shared table/Kanban utilities; no second board store. |
+| `agentic-graph.kanban.handoff` | Create one handoff row between named profiles. | Requires source profile, target profile, context refs, blockers, resume state, and acceptance. |
+| `agentic-graph.kanban.sync` | Reconcile board rows across full OS worker processes. | Read/write is conflict-aware and deploy-free. |
+| `agentic-graph.experience.capture` | Persist typed lessons from source-backed proof or operator correction. | Write requires explicit scope and no-copy validation. |
+| `agentic-graph.skill.propose` | Draft a new reusable skill contract from repeated experience. | Proposal-only until operator review. |
+| `agentic-graph.skill.evolve` | Run source-fenced `plan/start/step/status/cancel` skill-text optimization with epochs, mini-batches, learning-rate mutation budgets, and held-out gates. | Resumable revisions and explicit bounds are required; output stays review-pending with no apply, model-weight mutation, merge, or deploy. |
+| `agentic-graph.identity.reflect` | Persist stable non-secret operator and project facts. | Operator authority required; unsupported inference rejected. |
 
 ## Native Skill Creation Capabilities
 
-ACOS-owned tool identities for the native skill creation harness. They are distinct from the knowgrph skill-text tools above by ownership column, typed arguments, and artifact type. Every promotion to an `active` Agent Definition is approval-gated behind a resolvable operator instruction reference; the boundaries stay closed without one.
+ACOS-owned tool identities for the native skill creation harness. They are distinct from the agentic-graph skill-text tools above by ownership column, typed arguments, and artifact type. Every promotion to an `active` Agent Definition is approval-gated behind a resolvable operator instruction reference; the boundaries stay closed without one.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
@@ -197,9 +197,9 @@ MoA capabilities are discoverable without model spend. Runtime execution can fan
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.moa.run` | Resolve local MoA preset, settle bounded no-tool references fail-soft with typed branch audit and aggregate failure totals, and return the aggregator-owned response or typed fallback. | Discovery is zero-token; execution is approval-gated when paid calls are possible. |
-| `agenticgraph.moa.presets` | List local neutral MoA preset metadata without provider secrets or copied external examples. | Read-only; provider ids and credentials are not exposed. |
-| `agenticgraph.moa.cost` | Report reference token caps, aggregator tokens, cache hits, failures, and estimated cost. | Read-only cost view; no model calls. |
+| `agentic-graph.moa.run` | Resolve local MoA preset, settle bounded no-tool references fail-soft with typed branch audit and aggregate failure totals, and return the aggregator-owned response or typed fallback. | Discovery is zero-token; execution is approval-gated when paid calls are possible. |
+| `agentic-graph.moa.presets` | List local neutral MoA preset metadata without provider secrets or copied external examples. | Read-only; provider ids and credentials are not exposed. |
+| `agentic-graph.moa.cost` | Report reference token caps, aggregator tokens, cache hits, failures, and estimated cost. | Read-only cost view; no model calls. |
 
 ## Stateful Orchestration Capabilities
 
@@ -207,24 +207,24 @@ Stateful orchestration tools are discoverable without model spend. Runtime execu
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.orchestration.graph` | Validate source-backed state, node, edge, entry, exit, and stop-condition topology. | Discovery and dry validation are zero-token; mutation is gated. |
-| `agenticgraph.state.checkpoint` | Read or write scoped checkpoint and resume metadata. | Reads are scoped; writes require approval and recovery proof. |
-| `agenticgraph.human.review` | Surface interrupt payloads and accept approve, reject, or edit decisions. | Continuation remains blocked without operator result. |
-| `agenticgraph.stream.trace` | Stream ordered run, state, cost, and stop-condition events. | Trace is read-only, bounded, and secret-free. |
-| `agenticgraph.superagent.run` | Run bounded long-horizon research, coding, or creation over graph, workspace, message gateway, and artifact proof. | Discovery is zero-token; execution requires sandbox scope, checkpoint policy, stop condition, approval, and cost bounds. |
-| `agenticgraph.superagent.workspace` | Report sandbox workspace roots, allowed operations, artifact manifest, diff summary, scan state, and cleanup policy. | Read-only unless an approved run owns the workspace. |
-| `agenticgraph.superagent.messages` | Report typed user, agent, worker, tool, review, and artifact messages for a run. | Read-only ledger; cannot bypass tool, approval, cost, or deploy gates. |
+| `agentic-graph.orchestration.graph` | Validate source-backed state, node, edge, entry, exit, and stop-condition topology. | Discovery and dry validation are zero-token; mutation is gated. |
+| `agentic-graph.state.checkpoint` | Read or write scoped checkpoint and resume metadata. | Reads are scoped; writes require approval and recovery proof. |
+| `agentic-graph.human.review` | Surface interrupt payloads and accept approve, reject, or edit decisions. | Continuation remains blocked without operator result. |
+| `agentic-graph.stream.trace` | Stream ordered run, state, cost, and stop-condition events. | Trace is read-only, bounded, and secret-free. |
+| `agentic-graph.superagent.run` | Run bounded long-horizon research, coding, or creation over graph, workspace, message gateway, and artifact proof. | Discovery is zero-token; execution requires sandbox scope, checkpoint policy, stop condition, approval, and cost bounds. |
+| `agentic-graph.superagent.workspace` | Report sandbox workspace roots, allowed operations, artifact manifest, diff summary, scan state, and cleanup policy. | Read-only unless an approved run owns the workspace. |
+| `agentic-graph.superagent.messages` | Report typed user, agent, worker, tool, review, and artifact messages for a run. | Read-only ledger; cannot bypass tool, approval, cost, or deploy gates. |
 
 ## Agent Team Capabilities
 
-Role-based Agent Team tools are local stdio MCP capabilities. `/agent.team #role-based-agent-team @agent-team` is the one host alias tuple, not an alternate wire protocol. Agentic Canvas OS owns invocation, source shape, exact revisions, routing semantics, owner policy, and hard bounds. Knowgrph owns durable supervision, checkpoints, replay fences, cancellation, review state, and projection; existing Agent Definitions, Progressive Agents, Agent Orchestration, models, tools, guardrails, and persistence owners retain their authority.
+Role-based Agent Team tools are local stdio MCP capabilities. `/agent.team #role-based-agent-team @agent-team` is the one host alias tuple, not an alternate wire protocol. Agentic Canvas OS owns invocation, source shape, exact revisions, routing semantics, owner policy, and hard bounds. agentic-graph owns durable supervision, checkpoints, replay fences, cancellation, review state, and projection; existing Agent Definitions, Progressive Agents, Agent Orchestration, models, tools, guardrails, and persistence owners retain their authority.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.agent_team.plan` | Resolve one exact team source, Agent Definition revisions, Agent Orchestration workflow and branches, review policy, task digest, and effective bounds into an immutable plan digest. | Read-only and model-free; no durable run, model/tool call, state mutation, spend, Agent Swarm fallback, or owner inference. |
-| `agenticgraph.agent_team.start` | Revalidate exact plan, team, source, agent, workflow, branch, policy, idempotency, and state-version fences; then create one durable bounded run. | Manager owns the initial conversation; start grants no model, tool, approval, provider, persistence, Prod, or Cloudflare authority. |
-| `agenticgraph.agent_team.list` | Return bounded sanitized run summaries, state versions, current and final-answer owners, budget use, blockers, review state, and evidence references. | Read-only and zero-model; private intermediate output, hidden instructions, secrets, and raw provider payloads are excluded. |
-| `agenticgraph.agent_team.control` | Serialize version-fenced pause, resume, cancel, retry, review request, or review receipt transitions with an exact checkpoint. | Cancellation is terminal; stale versions, replay conflicts, missing review receipts, drift, or exhausted turn/depth/fanout/retry/time/token/cost bounds fail before new work. |
+| `agentic-graph.agent_team.plan` | Resolve one exact team source, Agent Definition revisions, Agent Orchestration workflow and branches, review policy, task digest, and effective bounds into an immutable plan digest. | Read-only and model-free; no durable run, model/tool call, state mutation, spend, Agent Swarm fallback, or owner inference. |
+| `agentic-graph.agent_team.start` | Revalidate exact plan, team, source, agent, workflow, branch, policy, idempotency, and state-version fences; then create one durable bounded run. | Manager owns the initial conversation; start grants no model, tool, approval, provider, persistence, Prod, or Cloudflare authority. |
+| `agentic-graph.agent_team.list` | Return bounded sanitized run summaries, state versions, current and final-answer owners, budget use, blockers, review state, and evidence references. | Read-only and zero-model; private intermediate output, hidden instructions, secrets, and raw provider payloads are excluded. |
+| `agentic-graph.agent_team.control` | Serialize version-fenced pause, resume, cancel, retry, review request, or review receipt transitions with an exact checkpoint. | Cancellation is terminal; stale versions, replay conflicts, missing review receipts, drift, or exhausted turn/depth/fanout/retry/time/token/cost bounds fail before new work. |
 
 Delegate output remains private to the source-agent synthesis and leaves ownership with the source. A successful handoff moves conversation and final-answer ownership to the target. Roles, goals, personas, membership, call order, and last response never override registered ownership.
 
@@ -234,51 +234,51 @@ Application composition is a local, provider-neutral compiler and bounded depend
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.application.catalog` | Return bounded immutable component, interface, schema, capability, owner, readiness, and opaque integration-profile metadata. | Read-only and zero-spend; no copied registry, transport configuration, endpoint, credential, command, or provider payload. |
-| `agenticgraph.application.plan` | Resolve exact revisions and digests, negotiate capabilities, compile a deterministic dependency DAG, and return an immutable `application-composition-plan/v1` digest. | Read-only; mutable references, drift, incompatibility, cycles, implicit fallback, install, upgrade, migration, connection, or execution fail closed. |
-| `agenticgraph.application.execute` | Revalidate one exact plan and sequence only dependency-ready steps through injected existing runtime owners. | Bounded and idempotency-fenced; no new agent loop or integration proxy, silent retry, automatic migration, provider fallback, continuation beyond bounds, deploy, or approval inference. |
+| `agentic-graph.application.catalog` | Return bounded immutable component, interface, schema, capability, owner, readiness, and opaque integration-profile metadata. | Read-only and zero-spend; no copied registry, transport configuration, endpoint, credential, command, or provider payload. |
+| `agentic-graph.application.plan` | Resolve exact revisions and digests, negotiate capabilities, compile a deterministic dependency DAG, and return an immutable `application-composition-plan/v1` digest. | Read-only; mutable references, drift, incompatibility, cycles, implicit fallback, install, upgrade, migration, connection, or execution fail closed. |
+| `agentic-graph.application.execute` | Revalidate one exact plan and sequence only dependency-ready steps through injected existing runtime owners. | Bounded and idempotency-fenced; no new agent loop or integration proxy, silent retry, automatic migration, provider fallback, continuation beyond bounds, deploy, or approval inference. |
 
 ## Deterministic Agentic Graph Capability
 
 Agentic Canvas OS owns the canonical invocation grammar and typed
-`createKnowgrphMcpClient` methods. Knowgrph owns the executable MCP runtime,
+`createAgenticGraphMcpClient` methods. agentic-graph owns the executable MCP runtime,
 parser generator and adapters, sharded artifact storage, query, explanation,
 Launch import, and Canvas projection. No artifact filesystem path crosses the
 client boundary.
 
 | Exact tool | Behavior | Mutation boundary |
 |---|---|---|
-| `agenticgraph.knowledge_graph.ingest` | Compile registered code, documents, SQL, configs, PDFs, and optional inert grammar artifacts into one deterministic explained graph. | Read the explicit workspace; return opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection. |
-| `agenticgraph.knowledge_graph.parser_generate` | Compile one inert bounded parser-registry specification, including optional finite declarative grammar data, into one deterministic canonical v2 registry. | Validate adapter fidelity and grammar bounds, reject executable or ambiguous input, and return the inert registry plus its exact digest without code, artifact paths, ingest, model use, or network use. |
-| `agenticgraph.knowledge_graph.query` | Run bounded lexical, neighborhood, impact, path, or summary operations against `graphId` plus `expectedSnapshotDigest`. | Read-only; reject a stale digest and perform no vector or remote lookup. |
-| `agenticgraph.knowledge_graph.explain_edge` | Return one stored relationship and its exact parser/source evidence from `graphId` plus `expectedSnapshotDigest`. | Read-only; no workspace scan, inference, model, network, or mutation. |
+| `agentic-graph.knowledge_graph.ingest` | Compile registered code, documents, SQL, configs, PDFs, and optional inert grammar artifacts into one deterministic explained graph. | Read the explicit workspace; return opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection. |
+| `agentic-graph.knowledge_graph.parser_generate` | Compile one inert bounded parser-registry specification, including optional finite declarative grammar data, into one deterministic canonical v2 registry. | Validate adapter fidelity and grammar bounds, reject executable or ambiguous input, and return the inert registry plus its exact digest without code, artifact paths, ingest, model use, or network use. |
+| `agentic-graph.knowledge_graph.query` | Run bounded lexical, neighborhood, impact, path, or summary operations against `graphId` plus `expectedSnapshotDigest`. | Read-only; reject a stale digest and perform no vector or remote lookup. |
+| `agentic-graph.knowledge_graph.explain_edge` | Return one stored relationship and its exact parser/source evidence from `graphId` plus `expectedSnapshotDigest`. | Read-only; no workspace scan, inference, model, network, or mutation. |
 
-`/agentic.graph.*`, `#agentic-graph`, `#parser-generation`, `@agentic-graph`, and `@parser-specification` resolve through the canonical dictionaries as metadata. Resolution is not execution. An explicit `tools/call` to one of the four names above is required; parser generation is independently invocable, while its executable compiler, adapters, and artifacts remain solely Knowgrph-owned.
+`/agentic.graph.*`, `#agentic-graph`, `#parser-generation`, `@agentic-graph`, and `@parser-specification` resolve through the canonical dictionaries as metadata. Resolution is not execution. An explicit `tools/call` to one of the four names above is required; parser generation is independently invocable, while its executable compiler, adapters, and artifacts remain solely agentic-graph-owned.
 
 ## Repository Packing Capability
 
-Repository packing is one local stdio MCP capability. `/repository.pack #repository-packing @repository-root @runtime-proof` is its exact host alias, not an alternate wire method. Agentic Canvas OS owns invocation and safety truth; Knowgrph owns Git discovery, symlink-safe bounded reads, deterministic rendering, atomic content-addressed publication, and structured proof.
+Repository packing is one local stdio MCP capability. `/repository.pack #repository-packing @repository-root @runtime-proof` is its exact host alias, not an alternate wire method. Agentic Canvas OS owns invocation and safety truth; agentic-graph owns Git discovery, symlink-safe bounded reads, deterministic rendering, atomic content-addressed publication, and structured proof.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.repository.pack` | Convert every eligible path in one exact local Git worktree into one deterministic AI-friendly Markdown artifact and return verified metadata only. | Local, idempotent, bounded, zero-network, zero-model, and zero-cost; secrets, traversal, symlinks, source drift, hard-limit overflow, external dependency, Prod, and Cloudflare fail before publication. |
+| `agentic-graph.repository.pack` | Convert every eligible path in one exact local Git worktree into one deterministic AI-friendly Markdown artifact and return verified metadata only. | Local, idempotent, bounded, zero-network, zero-model, and zero-cost; secrets, traversal, symlinks, source drift, hard-limit overflow, external dependency, Prod, and Cloudflare fail before publication. |
 
 ## Workspace Artifact Lifecycle Capabilities
 
-`/workspace.artifact.manage #workspace-artifact-lifecycle @artifact-operation @workspace-entry @artifact-policy @runtime-proof` is the canonical host invocation for bounded local file and folder lifecycle work. Add `@operator` only for apply. Agentic Canvas OS owns neutral invocation and safety truth; Knowgrph owns the configured-root, symlink-safe, digest-fenced local runtime. The publishing repository owns its authored guideline and template bytes. Browser Launch, URL ingest, and cloud/provider synchronization continue through `/workspace.launch`, `/source.ingest`, and `/file.sync`.
+`/workspace.artifact.manage #workspace-artifact-lifecycle @artifact-operation @workspace-entry @artifact-policy @runtime-proof` is the canonical host invocation for bounded local file and folder lifecycle work. Add `@operator` only for apply. Agentic Canvas OS owns neutral invocation and safety truth; agentic-graph owns the configured-root, symlink-safe, digest-fenced local runtime. The publishing repository owns its authored guideline and template bytes. Browser Launch, URL ingest, and cloud/provider synchronization continue through `/workspace.launch`, `/source.ingest`, and `/file.sync`.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.workspace_artifact.plan` | Normalize one inspect, create-file, create-folder, update-file, import-file, export-file, trash, or restore request and return observed state plus a deterministic plan digest. | Read-only, local, configured-root-only, symlink-safe, bounded, zero-network, zero-model, and zero-cost; unsupported recursive transfer and purge fail closed. |
-| `agenticgraph.workspace_artifact.apply` | Re-plan the exact request, require matching plan digest and operator intent, perform one atomic mutation, and return read-back plus recovery evidence. | The named operation only; source or target drift, collision-policy mismatch, undeclared roots, traversal, special files, symlinks, network, Git integration, Prod, and Cloudflare fail before mutation. |
+| `agentic-graph.workspace_artifact.plan` | Normalize one inspect, create-file, create-folder, update-file, import-file, export-file, trash, or restore request and return observed state plus a deterministic plan digest. | Read-only, local, configured-root-only, symlink-safe, bounded, zero-network, zero-model, and zero-cost; unsupported recursive transfer and purge fail closed. |
+| `agentic-graph.workspace_artifact.apply` | Re-plan the exact request, require matching plan digest and operator intent, perform one atomic mutation, and return read-back plus recovery evidence. | The named operation only; source or target drift, collision-policy mismatch, undeclared roots, traversal, special files, symlinks, network, Git integration, Prod, and Cloudflare fail before mutation. |
 
 ## Agentic SDLC Observability Capability
 
-`/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` is one host composition over a local stdio wire tool. Agentic Canvas OS owns its invocation, state-meaning, graph-vocabulary, and deployment-boundary truth. Knowgrph validates the immutable local ledger receipt, performs the deterministic projection, and hands GraphData and KGC Markdown to existing Canvas owners.
+`/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` is one host composition over a local stdio wire tool. Agentic Canvas OS owns its invocation, state-meaning, graph-vocabulary, and deployment-boundary truth. agentic-graph validates the immutable local ledger receipt, performs the deterministic projection, and hands GraphData and KGC Markdown to existing Canvas owners.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.agentic_sdlc.observe` | Read one exact `agentic-sdlc-ledger-receipt/v1` plus its digest-bound local artifact and return `agenticgraph-agentic-sdlc-observation/v1`; its `agentic-sdlc-canvas-projection/v1` payload supplies bounded deterministic GraphData and `kgc-computing-flow/v1` Markdown for the existing Canvas. | Read-only, local, deterministic, model-free, network-free, zero-token, zero-cost, and Dev-only. Receipt, revision, digest, containment, view, cursor, and limit fail closed; the tool creates no verdict, delivery state, authorization, deployment, store, dashboard, renderer, Prod mirror write, or Cloudflare action. |
+| `agentic-graph.agentic_sdlc.observe` | Read one exact `agentic-sdlc-ledger-receipt/v1` plus its digest-bound local artifact and return `agentic-graph-agentic-sdlc-observation/v1`; its `agentic-sdlc-canvas-projection/v1` payload supplies bounded deterministic GraphData and `kgc-computing-flow/v1` Markdown for the existing Canvas. | Read-only, local, deterministic, model-free, network-free, zero-token, zero-cost, and Dev-only. Receipt, revision, digest, containment, view, cursor, and limit fail closed; the tool creates no verdict, delivery state, authorization, deployment, store, dashboard, renderer, Prod mirror write, or Cloudflare action. |
 
 The response keeps source, status, conformance, projection, cache, and economics
 separate. `verified`, `delivery_ready`, and `deployed` remain externally owned
@@ -286,18 +286,18 @@ source claims. The tool observes them without creating, merging, translating,
 promoting, or authorizing any state.
 ## Payments Capabilities
 
-Payments capabilities are discoverable without model spend. The money path performs zero model calls by contract, so a non-zero model cost on rail selection, intent creation, event settlement, reconciliation, or record serialization is a defect rather than a budget overrun. The `/payment.*` commands plus their `@payment-*` bindings and `#payment-*` tags are host metadata; Agentic Canvas OS owns invocation and safety truth, and the Knowgrph payments capability owner owns rails, credentials, settlement, persistence, and proof.
+Payments capabilities are discoverable without model spend. The money path performs zero model calls by contract, so a non-zero model cost on rail selection, intent creation, event settlement, reconciliation, or record serialization is a defect rather than a budget overrun. The `/payment.*` commands plus their `@payment-*` bindings and `#payment-*` tags are host metadata; Agentic Canvas OS owns invocation and safety truth, and the agentic-graph payments capability owner owns rails, credentials, settlement, persistence, and proof.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agenticgraph.payment.rail.select` | Resolve exactly one settlement rail from requested currency, requested settlement asset, and per-rail readiness. | Read-only and model-free; the rail identifier and selection reason persist before any provider call, and no ready rail returns a typed unavailable result with zero provider objects. |
-| `agenticgraph.payment.intent.create` | Create one provider payment object on the selected rail behind a client-generated intent key. | Credentials stay server-side; agent-originated calls require the existing approval gate before any provider contact; a replayed key yields exactly one provider object and one cost log entry per call. |
-| `agenticgraph.payment.status` | Return the public projection of one payment intent. | Read-only; carries only intent identity, state, minor-unit amount, and currency, and never provider customer identifiers, provider metadata, or hosted payment URLs. |
-| `agenticgraph.payment.event.settle` | Authenticate one inbound provider event and apply its settlement side effect at most once. | Authenticity is verified before payload read, provider state is the settlement authority, and a mismatch of intent identity, minor-unit amount, or currency leaves the record unsettled. |
-| `agenticgraph.payment.reconcile` | Resolve queued or in-flight intents to a terminal state from provider-read state. | Bounded retry per record; local queue state never unlocks paid capability, and an unresolvable record stops at the stated attempt bound with an operator-visible entry. |
-| `agenticgraph.payment.receipt.project` | Serialize terminal records to one byte-stable local document and parse it back without loss. | Local, deterministic, zero-network, and zero-model; prohibited identifiers fail before write, and a malformed document returns a typed parse error with bytes unchanged. |
-| `agenticgraph.payment.refund` | Create one refund on the rail that settled the original payment. | Approval-gated; a repeated request leaves the refunded amount unchanged, and a non-settled record returns a typed not-applicable result with zero provider contact. |
-| `agenticgraph.payment.readiness` | Report per-rail credential names, presence, pinned provider version, configured integration model, and terminal sandbox proof. | Read-only with a non-zero exit on any missing required input; writes nothing, grants no deploy authority, and fails when a credential name or value appears in a visible surface. |
+| `agentic-graph.payment.rail.select` | Resolve exactly one settlement rail from requested currency, requested settlement asset, and per-rail readiness. | Read-only and model-free; the rail identifier and selection reason persist before any provider call, and no ready rail returns a typed unavailable result with zero provider objects. |
+| `agentic-graph.payment.intent.create` | Create one provider payment object on the selected rail behind a client-generated intent key. | Credentials stay server-side; agent-originated calls require the existing approval gate before any provider contact; a replayed key yields exactly one provider object and one cost log entry per call. |
+| `agentic-graph.payment.status` | Return the public projection of one payment intent. | Read-only; carries only intent identity, state, minor-unit amount, and currency, and never provider customer identifiers, provider metadata, or hosted payment URLs. |
+| `agentic-graph.payment.event.settle` | Authenticate one inbound provider event and apply its settlement side effect at most once. | Authenticity is verified before payload read, provider state is the settlement authority, and a mismatch of intent identity, minor-unit amount, or currency leaves the record unsettled. |
+| `agentic-graph.payment.reconcile` | Resolve queued or in-flight intents to a terminal state from provider-read state. | Bounded retry per record; local queue state never unlocks paid capability, and an unresolvable record stops at the stated attempt bound with an operator-visible entry. |
+| `agentic-graph.payment.receipt.project` | Serialize terminal records to one byte-stable local document and parse it back without loss. | Local, deterministic, zero-network, and zero-model; prohibited identifiers fail before write, and a malformed document returns a typed parse error with bytes unchanged. |
+| `agentic-graph.payment.refund` | Create one refund on the rail that settled the original payment. | Approval-gated; a repeated request leaves the refunded amount unchanged, and a non-settled record returns a typed not-applicable result with zero provider contact. |
+| `agentic-graph.payment.readiness` | Report per-rail credential names, presence, pinned provider version, configured integration model, and terminal sandbox proof. | Read-only with a non-zero exit on any missing required input; writes nothing, grants no deploy authority, and fails when a credential name or value appears in a visible surface. |
 
 External provider MCP transports may be federated for read-only payment tools. Every payment-mutating federated tool is registered as confirmation-required and routed through the existing approval gate. Federating a provider transport is not a parity claim for any other provider, and no payment proxy tier is introduced.
 
@@ -305,8 +305,8 @@ External provider MCP transports may be federated for read-only payment tools. E
 
 ```yaml
 capability:
-  toolId: "agenticgraph.os.status"
-  title: "Knowgrph OS Status"
+  toolId: "agentic-graph.os.status"
+  title: "agentic-graph OS Status"
   owningHarness: "agentic-os"
   sourceCatalogs:
     - "local-stdio"
@@ -327,8 +327,8 @@ capability:
 
 | Need | Route | Reason |
 |---|---|---|
-| Discover all capabilities | Local `agenticgraph.os.status view=capabilities` or remote tool list | Zero-spend, typed catalog. |
-| Connect an external user to Knowgrph tools | MainPanel MCP readiness plus local stdio `mcp/server.js` config and `Client.connect` / `tools/list` proof | Lets outside MCP clients use source-derived tools that live inside Knowgrph without copying tool descriptors or browser-storing secrets. |
+| Discover all capabilities | Local `agentic-graph.os.status view=capabilities` or remote tool list | Zero-spend, typed catalog. |
+| Connect an external user to agentic-graph tools | MainPanel MCP readiness plus local stdio `mcp/server.js` config and `Client.connect` / `tools/list` proof | Lets outside MCP clients use source-derived tools that live inside agentic-graph without copying tool descriptors or browser-storing secrets. |
 | Load durable identity | Local stdio MCP or approved prompt-assembly owner | Keeps identity source-backed, scanned, bounded, and separate from project operations. |
 | Inspect local runtime | Local stdio MCP | Local filesystem and harness state are not public. |
 | Read public docs/source | Pages HTTP MCP | Safe read-only route. |
@@ -354,9 +354,9 @@ capability:
 | Run long-horizon SuperAgent task | Local stdio MCP or approved control-plane harness | Composes graph, memory, skills, tools, workspace, messages, artifacts, and verification under one bounded run. |
 | Orchestrate a role-based Agent Team | Local stdio MCP | Plans and supervises one revision-fenced team through existing agent owners, durable checkpoints, explicit review, and exact delegate or handoff answer ownership. |
 | Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
-| Ingest, query, or explain a codebase agentic graph | Knowgrph local MCP | Uses one bounded local digest-fenced graph, deterministic source parsers, auditable edge evidence, opaque graph identity, and explicit tool dispatch without models, embeddings, or vectors. |
+| Ingest, query, or explain a codebase agentic graph | agentic-graph local MCP | Uses one bounded local digest-fenced graph, deterministic source parsers, auditable edge evidence, opaque graph identity, and explicit tool dispatch without models, embeddings, or vectors. |
 | Observe one Agentic SDLC run end to end | Local stdio MCP | Requires one immutable local ledger receipt and deterministically projects bounded KGC and GraphData through the existing Canvas without a model, network, spend, mutation, state promotion, or deployment. |
-| Pack one local Git repository | Local stdio MCP | Writes one bounded content-addressed artifact through `agenticgraph.repository.pack`; no source bytes cross the MCP response and no remote, model, or deploy route exists. |
+| Pack one local Git repository | Local stdio MCP | Writes one bounded content-addressed artifact through `agentic-graph.repository.pack`; no source bytes cross the MCP response and no remote, model, or deploy route exists. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
 | Select a settlement rail or read payment status | Local stdio MCP | Deterministic, model-free selection and a four-field public projection stay inside the payments owner. |
 | Create, settle, reconcile, or refund a payment | Local stdio MCP with the server-side payment trust boundary | Credentials, idempotency, event authenticity, and provider-authoritative settlement stay in one owner; agent-originated spend routes through the existing approval gate. |
@@ -372,7 +372,7 @@ capability:
 | Optional remote failures are bounded | Unreachable remote catalogs appear in `unreachableCatalogs[]` without crashing local discovery. |
 | No proxy duplication | No new server reimplements existing local or Worker dispatch without ADR. |
 | Spend is gated | Any paid or mutating route requires the relevant approval gate. |
-| Reviewed run-note mutation | `update_agent_run_note` maps only to `agenticgraph.run_manifest.note.update`, cannot disable review, and completes only after exact native receipt echo. |
+| Reviewed run-note mutation | `update_agent_run_note` maps only to `agentic-graph.run_manifest.note.update`, cannot disable review, and completes only after exact native receipt echo. |
 | Tool gateway is existing-infra | Tool routing uses local MCP, Pages HTTP MCP, Browser WebMCP, or approved control-plane owners; no new proxy is introduced. |
 | Payment path is model-free | A full intent-to-settlement run reports zero model calls and exact zero model cost for selection, creation, settlement, reconciliation, and serialization. |
 | Payment credentials stay server-side | No credential name or value appears in client bundle output or visible runtime variables, and a planted secret fails the readiness gate before configuration changes. |
@@ -380,7 +380,7 @@ capability:
 | Payment spend is gated | Every agent-originated payment-creating or money-moving route requires the existing approval gate, and an unapproved call is rejected with zero provider calls and a zero-cost entry. |
 | Payment federation adds no tier | Federated provider payment transports are registered as transports only, with confirmation required on every mutating tool and no new payment proxy. |
 | Tool providers are per-category | Web, image, TTS, and browser categories each expose gateway, direct, local, or unavailable state. |
-| Voice Studio ownership is singular | Three exact host metadata routes map to one `agenticgraph.voice.studio` wire tool; consent never follows from a binding, and no copied runtime or provider dependency is required. |
+| Voice Studio ownership is singular | Three exact host metadata routes map to one `agentic-graph.voice.studio` wire tool; consent never follows from a binding, and no copied runtime or provider dependency is required. |
 | Tool Search is scoped | Bridge routes search, describe, and call only deferred tools granted to the current session and never bypass real tool approval. |
 | Application plans are immutable | Equivalent manifests produce one digest over exact revisions, interface and schema digests, owners, edges, order, and bounds; drift or migration needs a new explicit plan and never mutates execution automatically. |
 | Agentic graphs are local and auditable | Ingestion is deterministic and workspace-scoped, every published edge has canonical source evidence and a stored explanation, query and explanation are read-only, and no model, embedding, vector store, external parser, or external graph service participates. |

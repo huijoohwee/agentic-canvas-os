@@ -44,7 +44,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 - Treat external projects and documentation as design references only. Do not copy their code, prose, prompts, schemas, tests, fixtures, or dependencies.
 - Keep claims proportional to evidence. A source contract is not live-provider, deployment, or runtime proof.
 - Prefer focused checks for touched behavior. Use the validation owner rather than restating commands here.
-- Prod mirrors and Cloudflare change only through the Knowgrph product-deployment owner after exact-candidate human authorization in the protected Production environment; repository integration remains ADLC-owned, and local agents, task worktrees, merges, and `turn:end` have no deploy authority.
+- Prod mirrors and Cloudflare change only through the agentic-graph product-deployment owner after exact-candidate human authorization in the protected Production environment; repository integration remains ADLC-owned, and local agents, task worktrees, merges, and `turn:end` have no deploy authority.
 
 ## Owner Routing
 

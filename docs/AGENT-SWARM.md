@@ -49,7 +49,7 @@ No caller supplies specialist roles, a branch catalog, or a handcrafted workflow
 | Function Calling and tool gateway | Tool schemas, authorization, review, idempotency, and execution receipts | Swarm membership grants no tool capability |
 | Agent Orchestration | Explicit manager delegation and conversation handoff through registered workflows | Fixed workflows remain separate from dynamic Agent Swarm runs |
 | Kanban collaboration | Durable coordination for named profiles and full OS worker processes | Kanban remains the collaboration SSOT; the swarm ledger owns only one application run |
-| Knowgrph | Read-only discovery of source-backed `/`, `#`, and `@` metadata | No duplicate scheduler, task store, worker registry, or readiness owner is added there |
+| agentic-graph | Read-only discovery of source-backed `/`, `#`, and `@` metadata | No duplicate scheduler, task store, worker registry, or readiness owner is added there |
 
 The existing prohibition on fragile hidden subagent swarms remains. Agent Swarm qualifies as runtime-ready only because task state, ownership, recovery, bounds, receipts, and public evidence are explicit. Process-local memory may optimize an active worker but may never become the coordination SSOT.
 

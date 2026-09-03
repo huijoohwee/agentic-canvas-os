@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { normalizeJson, serializedJsonLength } from "./json-contract.js";
 
 const RECEIPT_SCHEMA = "function-execution-receipt/v1";
-const UPSTREAM_SCHEMA = "knowgrph-tool-execution-receipt/v1";
+const UPSTREAM_SCHEMA = "agentic-os-tool-execution-receipt/v1";
 const DEFAULT_RECEIPT_TTL_MS = 604_800_000;
 const DEFAULT_CLAIM_TTL_MS = 60_000;
 const DEFAULT_MAX_RECORD_CHARS = 500_000;

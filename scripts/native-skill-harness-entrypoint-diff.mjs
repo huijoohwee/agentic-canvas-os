@@ -5,7 +5,7 @@
 // adapter-registration.js with a fixture adapter living under a temporary
 // adapters/<fixture>/ prefix leaves worker/index.js byte-identical, changes
 // only paths under the fixture's own prefix, and leaves no adapter identity
-// (the fixture's or knowgrph's) hardcoded in the shared entrypoint.
+// (the fixture's or agentic-graph's) hardcoded in the shared entrypoint.
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -25,7 +25,7 @@ const OPERATOR_REF = "operator-instruction/entrypoint-diff-fixture/2026-08-17";
 const DECLARED_TOKENS = ["/propose-skill", "#skill-candidate", "@skill-registry", "acos.adapter.register"];
 // An empty diff proves nothing if an adapter name was already hardcoded, so
 // every known adapter identity is asserted absent from the entrypoint.
-const KNOWN_ADAPTER_IDENTITIES = Object.freeze(["knowgrph", FIXTURE_PREFIX]);
+const KNOWN_ADAPTER_IDENTITIES = Object.freeze(["agentic-graph", FIXTURE_PREFIX]);
 
 function digest(text) {
   return createHash("sha256").update(text).digest("hex");
@@ -118,7 +118,7 @@ async function run() {
   }
   // An empty digest diff plus zero newly introduced adapter-identity
   // occurrences is what keeps criterion 13.4 honest: the entrypoint names no
-  // adapter. knowgrph pre-exists in a comment and in KNOWGRPH_* env names, so
+  // adapter. agentic-graph pre-exists in a comment and in AGENTIC_GRAPH_* env names, so
   // the assertion is that this feature introduced no additional occurrence.
   if (entrypointAfter.includes(FIXTURE_PREFIX)) {
     failures.push(`worker/index.js contains the fixture adapter identity ${FIXTURE_PREFIX}`);

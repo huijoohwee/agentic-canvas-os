@@ -8,45 +8,45 @@ import {
   hasText,
   isPlainObject,
   isUniqueStringArray,
-} from "./knowgrph-mcp-contract-utils.js";
+} from "./agentic-graph-mcp-contract-utils.js";
 import {
   validParserDescriptors,
   validParserRegistry,
-} from "./knowgrph-mcp-parser-contract.js";
+} from "./agentic-graph-mcp-parser-contract.js";
 import {
   privatePathFields,
   validExplainSuccess,
   validAgenticGraphCounts,
   validQuerySuccess,
   validateAgenticGraphProjection,
-} from "./knowgrph-mcp-result-contract.js";
+} from "./agentic-graph-mcp-result-contract.js";
 
-export class KnowgrphMcpError extends Error {
+export class AgenticGraphMcpError extends Error {
   constructor(message, { code, status, data } = {}) {
     super(message);
-    this.name = "KnowgrphMcpError";
-    this.code = code || "knowgrph_mcp_error";
+    this.name = "AgenticGraphMcpError";
+    this.code = code || "agentic-graph-mcp-error";
     if (status !== undefined) this.status = status;
     if (data !== undefined) this.data = data;
   }
 }
 
 export const AGENTIC_GRAPH_MCP_TOOLS = Object.freeze({
-  ingest: "agenticgraph.knowledge_graph.ingest",
-  generateParser: "agenticgraph.knowledge_graph.parser_generate",
-  query: "agenticgraph.knowledge_graph.query",
-  explainEdge: "agenticgraph.knowledge_graph.explain_edge",
+  ingest: "agentic-graph.knowledge_graph.ingest",
+  generateParser: "agentic-graph.knowledge_graph.parser_generate",
+  query: "agentic-graph.knowledge_graph.query",
+  explainEdge: "agentic-graph.knowledge_graph.explain_edge",
 });
 
 export const AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE = "default-source";
 
-const INVOCATION_SCHEMA = "agenticgraph-knowledge-graph-invocation/v1";
+const INVOCATION_SCHEMA = "agentic-graph-knowledge-graph-invocation/v1";
 const ROUTING_SCHEMA = "agentic-canvas-os-docs-routing/v1";
 const RESULT_SCHEMAS = Object.freeze({
-  ingest: "agenticgraph-knowledge-graph-ingest/v1",
-  parser_generate: "agenticgraph-knowledge-graph-parser-generate/v1",
-  query: "agenticgraph-knowledge-graph-query/v1",
-  explain_edge: "agenticgraph-knowledge-graph-explain-edge/v1",
+  ingest: "agentic-graph-knowledge-graph-ingest/v1",
+  parser_generate: "agentic-graph-knowledge-graph-parser-generate/v1",
+  query: "agentic-graph-knowledge-graph-query/v1",
+  explain_edge: "agentic-graph-knowledge-graph-explain-edge/v1",
 });
 const TOOL_BY_OPERATION = Object.freeze({
   ingest: AGENTIC_GRAPH_MCP_TOOLS.ingest,
@@ -119,7 +119,7 @@ function cloneAgenticGraphPayload(value, label) {
     if (new TextEncoder().encode(serialized).byteLength > maxBytes) throw new Error("too large");
     return JSON.parse(serialized);
   } catch {
-    throw new KnowgrphMcpError(`invalid agentic graph ${label}`, {
+    throw new AgenticGraphMcpError(`invalid agentic graph ${label}`, {
       code: `mcp_agentic_graph_${label}_invalid`,
       data: { fields: [label] },
     });
@@ -164,7 +164,7 @@ export function validateAgenticGraphRequest(operation, input) {
     && Object.hasOwn(input, "invocation")
     && !isAgenticGraphInvocationProof(operation, input.invocation)) fields.push("invocation");
   if (fields.length) {
-    throw new KnowgrphMcpError("invalid agentic graph request", {
+    throw new AgenticGraphMcpError("invalid agentic graph request", {
       code: "mcp_agentic_graph_request_invalid",
       data: { operation, fields },
     });
@@ -173,7 +173,7 @@ export function validateAgenticGraphRequest(operation, input) {
 }
 
 function invalidResult(operation, fields) {
-  throw new KnowgrphMcpError(`invalid agentic graph ${operation} result`, {
+  throw new AgenticGraphMcpError(`invalid agentic graph ${operation} result`, {
     code: "mcp_agentic_graph_result_invalid",
     data: { operation, fields: [...new Set(fields)] },
   });
@@ -199,7 +199,7 @@ function validateResultEnvelope(operation, value, fields) {
     fields.push("error");
   }
   if (fields.length) invalidResult(operation, fields);
-  throw new KnowgrphMcpError(value.error.message, {
+  throw new AgenticGraphMcpError(value.error.message, {
     code: value.error.code,
     data: value.error.details,
   });
@@ -252,9 +252,9 @@ export function validateAgenticGraphReadResult(operation, request, value) {
   return value;
 }
 
-export function createKnowgrphAgenticGraphClient({ callTool } = {}) {
+export function createAgenticGraphClient({ callTool } = {}) {
   if (typeof callTool !== "function") {
-    throw new KnowgrphMcpError("local Knowgrph MCP transport is required", {
+    throw new AgenticGraphMcpError("local agentic-graph MCP transport is required", {
       code: "mcp_agentic_graph_local_transport_required",
     });
   }

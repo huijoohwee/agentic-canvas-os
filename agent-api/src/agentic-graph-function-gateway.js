@@ -1,15 +1,15 @@
 import { createFunctionExecutionReceiptRuntime } from "./function-execution-receipts.js";
 import {
-  createKnowgrphGuardrailEvaluator,
-  KNOWGRPH_FUNCTION_TOOL_NAMES,
-  KNOWGRPH_TOOL_RECORDS,
-  parseKnowgrphFunctionToolAllowlist,
-} from "./knowgrph-function-tools.js";
+  createAgenticGraphGuardrailEvaluator,
+  AGENTIC_GRAPH_FUNCTION_TOOL_NAMES,
+  AGENTIC_GRAPH_TOOL_RECORDS,
+  parseAgenticGraphFunctionToolAllowlist,
+} from "./agentic-graph-function-tools.js";
 
 export {
-  createKnowgrphGuardrailEvaluator,
-  KNOWGRPH_FUNCTION_TOOL_NAMES,
-  parseKnowgrphFunctionToolAllowlist,
+  createAgenticGraphGuardrailEvaluator,
+  AGENTIC_GRAPH_FUNCTION_TOOL_NAMES,
+  parseAgenticGraphFunctionToolAllowlist,
 };
 
 function zeroGatewayCost() {
@@ -45,17 +45,17 @@ function guardrailOwner(value) {
     && typeof value.resolveReview === "function";
 }
 
-export function createKnowgrphFunctionGateway({
+export function createAgenticGraphFunctionGateway({
   mcpClient,
   allowedToolNames = [],
   reviewRequiredToolNames = [],
   guardrailsHumanReview,
   executionReceiptStore,
-  toolRecords = KNOWGRPH_TOOL_RECORDS,
+  toolRecords = AGENTIC_GRAPH_TOOL_RECORDS,
 } = {}) {
   const sourceRecords = toolRecords && typeof toolRecords === "object" && !Array.isArray(toolRecords)
     ? toolRecords
-    : KNOWGRPH_TOOL_RECORDS;
+    : AGENTIC_GRAPH_TOOL_RECORDS;
   const allowed = new Set(allowedToolNames.filter((name) => Object.hasOwn(sourceRecords, name)));
   const reviewRequired = new Set([
     ...[...allowed].filter((name) => sourceRecords[name].approvalRequired === true),
@@ -194,7 +194,7 @@ export function createKnowgrphFunctionGateway({
     const record = records[call.name];
     if (!record || !allowed.has(call.name)) {
       blockedCalls += 1;
-      return blocked("tool_not_allowlisted", `Function ${call.name} is not enabled by the Knowgrph gateway.`);
+      return blocked("tool_not_allowlisted", `Function ${call.name} is not enabled by the agentic-graph gateway.`);
     }
     if (call.caller?.type !== "direct"
       || call.policy?.revision !== record.revision
@@ -309,7 +309,7 @@ export function createKnowgrphFunctionGateway({
       if (!payload || typeof payload !== "object" || Array.isArray(payload) || payload.ok !== true) {
         await releaseExecution(executionClaim);
         blockedCalls += 1;
-        return blocked("tool_upstream_blocked", `Knowgrph blocked function ${call.name}.`, {
+        return blocked("tool_upstream_blocked", `agentic-graph blocked function ${call.name}.`, {
           retryable: Boolean(executionClaim),
           executionReceipt: preparedReceipt?.evidence,
         });
@@ -359,7 +359,7 @@ export function createKnowgrphFunctionGateway({
     } catch {
       await releaseExecution(executionClaim);
       blockedCalls += 1;
-      return blocked("tool_gateway_failed", `Knowgrph function ${call.name} failed at the gateway boundary.`, {
+      return blocked("tool_gateway_failed", `agentic-graph function ${call.name} failed at the gateway boundary.`, {
         retryable: Boolean(executionClaim),
         executionReceipt: preparedReceipt?.evidence,
       });

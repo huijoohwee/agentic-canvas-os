@@ -14,7 +14,7 @@ export const REPOSITORY_PACKING_INVOCATION = Object.freeze({
   binding: "@repository-root",
   proofBinding: "@runtime-proof",
   text: "/repository.pack #repository-packing @repository-root @runtime-proof",
-  tool: "agenticgraph.repository.pack",
+  tool: "agentic-graph.repository.pack",
 });
 
 export const REPOSITORY_PACKING_BOUNDS = Object.freeze({
@@ -41,7 +41,7 @@ const TOKEN_CONTRACTS = Object.freeze([
     sectionStart: "## Commands",
     sectionEnd: "## Command Shape",
     columns: 5,
-    expectedRow: "| `/repository.pack` | Pack the eligible text files in one exact local Git worktree into a deterministic content-addressed Markdown artifact. | exactly `@repository-root` and `@runtime-proof` | exactly `#repository-packing` | Knowgrph local stdio MCP returns `knowgrph-repository-pack-result/v1` with a verified repository-relative artifact path, source and artifact digests, typed counts, hard bounds, and exact zero network, model, token, and cost evidence. |",
+    expectedRow: "| `/repository.pack` | Pack the eligible text files in one exact local Git worktree into a deterministic content-addressed Markdown artifact. | exactly `@repository-root` and `@runtime-proof` | exactly `#repository-packing` | agentic-graph local stdio MCP returns `agentic-graph-repository-pack-result/v1` with a verified repository-relative artifact path, source and artifact digests, typed counts, hard bounds, and exact zero network, model, token, and cost evidence. |",
   },
   {
     token: REPOSITORY_PACKING_INVOCATION.semantic,
@@ -59,7 +59,7 @@ const TOKEN_CONTRACTS = Object.freeze([
     sectionStart: "## Bindings",
     sectionEnd: "## Binding Shape",
     columns: 4,
-    expectedRow: "| `@repository-root` | Exact local Git worktree root selected for deterministic repository packing. | Explicit operator path resolved under the configured Knowgrph local MCP root. | Must equal Git's canonical worktree root after symlink-safe validation; it grants reads only within that root and one content-addressed write under the approved output directory. |",
+    expectedRow: "| `@repository-root` | Exact local Git worktree root selected for deterministic repository packing. | Explicit operator path resolved under the configured agentic-graph local MCP root. | Must equal Git's canonical worktree root after symlink-safe validation; it grants reads only within that root and one content-addressed write under the approved output directory. |",
   },
 ]);
 
@@ -80,13 +80,13 @@ export const REPOSITORY_PACKING_DOCUMENTS = Object.freeze([
 
 export const REPOSITORY_PACKING_SOURCE_ROOTS = Object.freeze([".github", "__tests__", "agent-api/src", "scripts", "src", "web", "worker"]);
 export const REPOSITORY_PACKING_SOURCE_FILES = Object.freeze(["wrangler.jsonc"]);
-const COMPOSITION_ROW = "| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `agenticgraph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |";
+const COMPOSITION_ROW = "| `/repository.pack #repository-packing @repository-root @runtime-proof` | Resolve one exact local Git worktree into the single `agentic-graph.repository.pack` MCP request and bind only its verified content-addressed artifact metadata as proof. |";
 const EXTERNAL_PROJECT = ["repo", "mix"].join("");
 const PLANNING_CONTEXT = "repository-packing-ai-friendly-single-file-runtime";
 const PLANNING_DATE = "2026-07-24";
 const ATTRIBUTION_URL = ["https://github.com/yamadashy/", "repo", "mix"].join("");
 const REQUEST_ROWS = Object.freeze([
-  "| `repositoryPath` | string | `.` | Repository-relative path under the configured Knowgrph MCP root; it must resolve to an exact Git worktree root. |",
+  "| `repositoryPath` | string | `.` | Repository-relative path under the configured agentic-graph MCP root; it must resolve to an exact Git worktree root. |",
   "| `outputDirectory` | string | `data/outputs/repository-packs` | Repository-relative directory beneath the selected Git worktree; it must remain outside the packed inventory. |",
   "| `includePaths` | array of strings | `[]` | Optional repository-relative file or directory prefixes; empty means every eligible path. |",
   "| `excludePaths` | array of strings | `[]` | Optional repository-relative file or directory prefixes applied after inclusion. |",
@@ -113,13 +113,13 @@ const PROJECTION_ROWS = Object.freeze([
     sectionEnd: "## Instruction Audit Harness Contract",
     key: "Repository Packing",
     columns: 5,
-    markers: ["repositoryPath, outputDirectory, includePaths, excludePaths, maxFiles, maxFileBytes, maxTotalBytes", "knowgrph-repository-pack-result/v1", "secrets, escape, drift, overflow", "network, model, Prod, and Cloudflare"],
+    markers: ["repositoryPath, outputDirectory, includePaths, excludePaths, maxFiles, maxFileBytes, maxTotalBytes", "agentic-graph-repository-pack-result/v1", "secrets, escape, drift, overflow", "network, model, Prod, and Cloudflare"],
   },
   {
     document: "MCP-GATEWAY.md",
     sectionStart: "## Repository Packing Capability",
     sectionEnd: "## Workspace Artifact Lifecycle Capabilities",
-    key: "`agenticgraph.repository.pack`",
+    key: "`agentic-graph.repository.pack`",
     columns: 3,
     markers: ["return verified metadata only", "Local, idempotent, bounded, zero-network, zero-model, and zero-cost", "Prod, and Cloudflare fail before publication"],
   },
@@ -137,7 +137,7 @@ const PROJECTION_ROWS = Object.freeze([
     sectionEnd: "## External Runtime Gates",
     key: "Repository packing contract",
     columns: 4,
-    markers: [REPOSITORY_PACKING_INVOCATION.text, REPOSITORY_PACKING_INVOCATION.tool, "contract/runtime/stdio/independence tests", "Runtime-ready for ACOS contract", "exact integrated Knowgrph revision and docs pin"],
+    markers: [REPOSITORY_PACKING_INVOCATION.text, REPOSITORY_PACKING_INVOCATION.tool, "contract/runtime/stdio/independence tests", "Runtime-ready for ACOS contract", "exact integrated agentic-graph revision and docs pin"],
   },
   {
     document: "RUNTIME-PROOF.md",
@@ -145,7 +145,7 @@ const PROJECTION_ROWS = Object.freeze([
     sectionEnd: "## Proof Ledger",
     key: "Repository packing contract",
     columns: 3,
-    markers: [REPOSITORY_PACKING_INVOCATION.text, REPOSITORY_PACKING_INVOCATION.skill, REPOSITORY_PACKING_INVOCATION.tool, "exact Knowgrph proof", "Alternate aliases", "Prod, or Cloudflare"],
+    markers: [REPOSITORY_PACKING_INVOCATION.text, REPOSITORY_PACKING_INVOCATION.skill, REPOSITORY_PACKING_INVOCATION.tool, "exact agentic-graph proof", "Alternate aliases", "Prod, or Cloudflare"],
   },
   {
     document: "RUNTIME-PROOF.md",
@@ -161,7 +161,7 @@ const PROJECTION_ROWS = Object.freeze([
     sectionEnd: "## Revalidation",
     key: "Repository packing contract",
     columns: 3,
-    markers: ["Runtime-ready for ACOS contract", "exact protected Knowgrph tool proof", "exact Agentic Canvas OS docs revision pin"],
+    markers: ["Runtime-ready for ACOS contract", "exact protected agentic-graph tool proof", "exact Agentic Canvas OS docs revision pin"],
   },
   {
     document: "VALIDATION-RUNBOOK.md",
@@ -169,7 +169,7 @@ const PROJECTION_ROWS = Object.freeze([
     sectionEnd: "## Deploy Guard",
     key: "Repository Packing",
     columns: 2,
-    markers: ["npm run repository-packing-contract:check", "exact Knowgrph focused `repository-pack` contract, runtime, stdio, and independence tests", "zero network/model/token/cost", "no Prod or Cloudflare action"],
+    markers: ["npm run repository-packing-contract:check", "exact agentic-graph focused `repository-pack` contract, runtime, stdio, and independence tests", "zero network/model/token/cost", "no Prod or Cloudflare action"],
   },
   {
     document: "README.md",
@@ -177,7 +177,7 @@ const PROJECTION_ROWS = Object.freeze([
     sectionEnd: "## Runtime Position",
     key: "`REPOSITORY-PACKING.md`",
     columns: 3,
-    markers: [REPOSITORY_PACKING_INVOCATION.text, "one Knowgrph stdio MCP tool", "content-addressed Markdown", "clean-room independence"],
+    markers: [REPOSITORY_PACKING_INVOCATION.text, "one agentic-graph stdio MCP tool", "content-addressed Markdown", "clean-room independence"],
   },
   {
     document: "FACTS.md",
@@ -232,7 +232,7 @@ export function validateRepositoryPackingContractDocuments(documents) {
   requireMarkers(required["DICTIONARY-COMMAND.md"], "DICTIONARY-COMMAND.md repository tuple", [
     "exactly `@repository-root` and `@runtime-proof`",
     "exactly `#repository-packing`",
-    "`knowgrph-repository-pack-result/v1`",
+    "`agentic-graph-repository-pack-result/v1`",
   ], failures);
   requireMarkers(required["DICTIONARY-BINDING.md"], "DICTIONARY-BINDING.md root isolation", [
     "Must equal Git's canonical worktree root after symlink-safe validation",
@@ -246,7 +246,7 @@ export function validateRepositoryPackingContractDocuments(documents) {
     `invocation: "${REPOSITORY_PACKING_INVOCATION.text}"`,
     `skill_id: "${REPOSITORY_PACKING_INVOCATION.skill}"`,
     `mcp_tool: "${REPOSITORY_PACKING_INVOCATION.tool}"`,
-    'runtime_owner: "$GITHUB_ROOT/knowgrph/mcp/repository-pack-contract.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-error.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-format.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-git.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-publisher.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-runtime.js; $GITHUB_ROOT/knowgrph/mcp/local-tool-contract.js; $GITHUB_ROOT/knowgrph/mcp/os-status-runtime.js; $GITHUB_ROOT/knowgrph/mcp/server.js"',
+    'runtime_owner: "$GITHUB_ROOT/agentic-graph/mcp/repository-pack-contract.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-error.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-format.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-git.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-publisher.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-runtime.js; $GITHUB_ROOT/agentic-graph/mcp/local-tool-contract.js; $GITHUB_ROOT/agentic-graph/mcp/os-status-runtime.js; $GITHUB_ROOT/agentic-graph/mcp/server.js"',
     ATTRIBUTION_URL,
     'external_reference_policy: "attribution-only clean-room research"',
     'external_dependency: "forbidden"',
@@ -318,7 +318,7 @@ export function validateRepositoryPackingContractDocuments(documents) {
   }
 
   const externalInvocationAlias = new RegExp(`[\\/#@]${EXTERNAL_PROJECT}[\\w.-]*`, "i");
-  const externalToolAlias = new RegExp(`\\bknowgrph\\.${EXTERNAL_PROJECT}[\\w.-]*\\b`, "i");
+  const externalToolAlias = new RegExp(`\\bagentic-graph\\.${EXTERNAL_PROJECT}[\\w.-]*\\b`, "i");
   for (const name of ["DICTIONARY-COMMAND.md", "DICTIONARY-SEMANTIC.md", "DICTIONARY-BINDING.md"]) {
     if (externalInvocationAlias.test(required[name])) {
       failures.push(`${name}: forbidden external compatibility alias`);
@@ -389,7 +389,7 @@ export function validateRepositoryPackingPlanningRow(planningText) {
     `\`${REPOSITORY_PACKING_INVOCATION.tool}\``,
     "`runRepositoryPackTool`",
     "Agentic Canvas OS owns",
-    "Knowgrph owns",
+    "agentic-graph owns",
     "exact revision",
     "stdio",
     "protected integration",

@@ -10,14 +10,14 @@ import test from "node:test";
 import {
   AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE,
   AGENTIC_GRAPH_MCP_TOOLS,
-} from "../src/knowgrph-mcp-client.js";
+} from "../src/agentic-graph-mcp-client.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const EXPECTED_TOOLS = [
-  "agenticgraph.knowledge_graph.ingest",
-  "agenticgraph.knowledge_graph.parser_generate",
-  "agenticgraph.knowledge_graph.query",
-  "agenticgraph.knowledge_graph.explain_edge",
+  "agentic-graph.knowledge_graph.ingest",
+  "agentic-graph.knowledge_graph.parser_generate",
+  "agentic-graph.knowledge_graph.query",
+  "agentic-graph.knowledge_graph.explain_edge",
 ];
 const EXPECTED_DISPATCH = [
   ["/agentic.graph.ingest", EXPECTED_TOOLS[0]],
@@ -54,7 +54,7 @@ const RETIRED_RUNTIME_PATHS = [
   "__tests__/knowledge-graph-parser-generator.test.mjs",
 ];
 
-test("canonical commands map to exactly four Knowgrph-owned MCP tools", () => {
+test("canonical commands map to exactly four agentic-graph-owned MCP tools", () => {
   assert.deepEqual(AGENTIC_GRAPH_MCP_TOOLS, {
     ingest: EXPECTED_TOOLS[0],
     generateParser: EXPECTED_TOOLS[1],
@@ -64,7 +64,7 @@ test("canonical commands map to exactly four Knowgrph-owned MCP tools", () => {
 
   const contract = read("docs/AGENTIC-GRAPH.md");
   const dispatch = [...readFrontmatter(contract).matchAll(
-    /^  "(\/agentic\.graph(?:\.[a-z]+)+)": "(agenticgraph\.knowledge_graph\.[a-z_]+)"$/gmu,
+    /^  "(\/agentic\.graph(?:\.[a-z]+)+)": "(agentic-graph\.knowledge_graph\.[a-z_]+)"$/gmu,
   )].map((match) => [match[1], match[2]]);
   assert.deepEqual(dispatch, EXPECTED_DISPATCH);
 
@@ -73,7 +73,7 @@ test("canonical commands map to exactly four Knowgrph-owned MCP tools", () => {
     "docs/MCP-GATEWAY.md",
   ]) {
     assert.deepEqual(
-      [...new Set(read(file).match(/agenticgraph\.knowledge_graph\.[a-z_]+/gu) ?? [])],
+      [...new Set(read(file).match(/agentic-graph\.knowledge_graph\.[a-z_]+/gu) ?? [])],
       EXPECTED_TOOLS,
       `${file} tool projection`,
     );
@@ -146,10 +146,10 @@ test("agentic graph documentation remains bounded and contract/client-ready", ()
 
   const contract = read("docs/AGENTIC-GRAPH.md");
   assert.match(contract, /contract\/client-ready/iu);
-  assert.match(contract, /Knowgrph owns (?:the )?executable/iu);
+  assert.match(contract, /agentic-graph owns (?:the )?executable/iu);
   assert.match(contract, /expectedSnapshotDigest/u);
   assert.match(contract, /FloatingPanel Skills & Commands/iu);
-  assert.match(contract, /agenticgraph\.agentic_canvas_os\.docs\.invoke/u);
+  assert.match(contract, /agentic-graph\.agentic_canvas_os\.docs\.invoke/u);
   assert.match(contract, /\/agentic\.graph\.parser\.generate/u);
   assert.match(contract, new RegExp(`profile: "${AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE}"`, "u"));
   assert.match(contract, /alternative to `descriptors`/u);

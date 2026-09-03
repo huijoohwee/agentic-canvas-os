@@ -57,11 +57,11 @@ variables, not a standalone writable store.
 
 Observed path:
 
-1. `agent-api/src/app.js` reads `KNOWGRPH_FUNCTION_TOOL_ALLOWLIST` and
-   `KNOWGRPH_FUNCTION_REVIEW_REQUIRED`.
-2. `parseKnowgrphFunctionToolAllowlist(...)` converts each env value into a
+1. `agent-api/src/app.js` reads `AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST` and
+   `AGENTIC_OS_FUNCTION_REVIEW_REQUIRED`.
+2. `parseAgenticGraphFunctionToolAllowlist(...)` converts each env value into a
    token list at app construction time.
-3. `agent-api/src/knowgrph-function-gateway.js` builds an in-memory `allowed`
+3. `agent-api/src/agentic-graph-function-gateway.js` builds an in-memory `allowed`
    `Set` and dispatch checks `allowed.has(call.name)`.
 
 Recorded answer: `environment variable seeding an in-Worker owner`.
@@ -102,7 +102,7 @@ the non-operator mechanism that produced the draft.
 
 | Token | Owner | Tool identity | Typed arguments | Artifact produced | Promotion owner | Trust boundary |
 |---|---|---|---|---|---|---|
-| `/skill.propose` | Skill Evolution contract | `agenticgraph.skill.evolve` | skill text evolution inputs | `skill-text` proposal | `/skill.manage` | review-gated |
+| `/skill.propose` | Skill Evolution contract | `agentic-graph.skill.evolve` | skill text evolution inputs | `skill-text` proposal | `/skill.manage` | review-gated |
 | `/propose-skill` | ACOS Skill Proposer | `acos.skill_proposer.propose` | `{ gap_signal }` | `agent-definition` draft | `acos-skill-registry-gate` | approval-gated |
 
 Bindings remain distinct:

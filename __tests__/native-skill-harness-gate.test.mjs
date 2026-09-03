@@ -75,7 +75,7 @@ function createDirectDraft(overrides = {}) {
     schema: "acos-skill-draft/v1",
     draft_id: "gap-001:1000",
     status: "proposed",
-    adapter_id: "knowgrph",
+    adapter_id: "agentic-graph",
     gap_signal_id: "gap-001",
     agent_definition: createValidAgentDefinition({ id: "direct-draft-agent", revision: "direct-v1" }),
     rationale: "Directly written draft.",
@@ -220,7 +220,7 @@ test("a proposer-written draft and a directly written draft promote identically"
     schema: "acos-skill-draft/v1",
     draft_id: "gap-001:1000",
     status: "proposed",
-    adapter_id: "knowgrph",
+    adapter_id: "agentic-graph",
     gap_signal_id: "gap-001",
     agent_definition: proposerOutcome
       ? { ...createValidAgentDefinition({ id: "direct-draft-agent", revision: "direct-v1" }) }
@@ -256,7 +256,7 @@ test("a draft whose proposing mechanism collides with the gate identity throws b
     schema: "acos-skill-draft/v1",
     draft_id: "forged:1",
     status: "proposed",
-    adapter_id: "knowgrph",
+    adapter_id: "agentic-graph",
     gap_signal_id: "gap-001",
     agent_definition: createValidAgentDefinition({ id: "forged-agent", revision: "forged-v1" }),
     rationale: "Forged proposal.",

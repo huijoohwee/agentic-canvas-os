@@ -16,10 +16,12 @@ import {
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-// Pinned pre-feature digests: this feature must not move either file.
-const WRANGLER_SHA256 = "32f1c08f4833f04bcce5bae2f851289ae9b3e779e273eca86877ed654d806c46";
-const SKILL_EVOLUTION_SHA256 = "fcf84f312ae010bd665c58d0648ac9712141522f219c733fa53e93bd459c7bc9";
+// Pinned identity-migration digests: later work must not broaden this narrow rename.
+const WRANGLER_SHA256 = "614a632447b89dd157007ca56311b86948d51625a67c556ac1be9cbb9137e330";
+const SKILL_EVOLUTION_SHA256 = "e2c17a57a15de7ad47699908739abfc4c8f4b42760cc280d937be6ad2d521a08";
 const PROPERTY_SEED = 20260817;
+const retiredNamespace = ["k", "now", "grph"].join("");
+const retiredProductEnvPrefix = ["AGENTIC", "GRAPH_"].join("");
 
 function parseLocalImports(text) {
   return [...text.matchAll(/from\s+["'](\.\/[^"']+)["']/g)].map((match) => match[1]);
@@ -75,13 +77,18 @@ test("the gate accepts no model-adapter-shaped and no fetch-shaped parameter", (
   assert.equal(gate.stats().modelCallCapability, false);
 });
 
-test("wrangler.jsonc is byte-identical to the pre-feature digest with unchanged binding counts", async () => {
+test("wrangler.jsonc pins the identity migration with unchanged binding counts", async () => {
   const text = await readFile(path.join(REPOSITORY_ROOT, "wrangler.jsonc"), "utf8");
   assert.equal(
     createHash("sha256").update(text).digest("hex"),
     WRANGLER_SHA256,
-    "wrangler.jsonc changed; the blocked prerequisite gate forbids any binding change",
+    "wrangler.jsonc drifted beyond the reviewed identity migration",
   );
+  assert.match(text, /AGENTIC_OS_MCP_ENDPOINT/);
+  assert.match(text, /agentic-mcp-dev/);
+  assert.equal(text.toLowerCase().includes(retiredNamespace), false, "retired worker identity must not return");
+  assert.equal(new RegExp(`\\b${retiredProductEnvPrefix}`).test(text), false, "retired product runtime env names must not return");
+  assert.equal(text.includes("/agentic-graph"), false, "agentic-graph runtime routes must not return");
   // Comment-tolerant parse of the JSONC body for the structural counts.
   const parsed = JSON.parse(text.replace(/^\s*\/\/.*$/gm, ""));
   assert.equal(parsed.durable_objects.bindings.length, 2);
@@ -89,17 +96,26 @@ test("wrangler.jsonc is byte-identical to the pre-feature digest with unchanged 
   assert.equal(parsed.ratelimits.length, 2);
   assert.equal(parsed.assets ? 1 : 0, 1);
   assert.equal(parsed.env.dev.services.length, 1);
+  assert.deepEqual(parsed.env.dev.services[0], {
+    binding: "AGENTIC_OS_MCP_SERVICE",
+    service: "agentic-mcp-dev",
+  });
+  assert.equal(
+    parsed.env.dev.vars.AGENTIC_OS_MCP_ENDPOINT,
+    "https://agentic-mcp-dev.huijoohwee.workers.dev/agentic-os/control-plane/mcp",
+  );
   assert.equal("kv_namespaces" in parsed, false);
   assert.equal("d1_databases" in parsed, false);
 });
 
-test("docs/SKILL-EVOLUTION.md is unchanged and its flag semantics are untouched", async () => {
+test("docs/SKILL-EVOLUTION.md preserves flag semantics through the identity migration", async () => {
   const text = await readFile(path.join(REPOSITORY_ROOT, "docs/SKILL-EVOLUTION.md"), "utf8");
   assert.equal(
     createHash("sha256").update(text).digest("hex"),
     SKILL_EVOLUTION_SHA256,
-    "docs/SKILL-EVOLUTION.md changed; the skill-text ownership boundary must stay untouched",
+    "docs/SKILL-EVOLUTION.md drifted beyond the reviewed identity migration",
   );
+  assert.equal(text.toLowerCase().includes(retiredNamespace), false, "retired product identity must not return");
   // No new module sets, reads, or reinterprets the Skill Evolution flags.
   for (const modulePath of ["agent-api/src/skill-proposer.js", "agent-api/src/skill-registry-gate.js", "agent-api/src/adapter-registration.js"]) {
     const moduleText = await readFile(path.join(REPOSITORY_ROOT, modulePath), "utf8");
@@ -154,7 +170,7 @@ test("Property 14: Evaluator independence as a structural invariant", async () =
           schema: "acos-skill-draft/v1",
           draft_id: draftId,
           status: "proposed",
-          adapter_id: "knowgrph",
+          adapter_id: "agentic-graph",
           gap_signal_id: "gap-001",
           agent_definition: {
             id: "fixture-agent",

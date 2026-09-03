@@ -14,7 +14,7 @@ The Agent Definition schema is extended with `status: proposed | active | deprec
 
 The authoritative source is `$GITHUB_ROOT/joohwee/prd-tad-ard/acos-agentic-runtime-ready-production-verified-prd-tad-adr.md` (PRD + Architecture/TAD + ADR-1 + ADR-2 + Readiness Gap Matrix). Every VCC stated there maps to at least one acceptance criterion below.
 
-Scope tiers are carried forward from the PRD's MoSCoW list and are marked per requirement. **Min-Viable Scope is the Must tier proven against the existing `knowgrph` adapter only.**
+Scope tiers are carried forward from the PRD's MoSCoW list and are marked per requirement. **Min-Viable Scope is the Must tier proven against the existing `agentic-graph` adapter only.**
 
 ---
 
@@ -33,9 +33,9 @@ These were confirmed directly against the repository. Implementers should not re
 | **There is no KV or D1 binding in `wrangler.jsonc`.** The repository has Durable Objects and rate limiters only. The TAD's topology table names "Draft Registry Store - Existing KV/D1 namespace" and claims reuse of existing infrastructure. That claim does not hold. | `wrangler.jsonc` contains `durable_objects`, `ratelimits`, `assets`, `vars`, `secrets`, and one `services` binding under `env.dev`. No `kv_namespaces`, no `d1_databases`. |
 | devDependencies are only `ajv 8.20.0`, `fast-check 3.23.2`, `wrangler 4.120.0`. Node `>=22`. `npm run check` = `npm test && npm run web:build && npm run docs:check`. | `package.json`. |
 | `README.md` marks Agent Swarm, Agent Toolkit, Agent Orchestration, Agent Runtime Composition, Progressive Agents, Tool Search, Programmatic Tool Calling, Sandbox Agents, Agent Definitions, Autonomous Runtime, and Application Composition as `configured: false` with provider execution `unverified`. The word `unverified` appears 15 times. | `README.md`. |
-| `/skill.propose` **already exists** as a declared command owned by `docs/DICTIONARY-COMMAND.md`, bound to `#skill-evolution` and `@skill-catalog`, with MCP tool identity `knowgrph.skill.propose` declared in `docs/MCP-GATEWAY.md`. | `docs/DICTIONARY-COMMAND.md`, `docs/DICTIONARY-BINDING.md`, `docs/FACTS.md`, `docs/MCP-GATEWAY.md`, `docs/SKILLS.md`. |
+| `/skill.propose` **already exists** as a declared command owned by `docs/DICTIONARY-COMMAND.md`, bound to `#skill-evolution` and `@skill-catalog`, with MCP tool identity `agentic-graph.skill.propose` declared in `docs/MCP-GATEWAY.md`. | `docs/DICTIONARY-COMMAND.md`, `docs/DICTIONARY-BINDING.md`, `docs/FACTS.md`, `docs/MCP-GATEWAY.md`, `docs/SKILLS.md`. |
 | `/propose-skill`, `#skill-candidate`, and `@skill-registry` appear in **no** repository document today. They are new tokens. | Repository-wide search of `docs/**/*.md` returned no matches. |
-| `docs/SKILL-EVOLUTION.md` is a spec-complete contract (`schema: agentic-skill-evolution/v1`) with MCP tool `knowgrph.skill.evolve`, invocation `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator`, a `review_pending` terminal proposal, `/skill.manage` as the separate operator-gated persistence owner, hard `applied: false` / `modelWeightsMutated: false` / `deploymentAttempted: false` flags, and `external_dependency: forbidden` against Microsoft SkillOpt. | Read directly. |
+| `docs/SKILL-EVOLUTION.md` is a spec-complete contract (`schema: agentic-skill-evolution/v1`) with MCP tool `agentic-graph.skill.evolve`, invocation `/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator`, a `review_pending` terminal proposal, `/skill.manage` as the separate operator-gated persistence owner, hard `applied: false` / `modelWeightsMutated: false` / `deploymentAttempted: false` flags, and `external_dependency: forbidden` against Microsoft SkillOpt. | Read directly. |
 | `agent-api/src/` currently contains **59** `.js` modules, and `worker/` + `src/` + `agent-api/src/` currently total **19,834** lines. | `ls agent-api/src/*.js | wc -l`; `find worker src agent-api/src -name '*.js' -exec cat {} + | wc -l`. |
 
 ---
@@ -50,7 +50,7 @@ The PRD's Dependencies section states this feature "must not start before" Must-
 
 ### Conflict 2 - Overlap with the existing Skill Evolution contract
 
-`docs/SKILL-EVOLUTION.md` already owns a bounded loop that terminates in an operator-reviewed proposal, with `/skill.manage` as the separate persistence owner and an explicit clean-room ban on an external reference implementation. `/skill.propose` and `knowgrph.skill.propose` already exist. The scopes differ (Skill Evolution optimizes existing skill *text* against a frozen executor; this feature *creates* new Agent Definitions from capability gaps), but ADR-1's own "single owner per contract" principle is at risk if both ship as separate harnesses with separate registries and separate promotion gates. Requirements 15 and 16 fix the ownership boundary and the token namespace resolution.
+`docs/SKILL-EVOLUTION.md` already owns a bounded loop that terminates in an operator-reviewed proposal, with `/skill.manage` as the separate persistence owner and an explicit clean-room ban on an external reference implementation. `/skill.propose` and `agentic-graph.skill.propose` already exist. The scopes differ (Skill Evolution optimizes existing skill *text* against a frozen executor; this feature *creates* new Agent Definitions from capability gaps), but ADR-1's own "single owner per contract" principle is at risk if both ship as separate harnesses with separate registries and separate promotion gates. Requirements 15 and 16 fix the ownership boundary and the token namespace resolution.
 
 ### Conflict 3 - Product module growth
 
@@ -361,7 +361,7 @@ This feature proposes three harness modules plus an `adapters/` tree while the p
 1. THE Native_Skill_Creation_Harness SHALL expose no code path that promotes a Draft_Definition to `active` without an Operator_Instruction_Reference.
 2. THE Native_Skill_Creation_Harness SHALL expose no configuration value, environment variable, or flag whose effect is to open the Promotion_Gate boundary by default.
 3. THE Native_Skill_Creation_Harness SHALL introduce no dependency on and no vendored copy of any member of Forbidden_Dependency_Set, per Requirement 12.
-4. THE Min-Viable Scope SHALL be proven against the existing `knowgrph` adapter only, and the second-adapter genericity proof SHALL remain outside this increment.
+4. THE Min-Viable Scope SHALL be proven against the existing `agentic-graph` adapter only, and the second-adapter genericity proof SHALL remain outside this increment.
 
 ---
 

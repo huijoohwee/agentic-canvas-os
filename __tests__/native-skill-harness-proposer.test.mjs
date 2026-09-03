@@ -151,7 +151,7 @@ test("a valid candidate writes exactly one proposed draft and returns exactly th
   assert.equal(stored.status, "proposed");
   assert.equal(stored.consumed, false);
   assert.equal(stored.proposing_mechanism.identity, SKILL_PROPOSER_IDENTITY);
-  assert.deepEqual(await harness.draftStore.indexList("knowgrph"), [stored.draft_id]);
+  assert.deepEqual(await harness.draftStore.indexList("agentic-graph"), [stored.draft_id]);
 
   // Inertness: the active registry and the tool allowlist are untouched.
   assert.equal(captureSnapshot(harness.registry), snapshotBefore);
@@ -297,7 +297,7 @@ test("gapSignalFromToolSearchDenial maps a tool-search denial into a Gap_Signal"
     { authorized: false, reasonCode: "tool_not_granted" },
     {
       signal_id: "gap-009",
-      adapter_id: "knowgrph",
+      adapter_id: "agentic-graph",
       capability: "update agent run notes",
       missing_tool_names: ["update_agent_run_note"],
       observed_at_ms: 1786950000000,
@@ -448,7 +448,7 @@ test("Property 9: All-or-nothing draft persistence", async () => {
           assert.equal(stored.consumed, false);
         } else {
           assert.equal(indexWrites.length, 0);
-          assert.equal((await harness.draftStore.indexList("knowgrph")).length, 0);
+          assert.equal((await harness.draftStore.indexList("agentic-graph")).length, 0);
           assert.ok(
             (outcome && outcome.status === "no-draft")
               || thrown instanceof SkillProposalBlock,

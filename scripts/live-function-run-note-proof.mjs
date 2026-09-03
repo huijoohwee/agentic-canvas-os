@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 import { mintReviewerToken } from "../agent-api/src/auth.js";
-import { createKnowgrphMcpClient } from "../src/knowgrph-mcp-client.js";
+import { createAgenticGraphMcpClient } from "../src/agentic-graph-mcp-client.js";
 
 const APPROVAL = "I_APPROVE_ONE_BOUNDED_DEV_PROVIDER_RUN";
 const FUNCTION_NAME = "update_agent_run_note";
@@ -17,6 +17,15 @@ function devUrl(value, name) {
   const url = new URL(value);
   if (url.protocol !== "https:" || !url.hostname.endsWith(".workers.dev") || !url.hostname.includes("-dev.")) {
     throw new Error(`${name} must be an HTTPS Dev workers.dev URL.`);
+  }
+  return url;
+}
+
+function agenticMcpDevUrl(value, name) {
+  const url = devUrl(value, name);
+  if (url.hostname !== "agentic-mcp-dev.huijoohwee.workers.dev"
+    || url.pathname !== "/agentic-os/control-plane/mcp" || url.search || url.hash) {
+    throw new Error(`${name} must be the Agentic MCP Dev control-plane URL.`);
   }
   return url;
 }
@@ -74,9 +83,9 @@ function proofReceipt(result) {
   }
   const receipt = records[0].receipt;
   if (receipt?.schema !== "function-execution-receipt/v1" || receipt.phase !== "completed"
-    || receipt.upstreamReceipt?.schema !== "knowgrph-tool-execution-receipt/v1"
+    || receipt.upstreamReceipt?.schema !== "agentic-os-tool-execution-receipt/v1"
     || !["applied", "replayed"].includes(receipt.upstreamReceipt.status)) {
-    throw new Error("Completed function run did not expose matching native Knowgrph receipt evidence.");
+    throw new Error("Completed function run did not expose matching native agentic-graph receipt evidence.");
   }
   return receipt;
 }
@@ -86,8 +95,11 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
     throw new Error(`AGENTIC_LIVE_PROVIDER_APPROVAL must equal ${APPROVAL}.`);
   }
   const agenticBase = devUrl(required(env, "AGENTIC_DEV_URL"), "AGENTIC_DEV_URL");
-  const mcpEndpoint = devUrl(required(env, "KNOWGRPH_DEV_MCP_ENDPOINT"), "KNOWGRPH_DEV_MCP_ENDPOINT");
-  const mcpBearer = required(env, "AGENTICGRAPH_AGENT_RUNTIME_BEARER_TOKEN");
+  const mcpEndpoint = agenticMcpDevUrl(
+    required(env, "AGENTIC_OS_DEV_MCP_ENDPOINT"),
+    "AGENTIC_OS_DEV_MCP_ENDPOINT",
+  );
+  const mcpBearer = required(env, "AGENTIC_OS_AGENT_RUNTIME_BEARER_TOKEN");
   const reviewSecret = required(env, "AGENT_REVIEW_JWT_SECRET");
   const suffix = typeof env.AGENTIC_LIVE_PROOF_SUFFIX === "string" && env.AGENTIC_LIVE_PROOF_SUFFIX.trim()
     ? env.AGENTIC_LIVE_PROOF_SUFFIX.trim()
@@ -104,7 +116,7 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
     throw new Error("Dev Agentic Worker is not ready for durable reviewed function calling.");
   }
 
-  const mcpClient = createKnowgrphMcpClient({
+  const mcpClient = createAgenticGraphMcpClient({
     endpoint: mcpEndpoint.toString(),
     authToken: mcpBearer,
     fetchImpl: mcpTransport(fetchImpl),
@@ -119,7 +131,7 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
       shotCount: 1,
     });
     if (seeded?.runId !== targetRunId || seeded?.persistence?.persisted !== true) {
-      throw new Error("Knowgrph Dev Worker did not persist the proof manifest.");
+      throw new Error("agentic-graph Dev Worker did not persist the proof manifest.");
     }
   }
 
@@ -169,7 +181,7 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
     headers: { authorization: `Bearer ${mcpBearer}` },
   })).body;
   if (readBack.manifest?.operatorNote?.text !== note || readBack.manifest?.operatorNote?.revision !== 1) {
-    throw new Error("Persisted Knowgrph operator note does not match the reviewed function result.");
+    throw new Error("Persisted agentic-graph operator note does not match the reviewed function result.");
   }
 
   return Object.freeze({

@@ -10,13 +10,13 @@ status: "spec-complete"
 authority: "canonical skill-evolution invocation, optimization semantics, and review-only handoff"
 publish_policy: "Dev-only; no automatic skill write, Prod mirror mutation, or Cloudflare authority"
 runtime_scope: "canonical contract and validating MCP client transport for bounded resumable skill-text optimization"
-runtime_claim: "spec-complete ACOS contract and fail-closed transport validation; executable optimization remains unproven until exact integrated Knowgrph tests are cited"
+runtime_claim: "spec-complete ACOS contract and fail-closed transport validation; executable optimization remains unproven until exact integrated agentic-graph tests are cited"
 runtime_proof: "RUNTIME-PROOF.md"
 invocation:
   action: "/skill.evolve"
   semantics: ["#skill-evolution"]
   bindings: ["@skill-catalog", "@skill-policy", "@runtime-proof", "@operator"]
-mcp_tool: "agenticgraph.skill.evolve"
+mcp_tool: "agentic-graph.skill.evolve"
 external_pattern_sources:
   - "https://github.com/microsoft/SkillOpt"
 external_dependency: "forbidden"
@@ -28,7 +28,7 @@ external_dependency: "forbidden"
 
 Skill text can improve through a bounded sequence of training batches, mini-batches, and held-out validation gates while the executor and any underlying model remain frozen. The only successful terminal artifact is a review-pending proposal. The harness never applies the proposal, changes model weights, merges code, releases, or deploys.
 
-This contract adapts the general idea of optimizing instructions around a frozen agent into an original Agentic Canvas OS and Knowgrph design. Microsoft SkillOpt is a capability reference only. No SkillOpt code, prose, prompt, schema, algorithm, test, fixture, example, default, package, service, generated artifact, or repository layout is copied or required.
+This contract adapts the general idea of optimizing instructions around a frozen agent into an original Agentic Canvas OS and agentic-graph design. Microsoft SkillOpt is a capability reference only. No SkillOpt code, prose, prompt, schema, algorithm, test, fixture, example, default, package, service, generated artifact, or repository layout is copied or required.
 
 ## Canonical Invocation
 
@@ -43,7 +43,7 @@ The three dictionaries remain the only `/`, `#`, and `@` token owners. This cont
 | Owner | Responsibility | Forbidden ownership |
 |---|---|---|
 | Agentic Canvas OS | Invocation tokens, request and result contract, clean-room boundary, validation requirements, review-only handoff, and focused contract proof. | Candidate execution, durable optimization scheduling, a second skill registry, or direct canonical skill writes. |
-| Knowgrph local MCP | `agenticgraph.skill.evolve`, immutable run admission, resumable state, deterministic batching, injected adapters, budgets, validation gates, cost evidence, and proposal artifact. | Invocation aliases, model-weight updates, automatic skill apply, merge, release, or deployment. |
+| agentic-graph local MCP | `agentic-graph.skill.evolve`, immutable run admission, resumable state, deterministic batching, injected adapters, budgets, validation gates, cost evidence, and proposal artifact. | Invocation aliases, model-weight updates, automatic skill apply, merge, release, or deployment. |
 | Frozen executor adapter | Run exact skill candidates against referenced training cases and return typed evidence. | Fine-tuning, gradient updates, optimizer state, provider-specific authority, or unbounded calls. |
 | Candidate adapter | Propose bounded text mutations from training evidence only. | Validation-case access, canonical writes, hidden prompts, or exceeding mutation and spend limits. |
 | Held-out evaluator | Exclusively resolve validation references, own isolated validation rollouts through the frozen executor, compute the declared metric and gates, and return aggregate evidence and cost. | Giving the candidate adapter validation references, payloads, outputs, scores, per-case traces, or evaluator state. |
@@ -67,10 +67,10 @@ One MCP tool uses a strict operation discriminator:
 
 ## Request Contract
 
-Every request uses `knowgrph-skill-evolution-request/v1` and includes:
+Every request uses `agentic-graph-skill-evolution-request/v1` and includes:
 
 ```text
-schema: "knowgrph-skill-evolution-request/v1"
+schema: "agentic-graph-skill-evolution-request/v1"
 operation: "plan" | "start" | "step" | "status" | "cancel"
 invocation:
   command: "/skill.evolve"
@@ -158,7 +158,7 @@ No loop is implicit. Stop reasons are typed and include `completed`, `plateau`, 
 
 ## Result Contract
 
-Every successful tool call returns `knowgrph-skill-evolution-result/v1` with:
+Every successful tool call returns `agentic-graph-skill-evolution-result/v1` with:
 
 ```text
 runId, revision, operation,
@@ -242,4 +242,4 @@ Every other state returns `proposal: null`. A review-pending proposal references
 
 ## Promotion Boundary
 
-The ACOS invocation contract is spec-complete and its client transport is fail-closed under model-free tests. This is not Skill Evolution runtime proof. Runtime-ready promotion requires `RUNTIME-PROOF.md` to cite the exact integrated ACOS and Knowgrph revisions plus exact passing Knowgrph local MCP, persistence, adapter-isolation, validation, idempotency, budget, and no-write test commands. Until those citations exist, executable optimization remains gated. No result proves general skill quality, provider availability, production behavior, or deployment.
+The ACOS invocation contract is spec-complete and its client transport is fail-closed under model-free tests. This is not Skill Evolution runtime proof. Runtime-ready promotion requires `RUNTIME-PROOF.md` to cite the exact integrated ACOS and agentic-graph revisions plus exact passing agentic-graph local MCP, persistence, adapter-isolation, validation, idempotency, budget, and no-write test commands. Until those citations exist, executable optimization remains gated. No result proves general skill quality, provider availability, production behavior, or deployment.

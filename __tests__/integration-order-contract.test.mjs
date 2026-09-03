@@ -279,7 +279,7 @@ test("documentation keeps the neutral core separate from the reference adapter",
   );
 
   assert.ok(referenceAdapter, "reference implementation section is required");
-  assert.doesNotMatch(neutralCore, /GitHub|Cloudflare|Agentic Canvas OS|Knowgrph/);
+  assert.doesNotMatch(neutralCore, /GitHub|Cloudflare|Agentic Canvas OS|agentic-graph/);
   for (const phrase of [
     "Integration Unit",
     "Integration Frontier",

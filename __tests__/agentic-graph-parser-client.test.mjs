@@ -7,10 +7,10 @@ import {
   AGENTIC_GRAPH_MCP_TOOLS,
   validateAgenticGraphParserResult,
   validateAgenticGraphRequest,
-} from "../src/knowgrph-mcp-client.js";
+} from "../src/agentic-graph-mcp-client.js";
 
 const DECLARATIVE_GRAMMAR = {
-  schema: "knowgrph-declarative-grammar/v1",
+  schema: "agentic-graph-declarative-grammar/v1",
   start: "document",
   tokens: [
     { id: "word", kind: "identifier" },
@@ -48,12 +48,12 @@ const digestFor = (descriptors) => createHash("sha256")
 const registryResult = (descriptors) => {
   const digest = digestFor(descriptors);
   return {
-    schema: "agenticgraph-knowledge-graph-parser-generate/v1",
+    schema: "agentic-graph-knowledge-graph-parser-generate/v1",
     ok: true,
     operation: "parser_generate",
     parserRegistryDigest: digest,
     parserRegistry: {
-      schema: "agenticgraph-knowledge-graph-parser-registry/v2",
+      schema: "agentic-graph-knowledge-graph-parser-registry/v2",
       digest,
       descriptors,
     },
@@ -62,7 +62,7 @@ const registryResult = (descriptors) => {
 
 test("parser generation validates a built-in profile or source-backed descriptors", () => {
   const invocation = {
-    schema: "agenticgraph-knowledge-graph-invocation/v1",
+    schema: "agentic-graph-knowledge-graph-invocation/v1",
     tool: AGENTIC_GRAPH_MCP_TOOLS.generateParser,
     action: "/agentic.graph.parser.generate",
     semantics: ["#agentic-graph", "#parser-generation", "#mcp"],

@@ -7,7 +7,7 @@ export const PATH_PORTABILITY_AUDIT_SCHEMA =
   "agentic-game-os-path-portability-audit/v1";
 export const AUDITED_REPOSITORY_NAMES = Object.freeze([
   "agentic-canvas-os",
-  "knowgrph",
+  "agentic-graph",
   "GameXR",
 ]);
 export function digestAuthoredText(text) {

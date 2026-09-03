@@ -9,8 +9,8 @@ frontmatter_contract: "required"
 status: "spec-complete"
 authority: "canonical voice clone, speech-to-text, and text-to-speech invocation, safety, bounds, and owner separation"
 runtime_scope: "provider-neutral AI voice profile creation, dictation, and disclosed audio rendering"
-runtime_claim: "Agentic Canvas OS supplies a model-free validated contract; executable readiness belongs only to the matching Knowgrph local stdio MCP runtime and its exact proof"
-runtime_owner: "$GITHUB_ROOT/knowgrph/mcp"
+runtime_claim: "Agentic Canvas OS supplies a model-free validated contract; executable readiness belongs only to the matching agentic-graph local stdio MCP runtime and its exact proof"
+runtime_owner: "$GITHUB_ROOT/agentic-graph/mcp"
 runtime_proof: "../scripts/voice-studio-contract.mjs; ../__tests__/voice-studio-contract.test.mjs"
 invocation: "/voice.studio"
 operations: ["clone", "dictate", "create"]
@@ -18,18 +18,18 @@ semantic_routes:
   clone: "/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof"
   dictate: "/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof"
   create: "/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof"
-mcp_tool: "agenticgraph.voice.studio"
+mcp_tool: "agentic-graph.voice.studio"
 external_pattern_source: "https://github.com/jamiepine/voicebox"
 external_source_policy: "abstract workflow inspiration only; local source, vocabulary, schemas, prompts, fixtures, tests, assets, UI, and prose are independently authored"
 external_dependency: "forbidden"
-publish_policy: "Dev-only until matching Knowgrph runtime proof and explicit operator approval"
+publish_policy: "Dev-only until matching agentic-graph runtime proof and explicit operator approval"
 ---
 
 # AI Voice Studio
 
 `/voice.studio` selects one bounded provider-neutral studio for `clone`, `dictate`, or `create`. The selected semantic route determines the operation and its typed bindings. There are no `/voice.clone`, `/voice.dictate`, or `/voice.create` compatibility commands.
 
-The `/`, `#`, and `@` tokens are host discovery and handoff metadata. MCP clients call the single exact `agenticgraph.voice.studio` wire tool with a strict operation discriminator. A dictionary match never executes audio processing, grants recording rights, supplies consent, approves spend, or authorizes persistence.
+The `/`, `#`, and `@` tokens are host discovery and handoff metadata. MCP clients call the single exact `agentic-graph.voice.studio` wire tool with a strict operation discriminator. A dictionary match never executes audio processing, grants recording rights, supplies consent, approves spend, or authorizes persistence.
 
 ## Exact Routes
 
@@ -46,7 +46,7 @@ Exactly one semantic route is accepted per request. A missing semantic, multiple
 | Owner | Owns | Does not own |
 |---|---|---|
 | Agentic Canvas OS | Canonical command, semantic routes, binding meanings, request/result requirements, safety policy, bounds, clean-room boundary, and promotion gate. | Audio capture, media bytes, profiles, provider calls, credentials, durable jobs, UI state, or deployment. |
-| Knowgrph local stdio MCP | The exact `agenticgraph.voice.studio` schema, validation, idempotency, bounded adapter dispatch, cancellation, sanitized result, and deterministic Dev proof. | Consent inference, recording rights, provider entitlement, caller credentials, or authority from dictionary tokens. |
+| agentic-graph local stdio MCP | The exact `agentic-graph.voice.studio` schema, validation, idempotency, bounded adapter dispatch, cancellation, sanitized result, and deterministic Dev proof. | Consent inference, recording rights, provider entitlement, caller credentials, or authority from dictionary tokens. |
 | Existing media and workspace owners | Immutable audio/text artifacts, hashes, metadata, retention state, read-back, Rich Media, Card, and Timeline projection. | A copied voice store, alternate file namespace, or implicit public URL. |
 | Approved voice adapter | Capability-specific clone, transcription, or synthesis work and returned provider evidence. | Host invocation parsing, approval policy, durable authority, or fabricated cost and provenance. |
 | Operator or authorized speaker | Explicit recording rights, speaker consent, permitted uses, revocation, disclosure, and paid-call approval where required. | Silent approval through profile selection, prior unrelated consent, or a dictionary binding. |
@@ -55,7 +55,7 @@ Provider choice and credentials remain server-managed. The MCP request carries o
 
 ## Discriminated MCP Contract
 
-Every request uses `knowgrph-voice-studio-request/v1` and includes:
+Every request uses `agentic-graph-voice-studio-request/v1` and includes:
 
 ```yaml
 request:
@@ -74,7 +74,7 @@ The operation-specific object is exact and rejects unknown fields:
 | `dictate` | `sourceAudio {artifactId, sha256, mediaType, bytes, durationMs}`, `recordingAuthorization {rightsReceiptId, participantNotice}`, and `transcription {language, timestamps, diarization}`. | Microphone permission inference, unbounded live stream, hidden recording, unsupported codec guess, or generated transcript supplied as evidence. |
 | `create` | `sourceText {artifactId, sha256, characters}`, `voiceProfile {profileId, profileRevision}`, `disclosure {label, intendedAudience}`, and `output {mediaType, sampleRateHz, channels}`. | Mutable profile alias, revoked profile, undisclosed clone use, caller filesystem output, or text beyond the admitted digest. |
 
-Every response uses `knowgrph-voice-studio-result/v1` with `ok`, `operation`, `requestId`, `idempotencyKey`, `state`, `artifacts`, `provenance`, `rights`, `usage`, `cost`, `proof`, and exactly one of `result` or `error`. States are `validated`, `awaiting_approval`, `running`, `completed`, `blocked`, `canceled`, or `failed`. Errors contain a stable code, safe message, retry eligibility, and no raw provider payload or sensitive biometric material.
+Every response uses `agentic-graph-voice-studio-result/v1` with `ok`, `operation`, `requestId`, `idempotencyKey`, `state`, `artifacts`, `provenance`, `rights`, `usage`, `cost`, `proof`, and exactly one of `result` or `error`. States are `validated`, `awaiting_approval`, `running`, `completed`, `blocked`, `canceled`, or `failed`. Errors contain a stable code, safe message, retry eligibility, and no raw provider payload or sensitive biometric material.
 
 An exact idempotency retry returns the recorded terminal result. Reusing a key with changed operation, source digest, profile revision, authorization, text digest, output options, or bounds is a conflict. Cancellation prevents new adapter work; an already-started external effect may settle only through its existing receipt and cannot revive a canceled request.
 
@@ -115,7 +115,7 @@ The effective limit is the lowest caller, profile, adapter, application, and dep
 
 `npm run voice-studio-contract:check` is model-free and provider-free. It validates the canonical routes, dictionary and facts ownership, one MCP tool, consent and clean-room gates, planning row, and negative fixtures with `tokens: 0` and `costUsd: 0`.
 
-The contract remains `spec-complete` until an exact integrated Knowgrph revision proves the discriminated MCP schema and local stdio registration, deterministic injected-adapter clone/dictate/create results, idempotent replay, cancellation, consent and approval separation, revocation, provenance and read-back, bounds, cost honesty, secret redaction, and fail-before-spend live-adapter gaps. Source tests alone do not prove microphone permission, provider cloning quality, live transcription accuracy, live synthesis fidelity, biometric deletion, Prod, or Cloudflare readiness.
+The contract remains `spec-complete` until an exact integrated agentic-graph revision proves the discriminated MCP schema and local stdio registration, deterministic injected-adapter clone/dictate/create results, idempotent replay, cancellation, consent and approval separation, revocation, provenance and read-back, bounds, cost honesty, secret redaction, and fail-before-spend live-adapter gaps. Source tests alone do not prove microphone permission, provider cloning quality, live transcription accuracy, live synthesis fidelity, biometric deletion, Prod, or Cloudflare readiness.
 
 ## Clean-Room Boundary
 
@@ -126,7 +126,7 @@ Removing network access and the external repository changes neither this contrac
 ## VCCs
 
 - Given `/voice.studio`, when exactly one supported semantic and its required bindings resolve, then the host returns metadata for `clone`, `dictate`, or `create` and never claims MCP execution.
-- Given a valid MCP request, when consent, recording rights, permitted use, approval, bounds, capability, and artifact identity pass, then only `agenticgraph.voice.studio` may dispatch the selected adapter.
+- Given a valid MCP request, when consent, recording rights, permitted use, approval, bounds, capability, and artifact identity pass, then only `agentic-graph.voice.studio` may dispatch the selected adapter.
 - Given missing, expired, mismatched, or revoked authorization, when work is considered, then no audio read, adapter call, persistence, spend, or generated artifact begins.
 - Given an exact idempotency replay, when a terminal result exists, then the same sanitized result returns without a second adapter call or cost.
 - Given a completed operation, when output is returned, then raw and derived artifacts remain separate and exact source, profile, authorization, disclosure, usage, cost, and read-back evidence are present.

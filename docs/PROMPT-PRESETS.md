@@ -7,7 +7,7 @@ lang: "en-US"
 schema: "agentic-os-prompt-preset-catalog/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
-authority: "shared prompt presets for AgenticGraph FloatingPanel Chat"
+authority: "shared prompt presets for agentic-graph FloatingPanel Chat"
 runtime_scope: "zero-spend prompt selection with explicit Chat-response and MCP-resolution routes"
 runtime_claim: "source-backed prompt text and invocation metadata only; selection and MCP metadata resolution do not approve execution, provider spend, persistence, Prod, or Cloudflare mutation"
 publish_policy: "Dev-only until explicit operator approval"
@@ -28,7 +28,7 @@ prompt_presets:
     activation: "source-backed-canvas"
     invocation_modes: ["llm-chat-response", "mcp-invocation"]
     chat_route: "active Chat provider, endpoint, and model"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/video-agent"
     prompt: |-
       /video-agent @video-generation-demo-script @provider.byteplus @text @image @audio @video #spec.low #thinking.type.enabled #token-cap.medium
@@ -42,7 +42,7 @@ prompt_presets:
     activation: "card-inline"
     invocation_modes: ["native-chat-response", "mcp-invocation"]
     chat_route: "active native shared runtime"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/image.to-threejs"
     prompt: |-
       /image.to-threejs @image-to-threejs #image-to-threejs
@@ -56,22 +56,22 @@ prompt_presets:
     activation: "card-inline"
     invocation_modes: ["native-chat-response", "mcp-invocation"]
     chat_route: "active native shared runtime"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/image.to-glb"
     prompt: |-
       /image.to-glb @image-to-glb #image-to-glb
 
       Rebuild the selected or attached PNG, JPG, JPEG, or SVG reference as code-only procedural Three.js without mutating the source Widget Card or input media. Use the universal connected-silhouette contour-volume lane: preserve disconnected negative spaces, quantize a compact plan, and reject object-specific templates, horizontal box bands, baked geometry, serialized geometry, data URIs, loaders, network calls, and external modules. Enforce bounded component, outline, material, triangle, source, and three-pass review/correction budgets. Keep geometry, PBR material, reference, and action gates separate; record the visible front as observed and every rear, interior, or occluded surface as inferred with bounded confidence. Create stable rigid-part pivots and attachment sockets plus one four-second loop-continuous inspection clip bounded to +/-12 degrees yaw; do not claim skinning, morph targets, or deformable readiness. Export the same admitted scene as a full GLB and editable glTF JSON with an external .bin buffer. Use `validated` for deterministic evidence; use `approved` only for a proven optional independent provider review. Treat https://github.com/hoainho/img2threejs and https://github.com/microsoft/TRELLIS.2 as conceptual inspiration only; copy or depend on none of their code, prompts, schemas, examples, tests, fixtures, prose, assets, weights, models, packages, configuration, services, layout, or runtime. Keep the result Dev-only until explicit operator release authority.
-  - id: "agenticgraph-probe-tree"
-    label: "AgenticGraph Probe-Tree"
-    slash_command: "/agenticgraph-probe-tree-prompt-preset"
-    runtime_command: "/agenticgraph.probe-tree"
+  - id: "agentic-graph-probe-tree"
+    label: "agentic-graph Probe-Tree"
+    slash_command: "/agentic-graph-probe-tree-prompt-preset"
+    runtime_command: "/agentic-graph.probe-tree"
     description: "Native Widget Card preset for bounded, editable next-question branches and a separate Rich Media branch ledger."
     activation: "card-inline"
     invocation_modes: ["llm-chat-response", "mcp-invocation"]
     chat_route: "active Chat provider, endpoint, and model"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
-    mcp_token: "/agenticgraph.probe-tree"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
+    mcp_token: "/agentic-graph.probe-tree"
     semantic_contract: "PROBE-TREE.md"
     clarification_action_topics: ["RECOMMEND", "COMPARE", "ASSESS", "PLAN"]
     clarification_topic_match: "semantic and case-insensitive"
@@ -82,7 +82,7 @@ prompt_presets:
     model_route: "active Chat provider, endpoint, and model"
     fallback_policy: "fail closed; query-specific hardcoding and zero-model fallback cards are forbidden"
     prompt: |-
-      /agenticgraph.probe-tree
+      /agentic-graph.probe-tree
 
       Generate 2-4 bounded, editable next-question cards from this Widget Card under the semantic clarification contract in PROBE-TREE.md. Derive every question and every 2-4 answer choice from the selected user input, give every card a different user-named focus, and attach 2-6 short context anchors copied verbatim from that input. Every answer choice must express a decision-relevant preference, tradeoff, or consequence rather than a mechanical number, range, unit, named entity, or topic fragment. Never reuse a choice label, one card's complete choice set, or a subset/superset of it in another card. For a continuation, the selected child and its committed Output own the next topic; the root is lineage only. Classify the action-topic families RECOMMEND, COMPARE, ASSESS, and PLAN semantically and case-insensitively as clarification requests; an imperative or action verb never establishes terminal intent. Only a runtime-recognized selected-child terminal continuation bypasses card generation. Never substitute stock evidence, policy, reviewer, approval, system-of-record, recalled-exemplar, or fixture content unless the user actually named it. Keep the source card unchanged, connect each candidate branch, and atomically connect the source to its single owned Probe-Tree Branches Rich Media ledger. Preserve user-authored output targets; for a runtime-recognized selected-child terminal continuation, atomically create or reuse one owned Generated Result Rich Media Panel and one typed output edge from that child without merging targets or attaching an unrelated panel. Stop visibly at depth 8. Widget Run authorizes the bounded MCP context call followed by the active Chat provider, endpoint, and model. Never use stale card-local routing or materialize query-specific hardcoding or zero-model fallback cards; fail closed when fewer than two semantic cards survive.
   - id: "sme-care-agent"
@@ -93,7 +93,7 @@ prompt_presets:
     activation: "chat-agent"
     invocation_modes: ["llm-chat-response", "mcp-invocation"]
     chat_route: "active Chat provider, endpoint, and model"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/sme-care-agent"
     prompt: |-
       /sme-care-agent @source.frontmatter @source.body @local-harness @cost-log @runtime-proof #frontmatter #harness #token-economics #runtime-ready #approval-gate
@@ -107,7 +107,7 @@ prompt_presets:
     activation: "chat-agent"
     invocation_modes: ["llm-chat-response", "mcp-invocation"]
     chat_route: "active Chat provider, endpoint, and model"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/investment-research-agent"
     prompt: |-
       /investment-research-agent @source.frontmatter @source.body @cost-log @runtime-proof #frontmatter #token-economics #runtime-ready #approval-gate
@@ -121,7 +121,7 @@ prompt_presets:
     activation: "chat-agent"
     invocation_modes: ["native-chat-response", "mcp-invocation"]
     chat_route: "active native shared runtime"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/crawler-agent"
     prompt: |-
       /crawler-agent @url:https://example.com @reference-policy #canvas
@@ -135,7 +135,7 @@ prompt_presets:
     activation: "chat-agent"
     invocation_modes: ["llm-chat-response", "mcp-invocation"]
     chat_route: "active Chat provider, endpoint, and model"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/sme-care-agent"
     prompt: |-
       /sme-care-agent @source.frontmatter @source.body @local-harness @cost-log @runtime-proof #frontmatter #harness #token-economics #runtime-ready #approval-gate
@@ -149,7 +149,7 @@ prompt_presets:
     activation: "chat-agent"
     invocation_modes: ["llm-chat-response", "mcp-invocation"]
     chat_route: "active Chat provider, endpoint, and model"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/sme-care-agent"
     prompt: |-
       /sme-care-agent @source.frontmatter @source.body @local-harness @cost-log @runtime-proof #frontmatter #harness #token-economics #runtime-ready #approval-gate
@@ -163,7 +163,7 @@ prompt_presets:
     activation: "chat-agent"
     invocation_modes: ["llm-chat-response", "mcp-invocation"]
     chat_route: "active Chat provider, endpoint, and model"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/investment-research-agent"
     prompt: |-
       /investment-research-agent @source.frontmatter @source.body @cost-log @runtime-proof #frontmatter #token-economics #runtime-ready #approval-gate
@@ -177,7 +177,7 @@ prompt_presets:
     activation: "chat-agent"
     invocation_modes: ["llm-chat-response", "mcp-invocation"]
     chat_route: "active Chat provider, endpoint, and model"
-    mcp_tool: "agenticgraph.agentic_canvas_os.docs.invoke"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/investment-research-agent"
     prompt: |-
       /investment-research-agent @source.frontmatter @source.body @cost-log @runtime-proof #frontmatter #token-economics #runtime-ready #approval-gate
@@ -187,11 +187,11 @@ prompt_presets:
 
 # Prompt Presets
 
-This document is the single prompt-text owner for the AgenticGraph FloatingPanel **Prompt Presets** catalog. The runtime reads `prompt_presets` from frontmatter and projects the selected prompt into the existing shared composer.
+This document is the single prompt-text owner for the agentic-graph FloatingPanel **Prompt Presets** catalog. The runtime reads `prompt_presets` from frontmatter and projects the selected prompt into the existing shared composer.
 
 Selection and loading are zero-spend. **Send** remains the Chat execution boundary. An `llm-chat-response` preset must use the active Chat provider, endpoint, and model; it cannot inherit stale card-local routing. A `native-chat-response` preset resolves through its named shared runtime without inventing a model route. The image-to-threejs, image-to-glb, and Probe-Tree presets may also be inserted from the shared Skills & Commands catalog into the selected Widget Card, where each expands to its canonical `/`, `@`, and `#` tokens without replacing attached source media. The Widget Card **Run** action is the execution boundary for those card-inline presets. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; each changed multi-card stage is tracked by the shared active-source GitGraph owner as `Chat Run All i/n: <card>`, while an identical already-published graph remains an accepted no-op. SME Care and Investment Research presets use the shared slash-agent response contracts; Crawler Agent uses the native Import URL workflow.
 
-Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-preset`, except the two native image routes that intentionally reuse their executable slash commands. Every `runtime_command` remains the executable route owned by `SKILLS.md` and the command dictionary. Selecting a preset resolves its `runtime_command` and loads the source-backed prompt without submitting, persisting a chat turn, or rewriting the alias into another catalog entry. `mcp-invocation` calls `agenticgraph.agentic_canvas_os.docs.invoke` with `mcp_token` to resolve the same command metadata; that read-only resolution is not command execution, a model call, or approval to spend or mutate.
+Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-preset`, except the two native image routes that intentionally reuse their executable slash commands. Every `runtime_command` remains the executable route owned by `SKILLS.md` and the command dictionary. Selecting a preset resolves its `runtime_command` and loads the source-backed prompt without submitting, persisting a chat turn, or rewriting the alias into another catalog entry. `mcp-invocation` calls `agentic-graph.agentic_canvas_os.docs.invoke` with `mcp_token` to resolve the same command metadata; that read-only resolution is not command execution, a model call, or approval to spend or mutate.
 
 ## Catalog contract
 
@@ -200,7 +200,7 @@ Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-pre
 | Video Agent | `/video-prompt-preset` | `/video-agent` | Load the centralized prompt after validating the authored video Canvas and script source. | Activate the committed Canvas and hand it to the shared Run all owner. |
 | Image to Three.js | `/image.to-threejs` | `/image.to-threejs @image-to-threejs #image-to-threejs` | Load the native prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Resolve only an attached or selected supported image through the native zero-cost conversion owner. |
 | Image to GLB | `/image.to-glb` | `/image.to-glb @image-to-glb #image-to-glb` | Load the native procedural prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Require the compact connected-contour plan, separate geometry/material/reference/action gates, rigid pivots/sockets, bounded inspection loop, full GLB plus editable external-buffer glTF, and honest `validated`/optional `approved` evidence; source media stays unchanged and deploy remains Dev-only. |
-| AgenticGraph Probe-Tree | `/agenticgraph-probe-tree-prompt-preset` | `/agenticgraph.probe-tree` | Load the source-backed prompt in Chat or insert its slash invocation into the selected Widget Card. The `@` and `#` aliases remain independently authorable. | Classify RECOMMEND, COMPARE, ASSESS, and PLAN action topics semantically and case-insensitively as clarification requests. Use the active Chat provider, endpoint, and model to materialize 2-4 Type 2 child cards with distinct selected-child focuses, context-relevant clarification suggestions, 2-6 verbatim child-or-lineage anchors, Other, and a separate Rich Media branch ledger; only a runtime-recognized selected-child terminal continuation bypasses generation. Reject query-specific hardcoding, inferred output edges, and zero-model fallback cards. |
+| agentic-graph Probe-Tree | `/agentic-graph-probe-tree-prompt-preset` | `/agentic-graph.probe-tree` | Load the source-backed prompt in Chat or insert its slash invocation into the selected Widget Card. The `@` and `#` aliases remain independently authorable. | Classify RECOMMEND, COMPARE, ASSESS, and PLAN action topics semantically and case-insensitively as clarification requests. Use the active Chat provider, endpoint, and model to materialize 2-4 Type 2 child cards with distinct selected-child focuses, context-relevant clarification suggestions, 2-6 verbatim child-or-lineage anchors, Other, and a separate Rich Media branch ledger; only a runtime-recognized selected-child terminal continuation bypasses generation. Reject query-specific hardcoding, inferred output edges, and zero-model fallback cards. |
 | SME Care Agent | `/sme-care-prompt-preset` | `/sme-care-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract and deterministic SME kernel when that runtime is invoked. |
 | Investment Research Agent | `/investment-research-prompt-preset` | `/investment-research-agent` | Load the centralized prompt into Chat. | Use the shared slash-agent contract with source, evidence, review, and cost boundaries. |
 | Crawler Agent | `/crawler-prompt-preset` | `/crawler-agent` | Load the centralized prompt into Chat with an editable URL. | Use the native headless Import URL workflow and persist separate report and pipe-table Canvas outputs. |

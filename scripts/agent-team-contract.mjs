@@ -12,10 +12,10 @@ export const AGENT_TEAM_INVOCATION = Object.freeze({
 });
 
 export const AGENT_TEAM_MCP_TOOLS = Object.freeze([
-  "agenticgraph.agent_team.plan",
-  "agenticgraph.agent_team.start",
-  "agenticgraph.agent_team.list",
-  "agenticgraph.agent_team.control",
+  "agentic-graph.agent_team.plan",
+  "agentic-graph.agent_team.start",
+  "agentic-graph.agent_team.list",
+  "agentic-graph.agent_team.control",
 ]);
 
 export const AGENT_TEAM_BOUNDS = Object.freeze({
@@ -171,7 +171,7 @@ export function validateAgentTeamContractDocuments(documents) {
     if (
       cells.length !== 2
       || cells[0] !== `\`${AGENT_TEAM_INVOCATION.text}\``
-      || !cells[1].includes("Knowgrph local stdio MCP runtime")
+      || !cells[1].includes("agentic-graph local stdio MCP runtime")
       || !cells[1].includes("without creating a second scheduler or broadening Agent Swarm")
     ) {
       failures.push("DICTIONARY-BINDING.md: exact Agent Team composition row is malformed");
@@ -201,7 +201,7 @@ export function validateAgentTeamContractDocuments(documents) {
   requireMarkers(mcpSection, "MCP Agent Team owner separation", [
     AGENT_TEAM_INVOCATION.text,
     "Agentic Canvas OS owns invocation",
-    "Knowgrph owns durable supervision",
+    "agentic-graph owns durable supervision",
     "existing Agent Definitions, Progressive Agents, Agent Orchestration, models, tools, guardrails, and persistence owners retain their authority",
     "Roles, goals, personas, membership, call order, and last response never override registered ownership",
   ], failures);
@@ -340,7 +340,7 @@ function requireCanonicalTokenCells(token, cells, failures) {
   }
   if (token === AGENT_TEAM_INVOCATION.binding && (
     !cells[1]?.includes("Exact source URI and digest")
-    || !cells[2]?.includes("Knowgrph local stdio MCP owns durable lifecycle state")
+    || !cells[2]?.includes("agentic-graph local stdio MCP owns durable lifecycle state")
     || !cells[3]?.includes("cannot grant")
   )) {
     failures.push("DICTIONARY-BINDING.md: exact owning row @agent-team has non-canonical source or authority semantics");

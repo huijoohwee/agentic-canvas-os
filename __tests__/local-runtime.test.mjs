@@ -44,9 +44,9 @@ function repository(id, revision, overrides = {}) {
 function validCandidate(overrides = {}) {
   return {
     agenticCanvasOs: repository("agentic-canvas-os", docsSha),
-    knowgrph: {
-      ...repository("knowgrph", applicationSha),
-      gitCommonDir: "/workspace/knowgrph/.git",
+    agenticGraph: {
+      ...repository("agentic-graph", applicationSha),
+      gitCommonDir: "/workspace/agentic-graph/.git",
       hasDevApexScript: true,
       hasStorageWorkerScript: true,
     },
@@ -56,7 +56,7 @@ function validCandidate(overrides = {}) {
 
 test("canonical runtime accepts only clean protected exact-main sources", () => {
   const validated = validateCanonicalRuntimeCandidate(validCandidate());
-  assert.equal(validated.knowgrph.headSha, applicationSha);
+  assert.equal(validated.agenticGraph.headSha, applicationSha);
   assert.equal(validated.agenticCanvasOs.revisionBinding, "fetched-tip");
 });
 
@@ -98,10 +98,10 @@ test("canonical runtime rejects an agentic-canvas-os HEAD that matches neither t
   assert.throws(() => validateCanonicalRuntimeCandidate(candidate), /consumer-pinned docs_dependency ref/);
 });
 
-test("canonical runtime never relaxes the knowgrph tip requirement to a pin", () => {
+test("canonical runtime never relaxes the agentic-graph tip requirement to a pin", () => {
   const candidate = validCandidate({
-    knowgrph: {
-      ...validCandidate().knowgrph,
+    agenticGraph: {
+      ...validCandidate().agenticGraph,
       remoteSha: "c".repeat(40),
       consumerPinnedRef: applicationSha,
       consumerPinnedRefIsAncestorOfRemote: true,
@@ -131,8 +131,8 @@ test("consumer pinned docs ref parsing is conservative", () => {
 
 test("canonical runtime residue tolerates foreign parallel docs but blocks runtime authority drift", () => {
   const foreign = classifyCanonicalRuntimeResidue({
-    repositoryId: "knowgrph",
-    statusPorcelain: "?? docs/documents/knowgrph-storage-sync-prd-tad-adr.md\n",
+    repositoryId: "agentic-graph",
+    statusPorcelain: "?? docs/documents/agentic-graph-storage-sync-prd-tad-adr.md\n",
   });
   assert.equal(foreign.clean, false);
   assert.equal(foreign.runtimeSafe, true);
@@ -140,16 +140,16 @@ test("canonical runtime residue tolerates foreign parallel docs but blocks runti
   assert.deepEqual(
     foreign.foreign.map(entry => ({ path: entry.path, reason: entry.reason })),
     [{
-      path: "docs/documents/knowgrph-storage-sync-prd-tad-adr.md",
+      path: "docs/documents/agentic-graph-storage-sync-prd-tad-adr.md",
       reason: "foreign-parallel-residue",
     }],
   );
 
   const blocking = classifyCanonicalRuntimeResidue({
-    repositoryId: "knowgrph",
+    repositoryId: "agentic-graph",
     statusPorcelain: [
       "?? src/runtime-drift.ts",
-      " M docs/documents/knowgrph-storage-sync-document.md",
+      " M docs/documents/agentic-graph-storage-sync-document.md",
     ].join("\n"),
   });
   assert.equal(blocking.runtimeSafe, false);
@@ -157,7 +157,7 @@ test("canonical runtime residue tolerates foreign parallel docs but blocks runti
     blocking.blocking.map(entry => ({ path: entry.path, reason: entry.reason })),
     [
       { path: "src/runtime-drift.ts", reason: "untracked-runtime-authority" },
-      { path: "docs/documents/knowgrph-storage-sync-document.md", reason: "tracked-residue" },
+      { path: "docs/documents/agentic-graph-storage-sync-document.md", reason: "tracked-residue" },
     ],
   );
 });
@@ -188,7 +188,7 @@ test("canonical runtime follows the single registered main worktree from a featu
 });
 
 for (const [name, candidate, expected] of [
-  ["task branch", validCandidate({ knowgrph: { ...validCandidate().knowgrph, branch: "agent/device/task" } }), /must be on main/],
+  ["task branch", validCandidate({ agenticGraph: { ...validCandidate().agenticGraph, branch: "agent/device/task" } }), /must be on main/],
   ["dirty docs", validCandidate({
     agenticCanvasOs: repository("agentic-canvas-os", docsSha, {
       clean: false,
@@ -198,27 +198,27 @@ for (const [name, candidate, expected] of [
       }),
     }),
   }), /runtime-blocking residue/],
-  ["stale application", validCandidate({ knowgrph: { ...validCandidate().knowgrph, remoteSha: "c".repeat(40) } }), /must equal fetched origin\/main/],
-  ["missing protected checks", validCandidate({ knowgrph: { ...validCandidate().knowgrph, protectedChecksVerified: false } }), /protected checks/],
-  ["missing storage owner", validCandidate({ knowgrph: { ...validCandidate().knowgrph, hasStorageWorkerScript: false } }), /storage:worker:dev/],
+  ["stale application", validCandidate({ agenticGraph: { ...validCandidate().agenticGraph, remoteSha: "c".repeat(40) } }), /must equal fetched origin\/main/],
+  ["missing protected checks", validCandidate({ agenticGraph: { ...validCandidate().agenticGraph, protectedChecksVerified: false } }), /protected checks/],
+  ["missing storage owner", validCandidate({ agenticGraph: { ...validCandidate().agenticGraph, hasStorageWorkerScript: false } }), /storage:worker:dev/],
 ]) {
   test(`canonical runtime rejects ${name}`, () => {
     assert.throws(() => validateCanonicalRuntimeCandidate(candidate), expected);
   });
 }
 
-test("canonical runtime accepts non-blocking foreign residue in canonical knowgrph", () => {
+test("canonical runtime accepts non-blocking foreign residue in canonical agentic-graph", () => {
   const candidate = validCandidate({
-    knowgrph: {
-      ...validCandidate().knowgrph,
+    agenticGraph: {
+      ...validCandidate().agenticGraph,
       clean: false,
       residue: classifyCanonicalRuntimeResidue({
-        repositoryId: "knowgrph",
-        statusPorcelain: "?? docs/documents/knowgrph-storage-sync-prd-tad-adr.md\n",
+        repositoryId: "agentic-graph",
+        statusPorcelain: "?? docs/documents/agentic-graph-storage-sync-prd-tad-adr.md\n",
       }),
     },
   });
-  assert.equal(validateCanonicalRuntimeCandidate(candidate).knowgrph.headSha, applicationSha);
+  assert.equal(validateCanonicalRuntimeCandidate(candidate).agenticGraph.headSha, applicationSha);
 });
 
 test("service ownership binds listener group repository command and token", () => {
@@ -228,8 +228,8 @@ test("service ownership binds listener group repository command and token", () =
   const evidence = {
     pid: 101,
     processGroupId: 100,
-    command: "node /workspace/knowgrph/node_modules/.bin/vite --strictPort",
-    gitCommonDir: "/workspace/knowgrph/.git",
+    command: "node /workspace/agentic-graph/node_modules/.bin/vite --strictPort",
+    gitCommonDir: "/workspace/agentic-graph/.git",
     listenerEnvironment: `node_modules/.bin/vite AGENTIC_LOCAL_RUNTIME_TOKEN=${token}`,
   };
   assert.equal(validateOwnedService({ service, processEvidence: evidence, token, tokenDigest, candidate: validCandidate() }), true);
@@ -272,13 +272,13 @@ test("session Vite ownership binds exact session, process start, repository, com
       listenerPid: 101,
       commandMarker: "node_modules/.bin/vite",
       processStartedAt: "Sat Jul 26 12:00:00 2026",
-      listenerCwd: "/workspace/knowgrph/canvas",
+      listenerCwd: "/workspace/agentic-graph/canvas",
     },
   };
   const candidate = {
-    knowgrph: {
-      root: "/workspace/knowgrph",
-      gitCommonDir: "/workspace/knowgrph/.git",
+    agenticGraph: {
+      root: "/workspace/agentic-graph",
+      gitCommonDir: "/workspace/agentic-graph/.git",
       headSha: applicationSha,
     },
   };
@@ -287,10 +287,10 @@ test("session Vite ownership binds exact session, process start, repository, com
     processGroupId: 100,
     processStartedAt: state.service.processStartedAt,
     cwd: state.service.listenerCwd,
-    command: "node /workspace/knowgrph/node_modules/.bin/vite --strictPort",
-    gitCommonDir: candidate.knowgrph.gitCommonDir,
+    command: "node /workspace/agentic-graph/node_modules/.bin/vite --strictPort",
+    gitCommonDir: candidate.agenticGraph.gitCommonDir,
     listenerEnvironment: `AGENTIC_SESSION_ID=session-a AGENTIC_SESSION_RUNTIME_TOKEN=${token} ` +
-      `AGENTICGRAPH_SOURCE_REVISION=${applicationSha} AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION=${docsSha}`,
+      `AGENTIC_OS_SOURCE_REVISION=${applicationSha} AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION=${docsSha}`,
   };
   assert.equal(validateOwnedSessionService({
     state, processEvidence: evidence, token, candidate, sessionId: "session-a",
@@ -320,15 +320,15 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     workspaceRoot,
     agenticCanvasOsRoot: "/workspace/agentic-canvas-os",
     agenticCanvasOs: { headSha: docsSha, treeSha: "c".repeat(40) },
-    knowgrph: {
-      root: "/workspace/knowgrph",
-      gitCommonDir: "/workspace/knowgrph/.git",
+    agenticGraph: {
+      root: "/workspace/agentic-graph",
+      gitCommonDir: "/workspace/agentic-graph/.git",
       headSha: applicationSha,
       treeSha: "d".repeat(40),
     },
     protectedChecks: {
       "agentic-canvas-os": ["test", "build", "docs-contract", "collaboration-integration"],
-      knowgrph: ["Integration Gate"],
+      "agentic-graph": ["Integration Gate"],
     },
   };
   const listeners = new Map();
@@ -355,7 +355,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
         processStartedAt: `process-start-${listenerPid}`,
         command: `node ${commandMarker}`,
         listenerEnvironment: Object.entries(env).map(([key, value]) => `${key}=${value}`).join(" "),
-        gitCommonDir: candidate.knowgrph.gitCommonDir,
+        gitCommonDir: candidate.agenticGraph.gitCommonDir,
       });
       return { pid: supervisorPid, unref: () => {} };
     },
@@ -374,7 +374,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     now: () => new Date("2026-07-26T05:00:00.000Z"),
   };
   const options = {
-    repository: candidate.knowgrph.root,
+    repository: candidate.agenticGraph.root,
     agenticCanvasOsRoot: candidate.agenticCanvasOsRoot,
     sessionId: "session-a",
     timeoutMs: 10_000,
@@ -394,6 +394,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     assert.equal(result.schema, LOCAL_RUNTIME_SCHEMA);
     assert.equal(result.status, "runtime-ready");
     assert.equal(result.ready, true);
+    assert.equal(result.application, "agentic-os");
     assert.equal(result.handoff.status, "session-runtime-stopped");
     assert.equal(result.handoff.stoppedSessionRuntime, true);
     assert.ok(stoppedGroups.includes(100));
@@ -401,7 +402,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     assert.equal(listeners.get(APEX_PORT), 301);
     assert.deepEqual(launchedCommands[1], [
       "run", "storage:worker:dev", "--", "--local", "--var",
-      "AGENTICGRAPH_STORAGE_LOCAL_RUNTIME:true", "--ip", "127.0.0.1", "--port", "8787",
+      "AGENTIC_OS_STORAGE_LOCAL_RUNTIME:true", "--ip", "127.0.0.1", "--port", "8787",
     ]);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });

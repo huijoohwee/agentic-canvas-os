@@ -1,6 +1,6 @@
 ---
-title: "Knowgrph Agentic Canvas OS Docs"
-graphId: "md:knowgrph-agentic-canvas-os-doc-readme"
+title: "agentic-graph Agentic Canvas OS Docs"
+graphId: "md:agentic-graph-agentic-canvas-os-doc-readme"
 doc_type: "Agentic OS Docs Index"
 date: "2026-07-18"
 lang: "en-US"
@@ -20,13 +20,13 @@ source_of_truth:
   - "INSTRUCTION-QUALITY-EVALUATION.md"
 publish_policy: "product checks provide Dev evidence only; ADLC governs repository integration; forward Production requires exact-candidate human authorization"
 runtime_scope: "Agentic Canvas OS docs control surface"
-runtime_claim: "documentation control surface for making knowgrph a runtime-ready Agentic Canvas OS"
+runtime_claim: "documentation control surface for making agentic-graph a runtime-ready Agentic Canvas OS"
 runtime_proof: "RUNTIME-PROOF.md"
 ---
 
-# Knowgrph Agentic Canvas OS Docs
+# agentic-graph Agentic Canvas OS Docs
 
-This folder is the local documentation control surface for making `knowgrph` a runtime-ready Agentic Canvas OS. It is not a deploy artifact and does not authorize Prod or Cloudflare mutation.
+This folder is the local documentation control surface for making `agentic-graph` a runtime-ready Agentic Canvas OS. It is not a deploy artifact and does not authorize Prod or Cloudflare mutation.
 
 ## Start Here
 
@@ -71,14 +71,14 @@ For delivery planning or repeated mechanical failure, lazy-load only
 | `INSTRUCTION-QUALITY-EVALUATION.md` | Instruction task-quality evaluation | Provenance-bound final-answer scenarios, deterministic rubric findings, model-agnostic execution, and human-review promotion boundaries. |
 | `CACHE-CONTEXT.md` | Stable prompt-prefix contract | Revision-bound registration, exact prefix-first assembly, bounded reuse, invalidation, telemetry, and live-provider proof boundaries. |
 | `REASONING-CONTINUITY.md` | Cross-turn reasoning contract | Stable invariant matching, previous-response chaining, drift reset, capability gates, bounded concurrency, and provider-effective context proof. |
-| `FUNCTION-CALLING.md` | Direct function-call runtime | Strict schemas, exact call identity, durable reviewed-call continuation, pre-side-effect receipts, stable idempotency, guarded Knowgrph execution, costs, and live-provider proof gates. |
+| `FUNCTION-CALLING.md` | Direct function-call runtime | Strict schemas, exact call identity, durable reviewed-call continuation, pre-side-effect receipts, stable idempotency, guarded agentic-graph execution, costs, and live-provider proof gates. |
 | `LIVE-REVIEWED-FUNCTION-PROOF.md` | Reviewed function-call Dev proof | One recovered durable continuation, two provider requests, signed review, matching application and native receipts, returned usage, persisted revision 1, and explicit non-Prod boundary. |
 | `AGENT-DEFINITIONS.md` | Agent definition registry | Model and ordered instruction ownership, reference-only optional behavior, revision fencing, handoff verification, structured-output validation, and provider-proof boundaries. |
 | `MODELS-AND-PROVIDERS.md` | Model and transport selection runtime | Revision-fenced provider registration, explicit defaults, feature matching, transport strategy, sanitized environment readiness, and live-provider proof boundaries. |
 | `RUNNING-AGENTS.md` | Application-turn lifecycle contract | Bounded loops, exclusive continuation, same-loop streaming, durable paused-turn claims, settlement, cost evidence, and provider-proof boundaries. |
 | `AGENT-ORCHESTRATION.md` | Multi-agent ownership runtime | Revision-fenced manager and specialist topology, delegation, handoff, current-conversation ownership, final-answer ownership, handback, costs, and provider-proof boundaries. |
-| `AGENT-TEAM.md` | Role-based team invocation contract | Exact `/agent.team #role-based-agent-team @agent-team` projection, source and revision fences, typed Knowgrph MCP lifecycle, private delegate results, durable controls, hard budgets, and clean-room boundaries. |
-| `REPOSITORY-PACKING.md` | Local repository packing contract | Exact `/repository.pack #repository-packing @repository-root @runtime-proof` projection, one Knowgrph stdio MCP tool, deterministic content-addressed Markdown, typed omissions, path and size bounds, atomic publication, and clean-room independence. |
+| `AGENT-TEAM.md` | Role-based team invocation contract | Exact `/agent.team #role-based-agent-team @agent-team` projection, source and revision fences, typed agentic-graph MCP lifecycle, private delegate results, durable controls, hard budgets, and clean-room boundaries. |
+| `REPOSITORY-PACKING.md` | Local repository packing contract | Exact `/repository.pack #repository-packing @repository-root @runtime-proof` projection, one agentic-graph stdio MCP tool, deterministic content-addressed Markdown, typed omissions, path and size bounds, atomic publication, and clean-room independence. |
 | `REPOSITORY-RUNTIME-READINESS.md` | Local repository readiness contract | Exact `/runtime-ready.check` source-admission audit, bounded metadata-first discovery, typed findings, zero-cost evidence, clean-room reference boundary, and honest higher-layer gates. |
 | `AGENT-SWARM.md` | Dynamic horizontal agent runtime | Goal-only task generation, durable atomic worker claims, isolated contexts, recovery, cancellation, receipts, costs, and base-agent synthesis without predefined roles or workflows. |
 | `AGENT-TOOLKIT.md` | Framework-neutral agent intelligence layer | Digest-bound application-authorized instrumentation, metadata-only durable traces, bounded evaluation, trusted-evidence cohort comparison, and review-pending learning proposals without automatic application. |
@@ -95,7 +95,7 @@ For delivery planning or repeated mechanical failure, lazy-load only
 | `DICTIONARY-BINDING.md` | At dictionary | `@` actor, source, runtime, proof, and boundary bindings. |
 | `SKILLS.md` | Metadata-first skill catalog | Lightweight ids, families, selection rules, and links to progressively disclosed workflow owners. |
 | `kanban.md` | Durable task board | Shared task and handoff rows for named profiles and full OS worker processes using existing table/Kanban utilities. |
-| `PRD-TAD.md` | Combined product and architecture contract | What `knowgrph` must provide and how the runtime is shaped. |
+| `PRD-TAD.md` | Combined product and architecture contract | What `agentic-graph` must provide and how the runtime is shaped. |
 | `RUNTIME-READINESS.md` | Readiness matrix | Tracks spec-complete to runtime-ready gates by capability. |
 | `RUNTIME-PROOF.md` | Runtime proof ledger | Current parse, route, scan, validation, and deploy-boundary proof for this docs control surface. |
 | `HARNESS-CONTRACTS.md` | Harness contract catalog | Typed AI harness contracts, cost logs, fallback paths, and loop bounds. |
@@ -104,7 +104,7 @@ For delivery planning or repeated mechanical failure, lazy-load only
 
 ## Runtime Position
 
-`knowgrph` is the Agentic Canvas OS when these contracts are true:
+`agentic-graph` is the Agentic Canvas OS when these contracts are true:
 
 - A caller can discover capabilities without paid model calls.
 - A caller can load durable agent identity from `SOUL.md` into prompt slot 1 without silent hardcoded defaults.
@@ -126,7 +126,7 @@ For delivery planning or repeated mechanical failure, lazy-load only
 - A caller can load one bounded TODO index and the relevant `todo/YYYY-MM.md` shard without sending the full planning history to every model call.
 - A task can preserve planning history through one base-ref-anchored row in the active `todo/YYYY-MM.md` shard whose declared Context passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
 - A caller can discover callable tool functions and enable or disable logical toolsets per platform without copying a registry or granting global access.
-- A caller can route web search, image generation, TTS, and cloud browser tools through existing `knowgrph` infrastructure with per-tool provider state, approval gates, and cost logs.
+- A caller can route web search, image generation, TTS, and cloud browser tools through existing `agentic-graph` infrastructure with per-tool provider state, approval gates, and cost logs.
 - A caller can opt into Tool Search so eligible MCP and non-core plugin schemas stay behind session-scoped metadata search and exact definition loading while the real tool gateway retains execution policy.
 - A caller can inspect process, cost, gate, and circuit-breaker state through typed read views.
 - A caller can run approval-gated agent workflows through shared local or control-plane MCP owners.
@@ -145,7 +145,7 @@ The current native-in-repo target is:
 flowchart LR
   local["Local MCP + Source Files"]
   soul["SOUL.md identity"]
-  canvas["AgenticGraph Canvas"]
+  canvas["agentic-graph Canvas"]
   mcp["Cloudflare McpAgent where deployed"]
   gateway["Discovery-first MCP federation"]
   harnesses["Existing harnesses"]
@@ -159,7 +159,7 @@ flowchart LR
   harnesses -->|"evidence - recorded"| proof
 ```
 
-Superseded Vercel/AWS connector lanes are historical reference only unless a later ADR reopens them with a separate TCO and deployment-model comparison. The active runtime-ready path is `knowgrph` local + Cloudflare control-plane owners.
+Superseded Vercel/AWS connector lanes are historical reference only unless a later ADR reopens them with a separate TCO and deployment-model comparison. The active runtime-ready path is `agentic-graph` local + Cloudflare control-plane owners.
 
 ## Operating Rule
 

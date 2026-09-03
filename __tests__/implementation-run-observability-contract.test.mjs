@@ -11,9 +11,10 @@ const runtime = read("docs/IMPLEMENTATION-RUN-OBSERVATION.md");
 const gateway = read("docs/MCP-GATEWAY.md");
 const proof = read("docs/RUNTIME-PROOF.md");
 const planning = read("todo/2026-07.md");
+const retiredNamespace = ["k", "now", "grph"].join("");
 
 const invocation = "/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof";
-const tool = "agenticgraph.agentic_sdlc.observe";
+const tool = "agentic-graph.agentic_sdlc.observe";
 
 function count(source, expression) {
   return [...source.matchAll(new RegExp(expression, "gm"))].length;
@@ -46,7 +47,7 @@ test("the exact slash, hash, and reused at bindings resolve canonically", () => 
 });
 
 test("one local wire tool is receipt-gated and has the exact request and result identities", () => {
-  assert.equal(count(gateway, "^\\| `agenticgraph\\.agentic_sdlc\\.observe`"), 1);
+  assert.equal(count(gateway, "^\\| `agentic-graph\\.agentic_sdlc\\.observe`"), 1);
   assert.match(runtime, /`state\.result\.agenticSdlcLedger`/);
   assert.match(runtime, /schema: "agentic-sdlc-ledger-receipt\/v1"/);
   for (const field of [
@@ -71,9 +72,9 @@ test("one local wire tool is receipt-gated and has the exact request and result 
   }
   assert.match(runtime, /`sha256:<64-lowercase-hex>`/);
   assert.match(runtime, /action `\/sdlc\.observe`, semantic `#agentic-sdlc-observability`, and bindings ordered as `@implementation-run`, `@canvas`, `@runtime-proof`/);
-  assert.match(runtime, /`agenticgraph-agentic-sdlc-observation\/v1` with `source`, `status`, `conformance`, `projection`, `cache`, and `economics`/);
+  assert.match(runtime, /`agentic-graph-agentic-sdlc-observation\/v1` with `source`, `status`, `conformance`, `projection`, `cache`, and `economics`/);
   for (const source of [command, runtime, gateway]) {
-    assert.doesNotMatch(source, /knowgrph-agentic-sdlc-observation\/v1/);
+    assert.doesNotMatch(source, new RegExp(`${retiredNamespace}-agentic-sdlc-observation\\/v1`));
   }
   assert.match(gateway, new RegExp(escapeRegExp(tool)));
 });
@@ -140,9 +141,9 @@ test("economics and deployment boundaries stay exact and the planning row is com
   assert.doesNotMatch(runtime, /^status: "runtime-ready"$/m);
   assert.match(runtime, /exact zeros for network calls, model calls,\s+prompt tokens, completion tokens, and estimated cost/);
   assert.match(runtime, /It is spec-complete, not\s+runtime-ready/u);
-  assert.match(runtime, /does not claim current-guideline, protected Knowgrph,\s+cross-device, Prod, or Cloudflare runtime parity/u);
+  assert.match(runtime, /does not claim current-guideline, protected agentic-graph,\s+cross-device, Prod, or Cloudflare runtime parity/u);
   assert.match(proof, /Spec-complete for ACOS contract/);
-  assert.match(proof, /Current-guideline evaluator parity, protected Knowgrph integration, live rendering, Prod, and Cloudflare remain unclaimed/);
+  assert.match(proof, /Current-guideline evaluator parity, protected agentic-graph integration, live rendering, Prod, and Cloudflare remain unclaimed/);
 
   const context = "Agentic SDLC end-to-end observability catalog 2026-07-29";
   assert.equal(count(planning, `^\\| ${escapeRegExp(context)} \\|`), 1);

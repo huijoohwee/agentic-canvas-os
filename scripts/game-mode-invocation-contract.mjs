@@ -6,8 +6,8 @@ export const GAME_MODE_INVOCATION = Object.freeze({
 });
 
 export const GAME_MODE_WEB_MCP_TOOLS = Object.freeze([
-  "agenticgraph.inspect_local_game_mode",
-  "agenticgraph.control_local_game_mode",
+  "agentic-graph.inspect_local_game_mode",
+  "agentic-graph.control_local_game_mode",
 ]);
 
 const FORBIDDEN_ALIASES = Object.freeze(["/game.fps", "#game-mode"]);
@@ -46,7 +46,7 @@ export function validateGameModeInvocationContractDocuments(documents) {
     "exactly `@canvas`",
     "exactly `#gameplay`",
     ...GAME_MODE_WEB_MCP_TOOLS,
-    "Knowgrph remains the single game, ECS, renderer, camera/input, and Decision-persistence owner",
+    "agentic-graph remains the single game, ECS, renderer, camera/input, and Decision-persistence owner",
     "no runtime or deployment authority",
   ], failures);
 
@@ -71,7 +71,7 @@ export function validateGameModeInvocationContractDocuments(documents) {
   requireMarkers(factRow, "FACTS.md Game Mode invocation catalog row", [
     GAME_MODE_INVOCATION.invocation,
     "Dev-only browser-local",
-    "Knowgrph WebMCP owns",
+    "agentic-graph WebMCP owns",
     "scored `hold`, `alert`, `engage`, or `flee` decisions",
     "existing Canvas and XR Mode renderer",
     "Motion Control input reuse",

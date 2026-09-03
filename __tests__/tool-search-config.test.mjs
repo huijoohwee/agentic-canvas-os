@@ -36,11 +36,11 @@ const TOOLS = Object.freeze([
 
 test("upstream tool search stays disabled without a configured execution lane", () => {
   const enabled = upstreamToolSearchEnabled(
-    { KNOWGRPH_MCP_ENDPOINT: "https://control.example/mcp" },
+    { AGENTIC_OS_MCP_ENDPOINT: "https://control.example/mcp" },
     { openAiFunctionConfig: { ready: false }, autonomousRuntimeEnvironment: { ready: false } },
   );
   const runtime = createConfiguredToolSearchRuntime(
-    { KNOWGRPH_MCP_ENDPOINT: "https://control.example/mcp" },
+    { AGENTIC_OS_MCP_ENDPOINT: "https://control.example/mcp" },
     { openAiFunctionConfig: { ready: false }, autonomousRuntimeEnvironment: { ready: false } },
   );
   assert.equal(enabled, false);
@@ -49,7 +49,7 @@ test("upstream tool search stays disabled without a configured execution lane", 
 
 test("upstream tool search uses a deterministic session-catalog adapter once configured", async () => {
   const runtime = createConfiguredToolSearchRuntime(
-    { KNOWGRPH_MCP_ENDPOINT: "https://control.example/mcp" },
+    { AGENTIC_OS_MCP_ENDPOINT: "https://control.example/mcp" },
     { openAiFunctionConfig: { ready: true }, autonomousRuntimeEnvironment: { ready: false } },
   );
   assert.equal(runtime.stats().clientSearchConfigured, true);

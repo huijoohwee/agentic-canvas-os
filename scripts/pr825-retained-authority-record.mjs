@@ -79,7 +79,6 @@ function ensurePr825AuthorityRef(repoRoot) {
     git(repoRoot, [
       "fetch",
       "--no-tags",
-      "--depth=1",
       "origin",
       `${AUTHORITY_HEAD_REF}:${PR825_RETAINED_AUTHORITY.authorityRef}`,
     ]);

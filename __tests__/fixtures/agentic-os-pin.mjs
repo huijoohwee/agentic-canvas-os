@@ -1,5 +1,5 @@
 export const AGENTIC_OS_PIN =
-  "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/00c7430f56df924da6b33cf06aca38dd6c56f29a";
+  "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/c0a7a8a697c7a7c1e084c4b85b02ca133e6e014d";
 
 export const AGENTIC_OS_INTEGRITY =
-  "sha512-sZaKsw8rDYCgBCp6+PYMRWuR5AIsVd2OWMwF01ZQmRUAY1WPgKa3QqBg+G23VqR5hcfC8H+GFpfDYcXPOR+SdQ==";
+  "sha512-Jx1qP8oTQfETFF3F2tuchvCdGvleaerCrW3sF2AmzneDFRzCZWt7woK7fmgZ9kb8g0D8eqBXou/gKsJ19Jv/Mg==";

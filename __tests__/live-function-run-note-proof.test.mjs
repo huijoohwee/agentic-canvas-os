@@ -71,10 +71,10 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
         guardrailsHumanReview: { configured: true },
       });
     }
-    if (url.pathname === "/knowgrph/control-plane/mcp" && body?.method === "initialize") {
+    if (url.pathname === "/agentic-os/control-plane/mcp" && body?.method === "initialize") {
       return new Response("", { status: 200, headers: { "mcp-session-id": "session-1" } });
     }
-    if (url.pathname === "/knowgrph/control-plane/mcp" && body?.method === "tools/call") {
+    if (url.pathname === "/agentic-os/control-plane/mcp" && body?.method === "tools/call") {
       return Response.json({
         jsonrpc: "2.0",
         id: body.id,
@@ -124,7 +124,7 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
               phase: "completed",
               replayed: false,
               upstreamReceipt: {
-                schema: "knowgrph-tool-execution-receipt/v1",
+                schema: "agentic-os-tool-execution-receipt/v1",
                 idempotencyKey: "a".repeat(64),
                 requestDigest: "c".repeat(64),
                 status: "applied",
@@ -156,8 +156,8 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
     env: {
       AGENTIC_LIVE_PROVIDER_APPROVAL: LIVE_FUNCTION_RUN_NOTE_APPROVAL,
       AGENTIC_DEV_URL: "https://agentic-canvas-os-dev.example.workers.dev",
-      KNOWGRPH_DEV_MCP_ENDPOINT: "https://knowgrph-mcp-dev.example.workers.dev/knowgrph/control-plane/mcp",
-      AGENTICGRAPH_AGENT_RUNTIME_BEARER_TOKEN: "mcp-secret",
+      AGENTIC_OS_DEV_MCP_ENDPOINT: "https://agentic-mcp-dev.huijoohwee.workers.dev/agentic-os/control-plane/mcp",
+      AGENTIC_OS_AGENT_RUNTIME_BEARER_TOKEN: "mcp-secret",
       AGENT_REVIEW_JWT_SECRET: "review-secret",
       AGENTIC_LIVE_PROOF_SUFFIX: "test",
     },
@@ -170,12 +170,12 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
   assert.equal(JSON.stringify(proof).includes("review-secret"), false);
   assert.deepEqual(calls.map((call) => call.path), [
     "/api/ready",
-    "/knowgrph/control-plane/mcp",
-    "/knowgrph/control-plane/mcp",
+    "/agentic-os/control-plane/mcp",
+    "/agentic-os/control-plane/mcp",
     "/api/auth/session",
     "/api/function-call",
     "/api/function-call/resume",
-    "/knowgrph/control-plane/mcp/runs/dev-provider-proof-manifest-test",
+    "/agentic-os/control-plane/mcp/runs/dev-provider-proof-manifest-test",
   ]);
 
   calls.length = 0;
@@ -184,8 +184,8 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
     env: {
       AGENTIC_LIVE_PROVIDER_APPROVAL: LIVE_FUNCTION_RUN_NOTE_APPROVAL,
       AGENTIC_DEV_URL: "https://agentic-canvas-os-dev.example.workers.dev",
-      KNOWGRPH_DEV_MCP_ENDPOINT: "https://knowgrph-mcp-dev.example.workers.dev/knowgrph/control-plane/mcp",
-      AGENTICGRAPH_AGENT_RUNTIME_BEARER_TOKEN: "mcp-secret",
+      AGENTIC_OS_DEV_MCP_ENDPOINT: "https://agentic-mcp-dev.huijoohwee.workers.dev/agentic-os/control-plane/mcp",
+      AGENTIC_OS_AGENT_RUNTIME_BEARER_TOKEN: "mcp-secret",
       AGENT_REVIEW_JWT_SECRET: "review-secret",
       AGENTIC_LIVE_PROOF_SUFFIX: "test",
       AGENTIC_LIVE_PROOF_RECOVER: "1",
@@ -197,6 +197,22 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
     "/api/auth/session",
     "/api/function-call/recover",
     "/api/function-call/resume",
-    "/knowgrph/control-plane/mcp/runs/dev-provider-proof-manifest-test",
+    "/agentic-os/control-plane/mcp/runs/dev-provider-proof-manifest-test",
   ]);
+});
+
+test("live proof rejects a noncanonical Agentic MCP Dev endpoint", async () => {
+  const noncanonicalHost = ["agentic", "graph", "-mcp-dev.huijoohwee.workers.dev"].join("");
+  await assert.rejects(
+    () => runLiveFunctionRunNoteProof({
+      env: {
+        AGENTIC_LIVE_PROVIDER_APPROVAL: LIVE_FUNCTION_RUN_NOTE_APPROVAL,
+        AGENTIC_DEV_URL: "https://agentic-canvas-os-dev.example.workers.dev",
+        AGENTIC_OS_DEV_MCP_ENDPOINT: `https://${noncanonicalHost}/agentic-os/control-plane/mcp`,
+        AGENTIC_OS_AGENT_RUNTIME_BEARER_TOKEN: "mcp-secret",
+        AGENT_REVIEW_JWT_SECRET: "review-secret",
+      },
+    }),
+    /AGENTIC_OS_DEV_MCP_ENDPOINT must be the Agentic MCP Dev control-plane URL/,
+  );
 });

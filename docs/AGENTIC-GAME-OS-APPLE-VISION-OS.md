@@ -47,19 +47,19 @@ lifecycle for one exact candidate.
 | Concern | Sole owner | This repository's role |
 |---|---|---|
 | Invocation truth | Agentic Canvas OS dictionaries | Define and resolve the tuple without aliases or mirrors. |
-| Shared gameplay and backend behavior | Knowgrph shared substrate | Name the boundary; never duplicate its capability or utility logic. |
+| Shared gameplay and backend behavior | agentic-graph shared substrate | Name the boundary; never duplicate its capability or utility logic. |
 | Browser and native presentation | GameXR | Name the boundary; never own visuals, input presentation, scene values, or local adapters. |
 | Dev-to-delivery control | Agentic Canvas OS product pipeline plus pinned ADLC repository workflow | Validate product ordering, identity, and authorization; delegate repository effects only to ADLC. |
-| Production artifacts and public routes | Knowgrph product-deployment owner | Consume exact-candidate authorization and return product evidence; this document grants no authority. |
+| Production artifacts and public routes | agentic-graph product-deployment owner | Consume exact-candidate authorization and return product evidence; this document grants no authority. |
 
-The Prod mirror boundaries are `$GITHUB_ROOT/huijoohwee/content/knowgrph` and
+The Prod mirror boundaries are `$GITHUB_ROOT/huijoohwee/content/agentic-graph` and
 `$GITHUB_ROOT/huijoohwee/content/gamexr`. The Delivery surface boundaries are `airvio.co`,
-`airvio.co/knowgrph`, and `airvio.co/gamexr`. These paths and routes hold no
-world data; persistent world state remains source-owned by the shared Knowgrph
+`airvio.co/agentic-os`, and `airvio.co/gamexr`. These paths and routes hold no
+world data; persistent world state remains source-owned by the shared agentic-graph
 substrate.
 
 GameXR may host Flight Simulator, City Building Sim, RTS-MMO, and future games.
-Those games share Knowgrph domain owners and may differ only in visual
+Those games share agentic-graph domain owners and may differ only in visual
 projection, interaction presentation, scene configuration, and local
 persistence adapters. A new game does not create a new shared capability
 registry or backend utility owner.
@@ -77,7 +77,7 @@ The only feature tuple is:
 | `@portability-layer` | source, actor, or runtime binding | `agentic-canvas-os/docs/DICTIONARY-BINDING.md` |
 
 The tuple selects the source-backed, capability-detected Agentic Game OS
-portability contract across browser and native projections. Knowgrph remains
+portability contract across browser and native projections. agentic-graph remains
 the shared capability and backend owner. GameXR remains visual projection,
 interaction, scene, and local-adapter only. The tuple itself grants no
 renderer, persistence, provider, model, credential, Production, Cloudflare, or
@@ -98,7 +98,7 @@ status of `matched` or `pin-mismatched`.
 
 | Stage | Admission | Success evidence | Failure boundary |
 |---|---|---|---|
-| `dev-runtime` | Repository-owned Git inspection proves the exact Knowgrph root and origin, branch `main`, `HEAD == origin/main`, zero tracked modifications, zero untracked files, and one declared Dev command | Reachable local surface within 120 seconds; status becomes `local-runtime-ready` | Caller-supplied cleanliness is ignored; no process starts for non-canonical, stale, or dirty evidence. |
+| `dev-runtime` | Repository-owned Git inspection proves the exact agentic-graph root and origin, branch `main`, `HEAD == origin/main`, zero tracked modifications, zero untracked files, and one declared Dev command | Reachable local surface within 120 seconds; status becomes `local-runtime-ready` | Caller-supplied cleanliness is ignored; no process starts for non-canonical, stale, or dirty evidence. |
 | `prod-mirror` | Successful Dev for the same candidate, matched dependency pins, and one unconsumed authorization no older than 60 minutes | Exact candidate revision and digest are recorded before the delegated write, then independently read back before completion | Missing, mismatched, expired, consumed, errored, or timed-out authorization causes zero mirror mutation and zero retries. |
 | `delivery-surface` | Successful mirror outcome, an independently inspected byte-identical artifact digest, and a separate unconsumed authorization | Status becomes `production-runtime-ready` only after a second independent live read proves the exact revision, digest, and reachability | Absent or unequal preflight digest fails before delivery mutation; unequal post-delivery identity withholds readiness. |
 
@@ -130,7 +130,7 @@ The four auditors are deterministic, model-free, and write nothing:
 | Auditor | Pass condition | Typed failure |
 |---|---|---|
 | Frontmatter validator | Exact declared fields, valid readiness rungs, required document parts, evidence-aware readiness, and complete validation coverage | `document-missing`, `document-invalid`, `rung-combination`, `coverage-gap`, or `evidence-invalid` |
-| Duplicate logic auditor | Each listed shared capability has one tracked, digest-bound Knowgrph owner and public surface, while every GameXR assignment is exact-byte bound and declares only presentation/configuration/local-adapter ownership or an exact delegation to that surface | `duplicate-logic` or `audit-incomplete` |
+| Duplicate logic auditor | Each listed shared capability has one tracked, digest-bound agentic-graph owner and public surface, while every GameXR assignment is exact-byte bound and declares only presentation/configuration/local-adapter ownership or an exact delegation to that surface | `duplicate-logic` or `audit-incomplete` |
 | Path portability auditor | No machine-root or account-name literal; repository paths begin with `$GITHUB_ROOT` and resolve inside it | `path-portability` |
 | File size auditor | At most 600 lines, exactly one correctly placed in-file responsibility marker, and, for the explicitly supported MJS grammar, exact-byte external authority that enumerates every export and maps each symbol to that same statement | `file-size`, `single-responsibility`, or `audit-incomplete` for missing, stale, malformed, or unsupported responsibility/export proof |
 
@@ -191,8 +191,8 @@ valid exact-candidate authorization.
 | Item | Monthly TCO | Twelve-month assumption | FOSS or zero-cost path |
 |---|---:|---:|---|
 | Invocation and audit runtime | USD 0 | USD 0 | Node.js standard library and repository-pinned test dependencies |
-| Local Dev orchestration | USD 0 incremental | USD 0 incremental | Existing local Knowgrph runtime |
-| Pipeline state and audit entries | USD 0 | USD 0 | In-process candidate record; durable product-deployment evidence remains with Knowgrph and repository-lifecycle evidence remains with ADLC |
+| Local Dev orchestration | USD 0 incremental | USD 0 incremental | Existing local agentic-graph runtime |
+| Pipeline state and audit entries | USD 0 | USD 0 | In-process candidate record; durable product-deployment evidence remains with agentic-graph and repository-lifecycle evidence remains with ADLC |
 
 Minimum time to value is six steps and no more than 30 minutes for this source
 slice: install pinned dependencies, resolve the tuple, run the audit fixtures,
@@ -207,10 +207,10 @@ successful docs-contract exit.
 | Invocation resolver | `spec-complete` | `runtime-ready` | Protected exact-head checks and integrated dictionary projection | Focused invocation test followed by protected required checks |
 | Source auditors | `spec-complete` | `runtime-ready` | Protected exact-head checks plus cross-repository scans on authoritative roots | Focused auditor test with all three repository roots |
 | Pipeline controller | `spec-complete` | `runtime-ready` | Protected exact-head checks and one repository-owned local Dev receipt | Focused pipeline test plus clean canonical Dev proof |
-| Shared substrate | `spec-complete` | `runtime-ready` | Terminal scope authority, exact consumer pins, and complete Knowgrph portability owners | Knowgrph focused properties and package checks |
+| Shared substrate | `spec-complete` | `runtime-ready` | Terminal scope authority, exact consumer pins, and complete agentic-graph portability owners | agentic-graph focused properties and package checks |
 | Browser and native projections | `spec-complete` | `runtime-ready` | Integrated GameXR source, mobile WebKit, iOS Simulator, and native visionOS destination evidence | GameXR browser and native checks |
 | Physical Apple devices | `undocumented` | `runtime-ready` | Recorded iPhone and Apple Vision Pro matrices | Device run naming model, OS, date, and every matrix result |
-| Production delivery | `undocumented` | `runtime-ready` | Exact-candidate authorization, mirror equality, public digest equality, live-route status, and rollback evidence | Knowgrph product-deployment owner; repository effects remain ADLC-owned |
+| Production delivery | `undocumented` | `runtime-ready` | Exact-candidate authorization, mirror equality, public digest equality, live-route status, and rollback evidence | agentic-graph product-deployment owner; repository effects remain ADLC-owned |
 
 Simulator, compatibility-destination, headless-browser, HTTP status, preview,
 and source-contract results are never promoted into physical-device or
@@ -223,6 +223,6 @@ Protected integration proves Dev only. Neither a draft pull request, a task
 worktree, a focused test, a `main` label, a locally reachable surface, nor this
 document authorizes mirror or public-route mutation. Prod mirror and delivery
 each require their own exact-candidate, target-bound, unexpired, unconsumed
-human authorization and the Knowgrph product-deployment owner. A missing
+human authorization and the agentic-graph product-deployment owner. A missing
 token, changed revision, changed digest, changed target, failed check, or
 unavailable physical-device gate leaves Production closed.

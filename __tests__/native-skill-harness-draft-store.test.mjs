@@ -60,7 +60,7 @@ function createDraft(overrides = {}) {
     schema: "acos-skill-draft/v1",
     draft_id: "gap-001:1786950000000",
     status: "proposed",
-    adapter_id: "knowgrph",
+    adapter_id: "agentic-graph",
     gap_signal_id: "gap-001",
     agent_definition: {
       id: "draft-gap-agent",
@@ -114,14 +114,14 @@ test("the adapter index appends uniquely and rejects beyond 64 entries", async (
   const namespace = createAgentStateNamespace();
   const store = createDurableObjectSkillDraftStore({ namespace });
   for (let index = 0; index < SKILL_DRAFT_STORE_DEFAULTS.maxDraftsPerAdapter; index += 1) {
-    assert.equal(await store.indexAppend("knowgrph", `draft-${index}`), true);
+    assert.equal(await store.indexAppend("agentic-graph", `draft-${index}`), true);
   }
-  assert.deepEqual(await store.indexList("knowgrph"), Array.from(
+  assert.deepEqual(await store.indexList("agentic-graph"), Array.from(
     { length: SKILL_DRAFT_STORE_DEFAULTS.maxDraftsPerAdapter },
     (_, index) => `draft-${index}`,
   ));
   await assert.rejects(
-    () => store.indexAppend("knowgrph", "draft-64"),
+    () => store.indexAppend("agentic-graph", "draft-64"),
     (error) => error instanceof RangeError,
   );
   // A second adapter keeps its own bounded index.

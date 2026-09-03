@@ -43,7 +43,7 @@ test("repository keeps one canonical resumable Skill Evolution contract", () => 
     bindings: ["@skill-catalog", "@skill-policy", "@runtime-proof", "@operator"],
     text: "/skill.evolve #skill-evolution @skill-catalog @skill-policy @runtime-proof @operator",
   });
-  assert.equal(SKILL_EVOLUTION_MCP_TOOL, "agenticgraph.skill.evolve");
+  assert.equal(SKILL_EVOLUTION_MCP_TOOL, "agentic-graph.skill.evolve");
   assert.deepEqual(SKILL_EVOLUTION_OPERATIONS, ["plan", "start", "step", "status", "cancel"]);
   assert.deepEqual(validateSkillEvolutionContractDocuments(repositoryDocuments), []);
 });
@@ -173,7 +173,7 @@ test("strict directional metrics, candidate roles, and validation isolation are 
   }
 });
 
-test("ACOS contract cannot claim runtime-ready before integrated Knowgrph proof", () => {
+test("ACOS contract cannot claim runtime-ready before integrated agentic-graph proof", () => {
   const documents = withReplacement(
     "SKILL-EVOLUTION.md",
     'status: "spec-complete"',

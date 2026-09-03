@@ -124,7 +124,7 @@ exception. Preserve user bytes and stop on any typed ADLC attention result.
 - Lifecycle closeout must satisfy the installed ADLC release workflow. This
   product policy neither restates nor weakens its completion receipts.
 - Before the final response of every implementation turn, run `npm run turn:end
-  -- --repository=<canonical-knowgrph-root> --json`. Runtime-ready may be
+  -- --repository=<canonical-agentic-graph-root> --json`. Runtime-ready may be
   claimed only when its JSON proves exact protected `main` SHAs, no
   runtime-blocking residue in canonical checkouts, the private-token-owned Apex
   and storage listeners, and all HTTP probes. Foreign parallel residue may be
@@ -132,5 +132,5 @@ exception. Preserve user bytes and stop on any typed ADLC attention result.
   must fail closed without stopping an unrelated listener.
 - A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.
 - Suggest next steps in `/GitHub/agentic-canvas-os/{docs/TODO.md, todo/}`,
-  `/GitHub/knowgrph/docs/`, and
+  `/GitHub/agentic-graph/docs/`, and
   `/GitHub/huijoohwee.github.io/schema/AgenticRAG` when relevant.

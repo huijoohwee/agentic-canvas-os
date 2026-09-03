@@ -7,8 +7,8 @@ lang: "en-US"
 schema: "agentic-live-reviewed-function-proof/v1"
 frontmatter_contract: "required"
 status: "runtime-ready-dev"
-authority: "accepted Dev evidence for one reviewed OpenAI Responses function call and one native Knowgrph mutation"
-runtime_scope: "route-free Agentic Canvas OS and Knowgrph Dev Workers only"
+authority: "accepted Dev evidence for one reviewed OpenAI Responses function call and one native agentic-graph mutation"
+runtime_scope: "route-free Agentic Canvas OS and agentic-graph Dev Workers only"
 runtime_claim: "one approved logical provider run completed in two Responses requests with one signed review, one applied native receipt, and one persisted run-note revision"
 runtime_owner: "../scripts/live-function-run-note-proof.mjs; ../worker/index.js"
 runtime_proof: "../__tests__/live-function-run-note-proof.test.mjs; ../__tests__/cloudflare-worker.test.mjs; FUNCTION-CALLING.md; RUNTIME-PROOF.md"
@@ -19,7 +19,7 @@ publish_policy: "Dev evidence only; Prod, Pages, and custom-domain deployment re
 
 # Bounded Live Reviewed Function Proof
 
-The accepted 2026-07-19 run resumed the one already-paused durable continuation instead of starting another provider run. The exact signed reviewer decision authorized one `update_agent_run_note` call. Agentic Canvas OS used a Dev-only Cloudflare Service Binding for the same-zone Knowgrph MCP Worker, while the OpenAI request stayed on the public fetch transport.
+The accepted 2026-07-19 run resumed the one already-paused durable continuation instead of starting another provider run. The exact signed reviewer decision authorized one `update_agent_run_note` call. Agentic Canvas OS used a Dev-only Cloudflare Service Binding for the same-zone agentic-graph MCP Worker, while the OpenAI request stayed on the public fetch transport.
 
 ## Accepted Result
 
@@ -27,7 +27,7 @@ The accepted 2026-07-19 run resumed the one already-paused durable continuation 
 |---|---|
 | Agentic source SHA | `41f3f5a40d7fa49e75cca067eeba9e9d0aeb8ffc` |
 | Agentic Dev Worker version | `f5c5999a-5cc5-4637-9663-0a84d08da6c8` |
-| Knowgrph Dev Worker version | `e8747308-e6af-4e82-957d-cb9b764d575d` |
+| agentic-graph Dev Worker version | `e8747308-e6af-4e82-957d-cb9b764d575d` |
 | Function run | `dev-provider-proof-function-20260719-live-01` |
 | Target manifest | `dev-provider-proof-manifest-20260719-live-01` |
 | Provider model | `gpt-5.6-luna` |
@@ -37,11 +37,11 @@ The accepted 2026-07-19 run resumed the one already-paused durable continuation 
 | Provider cache status | `miss` |
 | Estimated cost | `USD 0.000876` at the operator-supplied price snapshot |
 | Application receipt | `a4baab54-7e64-4f51-999c-65a3315ef0b2`, phase `completed`, replayed `false` |
-| Native receipt | `knowgrph-tool-execution-receipt/v1`, status `applied` |
+| Native receipt | `agentic-os-tool-execution-receipt/v1`, status `applied` |
 | Persisted result | note revision `1`, text `Reviewed Dev provider proof 20260719-live-01.` |
 | Deployment boundary | production deployment `false`; no Prod, Pages, or custom-domain change |
 
-The application and native receipts returned the same idempotency key, `393a640c0ba0ce6192bfa90ad11d25a677373b30609f1f7da0f0cf3ff3f161b2`. Their request digests intentionally differ because each owner hashes its own canonical request boundary. The proof runner then read the target manifest directly from the authenticated Knowgrph Dev endpoint and required revision `1` with the exact note text before reporting success.
+The application and native receipts returned the same idempotency key, `393a640c0ba0ce6192bfa90ad11d25a677373b30609f1f7da0f0cf3ff3f161b2`. Their request digests intentionally differ because each owner hashes its own canonical request boundary. The proof runner then read the target manifest directly from the authenticated agentic-graph Dev endpoint and required revision `1` with the exact note text before reporting success.
 
 ## Response Continuation
 

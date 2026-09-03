@@ -37,7 +37,7 @@ test("repository packing keeps one canonical invocation and bounded contract", (
     binding: "@repository-root",
     proofBinding: "@runtime-proof",
     text: "/repository.pack #repository-packing @repository-root @runtime-proof",
-    tool: "agenticgraph.repository.pack",
+    tool: "agentic-graph.repository.pack",
   });
   assert.deepEqual(REPOSITORY_PACKING_BOUNDS, {
     defaultMaxFiles: 12_000,
@@ -176,7 +176,7 @@ test("MCP gateway exposes exactly one canonical local tool", () => {
   const duplicate = new Map(repositoryDocuments);
   duplicate.set(
     "MCP-GATEWAY.md",
-    `${duplicate.get("MCP-GATEWAY.md")}\n| \`agenticgraph.repository.pack\` | duplicate | duplicate |\n`,
+    `${duplicate.get("MCP-GATEWAY.md")}\n| \`agentic-graph.repository.pack\` | duplicate | duplicate |\n`,
   );
   assert.equal(
     validateRepositoryPackingContractDocuments(duplicate)
@@ -186,8 +186,8 @@ test("MCP gateway exposes exactly one canonical local tool", () => {
 
   const renamed = withReplacement(
     "MCP-GATEWAY.md",
-    "`agenticgraph.repository.pack`",
-    "`knowgrph.repomix.pack`",
+    "`agentic-graph.repository.pack`",
+    "`agentic-graph.repomix.pack`",
   );
   assert.equal(
     validateRepositoryPackingContractDocuments(renamed)
@@ -231,7 +231,7 @@ test("MCP gateway exposes exactly one canonical local tool", () => {
   const factsBodyAlias = withReplacement(
     "FACTS.md",
     "## Resolution Rules",
-    "| Unrelated alias | `/repomix` is registered elsewhere. | `knowgrph.repomix.pack`. |\n## Resolution Rules",
+    "| Unrelated alias | `/repomix` is registered elsewhere. | `agentic-graph.repomix.pack`. |\n## Resolution Rules",
   );
   assert.equal(
     validateRepositoryPackingContractDocuments(factsBodyAlias)
@@ -313,8 +313,8 @@ test("clean-room guard rejects dependencies, locators, imports, binaries, and se
     { sourceEntries: [["runtime.js", 'const upstream = "https://github.com/yamadashy/repomix?raw=1";']] },
     { sourceEntries: [["runtime.js", 'const upstream = "//github.com/yamadashy/repomix";']] },
     { sourceEntries: [["runtime.js", "// https://github.com/yamadashy/repomix#readme"]] },
-    { sourceEntries: [["runtime.js", '"knowgrph.repomix"']] },
-    { sourceEntries: [["runtime.js", '"knowgrph.repomix.pack"']] },
+    { sourceEntries: [["runtime.js", '"agentic-graph.repomix"']] },
+    { sourceEntries: [["runtime.js", '"agentic-graph.repomix.pack"']] },
   ]) {
     const failures = validateRepositoryPackingIndependence({
       packageText: fixture.packageText ?? "{}",
@@ -327,14 +327,14 @@ test("clean-room guard rejects dependencies, locators, imports, binaries, and se
 
 test("every projection row proves its content instead of only its label", () => {
   for (const [name, prefix, selector, columns] of [
-    ["HARNESS-CONTRACTS.md", "| Repository Packing |", "knowgrph-repository-pack-result/v1", 5],
-    ["MCP-GATEWAY.md", "| `agenticgraph.repository.pack` |", "return verified metadata only", 3],
+    ["HARNESS-CONTRACTS.md", "| Repository Packing |", "agentic-graph-repository-pack-result/v1", 5],
+    ["MCP-GATEWAY.md", "| `agentic-graph.repository.pack` |", "return verified metadata only", 3],
     ["SKILLS.md", "| Repository packing |", "REPOSITORY-PACKING.md", 2],
-    ["RUNTIME-READINESS.md", "| Repository packing contract |", "exact integrated Knowgrph revision", 4],
-    ["RUNTIME-PROOF.md", "| Repository packing contract |", "single `agenticgraph.repository.pack`", 3],
+    ["RUNTIME-READINESS.md", "| Repository packing contract |", "exact integrated agentic-graph revision", 4],
+    ["RUNTIME-PROOF.md", "| Repository packing contract |", "single `agentic-graph.repository.pack`", 3],
     ["RUNTIME-PROOF.md", "| Repository packing contract is executable |", "repository-packing-contract:check", 3],
-    ["RUNTIME-PROOF.md", "| Repository packing contract |", "exact protected Knowgrph tool proof", 3],
-    ["VALIDATION-RUNBOOK.md", "| Repository Packing |", "exact Knowgrph focused", 2],
+    ["RUNTIME-PROOF.md", "| Repository packing contract |", "exact protected agentic-graph tool proof", 3],
+    ["VALIDATION-RUNBOOK.md", "| Repository Packing |", "exact agentic-graph focused", 2],
     ["README.md", "| `REPOSITORY-PACKING.md` |", "Local repository packing contract", 3],
     ["FACTS.md", "| Repository packing |", "content-addressed Markdown artifact", 3],
   ]) {
@@ -392,9 +392,9 @@ test("planning row is unique, complete, dated, and directive-bounded", () => {
 
   for (const [before, after, expected] of [
     ["/repository.pack #repository-packing @repository-root @runtime-proof", "generic invocation", "missing /repository.pack"],
-    ["`agenticgraph.repository.pack`", "`other.tool`", "missing `agenticgraph.repository.pack`"],
+    ["`agentic-graph.repository.pack`", "`other.tool`", "missing `agentic-graph.repository.pack`"],
     ["Agentic Canvas OS owns", "A owns", "missing Agentic Canvas OS owns"],
-    ["Knowgrph owns", "B owns", "missing Knowgrph owns"],
+    ["agentic-graph owns", "B owns", "missing agentic-graph owns"],
   ]) {
     const changed = repositoryPlanning.replace(row, row.replace(before, after));
     assert.equal(

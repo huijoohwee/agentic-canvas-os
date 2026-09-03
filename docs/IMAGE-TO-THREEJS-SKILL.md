@@ -8,8 +8,8 @@ schema: "agentic-canvas-os-skill/v1"
 frontmatter_contract: "required"
 status: "runtime-ready-dev"
 skill_id: "image.to-threejs"
-owner: "$GITHUB_ROOT/knowgrph/canvas/src/features/image-to-threejs"
-runtime_scope: "Knowgrph Card, Widget, and Rich Media Panel projections"
+owner: "$GITHUB_ROOT/agentic-graph/canvas/src/features/image-to-threejs"
+runtime_scope: "agentic-graph Card, Widget, and Rich Media Panel projections"
 runtime_claim: "native Dev runtime proven for PNG, JPEG, and SVG Card, Widget, Storyboard, and Rich Media Panel projections with typed fallback and bounded disposal"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -24,7 +24,7 @@ copy_policy: "behavioral reference only; forbid copied code, prompts, schemas, f
 
 # Image To Three.js Skill
 
-`image.to-threejs` is a model-free Knowgrph skill that converts supported image sources into a typed Three.js render contract and projects the result through existing Card, Widget, and Rich Media Panel owners. It is not an agent, provider, photogrammetry pipeline, external plugin, or compatibility alias.
+`image.to-threejs` is a model-free agentic-graph skill that converts supported image sources into a typed Three.js render contract and projects the result through existing Card, Widget, and Rich Media Panel owners. It is not an agent, provider, photogrammetry pipeline, external plugin, or compatibility alias.
 
 ## Shared Invocation
 
@@ -41,7 +41,7 @@ copy_policy: "behavioral reference only; forbid copied code, prompts, schemas, f
 input:
   source_url: "string ending in .png, .jpg, .jpeg, or .svg, or an equivalent image data URL"
 output:
-  schema: "knowgrph-image-to-threejs/v1"
+  schema: "agentic-graph-image-to-threejs/v1"
   source_kind: "raster | svg"
   render_engine: "three"
   primitive: "textured-plane | shape-geometry"
@@ -76,7 +76,7 @@ The default public card presents as `Widget Card`. It suppresses the legacy visi
 
 ## External Boundary
 
-The named Object Sculptor repository informs only the staged, code-first modeling capability class. Knowgrph imports none of its code, prompts, schema, tests, fixtures, prose, package metadata, plugin layout, or runtime dependencies. The local skill uses dependencies already owned by the Canvas runtime.
+The named Object Sculptor repository informs only the staged, code-first modeling capability class. agentic-graph imports none of its code, prompts, schema, tests, fixtures, prose, package metadata, plugin layout, or runtime dependencies. The local skill uses dependencies already owned by the Canvas runtime.
 
 ## VCCs
 
@@ -95,7 +95,7 @@ The named Object Sculptor repository informs only the staged, code-first modelin
 |---|---|
 | Typed conversion and lifecycle | `npm --prefix canvas run test:ci:unit -- imageToThreeJs` reports 17/17 focused selectors passing, including inline Card/Widget invocation, a Card-owned `Three.js Rich Media Panel` with no input mutation, legacy derived-output recovery, source replacement, fallback, and disposal events. |
 | Browser contract | `npm --prefix canvas run test:ci:unit -- richMedia.browserSmokeContract` reports 1/1 passing. |
-| Shared-surface browser proof | `npm --prefix canvas run test:smoke:rich-media:browser` on a contract-valid Knowgrph task branch renders a PNG Rich Media Panel, runtime-generated JPEG Card, SVG Rich Media Panel, SVG Storyboard Widget, and the typed fallback on the visual Canvas. |
+| Shared-surface browser proof | `npm --prefix canvas run test:smoke:rich-media:browser` on a contract-valid agentic-graph task branch renders a PNG Rich Media Panel, runtime-generated JPEG Card, SVG Rich Media Panel, SVG Storyboard Widget, and the typed fallback on the visual Canvas. |
 | Static gates | Canvas TypeScript and repository hygiene checks pass for the validated source diff. |
 | Dependency boundary | Package manifests are unchanged; the runtime continues to use the repository-owned, deduplicated `three` dependency and imports no Object Sculptor package or source. |
-| Deployment boundary | Proof is local to the validated Knowgrph Dev task branch. Protected integration, Prod mirror synchronization, and Cloudflare remain separate operator-gated steps. |
+| Deployment boundary | Proof is local to the validated agentic-graph Dev task branch. Protected integration, Prod mirror synchronization, and Cloudflare remain separate operator-gated steps. |

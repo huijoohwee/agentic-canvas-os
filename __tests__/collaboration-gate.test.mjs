@@ -5,9 +5,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import {
-  assertKnowgrphCollaborationGate,
+  assertAgenticGraphCollaborationGate,
   readCollaborationProof,
-  resolveKnowgrphRoot,
+  resolveAgenticGraphRoot,
   runCollaborationGate,
   validateCollaborationProof,
 } from "../scripts/collaboration-gate.mjs";
@@ -24,7 +24,7 @@ const passingProof = {
     requiredDeviceCount: 2,
     verificationDigest: "a".repeat(64),
     devices: ["owner", "guest"],
-    agenticgraphRevision: "b".repeat(40),
+    agenticGraphRevision: "b".repeat(40),
     agenticCanvasOsRevision: "c".repeat(40),
     catalogRevision: "c".repeat(40),
     catalogHydrationStatus: "fresh",
@@ -47,40 +47,40 @@ function fakeSandbox() {
   };
 }
 
-test("collaboration gate resolves the sibling Knowgrph owner without machine paths", () => {
+test("collaboration gate resolves the sibling agentic-graph owner without machine paths", () => {
   assert.equal(
-    resolveKnowgrphRoot({ agenticCanvasOsRoot: "/repos/agentic-canvas-os", env: {} }),
-    path.resolve("/repos/knowgrph"),
+    resolveAgenticGraphRoot({ agenticCanvasOsRoot: "/repos/agentic-canvas-os", env: {} }),
+    path.resolve("/repos/agentic-graph"),
   );
   assert.equal(
-    resolveKnowgrphRoot({ agenticCanvasOsRoot: "/repos/agentic-canvas-os", env: { AGENTICGRAPH_ROOT: "/work/knowgrph" } }),
-    path.resolve("/work/knowgrph"),
+    resolveAgenticGraphRoot({ agenticCanvasOsRoot: "/repos/agentic-canvas-os", env: { AGENTIC_GRAPH_ROOT: "/work/agentic-graph" } }),
+    path.resolve("/work/agentic-graph"),
   );
 });
 
-test("collaboration gate requires the canonical Knowgrph command owner", () => {
+test("collaboration gate requires the canonical agentic-graph command owner", () => {
   const packageText = JSON.stringify({
     scripts: { "collaboration:readiness:check": "node ./scripts/check-collaboration-readiness.mjs" },
   });
-  assert.equal(assertKnowgrphCollaborationGate({
-    knowgrphRoot: "/repos/knowgrph",
+  assert.equal(assertAgenticGraphCollaborationGate({
+    agenticGraphRoot: "/repos/agentic-graph",
     fileExists: () => true,
     readText: () => packageText,
-  }), "/repos/knowgrph");
-  assert.throws(() => assertKnowgrphCollaborationGate({
-    knowgrphRoot: "/repos/knowgrph",
+  }), "/repos/agentic-graph");
+  assert.throws(() => assertAgenticGraphCollaborationGate({
+    agenticGraphRoot: "/repos/agentic-graph",
     fileExists: () => true,
     readText: () => JSON.stringify({ scripts: {} }),
   }), /canonical collaboration:readiness:check/);
 });
 
-test("one command delegates to the complete Knowgrph collaboration readiness gate", () => {
+test("one command delegates to the complete agentic-graph collaboration readiness gate", () => {
   const calls = [];
   const { sandbox, releases } = fakeSandbox();
   const result = runCollaborationGate({
     agenticCanvasOsRoot: "/repos/agentic-canvas-os",
     env: {},
-    validateOwner: ({ knowgrphRoot }) => knowgrphRoot,
+    validateOwner: ({ agenticGraphRoot }) => agenticGraphRoot,
     createSandbox: () => sandbox,
     readProof: () => passingProof,
     spawn: (command, args, options) => {
@@ -90,7 +90,7 @@ test("one command delegates to the complete Knowgrph collaboration readiness gat
   });
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0].args, ["run", "collaboration:readiness:check"]);
-  assert.equal(calls[0].options.cwd, path.resolve("/repos/knowgrph"));
+  assert.equal(calls[0].options.cwd, path.resolve("/repos/agentic-graph"));
   assert.equal(calls[0].options.stdio, "inherit");
   assert.equal(calls[0].options.env.TEST_GATE, "isolated");
   assert.equal(result.status, "passed");
@@ -103,7 +103,7 @@ test("failed runtime proof remains scoped to parity and preserves diagnostics", 
   assert.throws(() => runCollaborationGate({
     agenticCanvasOsRoot: "/repos/agentic-canvas-os",
     env: {},
-    validateOwner: ({ knowgrphRoot }) => knowgrphRoot,
+    validateOwner: ({ agenticGraphRoot }) => agenticGraphRoot,
     createSandbox: () => sandbox,
     spawn: () => ({ status: 13 }),
   }), (error) => {
@@ -129,7 +129,7 @@ test("parallel sandboxes use distinct resources and release only their own run",
   const stateRoot = mkdtempSync(path.join(tmpdir(), "agentic-collaboration-gate-"));
   const options = {
     agenticCanvasOsRoot: "/repos/agentic-canvas-os",
-    knowgrphRoot: "/repos/knowgrph",
+    agenticGraphRoot: "/repos/agentic-graph",
     env: { AGENTIC_COLLABORATION_STATE_ROOT: stateRoot },
     portsAvailable: () => true,
   };

@@ -13,13 +13,13 @@ const digest = 'c'.repeat(64)
 const sample = {
   schema: PRODUCTION_RUNTIME_READINESS_SCHEMA,
   status: 'verified-build',
-  source: { repository: 'huijoohwee/knowgrph', revision, tree: 'd'.repeat(40) },
+  source: { repository: 'huijoohwee/agentic-graph', revision, tree: 'd'.repeat(40) },
   agenticCanvasOs: { repository: 'huijoohwee/agentic-canvas-os', revision: docsRevision },
   catalogRevision: docsRevision,
   artifact: { algorithm: 'sha256', digest },
   immutableManifest: { algorithm: 'sha256', digest: 'e'.repeat(64) },
   mirror: { repository: 'huijoohwee/huijoohwee' },
-  surfaces: ['/', '/agenticgraph'],
+  surfaces: ['/', '/agentic-graph'],
 }
 
 test('production runtime readiness binds app docs catalog artifact manifest mirror and surfaces', () => {
@@ -38,5 +38,9 @@ test('production runtime readiness rejects revision drift and unknown fields', (
   assert.throws(
     () => validateProductionRuntimeReadiness({ ...sample, deploymentId: 'mutable' }),
     /missing or unknown fields/,
+  )
+  assert.throws(
+    () => validateProductionRuntimeReadiness({ ...sample, surfaces: ['/', '/agentic-os'] }),
+    /apex and \/agentic-graph surfaces/,
   )
 })

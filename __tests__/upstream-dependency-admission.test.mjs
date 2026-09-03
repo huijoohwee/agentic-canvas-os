@@ -276,5 +276,5 @@ test("documentation binds the runtime to exact protected guideline provenance", 
     "## Agentic Canvas OS Reference Implementation",
   );
   assert.ok(referenceAdapter);
-  assert.doesNotMatch(neutralCore, /GitHub|Cloudflare|Agentic Canvas OS|Knowgrph|localhost/);
+  assert.doesNotMatch(neutralCore, /GitHub|Cloudflare|Agentic Canvas OS|agentic-graph|localhost/);
 });

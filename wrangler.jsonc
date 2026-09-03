@@ -61,8 +61,8 @@
     { "tag": "v2-agent-state", "new_sqlite_classes": ["AgentState"] }
   ],
   "vars": {
-    "KNOWGRPH_MCP_ENDPOINT": "https://airvio.co/knowgrph/control-plane/mcp",
-    "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
+    "AGENTIC_OS_MCP_ENDPOINT": "https://airvio.co/agentic-os/control-plane/mcp",
+    "CANVAS_BASE_URL": "https://airvio.co/agentic-os",
     "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
   },
   "secrets": {
@@ -126,21 +126,21 @@
         { "tag": "v2-agent-state", "new_sqlite_classes": ["AgentState"] }
       ],
       "services": [
-        { "binding": "KNOWGRPH_MCP_SERVICE", "service": "knowgrph-mcp-dev" }
+        { "binding": "AGENTIC_OS_MCP_SERVICE", "service": "agentic-mcp-dev" }
       ],
       "vars": {
-        "KNOWGRPH_MCP_ENDPOINT": "https://knowgrph-mcp-dev.huijoohwee.workers.dev/knowgrph/control-plane/mcp",
-        "KNOWGRPH_FUNCTION_TOOL_ALLOWLIST": "update_agent_run_note",
-        "KNOWGRPH_FUNCTION_REVIEW_REQUIRED": "update_agent_run_note",
+        "AGENTIC_OS_MCP_ENDPOINT": "https://agentic-mcp-dev.huijoohwee.workers.dev/agentic-os/control-plane/mcp",
+        "AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST": "update_agent_run_note",
+        "AGENTIC_OS_FUNCTION_REVIEW_REQUIRED": "update_agent_run_note",
         "OPENAI_FUNCTION_CALLING_ENDPOINT": "https://api.openai.com/v1/responses",
         "OPENAI_FUNCTION_CALLING_API_KEY_ENV": "OPENAI_API_KEY",
         "OPENAI_FUNCTION_CALLING_REASONING_EFFORT": "low",
         "OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS": "256",
-        "CANVAS_BASE_URL": "https://airvio.co/knowgrph",
+        "CANVAS_BASE_URL": "https://airvio.co/agentic-os",
         "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
       },
       "secrets": {
-        "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN"]
+        "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "AGENTIC_OS_MCP_FUNCTION_BEARER_TOKEN"]
       }
     }
   }

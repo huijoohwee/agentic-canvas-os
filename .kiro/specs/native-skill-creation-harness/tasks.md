@@ -137,7 +137,7 @@ at the end and is not part of this increment.
   - [ ] 2.2 Determine and record the tool allowlist backing store
     - Resolve the open question by inspecting `wrangler.jsonc` (`env.dev.vars`), the
       `function-calling*.js` family, and `worker/index.js` for every read of
-      `KNOWGRPH_FUNCTION_TOOL_ALLOWLIST` and `KNOWGRPH_FUNCTION_REVIEW_REQUIRED`, and record which
+      `AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST` and `AGENTIC_OS_FUNCTION_REVIEW_REQUIRED`, and record which
       surface actually backs the allowlist that the Function Calling Gateway consults at dispatch
     - Record the answer in `docs/NATIVE-SKILL-HARNESS.md` as one of: an environment variable only, an
       in-Worker owner module only, or an environment variable seeding an in-Worker owner
@@ -544,14 +544,14 @@ at the end and is not part of this increment.
       `worker/index.js`, and asserts the digest is unchanged
     - Assert the set of changed working-tree paths is a subset of the fixture adapter's own prefix
     - Assert `worker/index.js` contains no occurrence of the fixture adapter's identity string and no
-      occurrence of any adapter identity including `knowgrph`, so an empty diff cannot pass on a name
+      occurrence of any adapter identity including `agentic-graph`, so an empty diff cannot pass on a name
       that was already hardcoded
     - _Requirements: 13.2, 13.3, 13.4_
 
-  - [ ]* 9.6 Write unit tests for the knowgrph adapter registration path
-    - Register a knowgrph-shaped fixture through `register` with a resolvable reference and assert the
+  - [ ]* 9.6 Write unit tests for the agentic-graph adapter registration path
+    - Register a agentic-graph-shaped fixture through `register` with a resolvable reference and assert the
       Registration_Record names the adapter identity, the definition id, and the allowlist entry id
-    - Record in the test comment that the Min-Viable Scope is proven against the existing `knowgrph`
+    - Record in the test comment that the Min-Viable Scope is proven against the existing `agentic-graph`
       adapter only and that the second-adapter genericity proof is outside this increment
     - _Requirements: 13.1, 22.4_
 
@@ -579,7 +579,7 @@ at the end and is not part of this increment.
     - Add `acos.skill_proposer.propose` with `{ gap_signal }`, `acos.skill_registry.promote` with
       `{ draft_id, operator_instruction_ref }`, and `acos.adapter.register` with
       `{ agent_definition, tool_allowlist_entry }` to `docs/MCP-GATEWAY.md`, each with trust boundary
-      `approval-gated`, leaving the existing `knowgrph.skill.propose` row unchanged
+      `approval-gated`, leaving the existing `agentic-graph.skill.propose` row unchanged
     - _Requirements: 15.4_
 
   - [ ] 10.5 Implement the token declaration count check
@@ -724,7 +724,7 @@ Must-tier count.
 - **Requirement 21, cross-adapter skill suggestion (Could tier).** Reuses the Must-tier proposer
   unchanged; the only new surface is the derivation function.
 - **Requirement 22 criterion 4, the second-adapter genericity proof.** The Min-Viable Scope is proven
-  against the existing `knowgrph` adapter only.
+  against the existing `agentic-graph` adapter only.
 - **The `/propose-skill` to `/skill.draft-definition` rename.** Edits a canonical register, needs an
   operator instruction.
 

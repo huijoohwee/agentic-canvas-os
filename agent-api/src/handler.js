@@ -1,12 +1,12 @@
 // Thin, keyless Agent-API for the agentic-canvas-os product tier.
 //
-// Two responsibilities, NOTHING more (mirrors knowgrph R11/R12/R15):
+// Two responsibilities, NOTHING more (mirrors agentic-graph R11/R12/R15):
 //   1. `POST /auth/session` → mint a stateless session token (HS256, secret
 //      server-side only).
 //   2. `POST /run` → verify the session token, validate the request schema, and
-//      FORWARD `agenticgraph.video_remix.run` to the AgenticGraph MCP control plane,
+//      FORWARD `agentic-graph.video_remix.run` to the agentic-graph MCP control plane,
 //      returning the Run_Manifest. This tier holds NO model keys and calls NO
-//      paid model directly; all reasoning/spend happens in knowgrph behind its
+//      paid model directly; all reasoning/spend happens in agentic-graph behind its
 //      Approval_Gates.
 //
 // Pure/deterministic + injectable (MCP client, secret, clock) so it is fully
@@ -15,7 +15,7 @@
 
 import { isSecureRoomCapability, mintSessionToken, verifySessionToken } from "./auth.js";
 
-// Request schema bounds (mirror knowgrph POST /run, R12.1).
+// Request schema bounds (mirror agentic-graph POST /run, R12.1).
 const REFERENCE_URL_MAX = 2048;
 const BRIEF_MIN = 1;
 const BRIEF_MAX = 10000;
@@ -109,20 +109,20 @@ export function createAuthSessionHandler({ secret, now, defaultExpirySeconds } =
 }
 
 /**
- * `POST /run` handler factory: verify session → validate → forward to knowgrph
+ * `POST /run` handler factory: verify session → validate → forward to agentic-graph
  * MCP. FAIL-CLOSED with 501 when no MCP client/endpoint is wired (never a silent
  * direct model call).
  *
  * @param {object} deps
  * @param {string} deps.secret server-side signing secret (verify Auth_Token)
- * @param {{ runVideoRemix: Function }} deps.mcpClient knowgrph MCP client
+ * @param {{ runVideoRemix: Function }} deps.mcpClient agentic-graph MCP client
  * @param {number} [deps.now] injectable clock
  */
 export function createRunHandler({ secret, mcpClient, now } = {}) {
   return async function run(request = {}) {
     if (!secret) return json(501, { error: "auth not configured" });
     if (!mcpClient || typeof mcpClient.runVideoRemix !== "function") {
-      return json(501, { error: "AgenticGraph MCP control plane not configured" });
+      return json(501, { error: "agentic-graph MCP control plane not configured" });
     }
 
     // 1. Auth: verify the session token (access gate; never authorizes spend).
@@ -134,7 +134,7 @@ export function createRunHandler({ secret, mcpClient, now } = {}) {
     const { valid, errors, value } = validateRunRequest(request.body);
     if (!valid) return json(400, { error: "invalid request", fields: errors });
 
-    // 3. Forward to the AgenticGraph control plane over MCP; return the Run_Manifest.
+    // 3. Forward to the agentic-graph control plane over MCP; return the Run_Manifest.
     try {
       const manifest = await mcpClient.runVideoRemix(value, { bearer: token });
       return json(200, manifest);
@@ -142,7 +142,7 @@ export function createRunHandler({ secret, mcpClient, now } = {}) {
       const status = Number.isFinite(err && err.status) ? err.status : 502;
       // Non-disclosing: surface a coarse upstream-failure indication only.
       return json(status >= 400 && status < 600 ? status : 502, {
-        error: "AgenticGraph control plane call failed",
+        error: "agentic-graph control plane call failed",
         code: (err && err.code) || "mcp_error",
       });
     }
@@ -150,14 +150,14 @@ export function createRunHandler({ secret, mcpClient, now } = {}) {
 }
 
 /**
- * `POST /invoke` handler factory: verify session → forward to AgenticGraph
+ * `POST /invoke` handler factory: verify session → forward to agentic-graph
  * MCP command grammar tool.
  */
 export function createInvokeHandler({ secret, mcpClient, now } = {}) {
   return async function invoke(request = {}) {
     if (!secret) return json(501, { error: "auth not configured" });
     if (!mcpClient || typeof mcpClient.invokeDocsGrammar !== "function") {
-      return json(501, { error: "AgenticGraph MCP control plane not configured" });
+      return json(501, { error: "agentic-graph MCP control plane not configured" });
     }
 
     const token = readBearer(request.headers);
@@ -175,7 +175,7 @@ export function createInvokeHandler({ secret, mcpClient, now } = {}) {
     } catch (err) {
       const status = Number.isFinite(err && err.status) ? err.status : 502;
       return json(status >= 400 && status < 600 ? status : 502, {
-        error: "AgenticGraph control plane call failed",
+        error: "agentic-graph control plane call failed",
         code: (err && err.code) || "mcp_error",
       });
     }

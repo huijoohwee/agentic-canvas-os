@@ -1,5 +1,5 @@
 ---
-title: "AgenticGraph Native XR Physics Playground"
+title: "agentic-graph Native XR Physics Playground"
 doc_type: "Workspace Demo"
 status: "runtime-ready"
 runtime_status: "runtime-ready"
@@ -24,10 +24,10 @@ run_ready_demo:
   identity_conflict: "fail closed when path and source identity disagree"
   canonical_consumers: ["home-apex", "workspace", "game-mode-overlay"]
   dev_command: "npm run dev"
-  canonical_source_file: "/docs/workspace-seeds/agenticgraph-physics-playground-demo.md"
-  env_selector: "VITE_AGENTICGRAPH_RUN_READY_DEMO=xr-physics"
-  validation_seed_path: "/agenticgraph-physics-playground-demo.md"
-  source_root: "agenticgraph/docs"
+  canonical_source_file: "/docs/workspace-seeds/agentic-graph-physics-playground-demo.md"
+  env_selector: "VITE_AGENTIC_OS_RUN_READY_DEMO=xr-physics"
+  validation_seed_path: "/agentic-graph-physics-playground-demo.md"
+  source_root: "agentic-graph/docs"
   source_backed: true
   clean_canvas_recommended: true
   native_runtime: true
@@ -36,7 +36,7 @@ run_ready_demo:
   auto_start: true
   external_dependencies: []
 home_apex:
-  source_authority: "/docs/workspace-seeds/agenticgraph-physics-playground-demo.md"
+  source_authority: "/docs/workspace-seeds/agentic-graph-physics-playground-demo.md"
   scene_authority: "the authored XR Physics Playground world in this document"
   game_mode_projection: "actor, camera, and controls overlay only"
   forbidden_variants: ["fallback arena", "standalone game scene", "duplicate world", "legacy environment"]
@@ -88,8 +88,8 @@ motion_control:
   frame_persistence: false
   xr_drivers: ["native physics controller", "selected humanoid pose"]
   invocation: "/motion.control @canvas #pose operation=start backend=auto"
-  inspect_tool: "agenticgraph.inspect_local_motion_control"
-  control_tool: "agenticgraph.control_local_motion_control"
+  inspect_tool: "agentic-graph.inspect_local_motion_control"
+  control_tool: "agentic-graph.control_local_motion_control"
   game_mode_role: "optional normalized player input only; never the NPC decision policy"
 game_mode:
   companion_view: "gameMode"
@@ -106,10 +106,10 @@ game_mode:
     reload: "/game.mode @canvas #gameplay operation=reload"
     save: "/game.mode @canvas #gameplay operation=save"
     exit: "/game.mode @canvas #gameplay operation=exit"
-  web_mcp_schema: "agenticgraph-game-mode-mcp/v1"
-  inspect_tool: "agenticgraph.inspect_local_game_mode"
-  control_tool: "agenticgraph.control_local_game_mode"
-  source_authority: "/docs/workspace-seeds/agenticgraph-physics-playground-demo.md"
+  web_mcp_schema: "agentic-graph-game-mode-mcp/v1"
+  inspect_tool: "agentic-graph.inspect_local_game_mode"
+  control_tool: "agentic-graph.control_local_game_mode"
+  source_authority: "/docs/workspace-seeds/agentic-graph-physics-playground-demo.md"
   activation_scope: "optional overlay on the active authored XR world; never a standalone Home source"
   lifecycle: "retain the authored XR scene while suspending its controller input and simulation; restore both on exit"
   controller_handoff: "temporarily suspend the native XR controller stage and restore it on exit"
@@ -124,7 +124,7 @@ game_mode:
   malformed_hydration: "preserve bytes and block Start and Restart until explicit Reset"
   validation_input_forbid_hardcode_in_repo: true
 kgXrMotionReference:
-  schema: "agenticgraph-xr-motion-reference/v1"
+  schema: "agentic-graph-xr-motion-reference/v1"
   stageId: "singapore"
   durationSeconds: 6
   fps: 12
@@ -181,9 +181,9 @@ runtime_validation:
   xr_authoring_edited_media_delivery:
     scope: "xr-authoring-edited-media-delivery"
     projection_role: "downstream scoped evidence; not a second XR readiness authority"
-    prd: "/docs/documents/agenticgraph-ar-vr-xr-prd-tad-adr.md"
+    prd: "/docs/documents/agentic-graph-ar-vr-xr-prd-tad-adr.md"
     runtime_owner: "canvas/src/components/timeline; canvas/src/features/gitgraph"
-    source_snapshot_schema: "agenticgraph-xr-v2-readiness/v1"
+    source_snapshot_schema: "agentic-graph-xr-v2-readiness/v1"
     source_snapshot_status: "source-ready"
     canonical_delivery_status: "runtime-ready"
     canonical_delivery_limit: "XR authoring and native edited-media delivery only"
@@ -203,7 +203,7 @@ runtime_validation:
       completed_at: "2026-08-04T09:26:58Z"
       affected_scope: "xr_v2_video_editor"
       focused_gate: "npm run xr-v2:review-ready"
-      browser_observation_schema: "agenticgraph-xr-v2-browser-smoke/v1"
+      browser_observation_schema: "agentic-graph-xr-v2-browser-smoke/v1"
       browser_observation: "pass"
     canonical_runtime_reconciliation:
       integration_result_schema: "agentic-device-integration-result/v1"
@@ -234,8 +234,8 @@ runtime_validation:
       - "Production availability"
       - "deployment authority"
 mcp_control:
-  inspect_tool: "agenticgraph.inspect_local_xr_scene_assets"
-  control_tool: "agenticgraph.control_local_xr_scene"
+  inspect_tool: "agentic-graph.inspect_local_xr_scene_assets"
+  control_tool: "agentic-graph.control_local_xr_scene"
   launch: "/xr.physics @canvas #controller operation=develop-run mode=ball"
   switch: "/xr.physics @canvas #controller operation=select mode=rocket"
   reset: "/xr.physics @canvas #controller operation=reset"
@@ -306,19 +306,19 @@ flow:
 
 # Native XR Physics Playground
 
-This Source Files document activates a playable XR physics playground inside the normal AgenticGraph workspace. The default Singapore waterfront terrain, player presentations, physics stepping, inputs, controller switching, objective loop, and selectable camera source are owned by AgenticGraph runtime modules and need no remote service or downloaded asset.
+This Source Files document activates a playable XR physics playground inside the normal agentic-graph workspace. The default Singapore waterfront terrain, player presentations, physics stepping, inputs, controller switching, objective loop, and selectable camera source are owned by agentic-graph runtime modules and need no remote service or downloaded asset.
 
 ## Run
 
-From the repository root, run `npm run dev`. In AgenticGraph, open **Explorer → Source Files → docs → workspace-seeds → agenticgraph-physics-playground-demo.md**. Applying this document starts the Beach Ball, playground, camera, and bottom vehicle switcher automatically while Explorer remains available.
+From the repository root, run `npm run dev`. In agentic-graph, open **Explorer → Source Files → docs → workspace-seeds → agentic-graph-physics-playground-demo.md**. Applying this document starts the Beach Ball, playground, camera, and bottom vehicle switcher automatically while Explorer remains available.
 
 ## Scoped XR edited-media evidence
 
 This document projects downstream evidence for `xr-authoring-edited-media-delivery`; applying it still starts only the native `xr-physics` playground. It does not load a video sequence, run the dedicated smoke route, or claim that opening the XR choreography Timeline reproduces the edited-media proof.
 
-The checked-in `agenticgraph-xr-v2-readiness/v1` source snapshot remains `source-ready`. Separately, the protected delivery chain is `runtime-ready` for this scope only: reviewed feature commit `fcd69c6b2d42a00779f55be8c1d57a0ab468339b`, protected-refresh head `a6de5722e550e633d0d73f59f187a09ec7388879`, and canonical `main` commit `a3ddfef7cc55c38385520173273abd66010e9747` share the admitted feature lineage. Canonical push run `30895597328` passed **Integration Gate**, selected `npm run xr-v2:review-ready`, and passed the dedicated Chromium edited-media observation. Agentic Canvas OS then reconciled the clean canonical runtime at that exact AgenticGraph commit under `agentic-local-runtime-readiness/v1` at revision `217a8a42d6497e059839a6a1f809c2459530ca54`.
+The checked-in `agentic-graph-xr-v2-readiness/v1` source snapshot remains `source-ready`. Separately, the protected delivery chain is `runtime-ready` for this scope only: reviewed feature commit `fcd69c6b2d42a00779f55be8c1d57a0ab468339b`, protected-refresh head `a6de5722e550e633d0d73f59f187a09ec7388879`, and canonical `main` commit `a3ddfef7cc55c38385520173273abd66010e9747` share the admitted feature lineage. Canonical push run `30895597328` passed **Integration Gate**, selected `npm run xr-v2:review-ready`, and passed the dedicated Chromium edited-media observation. Agentic Canvas OS then reconciled the clean canonical runtime at that exact agentic-graph commit under `agentic-local-runtime-readiness/v1` at revision `217a8a42d6497e059839a6a1f809c2459530ca54`.
 
-To reproduce the focused feature evidence from clean exact canonical AgenticGraph `main`, run `npm run xr-v2:review-ready`. It uses the dedicated local XR v2 smoke route and committed same-origin fixture; it does not deploy.
+To reproduce the focused feature evidence from clean exact canonical agentic-graph `main`, run `npm run xr-v2:review-ready`. It uses the dedicated local XR v2 smoke route and committed same-origin fixture; it does not deploy.
 
 The evidence covers canonical Timeline command routing, browser-native edited-media export, non-empty output, decoded metadata, bounded playback, and resource teardown. It does not establish mounted-renderer material wiring, live depth, a named-device frame budget, camera lifecycle on physical devices, physical-headset behavior, Production availability, or deployment authority. The clean-room editor boundary remains dependency-free and attribution-only; no external editor code, package, generated asset, or runtime/build/test contact is admitted.
 
@@ -331,17 +331,17 @@ The evidence covers canonical Timeline command routing, browser-native edited-me
 | Torque or stabilization | Shift | Shoulder action |
 | Switch controller | Ball / Rocket buttons | Simulation controls |
 
-The same runtime is MCP-controllable through `agenticgraph.control_local_xr_scene`; use `/xr.physics @canvas #controller operation=develop-run mode=ball`, then `operation=select mode=rocket`, `operation=pause`, `operation=resume`, or `operation=reset`. While this document remains applied, an `exit` transition is immediately reclaimed as a fresh Ball run so the authored editor preview cannot replace the native stage. Applying another document releases the document-owned runtime.
+The same runtime is MCP-controllable through `agentic-graph.control_local_xr_scene`; use `/xr.physics @canvas #controller operation=develop-run mode=ball`, then `operation=select mode=rocket`, `operation=pause`, `operation=resume`, or `operation=reset`. While this document remains applied, an `exit` transition is immediately reclaimed as a fresh Ball run so the authored editor preview cannot replace the native stage. Applying another document releases the document-owned runtime.
 
 This document is the sole source authority for the Home Apex background, the workspace Physics Playground, and Game Mode when opened from either surface. Game Mode is an optional actor, camera, and controls overlay on this authored world; no standalone Game Mode document, arena, terrain, environment, or second Canvas participates in Home activation.
 
-**FloatingPanel → Game Mode** uses the same React Three Fiber Canvas and authored XR world as **Media**, **Animation**, **Motion Control**, and **Camera**. Its native invocation prefix is exactly `/game.mode @canvas #gameplay`; add one supported operation from **Open**, **Start**, **Stop**, **Restart**, **Fire**, **Reload**, **Save**, or **Exit**. Browser-local WebMCP exposes schema `agenticgraph-game-mode-mcp/v1` through `agenticgraph.inspect_local_game_mode` and `agenticgraph.control_local_game_mode`. The synchronous WebGL probe fails closed before mission start and exposes a visible local unsupported state without mounting another scene or renderer.
+**FloatingPanel → Game Mode** uses the same React Three Fiber Canvas and authored XR world as **Media**, **Animation**, **Motion Control**, and **Camera**. Its native invocation prefix is exactly `/game.mode @canvas #gameplay`; add one supported operation from **Open**, **Start**, **Stop**, **Restart**, **Fire**, **Reload**, **Save**, or **Exit**. Browser-local WebMCP exposes schema `agentic-graph-game-mode-mcp/v1` through `agentic-graph.inspect_local_game_mode` and `agentic-graph.control_local_game_mode`. The synchronous WebGL probe fails closed before mission start and exposes a visible local unsupported state without mounting another scene or renderer.
 
 Opening Game Mode while XR owns the surface keeps the authored atmosphere, Singapore terrain, props, and exact paused frame visibly mounted in the same Canvas. Only the first-person gameplay camera and actor overlay change. Fallback, renamed, conditional, duplicate, stale, and legacy arena or environment producers are forbidden at source. Start prepares a healthy tick-zero frame and waits for normalized desktop, pointer, touch, Motion Control, or MCP engagement before deterministic ticks begin. Stop followed by Start resumes the exact in-memory Game Mode tick and state. Exiting restores XR input and simulation ownership so its deterministic stage continues. Switching the FloatingPanel among Media, Animation, Motion Control, Game Mode, and Camera preserves the same Canvas and authored scene. Motion Control remains an optional normalized player-input source only; its camera/LiteRT pipeline never becomes the four-action NPC decision policy.
 
 Terminal Game Mode results remain pending and are not auto-saved. **Save** is the only operation that persists validated game Decisions through browser-local WorkspaceFs. Malformed saved bytes remain intact and block **Start** and **Restart** until the operator explicitly chooses **Reset local save**.
 
-Camera source is independent of controller and object selection. In **FloatingPanel Camera → SHOOT**, choose **Fixed Follow** for stage-aware tracking or **Free Orbit** for direct pan, rotate, and zoom. The same choice is invocable through `agenticgraph.control_local_camera` with `/camera.select @camera #camera camera=fixed-follow` or `camera=free-orbit`. Timeline camera-mark playback temporarily takes framing ownership, then returns to the selected source.
+Camera source is independent of controller and object selection. In **FloatingPanel Camera → SHOOT**, choose **Fixed Follow** for stage-aware tracking or **Free Orbit** for direct pan, rotate, and zoom. The same choice is invocable through `agentic-graph.control_local_camera` with `/camera.select @camera #camera camera=fixed-follow` or `camera=free-orbit`. Timeline camera-mark playback temporarily takes framing ownership, then returns to the selected source.
 
 The ball rolls across the terrain, jumps only from supported contact, retains bounded air steering, and exposes a stronger torque response while the modifier is held. The rocket applies directional and vertical thrust, visualizes bounded tilt and live exhaust, dampens rotation, and uses the modifier to stabilize toward upright. Rocket altitude stays within the authored terrain scale while the single camera raises and widens into a bounded aerial composition of the procedural Singapore waterfront and skyline.
 

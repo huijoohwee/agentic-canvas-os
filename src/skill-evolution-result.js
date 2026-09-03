@@ -1,10 +1,10 @@
-// Canonical, model-free validation for knowgrph Skill Evolution MCP result snapshots.
+// Canonical, model-free validation for agentic-graph Skill Evolution MCP result snapshots.
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-const SKILL_EVOLUTION_RESULT_SCHEMA = "knowgrph-skill-evolution-result/v1";
+const SKILL_EVOLUTION_RESULT_SCHEMA = "agentic-graph-skill-evolution-result/v1";
 const SKILL_EVOLUTION_OPERATIONS = new Set(["plan", "start", "step", "status", "cancel"]);
 const SKILL_EVOLUTION_STATUSES = new Set([
   "planned",

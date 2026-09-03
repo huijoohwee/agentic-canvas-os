@@ -5,11 +5,11 @@ import { createAgentApiApp } from "../agent-api/src/app.js";
 import { mintReviewerToken, verifyReviewerToken } from "../agent-api/src/auth.js";
 import { createGuardrailsHumanReviewRuntime } from "../agent-api/src/guardrails-human-review.js";
 import {
-  createKnowgrphFunctionGateway,
-  createKnowgrphGuardrailEvaluator,
-  KNOWGRPH_FUNCTION_TOOL_NAMES,
-  parseKnowgrphFunctionToolAllowlist,
-} from "../agent-api/src/knowgrph-function-gateway.js";
+  createAgenticGraphFunctionGateway,
+  createAgenticGraphGuardrailEvaluator,
+  AGENTIC_GRAPH_FUNCTION_TOOL_NAMES,
+  parseAgenticGraphFunctionToolAllowlist,
+} from "../agent-api/src/agentic-graph-function-gateway.js";
 import {
   createOpenAiResponsesFunctionAdapter,
   resolveOpenAiResponsesFunctionConfig,
@@ -149,20 +149,20 @@ test("OpenAI adapter redacts provider bodies and configuration fails closed with
   );
 });
 
-test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", async () => {
+test("agentic-graph gateway enforces its allowlist and immutable policy before MCP", async () => {
   let calls = 0;
   const guardrailsHumanReview = createGuardrailsHumanReviewRuntime({
-    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    evaluateGuardrail: createAgenticGraphGuardrailEvaluator(),
   });
-  const gateway = createKnowgrphFunctionGateway({
-    allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
+  const gateway = createAgenticGraphFunctionGateway({
+    allowedToolNames: [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status],
     mcpClient: {
       callTool: async () => {
         calls += 1;
         return {
           ok: true,
           view: "capabilities",
-          entries: [{ toolId: "agenticgraph.os.status" }],
+          entries: [{ toolId: "agentic-graph.os.status" }],
           unavailableSources: [],
           cost_log: {
             model: "none",
@@ -179,11 +179,11 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
   const base = {
     runId: "run-a",
     callId: "call-a",
-    name: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
+    name: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status,
     arguments: { view: "capabilities" },
     caller: { type: "direct" },
     policy: {
-      revision: "knowgrph-status-function/v1", riskClass: "read-only", idempotent: true, approvalRequired: false,
+      revision: "agentic-graph-status-function/v1", riskClass: "read-only", idempotent: true, approvalRequired: false,
     },
   };
   const mismatch = await gateway.callTool({ ...base, policy: { ...base.policy, riskClass: "mutation" } });
@@ -193,14 +193,14 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
 
   const completed = await gateway.callTool(base);
   assert.equal(completed.status, "completed");
-  assert.deepEqual(completed.output.entry_ids, ["agenticgraph.os.status"]);
+  assert.deepEqual(completed.output.entry_ids, ["agentic-graph.os.status"]);
   assert.equal(completed.costLog.estimated_cost_usd, 0);
   assert.equal(calls, 1);
   assert.equal(gateway.stats().inputGuardrailChecks, 1);
   assert.equal(gateway.stats().outputGuardrailChecks, 1);
 
-  const nonzeroGateway = createKnowgrphFunctionGateway({
-    allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
+  const nonzeroGateway = createAgenticGraphFunctionGateway({
+    allowedToolNames: [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status],
     mcpClient: {
       callTool: async () => ({
         ok: true,
@@ -223,11 +223,11 @@ test("Knowgrph gateway enforces its allowlist and immutable policy before MCP", 
   assert.equal(rejectedCost.reasonCode, "tool_output_invalid");
 });
 
-test("Knowgrph gateway resumes a review-required status call with exact signed reviewer evidence", async () => {
+test("agentic-graph gateway resumes a review-required status call with exact signed reviewer evidence", async () => {
   const reviewSecret = "review-secret";
   let mcpCalls = 0;
   const guardrailsHumanReview = createGuardrailsHumanReviewRuntime({
-    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    evaluateGuardrail: createAgenticGraphGuardrailEvaluator(),
     createReviewId: () => "status-review-1",
     authenticateReviewer: async ({ state, evidence }) => {
       const verdict = verifyReviewerToken(evidence?.token, reviewSecret, state);
@@ -241,9 +241,9 @@ test("Knowgrph gateway resumes a review-required status call with exact signed r
         : { authenticated: false };
     },
   });
-  const gateway = createKnowgrphFunctionGateway({
-    allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
-    reviewRequiredToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.status],
+  const gateway = createAgenticGraphFunctionGateway({
+    allowedToolNames: [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status],
+    reviewRequiredToolNames: [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status],
     guardrailsHumanReview,
     mcpClient: {
       callTool: async () => {
@@ -251,7 +251,7 @@ test("Knowgrph gateway resumes a review-required status call with exact signed r
         return {
           ok: true,
           view: "capabilities",
-          entries: [{ toolId: "agenticgraph.os.status" }],
+          entries: [{ toolId: "agentic-graph.os.status" }],
           unavailableSources: [],
           cost_log: {
             model: "none",
@@ -268,11 +268,11 @@ test("Knowgrph gateway resumes a review-required status call with exact signed r
     runId: "reviewed-run",
     conversationId: "reviewed-conversation",
     callId: "reviewed-call",
-    name: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
+    name: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status,
     arguments: { view: "capabilities" },
     caller: { type: "direct" },
     policy: {
-      revision: "knowgrph-status-function/v1", riskClass: "read-only", idempotent: true, approvalRequired: true,
+      revision: "agentic-graph-status-function/v1", riskClass: "read-only", idempotent: true, approvalRequired: true,
     },
   };
 
@@ -296,22 +296,22 @@ test("Knowgrph gateway resumes a review-required status call with exact signed r
     },
   });
   assert.equal(completed.status, "completed");
-  assert.deepEqual(completed.output.entry_ids, ["agenticgraph.os.status"]);
+  assert.deepEqual(completed.output.entry_ids, ["agentic-graph.os.status"]);
   assert.equal(mcpCalls, 1);
-  assert.deepEqual(gateway.stats().reviewRequiredToolNames, [KNOWGRPH_FUNCTION_TOOL_NAMES.status]);
+  assert.deepEqual(gateway.stats().reviewRequiredToolNames, [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status]);
   assert.equal(gateway.stats().reviewPauses, 1);
   assert.equal(gateway.stats().reviewResolutions, 1);
 });
 
 test("built-in run-note mutation cannot bypass review and requires native receipt evidence", async () => {
   assert.deepEqual(
-    parseKnowgrphFunctionToolAllowlist(`unknown,${KNOWGRPH_FUNCTION_TOOL_NAMES.runNote}`),
-    [KNOWGRPH_FUNCTION_TOOL_NAMES.runNote],
+    parseAgenticGraphFunctionToolAllowlist(`unknown,${AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.runNote}`),
+    [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.runNote],
   );
   const reviewSecret = "run-note-review-secret";
   let mcpCall;
   const guardrailsHumanReview = createGuardrailsHumanReviewRuntime({
-    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    evaluateGuardrail: createAgenticGraphGuardrailEvaluator(),
     createReviewId: () => "run-note-review-1",
     authenticateReviewer: async ({ state, evidence }) => {
       const verdict = verifyReviewerToken(evidence?.token, reviewSecret, state);
@@ -320,8 +320,8 @@ test("built-in run-note mutation cannot bypass review and requires native receip
         : { authenticated: false };
     },
   });
-  const gateway = createKnowgrphFunctionGateway({
-    allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.runNote],
+  const gateway = createAgenticGraphFunctionGateway({
+    allowedToolNames: [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.runNote],
     guardrailsHumanReview,
     mcpClient: {
       callTool: async (name, argumentsValue, options) => {
@@ -332,7 +332,7 @@ test("built-in run-note mutation cannot bypass review and requires native receip
           note: argumentsValue.note,
           revision: 1,
           execution_receipt: {
-            schema: "knowgrph-tool-execution-receipt/v1",
+            schema: "agentic-os-tool-execution-receipt/v1",
             idempotencyKey: options.execution.idempotencyKey,
             requestDigest: options.execution.requestDigest,
             status: "applied",
@@ -345,11 +345,11 @@ test("built-in run-note mutation cannot bypass review and requires native receip
     runId: "reviewed-run-note",
     conversationId: "reviewed-run-note-conversation",
     callId: "reviewed-run-note-call",
-    name: KNOWGRPH_FUNCTION_TOOL_NAMES.runNote,
+    name: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.runNote,
     arguments: { run_id: "target-run", note: "Operator reviewed this run." },
     caller: { type: "direct" },
     policy: {
-      revision: "knowgrph-run-note-function/v1",
+      revision: "agentic-graph-run-note-function/v1",
       riskClass: "mutation",
       idempotent: true,
       approvalRequired: true,
@@ -357,7 +357,7 @@ test("built-in run-note mutation cannot bypass review and requires native receip
   };
 
   assert.equal(gateway.tools[0].approvalRequired, true);
-  assert.deepEqual(gateway.stats().reviewRequiredToolNames, [KNOWGRPH_FUNCTION_TOOL_NAMES.runNote]);
+  assert.deepEqual(gateway.stats().reviewRequiredToolNames, [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.runNote]);
   const bypass = await gateway.callTool({
     ...call,
     policy: { ...call.policy, approvalRequired: false },
@@ -392,18 +392,18 @@ test("built-in run-note mutation cannot bypass review and requires native receip
     note: "Operator reviewed this run.",
     revision: 1,
   });
-  assert.equal(mcpCall.name, "agenticgraph.run_manifest.note.update");
+  assert.equal(mcpCall.name, "agentic-graph.run_manifest.note.update");
   assert.equal(mcpCall.options.execution.schema, "function-execution-receipt/v1");
 });
 
-test("Agent API completes one authenticated OpenAI and Knowgrph function loop without exposing keys", async () => {
+test("Agent API completes one authenticated OpenAI and agentic-graph function loop without exposing keys", async () => {
   const openAiBodies = [];
   const mcpCalls = [];
   let openAiTurnIndex = 0;
   const env = {
     AGENT_API_JWT_SECRET: "jwt-secret",
-    KNOWGRPH_MCP_ENDPOINT: "https://knowgrph.example/mcp",
-    KNOWGRPH_FUNCTION_TOOL_ALLOWLIST: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
+    AGENTIC_OS_MCP_ENDPOINT: "https://agentic-os.example/mcp",
+    AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status,
     OPENAI_API_KEY: "openai-secret",
     OPENAI_FUNCTION_CALLING_MODEL: "gpt-test",
     OPENAI_FUNCTION_CALLING_INPUT_USD_PER_MILLION: "1",
@@ -424,12 +424,12 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
             {
               type: "function_call",
               call_id: "call-a",
-              name: KNOWGRPH_FUNCTION_TOOL_NAMES.status,
+              name: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status,
               arguments: "{\"view\":\"capabilities\"}",
             },
           ])
           : openAiTurn("resp-b", [
-            { type: "message", content: [{ type: "output_text", text: "Knowgrph capabilities loaded." }] },
+            { type: "message", content: [{ type: "output_text", text: "agentic-graph capabilities loaded." }] },
           ]));
       }
       if (request.body.method === "initialize") {
@@ -443,7 +443,7 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
           structuredContent: {
             ok: true,
             view: "capabilities",
-            entries: [{ toolId: "agenticgraph.os.status" }, { toolId: "agenticgraph.agent.run" }],
+            entries: [{ toolId: "agentic-graph.os.status" }, { toolId: "agentic-graph.agent.run" }],
             unavailableSources: [],
             cost_log: {
               model: "none",
@@ -461,7 +461,7 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
   assert.equal(ready.configured, true);
   assert.equal(ready.adapter.provider, "openai");
   assert.equal(ready.adapter.apiKeyPresent, true);
-  assert.deepEqual(ready.gateway.allowedToolNames, [KNOWGRPH_FUNCTION_TOOL_NAMES.status]);
+  assert.deepEqual(ready.gateway.allowedToolNames, [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status]);
   assert.equal(JSON.stringify(ready).includes("openai-secret"), false);
 
   const session = await app.authSession({ body: {} });
@@ -469,18 +469,18 @@ test("Agent API completes one authenticated OpenAI and Knowgrph function loop wi
     headers: { authorization: `Bearer ${session.body.token}` },
     body: {
       runId: "live-proof-shape",
-      prompt: "Read the Knowgrph capability status, then summarize it.",
-      toolChoice: { mode: "forced", name: KNOWGRPH_FUNCTION_TOOL_NAMES.status },
+      prompt: "Read the agentic-graph capability status, then summarize it.",
+      toolChoice: { mode: "forced", name: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.status },
       parallelToolCalls: false,
     },
   });
   assert.equal(result.statusCode, 200);
   assert.equal(result.body.status, "completed");
-  assert.equal(result.body.output, "Knowgrph capabilities loaded.");
+  assert.equal(result.body.output, "agentic-graph capabilities loaded.");
   assert.equal(result.body.evidence.toolCalls, 1);
   assert.equal(result.body.evidence.callIdentity, "preserved");
   assert.deepEqual(result.body.evidence.providerResponseIds, ["resp-a", "resp-b"]);
-  assert.equal(mcpCalls[0].params.name, "agenticgraph.os.status");
+  assert.equal(mcpCalls[0].params.name, "agentic-graph.os.status");
   assert.equal(openAiBodies[1].previous_response_id, "resp-a");
   assert.equal(openAiBodies[1].input[1].call_id, "call-a");
   assert.equal(openAiBodies[1].tool_choice, "auto");

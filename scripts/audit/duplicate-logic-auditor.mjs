@@ -39,7 +39,7 @@ export function auditDuplicateLogic({
   capabilities = SHARED_CAPABILITY_IDS,
   expectedModulePaths,
   authoritativeAssignments,
-  sharedSubstrateRoot = "knowgrph",
+  sharedSubstrateRoot = "agentic-graph",
   elapsedMs = 0,
   deadlineMs = DUPLICATE_LOGIC_DEADLINE_MS,
 } = {}) {
@@ -143,7 +143,7 @@ export function auditTrackedDuplicateLogic({
   const modules = inventory.files.filter((file) => (
     file.readError
     || (file.path
-      && (file.path.startsWith("knowgrph/") || file.path.startsWith("GameXR/"))
+      && (file.path.startsWith("agentic-graph/") || file.path.startsWith("GameXR/"))
       && EXECUTABLE_SOURCE_PATTERN.test(file.path))
   ));
   const audit = auditDuplicateLogic({
@@ -151,7 +151,7 @@ export function auditTrackedDuplicateLogic({
     capabilities,
     expectedModulePaths: sourcePaths.filter((path) => path.startsWith("GameXR/")),
     authoritativeAssignments,
-    sharedSubstrateRoot: "knowgrph",
+    sharedSubstrateRoot: "agentic-graph",
     elapsedMs: elapsedMs ?? Date.now() - startedAt,
     deadlineMs,
   });
@@ -195,17 +195,17 @@ function collectUnscannedModules({
     const owners = sharedOwnersForCapability({ assignments, capability, sharedRoot });
     if (owners.length !== 1) unscanned.push({
       path: `<shared-capability:${capability}>`,
-      reason: `exactly one digest-bound knowgrph owner/public-surface assignment is required; observed ${owners.length}`,
+      reason: `exactly one digest-bound agentic-graph owner/public-surface assignment is required; observed ${owners.length}`,
     });
     for (const owner of owners) {
       if (!observed.has(owner.path)) unscanned.push({
         path: owner.path,
-        reason: `knowgrph owner for ${capability} was not supplied from tracked source`,
+        reason: `agentic-graph owner for ${capability} was not supplied from tracked source`,
       });
       if (!isPublicSurface(publicSurfaceFor(owner, capability))) {
         unscanned.push({
           path: owner.path,
-          reason: `knowgrph owner for ${capability} lacks one exact public capability surface`,
+          reason: `agentic-graph owner for ${capability} lacks one exact public capability surface`,
         });
       }
     }
@@ -257,7 +257,7 @@ function collectUnscannedModules({
     if (shared && !assignment) {
       if (classification.implementationIds.size > 0) unscanned.push({
         path: module.path,
-        reason: "declared knowgrph capability owner lacks digest-bound authority",
+        reason: "declared agentic-graph capability owner lacks digest-bound authority",
       });
       continue;
     }
@@ -293,7 +293,7 @@ function collectUnscannedModules({
       ))
     )) unscanned.push({
       path: module.path,
-      reason: "knowgrph owner assignment does not exactly match implementation directives",
+      reason: "agentic-graph owner assignment does not exactly match implementation directives",
     });
     if (!shared && assignment?.role === "delegation") {
       for (const capability of assignment.capabilities) {
@@ -303,7 +303,7 @@ function collectUnscannedModules({
           || publicSurface !== publicSurfaceFor(owners[0], capability)) {
           unscanned.push({
             path: module.path,
-            reason: `delegation for ${capability} does not bind the authoritative knowgrph public surface`,
+            reason: `delegation for ${capability} does not bind the authoritative agentic-graph public surface`,
           });
         }
       }

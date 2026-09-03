@@ -12,7 +12,7 @@ import {
 } from "../scripts/pipeline-controller.mjs";
 
 const NOW = Date.parse("2026-08-09T12:00:00.000Z");
-const DEV_ROOT = path.resolve("fixtures/knowgrph");
+const DEV_ROOT = path.resolve("fixtures/agentic-graph");
 const candidate = Object.freeze({
   sourceRevision: "a".repeat(40),
   artifactDigest: "b".repeat(64),
@@ -20,7 +20,7 @@ const candidate = Object.freeze({
 });
 const cleanGitEvidence = Object.freeze({
   root: DEV_ROOT,
-  remote: "git@github.com:huijoohwee/knowgrph.git",
+  remote: "git@github.com:huijoohwee/agentic-graph.git",
   branch: "main",
   status: "",
   headRevision: candidate.sourceRevision,

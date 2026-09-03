@@ -3,7 +3,7 @@
 // transpile or bundle, so `npm install` and `npm run web:build` both work
 // OFFLINE with zero network or Cloudflare calls.
 //
-// It (1) copies the knowgrph static canvas shell, and (2) injects the MCP
+// It (1) copies the agentic-graph static canvas shell, and (2) injects the MCP
 // command grammar overlay UI at the bottom of index.html.
 // The UI now queries the agentic-canvas-os worker (`/api/invoke`) instead
 // of statically compiling the dictionary.
@@ -21,7 +21,7 @@ const DIST = path.join(WEB, "dist");
 
 function buildGrammarOverlay() {
   const css = `
-/* MCP Command Grammar Overlay Styles (Knowgrph-Themed) */
+/* MCP Command Grammar Overlay Styles (agentic-graph-Themed) */
 .kg-cmd-overlay {
   position: fixed;
   inset: 0;
@@ -110,7 +110,7 @@ function buildGrammarOverlay() {
 `;
 
   const js = `
-// MCP Command Grammar Integration (Knowgrph Canvas)
+// MCP Command Grammar Integration (agentic-graph Canvas)
 let debounceTimer = null;
 let sessionToken = null;
 let abortController = null;
@@ -248,7 +248,7 @@ function initGrammar() {
   overlayDiv.innerHTML = buildOverlayHtml();
   document.body.appendChild(overlayDiv.firstElementChild);
 
-  // Add HUD hint to knowgrph's existing HUD
+  // Add HUD hint to agentic-graph's existing HUD
   const hud = document.getElementById('kg-hud');
   if (hud) {
     const chip = document.createElement('div');
@@ -318,7 +318,7 @@ function initGrammar() {
   });
 }
 
-// Initialize after knowgrph's canvas loads
+// Initialize after agentic-graph's canvas loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initGrammar);
 } else {
@@ -333,7 +333,7 @@ function main() {
   fs.rmSync(DIST, { recursive: true, force: true });
   fs.mkdirSync(DIST, { recursive: true });
 
-  // 2. Load knowgrph index.html
+  // 2. Load agentic-graph index.html
   const originalHtml = fs.readFileSync(path.join(WEB, "index.html"), "utf8");
 
   // 3. Compile grammar overlay
@@ -352,7 +352,7 @@ function main() {
 
   process.stdout.write(
     `agentic-canvas-os web build → ${path.relative(REPO, DIST)}\n` +
-      `  Knowgrph canvas + MCP command grammar overlay ready!\n` +
+      `  agentic-graph canvas + MCP command grammar overlay ready!\n` +
       `  Artifacts: index.html (standalone canvas + remote grammar resolution)\n`,
   );
 }

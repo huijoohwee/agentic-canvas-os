@@ -7,10 +7,10 @@ import { mintReviewerToken, verifyReviewerToken } from "../agent-api/src/auth.js
 import { createDurableObjectFunctionExecutionReceiptStore } from "../agent-api/src/durable-object-state-store.js";
 import { createGuardrailsHumanReviewRuntime } from "../agent-api/src/guardrails-human-review.js";
 import {
-  createKnowgrphFunctionGateway,
-  createKnowgrphGuardrailEvaluator,
-  KNOWGRPH_FUNCTION_TOOL_NAMES,
-} from "../agent-api/src/knowgrph-function-gateway.js";
+  createAgenticGraphFunctionGateway,
+  createAgenticGraphGuardrailEvaluator,
+  AGENTIC_GRAPH_FUNCTION_TOOL_NAMES,
+} from "../agent-api/src/agentic-graph-function-gateway.js";
 import { AgentState } from "../worker/agent-state.js";
 
 class TransactionalMemoryStorage {
@@ -68,22 +68,22 @@ function namespaceFor(createInstance) {
   });
 }
 
-function requiredKnowgrphRoot(argv) {
-  const prefix = "--knowgrph-root=";
+function requiredAgenticGraphRoot(argv) {
+  const prefix = "--agentic-graph-root=";
   const raw = argv.find((entry) => entry.startsWith(prefix))?.slice(prefix.length);
-  if (!raw) throw new Error("Usage: npm run function-gateway:cross-repo-proof -- --knowgrph-root=/absolute/path/to/knowgrph");
+  if (!raw) throw new Error("Usage: npm run function-gateway:cross-repo-proof -- --agentic-graph-root=/absolute/path/to/agentic-graph");
   const root = resolve(raw);
-  const modulePath = resolve(root, "cloudflare/workers/knowgrph-mcp/run-manifest-store.mjs");
-  if (!existsSync(modulePath)) throw new Error(`Knowgrph runtime module not found: ${modulePath}`);
+  const modulePath = resolve(root, "cloudflare/workers/agentic-graph-mcp/run-manifest-store.mjs");
+  if (!existsSync(modulePath)) throw new Error(`agentic-graph runtime module not found: ${modulePath}`);
   return { root, modulePath };
 }
 
-const { root: knowgrphRoot, modulePath } = requiredKnowgrphRoot(process.argv.slice(2));
-const knowgrph = await import(pathToFileURL(modulePath).href);
+const { root: agenticGraphRoot, modulePath } = requiredAgenticGraphRoot(process.argv.slice(2));
+const agenticGraph = await import(pathToFileURL(modulePath).href);
 const runManifestNamespace = namespaceFor(
-  () => new knowgrph.RunManifestStore({ storage: new TransactionalMemoryStorage() }, {}),
+  () => new agenticGraph.RunManifestStore({ storage: new TransactionalMemoryStorage() }, {}),
 );
-await knowgrph.persistRunManifestThroughNamespace(runManifestNamespace, {
+await agenticGraph.persistRunManifestThroughNamespace(runManifestNamespace, {
   contractVersion: "run-manifest/v1",
   runId: "cross-repo-run-note",
   state: "completed",
@@ -102,7 +102,7 @@ let dropReceipt = true;
 
 function createReviewRuntime() {
   return createGuardrailsHumanReviewRuntime({
-    evaluateGuardrail: createKnowgrphGuardrailEvaluator(),
+    evaluateGuardrail: createAgenticGraphGuardrailEvaluator(),
     createReviewId: () => "cross-repo-run-note-review",
     authenticateReviewer: async ({ state, evidence }) => {
       const verdict = verifyReviewerToken(evidence?.token, reviewSecret, state);
@@ -128,7 +128,7 @@ function createReviewRuntime() {
 const mcpClient = Object.freeze({
   async callTool(toolName, argumentsValue, options) {
     mcpCalls += 1;
-    const result = await knowgrph.dispatchKnowgrphMcpToolCall({
+    const result = await agenticGraph.dispatchAgenticGraphMcpToolCall({
       toolName,
       args: argumentsValue,
       namespace: runManifestNamespace,
@@ -146,8 +146,8 @@ const mcpClient = Object.freeze({
 });
 
 function createGateway() {
-  return createKnowgrphFunctionGateway({
-    allowedToolNames: [KNOWGRPH_FUNCTION_TOOL_NAMES.runNote],
+  return createAgenticGraphFunctionGateway({
+    allowedToolNames: [AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.runNote],
     mcpClient,
     guardrailsHumanReview: createReviewRuntime(),
     executionReceiptStore,
@@ -158,14 +158,14 @@ const call = Object.freeze({
   runId: "cross-repo-agentic-run",
   conversationId: "cross-repo-agentic-conversation",
   callId: "cross-repo-run-note-call",
-  name: KNOWGRPH_FUNCTION_TOOL_NAMES.runNote,
+  name: AGENTIC_GRAPH_FUNCTION_TOOL_NAMES.runNote,
   arguments: Object.freeze({
     run_id: "cross-repo-run-note",
     note: "Reviewed once and recovered after an uncertain result.",
   }),
   caller: Object.freeze({ type: "direct" }),
   policy: Object.freeze({
-    revision: "knowgrph-run-note-function/v1",
+    revision: "agentic-graph-run-note-function/v1",
     riskClass: "mutation",
     idempotent: true,
     approvalRequired: true,
@@ -203,7 +203,7 @@ assert.equal(terminalReplay.status, "completed");
 assert.equal(terminalReplay.executionReceipt.replayed, true);
 assert.equal(mcpCalls, callsAfterRecovery);
 
-const stored = await knowgrph.readRunManifestThroughNamespace(
+const stored = await agenticGraph.readRunManifestThroughNamespace(
   runManifestNamespace,
   "cross-repo-run-note",
 );
@@ -214,7 +214,7 @@ assert.equal(mcpCalls, 2);
 process.stdout.write(`${JSON.stringify({
   ok: true,
   proof: "cross-repo-run-note-uncertain-result-recovery/v1",
-  knowgrphRoot,
+  agenticGraphRoot,
   reviewRequired: true,
   firstResult: uncertain.reasonCode,
   nativeRetryStatus: "replayed",

@@ -79,25 +79,25 @@ function redactSensitiveFields(value) {
 
 function printHuman(result) {
   if (result.status === "session-dev") {
-    console.log(`Knowgrph session-owned Vite is available at http://${result.host}:${result.ports.apex}/.`);
+    console.log(`agentic-graph session-owned Vite is available at http://${result.host}:${result.ports.apex}/.`);
     return;
   }
   if (result.status === "session-stopped") {
-    console.log("Knowgrph session-owned Vite is stopped.");
+    console.log("agentic-graph session-owned Vite is stopped.");
     return;
   }
   if (!result.ready) {
-    console.log(`Knowgrph local runtime ${result.status}.`);
+    console.log(`agentic-graph local runtime ${result.status}.`);
     if (result.reason) console.log(result.reason);
     return;
   }
-  console.log(`Knowgrph Home Apex runtime-ready at http://${result.host}:${result.ports.apex}/`);
-  console.log(`Knowgrph ${result.source.revision}`);
+  console.log(`agentic-graph Home Apex runtime-ready at http://${result.host}:${result.ports.apex}/`);
+  console.log(`agentic-graph ${result.source.revision}`);
   console.log(`Agentic Canvas OS and catalog ${result.agenticCanvasOs.revision}`);
   console.log(`Storage proxy HTTP ${result.probes.storageProxy}`);
 }
 
 function usage() {
-  console.error("Usage: node scripts/local-runtime.mjs <ensure|status|stop|turn-end|session-start|session-status|session-stop> [--repository=<canonical-knowgrph-root>] [--session=<stable-session-id>] [--timeout-ms=120000] [--json]");
+  console.error("Usage: node scripts/local-runtime.mjs <ensure|status|stop|turn-end|session-start|session-status|session-stop> [--repository=<canonical-agentic-graph-root>] [--session=<stable-session-id>] [--timeout-ms=120000] [--json]");
   process.exit(2);
 }

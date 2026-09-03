@@ -1,6 +1,6 @@
 ---
-title: "Knowgrph Agentic Canvas OS Validation Runbook"
-graphId: "md:knowgrph-agentic-canvas-os-validation-runbook"
+title: "agentic-graph Agentic Canvas OS Validation Runbook"
+graphId: "md:agentic-graph-agentic-canvas-os-validation-runbook"
 doc_type: "Validation Runbook"
 date: "2026-07-21"
 lang: "en-US"
@@ -92,11 +92,11 @@ Resolve repository roots once, then run all checks through those roots:
 AGENTIC_CANVAS_OS_ROOT="$(git rev-parse --show-toplevel)"
 GITHUB_ROOT="$(dirname "$AGENTIC_CANVAS_OS_ROOT")"
 DOCS_ROOT="$AGENTIC_CANVAS_OS_ROOT/docs"
-AGENTICGRAPH_ROOT="$GITHUB_ROOT/knowgrph"
-PROD_MIRROR_ROOT="$GITHUB_ROOT/huijoohwee/content/knowgrph"
+AGENTIC_GRAPH_ROOT="$GITHUB_ROOT/agentic-graph"
+PROD_MIRROR_ROOT="$GITHUB_ROOT/huijoohwee/content/agentic-graph"
 MEMORY_ROOT="$AGENTIC_CANVAS_OS_ROOT/memory"
 PLANNING_ROOT="$AGENTIC_CANVAS_OS_ROOT/todo"
-export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT AGENTICGRAPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT PLANNING_ROOT
+export AGENTIC_CANVAS_OS_ROOT GITHUB_ROOT DOCS_ROOT AGENTIC_GRAPH_ROOT PROD_MIRROR_ROOT MEMORY_ROOT PLANNING_ROOT
 find "$DOCS_ROOT" -maxdepth 1 -type f -name '*.md' -print0 | xargs -0 ruby -rdate -ryaml -e 'ARGV.each { |path| text=File.read(path); match=text.match(/\A---\n(.*?)\n---\n/m) or abort("#{path}: missing frontmatter"); YAML.safe_load(match[1], permitted_classes: [Date], aliases: true); puts "#{path}: frontmatter ok" }'
 wc -l "$DOCS_ROOT"/*.md
 ! LC_ALL=C rg -n "[^[:ascii:]]" "$DOCS_ROOT"
@@ -122,7 +122,7 @@ pinned `agentic-os` package and are not reimplemented by this gate.
 
 Then run `npm run collaboration:gate` from the Agentic Canvas OS repository.
 
-This is the only required operator command. It resolves the sibling Knowgrph checkout from the repository root, verifies that Knowgrph still owns `collaboration:readiness:check`, and delegates to that canonical runtime owner. The gate automatically:
+This is the only required operator command. It resolves the sibling agentic-graph checkout from the repository root, verifies that agentic-graph still owns `collaboration:readiness:check`, and delegates to that canonical runtime owner. The gate automatically:
 
 1. Runs focused collaboration documentation, protocol, runtime, and MainPanel checks.
 2. Allocates unique local owner, guest, and worker ports plus an external per-run Wrangler state root; it never reuses or stops canonical `5173`/`8787`.
@@ -132,7 +132,7 @@ This is the only required operator command. It resolves the sibling Knowgrph che
 
 The automated contexts model two independent collaboration peers; the gate does not require two physical devices. It does not accept clipboard actions or manually assembled evidence; its private run-scoped proof artifact is validator-owned and deleted after success. `Copy diagnostic JSON` remains optional troubleshooting only. A nonzero exit, fewer than two peers, a room-key mismatch, duplicate runtime identity, revision mismatch, stale hydration, different digest, propagation failure, or leaked run-owned process blocks parity and release without blocking ownership-qualified isolated authoring.
 
-`AGENTICGRAPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
+`AGENTIC_GRAPH_ROOT` may override sibling discovery for a canonical checkout in a different repository root. There is no `--skip-browser` compliance mode: source-only checks cannot replace the authenticated browser and worker proof.
 
 ## Mandatory Completion Evidence
 
@@ -160,15 +160,15 @@ without separate operator authorization.
 Create the artifact from one exact source object, then validate the downloaded bytes against the same source and pinned docs revisions:
 
 ```bash
-export AGENTICGRAPH_SOURCE_REVISION="<exact-knowgrph-sha>"
-export AGENTICGRAPH_TARGET_REF="refs/heads/agent/<device>/<semantic-scope>"
-npm --prefix "$AGENTICGRAPH_ROOT" run release:manifest:create -- \
-  --source-sha "$AGENTICGRAPH_SOURCE_REVISION" \
-  --target-ref "$AGENTICGRAPH_TARGET_REF" \
+export AGENTIC_GRAPH_SOURCE_REVISION="<exact-agentic-graph-sha>"
+export AGENTIC_GRAPH_TARGET_REF="refs/heads/agent/<device>/<semantic-scope>"
+npm --prefix "$AGENTIC_GRAPH_ROOT" run release:manifest:create -- \
+  --source-sha "$AGENTIC_GRAPH_SOURCE_REVISION" \
+  --target-ref "$AGENTIC_GRAPH_TARGET_REF" \
   --output immutable-release-manifest.json
-npm --prefix "$AGENTICGRAPH_ROOT" run release:manifest:check -- \
+npm --prefix "$AGENTIC_GRAPH_ROOT" run release:manifest:check -- \
   immutable-release-manifest.json \
-  --source-sha "$AGENTICGRAPH_SOURCE_REVISION"
+  --source-sha "$AGENTIC_GRAPH_SOURCE_REVISION"
 ```
 
 CI must upload the generated file, download it into a separate directory, and rerun the checker with the expected app SHA, resolved Agentic Canvas OS SHA, and first-pass manifest digest. A current-worktree report, individually green docs PR, branch name, manually assembled JSON, or unvalidated upload is insufficient.
@@ -228,7 +228,7 @@ Expected:
 
 ## Function Calling Runtime Checks
 
-Run the controller, concrete OpenAI adapter, Knowgrph gateway, and affected readiness checks after changing strict schemas, provider translation, selection, call correlation, continuation, gateway policy, or cost boundaries:
+Run the controller, concrete OpenAI adapter, agentic-graph gateway, and affected readiness checks after changing strict schemas, provider translation, selection, call correlation, continuation, gateway policy, or cost boundaries:
 
 ```bash
 npm --prefix "$AGENTIC_CANVAS_OS_ROOT" run function-gateway:check
@@ -242,7 +242,7 @@ Expected:
 - Strict object schemas reject unknown properties and require every declared field before model execution.
 - Auto, required, none, forced, and allowed selection constrain direct calls without changing gateway permissions.
 - Reasoning items and exact call ids stay inside the active loop or a private manager checkpoint; a fresh manager resumes with the stored previous response and never returns private state.
-- Callers cannot supply schemas, MCP names, review ids, stored continuation, or approval arrays; the allowlist maps exact `read_agentic_os_status` and `update_agent_run_note` names only. The mutation remains review-required without an environment override. Run `npm run function-gateway:cross-repo-proof -- --knowgrph-root=<clean-or-claimed-checkout>` to prove one native revision, `replayed` recovery after a dropped receipt, and terminal replay without provider or deployment work. Invalid reviewer authentication, concurrent claims, expiry, non-idempotent review, and definition drift fail closed.
+- Callers cannot supply schemas, MCP names, review ids, stored continuation, or approval arrays; the allowlist maps exact `read_agentic_os_status` and `update_agent_run_note` names only. The mutation remains review-required without an environment override. Run `npm run function-gateway:cross-repo-proof -- --agentic-graph-root=<clean-or-claimed-checkout>` to prove one native revision, `replayed` recovery after a dropped receipt, and terminal replay without provider or deployment work. Invalid reviewer authentication, concurrent claims, expiry, non-idempotent review, and definition drift fail closed.
 - Missing model, key, pricing, MCP endpoint, or exact allowlist fails closed; readiness never emits credentials or provider error bodies.
 - Capability, adapter, gateway, call, parallel, result, duplicate, timeout, and cost failures stay typed and bounded.
 - Offline transport proof reports actual-shaped usage and zero-cost gateway evidence while provider execution stays `unverified`; no unapproved paid call, Prod mirror write, or Cloudflare action occurs.
@@ -385,7 +385,7 @@ Expected:
 - `/context.discover`, `/context.load`, `/context.audit`, context-file tags, working-directory bindings, policy bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`.
 - `/reference.expand`, `/reference.audit`, context-reference tags, reference bindings, attached-context packets, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`.
 - `/kanban.task`, `/kanban.handoff`, `/kanban.sync`, Kanban tags, board bindings, row bindings, profile bindings, and `kanban.collaborate` route through dictionaries, `MEMORY.md`, `SKILLS.md`, and `kanban.md`.
-- `/tool.catalog`, `/tool.route`, `/tool.provider.select`, `/tool.gateway.audit`, tool gateway tags, tool bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`; `/voice.studio` additionally resolves exact clone, dictate, and create metadata routes to one `agenticgraph.voice.studio` wire identity while consent, approval, runtime proof, and external dependency remain fail-closed.
+- `/tool.catalog`, `/tool.route`, `/tool.provider.select`, `/tool.gateway.audit`, tool gateway tags, tool bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`; `/voice.studio` additionally resolves exact clone, dictate, and create metadata routes to one `agentic-graph.voice.studio` wire identity while consent, approval, runtime proof, and external dependency remain fail-closed.
 - `/tool.catalog`, `/toolset.enable`, `/toolset.disable`, tool-function tags, toolset tags, platform-surface bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`.
 - `/tool.search`, `/tool.describe`, `/tool.call`, tool-search tags, deferred-schema tags, bridge bindings, and matching skills route through dictionaries, `MEMORY.md`, and `SKILLS.md`.
 - `/moa`, MoA tags, MoA bindings, `moa.run`, and `agent.moa` route through dictionaries and `SKILLS.md`.
@@ -396,15 +396,15 @@ Expected:
 - `/computing-flow`, `#computing-flow`, and `flow.computing` route through KGC/frontmatter contracts.
 - No entry requires a FloatingPanel-only duplicate registry.
 
-## Knowgrph Local Runtime Checks
+## agentic-graph Local Runtime Checks
 
-Run only when a runtime owner in `$AGENTICGRAPH_ROOT` is touched:
+Run only when a runtime owner in `$AGENTIC_GRAPH_ROOT` is touched:
 
 ```bash
-npm -C "$AGENTICGRAPH_ROOT" run vdeoxpln:check
-npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- mcpLocalToolContract
-npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- vdeoxplnContract
-npm -C "$AGENTICGRAPH_ROOT/canvas" run typecheck
+npm -C "$AGENTIC_GRAPH_ROOT" run vdeoxpln:check
+npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- mcpLocalToolContract
+npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- vdeoxplnContract
+npm -C "$AGENTIC_GRAPH_ROOT/canvas" run typecheck
 ```
 
 Choose the subset matching touched owners. Do not run broader suites unless the change crosses shared contracts or compiler boundaries.
@@ -428,7 +428,7 @@ repository-contract context; the former bridge is retired and absent.
 | Capability | Focused check |
 |---|---|
 | Capability discovery | Tool catalog test exits 0 and reports deduplicated tool ids. |
-| Automated collaboration and runtime identity | `npm run collaboration:gate` exits zero after focused checks and isolated owner/guest/worker proof; the result reports at least two active peers, remote document propagation, two distinct runtime identities, one common digest, identical exact Knowgrph, Agentic Canvas OS, and catalog SHAs, and `fresh` hydration within two attempts. Physical devices and JSON exports are not required. |
+| Automated collaboration and runtime identity | `npm run collaboration:gate` exits zero after focused checks and isolated owner/guest/worker proof; the result reports at least two active peers, remote document propagation, two distinct runtime identities, one common digest, identical exact agentic-graph, Agentic Canvas OS, and catalog SHAs, and `fresh` hydration within two attempts. Physical devices and JSON exports are not required. |
 | Canonical local runtime | `turn:end` reports `ready` only when clean exact protected `main` revisions, private-token process ownership, fixed Apex/storage listeners, and direct plus proxied HTTP probes agree; `runtime:local:stop` refuses unrelated processes. |
 | ADLC lifecycle | `npm run doctor`, `npm run status`, and the focused ADLC compatibility tests prove observational state, exact integration proof, and exact clean retirement without granting Production or deployment authority. |
 | OS status read views | Status runtime test exits 0 and state-source before/after diff is empty. |
@@ -436,33 +436,33 @@ repository-contract context; the former bridge is retired and absent.
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |
 | Video Remix Director | Missing approvals produce blocked zero-cost manifest; approved dry-run emits storyboard evidence. |
 | Canvas dashboard | Frontmatter parses; KGC graph materializes through existing Source Files/Canvas owners. |
-| Agentic OS slash dictionary | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.composer.memoryInvocationRuntime` exits 0. |
-| FloatingPanel Chat action recommendation | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.pipeline`, `ui.floatingPanelChat.quickActions.invocationRoutes`, `ui.floatingPanelChat.composer.ingestCommandRegistry`, and `ui.floatingPanelChat.composer.slashVariableMenus` exit 0. |
-| Soul identity | Focused docs route check reports `soul route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes prompt slot 1 assembly, scan, bounds, typed fallback, and no-hardcoded-default rejection. |
-| Mixture of Agents | Focused docs route check reports `moa route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes preset resolution, reference fan-out, aggregator action, separated cost logs, and no-recursion rejection. |
-| Persistent memory | Focused docs route check reports `persistent-memory route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes bounded memory/profile targets, frozen snapshot reads, typed capacity errors, scan, and session search. |
-| Skills system | Focused docs route check reports `skill-system route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes metadata discovery, selected source load, resource load, bundle resolution, scan, validation, and write approval policy. |
+| Agentic OS slash dictionary | `npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.composer.memoryInvocationRuntime` exits 0. |
+| FloatingPanel Chat action recommendation | `npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.pipeline`, `ui.floatingPanelChat.quickActions.invocationRoutes`, `ui.floatingPanelChat.composer.ingestCommandRegistry`, and `ui.floatingPanelChat.composer.slashVariableMenus` exit 0. |
+| Soul identity | Focused docs route check reports `soul route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes prompt slot 1 assembly, scan, bounds, typed fallback, and no-hardcoded-default rejection. |
+| Mixture of Agents | Focused docs route check reports `moa route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes preset resolution, reference fan-out, aggregator action, separated cost logs, and no-recursion rejection. |
+| Persistent memory | Focused docs route check reports `persistent-memory route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes bounded memory/profile targets, frozen snapshot reads, typed capacity errors, scan, and session search. |
+| Skills system | Focused docs route check reports `skill-system route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes metadata discovery, selected source load, resource load, bundle resolution, scan, validation, and write approval policy. |
 | Instruction Audit | `npm run instruction-audit:check` exits zero; required intent remains, budgets hold, duplicate and owner-leakage fixtures fail, cost is zero, and optional baseline metrics are exact. |
 | Instruction Task Quality | `npm run instruction-quality:check` exits zero; four cases and seven discrimination tests pass, candidate drift fails closed, and evaluator model/deploy claims remain false. |
-| Context files | Focused docs route check reports `context-files route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes working-directory discovery, scanned load, truncation, progressive hints, and context audit proof. |
-| Context references | Focused docs route check reports `context-references route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed expansion packets, warnings, refusals, source metadata, and unsupported-surface behavior. |
-| Kanban collaboration | Focused docs route check reports `kanban route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes row validation, table/Kanban projection, profile binding, worker-process proof, and sync conflicts. |
-| Tools and toolsets | Focused docs route check reports `tools-and-toolsets route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes tool function catalog, toolset state, platform scope, policy, approval, cost, and fallback proof. |
-| Tool Gateway | Focused docs route check reports `tool-gateway route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes tool catalog, provider select, web/image/TTS/browser route, schema, approval, egress, cost, and fallback proof. |
+| Context files | Focused docs route check reports `context-files route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes working-directory discovery, scanned load, truncation, progressive hints, and context audit proof. |
+| Context references | Focused docs route check reports `context-references route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes typed expansion packets, warnings, refusals, source metadata, and unsupported-surface behavior. |
+| Kanban collaboration | Focused docs route check reports `kanban route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes row validation, table/Kanban projection, profile binding, worker-process proof, and sync conflicts. |
+| Tools and toolsets | Focused docs route check reports `tools-and-toolsets route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes tool function catalog, toolset state, platform scope, policy, approval, cost, and fallback proof. |
+| Tool Gateway | Focused docs route check reports `tool-gateway route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes tool catalog, provider select, web/image/TTS/browser route, schema, approval, egress, cost, and fallback proof. |
 | Function Calling | `npm run function-gateway:check` exits zero with 34 focused checks; the explicit cross-repository proof additionally confirms one real native run-note revision, stable-key `replayed` recovery, and terminal replay with zero provider calls. Live provider, remote Worker, Prod, and Cloudflare execution remain gated. |
 | Agent Definitions | `npm run agent-definitions:check` exits zero; affected composition, app, and Worker tests confirm exact source verification, immutable packets, revision fencing, reference-only authorization, verified handoffs, bounded output validation, sanitized empty-registry readiness, and no provider overclaim. |
 | Models and Providers | `npm run model-providers:check` exits zero; Agent Definition, app, and Worker tests confirm exact default precedence, revision fencing, feature and transport matching, strict neutral environment fields, secret redaction, sanitized readiness, and unverified live execution. |
 | Running Agents | `npm run running-agents:check` and `npm run durable-agent-state:check` exit zero; app and Worker tests confirm bounded lifecycle, exclusive continuation, same-loop streaming, same-turn and cross-isolate pause resume, atomic claims, replay fencing, honest costs, and no provider overclaim. |
 | Guardrails, Progressive Agents, Runtime Composition, Orchestration, Agent Swarm, and Agent Toolkit | `npm run guardrails-human-review:check`, `npm run progressive-agents:check`, `npm run agent-runtime-composition:check`, `npm run agent-orchestration:check`, `npm run agent-swarm:check`, and `npm run agent-toolkit:check` exit zero; the combined affected gateway, definition, durable-state, app, and Worker suites confirm authenticated identity, atomic claims and admission quotas, application-authorized digest/evaluator fencing, trust-labelled metadata and exporter isolation, bounded profiles and optimization recommendations, remote-evidence exclusion, honest costs, proposal-only learning, and sanitized readiness. |
 | Application Composition | `npm run application-composition-contract:check` exits zero and validates the exact host alias tuple, three MCP tool ids, connection-negotiated protocol/capability evidence, exact revisions and schema digests, deterministic immutable plan, opaque integration profiles, bounded existing-owner sequencing, explicit non-automatic migration diagnostics, and no new loop, proxy, silent retry, upgrade, or deploy. |
-| Repository Packing | `npm run repository-packing-contract:check` and the exact Knowgrph focused `repository-pack` contract, runtime, stdio, and independence tests exit zero; proof covers the canonical host tuple and MCP id, Git ignores, byte ordering, hashes, binary and secret handling, traversal and symlink blocks, source drift, hard bounds, self-exclusion, atomic replay, unchanged source, zero network/model/token/cost, and no Prod or Cloudflare action. |
+| Repository Packing | `npm run repository-packing-contract:check` and the exact agentic-graph focused `repository-pack` contract, runtime, stdio, and independence tests exit zero; proof covers the canonical host tuple and MCP id, Git ignores, byte ordering, hashes, binary and secret handling, traversal and symlink blocks, source drift, hard bounds, self-exclusion, atomic replay, unchanged source, zero network/model/token/cost, and no Prod or Cloudflare action. |
 | Sandbox Agents | `npm run sandbox-provider:check` exits zero; affected app and Worker tests keep default readiness unconfigured; `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-docker:check` must report a fresh verified proof, 20 checks, real files, argv commands, offline local package installation, internal networking, loopback preview traffic, snapshot seeding, atomic cross-controller resume, zero cost, and zero residual labeled resources. |
-| Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `knowgrph` proof. |
+| Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `agentic-graph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |
-| Computing-flow | `npm -C "$AGENTICGRAPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |
-| Learning loop and Skill Evolution | Focused docs routing covers memory, experience, skill, identity, and `agent.learning`; `npm run skill-evolution:check` proves only the model-free ACOS spec and fail-closed client transport for singular invocation, resumable operations, isolated validation, strict metrics, candidate roles, complete snapshots, dependency/import clean-room checks, and safety flags. Runtime readiness requires exact integrated Knowgrph test citations. |
-| Stateful orchestration | Focused docs route check reports `orchestration route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed graph, checkpoint, review, and trace outputs. |
-| Long-horizon SuperAgent | Focused docs route check reports `superagent route consistency ok`; implementation proof remains gated until a touched `knowgrph` owner exposes typed graph, sandbox workspace, message gateway, artifact manifest, verification, cost, and stop condition outputs. |
+| Computing-flow | `npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |
+| Learning loop and Skill Evolution | Focused docs routing covers memory, experience, skill, identity, and `agent.learning`; `npm run skill-evolution:check` proves only the model-free ACOS spec and fail-closed client transport for singular invocation, resumable operations, isolated validation, strict metrics, candidate roles, complete snapshots, dependency/import clean-room checks, and safety flags. Runtime readiness requires exact integrated agentic-graph test citations. |
+| Stateful orchestration | Focused docs route check reports `orchestration route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes typed graph, checkpoint, review, and trace outputs. |
+| Long-horizon SuperAgent | Focused docs route check reports `superagent route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes typed graph, sandbox workspace, message gateway, artifact manifest, verification, cost, and stop condition outputs. |
 
 ## Deploy Guard
 
@@ -470,7 +470,7 @@ Documentation-only changes must end with:
 
 ```bash
 git -C "$AGENTIC_CANVAS_OS_ROOT" status --short -- docs
-git -C "$AGENTICGRAPH_ROOT" status --short
+git -C "$AGENTIC_GRAPH_ROOT" status --short
 ```
 
 Confirm:

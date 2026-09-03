@@ -8,8 +8,8 @@ schema: "agentic-canvas-os-skill/v1"
 frontmatter_contract: "required"
 status: "spec-complete"
 skill_id: "image.to-glb"
-owner: "$GITHUB_ROOT/knowgrph/canvas/src/features/image-to-glb"
-runtime_scope: "Knowgrph Widget Card prompt, compact contour reconstruction, action-ready procedural scene, GLB and editable glTF asset pipeline, and separate output projection"
+owner: "$GITHUB_ROOT/agentic-graph/canvas/src/features/image-to-glb"
+runtime_scope: "agentic-graph Widget Card prompt, compact contour reconstruction, action-ready procedural scene, GLB and editable glTF asset pipeline, and separate output projection"
 runtime_claim: "source-backed native single-reference procedural image-to-3D contract; deterministic validation is not an independent visual approval"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -26,7 +26,7 @@ copy_policy: "conceptual inspiration only; forbid copied code, dependencies, pro
 
 # Image To GLB Skill
 
-`image.to-glb` is the native Knowgrph contract for rebuilding one supported image reference as reviewable TypeScript, a trusted Three.js scene, a full GLB, and editable glTF JSON with an external `.bin` buffer. It reuses the existing image-to-threejs source-resolution utilities; it does not replace the source Widget Card or its input media.
+`image.to-glb` is the native agentic-graph contract for rebuilding one supported image reference as reviewable TypeScript, a trusted Three.js scene, a full GLB, and editable glTF JSON with an external `.bin` buffer. It reuses the existing image-to-threejs source-resolution utilities; it does not replace the source Widget Card or its input media.
 
 ## Shared Invocation
 
@@ -80,7 +80,7 @@ Complete geometry buffers, material values, world transforms, bounds, parent pat
 - One front reference observes only its visible projection. Rear depth, occluded surfaces, and interiors remain explicitly inferred with bounded confidence; multi-view reconstruction is a separate capability.
 - Unsupported source formats, compact-plan overflow, failed geometry/material/reference/action gates, exporter failures, embedded editable-glTF buffers, and external coupling fail closed.
 - Rigid pivots, sockets, and the inspection loop are action-ready evidence. Character skinning, morph deformation, and deformable rigging are not claimed by this contract.
-- [hoainho/img2threejs](https://github.com/hoainho/img2threejs) and [microsoft/TRELLIS.2](https://github.com/microsoft/TRELLIS.2) inform only neutral staged-construction, compact-planning, and separated-quality principles. Knowgrph copies or depends on none of their code, packages, prompts, schemas, examples, tests, fixtures, prose, assets, weights, models, configuration, services, layout, or runtime.
+- [hoainho/img2threejs](https://github.com/hoainho/img2threejs) and [microsoft/TRELLIS.2](https://github.com/microsoft/TRELLIS.2) inform only neutral staged-construction, compact-planning, and separated-quality principles. agentic-graph copies or depends on none of their code, packages, prompts, schemas, examples, tests, fixtures, prose, assets, weights, models, configuration, services, layout, or runtime.
 
 ## VCCs
 

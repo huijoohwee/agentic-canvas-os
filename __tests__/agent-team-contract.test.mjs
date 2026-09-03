@@ -49,10 +49,10 @@ test("repository keeps one canonical role-based Agent Team contract", () => {
     text: "/agent.team #role-based-agent-team @agent-team",
   });
   assert.deepEqual(AGENT_TEAM_MCP_TOOLS, [
-    "agenticgraph.agent_team.plan",
-    "agenticgraph.agent_team.start",
-    "agenticgraph.agent_team.list",
-    "agenticgraph.agent_team.control",
+    "agentic-graph.agent_team.plan",
+    "agentic-graph.agent_team.start",
+    "agentic-graph.agent_team.list",
+    "agentic-graph.agent_team.control",
   ]);
   assert.deepEqual(AGENT_TEAM_BOUNDS, {
     participants: 16,
@@ -124,7 +124,7 @@ test("each invocation token must remain directly and truthfully resolvable", () 
 test("Agent Team cannot absorb existing runtime owners or broaden Agent Swarm", () => {
   const movedOwner = withReplacement(
     "MCP-GATEWAY.md",
-    "Knowgrph owns durable supervision",
+    "agentic-graph owns durable supervision",
     "Agentic Canvas OS owns durable supervision",
   );
   assert.equal(

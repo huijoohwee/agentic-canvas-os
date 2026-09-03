@@ -38,7 +38,7 @@ The cited OpenAI guides inform only the capability class and the value of separa
 | External state store | Persist opaque snapshot references and serialized resume state across controller lifetimes. | The default Worker does not install an implicit in-memory durability substitute. |
 | Docker CLI adapter | Run an immutable image as a non-root, read-only, capability-dropped, resource-bounded container; use an internal network plus hardened loopback proxy for declared previews. | Node-only and explicitly injected; it rejects image tags, environment bindings, public ports, online packages, and host bind mounts. |
 | Independent Docker verifier | Inspect engine, container, network, and preview-proxy configuration and run non-root, root-write, workspace-write, and egress-denial probes. | Verifies one local Docker boundary at run time; it is not formal third-party, cloud, or multi-tenant certification. |
-| Native sandbox policy preflight | Continue to validate and authorize Knowgrph filesystem, process, network, and credential policy before execution. | `SANDBOX-RUNTIME.md` remains policy preflight only; this controller does not turn it into kernel enforcement. |
+| Native sandbox policy preflight | Continue to validate and authorize agentic-graph filesystem, process, network, and credential policy before execution. | `SANDBOX-RUNTIME.md` remains policy preflight only; this controller does not turn it into kernel enforcement. |
 
 ## Container Provider Contract
 

@@ -138,7 +138,7 @@ export function createValidGapSignal(overrides = {}) {
   return {
     schema: "acos-gap-signal/v1",
     signal_id: "gap-001",
-    adapter_id: "knowgrph",
+    adapter_id: "agentic-graph",
     capability: "update agent run notes",
     missing_tool_names: ["update_agent_run_note"],
     denial_reason_code: "tool_not_granted",
@@ -150,10 +150,10 @@ export function createValidGapSignal(overrides = {}) {
 
 export function createValidAgentDefinition(overrides = {}) {
   return {
-    id: "knowgrph-note-agent",
+    id: "agentic-graph-note-agent",
     revision: "note-v1",
-    name: "Knowgrph Note Agent",
-    source: { uri: "workspace:/agents/knowgrph-note-agent.json", digest: "c".repeat(64) },
+    name: "agentic-graph Note Agent",
+    source: { uri: "workspace:/agents/agentic-graph-note-agent.json", digest: "c".repeat(64) },
     model: { providerId: "workspace-provider", modelId: "workspace-model" },
     instructions: [{ name: "purpose", content: "Draft agent run notes through the MCP gateway." }],
     ...overrides,
@@ -162,9 +162,9 @@ export function createValidAgentDefinition(overrides = {}) {
 
 export function createValidToolAllowlistEntry(overrides = {}) {
   return {
-    entry_id: "allowlist-knowgrph-note-agent-1",
-    agent_definition_id: "knowgrph-note-agent",
-    adapter_identity: "knowgrph",
+    entry_id: "allowlist-agentic-graph-note-agent-1",
+    agent_definition_id: "agentic-graph-note-agent",
+    adapter_identity: "agentic-graph",
     tool_names: ["update_agent_run_note"],
     review_required: true,
     ...overrides,

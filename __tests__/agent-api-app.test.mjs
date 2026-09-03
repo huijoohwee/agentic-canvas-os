@@ -10,7 +10,7 @@ import { createAgentSwarmRuntime } from "../agent-api/src/agent-swarm.js";
 
 const ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
-  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
+  AGENTIC_OS_MCP_ENDPOINT: "https://airvio.co/agentic-os/control-plane/mcp",
   AGENT_MODEL_PROVIDER: "workspace-provider",
   AGENT_MODEL_PROVIDER_REVISION: "workspace-provider-v1",
   AGENT_MODEL_ADAPTER: "workspace-adapter",
@@ -32,9 +32,9 @@ const UPSTREAM_RUNTIME_SOURCE_DIGEST = createHash("sha256").update(UPSTREAM_RUNT
 
 const UPSTREAM_RUNTIME_ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
-  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
-  KNOWGRPH_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note",
-  KNOWGRPH_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note",
+  AGENTIC_OS_MCP_ENDPOINT: "https://airvio.co/agentic-os/control-plane/mcp",
+  AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note",
+  AGENTIC_OS_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note",
   OPENAI_FUNCTION_CALLING_ENDPOINT: "https://api.openai.com/v1/responses",
   OPENAI_FUNCTION_CALLING_API_KEY_ENV: "OPENAI_API_KEY",
   OPENAI_FUNCTION_CALLING_MODEL: "gpt-5.6-luna",
@@ -301,12 +301,24 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.ok(run.body.approvalGates.length >= 5);
 });
 
+test("retired runtime endpoint names do not configure the application", () => {
+  const { AGENTIC_OS_MCP_ENDPOINT: _endpoint, ...withoutRuntimeEndpoint } = ENV;
+  const retiredRuntimeEndpoint = ["AGENTIC", "GRAPH_MCP_ENDPOINT"].join("");
+  const app = createAgentApiApp({
+    env: {
+      ...withoutRuntimeEndpoint,
+      [retiredRuntimeEndpoint]: "https://airvio.co/agentic-os/control-plane/mcp",
+    },
+  });
+  assert.equal(app.configured, false);
+});
+
 test("createAgentApiApp wires an invoke handler for grammar queries", async () => {
   const app = createAgentApiApp({
     env: ENV,
     fetchImpl: mcpStub({
       ok: true,
-      catalog: [{ token: "/soul.load", kind: "command", summary: "Resolved from knowgrph MCP." }],
+      catalog: [{ token: "/soul.load", kind: "command", summary: "Resolved from agentic-graph MCP." }],
     }),
   });
   assert.equal(app.configured, true);

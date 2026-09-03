@@ -1,4 +1,4 @@
-// Tests for the Cloudflare Worker runtime adapter. ZERO network: the knowgrph
+// Tests for the Cloudflare Worker runtime adapter. ZERO network: the agentic-graph
 // MCP transport and static assets binding are injected.
 
 import test from "node:test";
@@ -11,7 +11,7 @@ import { createWorkerFetch, handleCloudflareRequest } from "../worker/index.js";
 
 const ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
-  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
+  AGENTIC_OS_MCP_ENDPOINT: "https://airvio.co/agentic-os/control-plane/mcp",
   AGENT_MODEL_PROVIDER: "workspace-provider",
   AGENT_MODEL_PROVIDER_REVISION: "workspace-provider-v1",
   AGENT_MODEL_ADAPTER: "workspace-adapter",
@@ -33,9 +33,9 @@ const UPSTREAM_RUNTIME_SOURCE_DIGEST = createHash("sha256").update(UPSTREAM_RUNT
 
 const UPSTREAM_RUNTIME_ENV = Object.freeze({
   AGENT_API_JWT_SECRET: "server-side-secret",
-  KNOWGRPH_MCP_ENDPOINT: "https://airvio.co/knowgrph/control-plane/mcp",
-  KNOWGRPH_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note",
-  KNOWGRPH_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note",
+  AGENTIC_OS_MCP_ENDPOINT: "https://airvio.co/agentic-os/control-plane/mcp",
+  AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note",
+  AGENTIC_OS_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note",
   OPENAI_FUNCTION_CALLING_ENDPOINT: "https://api.openai.com/v1/responses",
   OPENAI_FUNCTION_CALLING_API_KEY_ENV: "OPENAI_API_KEY",
   OPENAI_FUNCTION_CALLING_MODEL: "gpt-5.6-luna",
@@ -120,8 +120,8 @@ test("Worker transport uses the Dev service binding only for the configured MCP 
   const serviceRequests = [];
   const publicRequests = [];
   const transport = createWorkerFetch({
-    KNOWGRPH_MCP_ENDPOINT: "https://knowgrph-mcp-dev.example.workers.dev/knowgrph/control-plane/mcp",
-    KNOWGRPH_MCP_SERVICE: {
+    AGENTIC_OS_MCP_ENDPOINT: "https://agentic-mcp-dev.example.workers.dev/agentic-os/control-plane/mcp",
+    AGENTIC_OS_MCP_SERVICE: {
       fetch: async (request) => {
         serviceRequests.push(request);
         return Response.json({ owner: "service-binding" });
@@ -132,7 +132,7 @@ test("Worker transport uses the Dev service binding only for the configured MCP 
     return Response.json({ owner: "public-fetch" });
   });
   const mcpResponse = await transport({
-    url: "https://knowgrph-mcp-dev.example.workers.dev/knowgrph/control-plane/mcp",
+    url: "https://agentic-mcp-dev.example.workers.dev/agentic-os/control-plane/mcp",
     method: "POST",
     headers: { authorization: "Bearer secret" },
     body: { jsonrpc: "2.0" },
@@ -146,7 +146,7 @@ test("Worker transport uses the Dev service binding only for the configured MCP 
   assert.equal((await mcpResponse.json()).owner, "service-binding");
   assert.equal((await providerResponse.json()).owner, "public-fetch");
   assert.equal(serviceRequests.length, 1);
-  assert.equal(new URL(serviceRequests[0].url).pathname, "/knowgrph/control-plane/mcp");
+  assert.equal(new URL(serviceRequests[0].url).pathname, "/agentic-os/control-plane/mcp");
   assert.equal(publicRequests.length, 1);
   assert.equal(publicRequests[0].url, "https://api.openai.com/v1/responses");
 });

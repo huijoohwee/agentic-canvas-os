@@ -49,7 +49,7 @@ test("a definition registered with no status key defaults to active and stays di
   const snapshot = registry.snapshot();
   assert.equal(snapshot.schema, ACTIVE_REGISTRY_SNAPSHOT_SCHEMA);
   assert.equal(snapshot.agents, 1);
-  assert.ok(snapshot.serialization.includes('"id":"knowgrph-note-agent"'));
+  assert.ok(snapshot.serialization.includes('"id":"agentic-graph-note-agent"'));
   assert.ok(snapshot.serialization.includes('"status":"active"'));
 
   const prepared = await registry.prepare({ agentId: definition.id });
@@ -112,7 +112,7 @@ test("snapshot entry ordering is ascending by id regardless of insertion order",
   for (const definition of definitions) first.register(definition);
   for (const definition of [...definitions].reverse()) second.register(definition);
   assert.equal(captureSnapshot(first), captureSnapshot(second));
-  assert.ok(captureSnapshot(first).indexOf("aaa-first-agent") < captureSnapshot(first).indexOf("knowgrph-note-agent"));
+  assert.ok(captureSnapshot(first).indexOf("aaa-first-agent") < captureSnapshot(first).indexOf("agentic-graph-note-agent"));
 });
 
 test("proposed and deprecated definitions are invisible to snapshot and dispatch but counted", async () => {

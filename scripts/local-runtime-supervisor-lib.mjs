@@ -34,7 +34,7 @@ export function validateOwnedService({ service, processEvidence, token, tokenDig
   if (processEvidence.processGroupId !== service.supervisorPid) {
     throw new Error(`${service.name} listener no longer belongs to its recorded process group.`);
   }
-  if (path.resolve(processEvidence.gitCommonDir || "") !== path.resolve(candidate.knowgrph.gitCommonDir)) {
+  if (path.resolve(processEvidence.gitCommonDir || "") !== path.resolve(candidate.agenticGraph.gitCommonDir)) {
     throw new Error(`${service.name} listener belongs to an unrelated repository.`);
   }
   if (!String(processEvidence.command || "").includes(service.commandMarker)) {
@@ -52,7 +52,7 @@ export async function launchService(spec, candidate, environment, timeoutMs, dep
   const logFd = deps.openLog(spec.logPath);
   let child;
   try {
-    child = deps.spawnService({ cwd: candidate.knowgrph.root, env: environment, command: spec.command[0], args: spec.command[1], logFd });
+    child = deps.spawnService({ cwd: candidate.agenticGraph.root, env: environment, command: spec.command[0], args: spec.command[1], logFd });
   } finally {
     deps.closeLog(logFd);
   }
@@ -112,7 +112,7 @@ function assertPortUnclaimed(port, deps) {
 
 
 export function runtimeLocations(workspaceRoot) {
-  const runtimeRoot = path.join(workspaceRoot, ".runtime-state", "agentic-canvas-os", "knowgrph-local-runtime");
+  const runtimeRoot = path.join(workspaceRoot, ".runtime-state", "agentic-canvas-os", "agentic-graph-local-runtime");
   return {
     runtimeRoot,
     statePath: path.join(runtimeRoot, "readiness.json"),

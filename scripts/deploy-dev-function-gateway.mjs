@@ -10,14 +10,14 @@ const REQUIRED_DYNAMIC_VARS = Object.freeze([
 ]);
 
 const STABLE_DEV_VARS = Object.freeze({
-  KNOWGRPH_MCP_ENDPOINT: "https://knowgrph-mcp-dev.huijoohwee.workers.dev/knowgrph/control-plane/mcp",
-  KNOWGRPH_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note",
-  KNOWGRPH_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note",
+  AGENTIC_OS_MCP_ENDPOINT: "https://agentic-mcp-dev.huijoohwee.workers.dev/agentic-os/control-plane/mcp",
+  AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note",
+  AGENTIC_OS_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note",
   OPENAI_FUNCTION_CALLING_ENDPOINT: "https://api.openai.com/v1/responses",
   OPENAI_FUNCTION_CALLING_API_KEY_ENV: "OPENAI_API_KEY",
   OPENAI_FUNCTION_CALLING_REASONING_EFFORT: "low",
   OPENAI_FUNCTION_CALLING_MAX_OUTPUT_TOKENS: "256",
-  CANVAS_BASE_URL: "https://airvio.co/knowgrph",
+  CANVAS_BASE_URL: "https://airvio.co/agentic-os",
 });
 
 function requiredValue(env, name) {
@@ -53,6 +53,6 @@ export const DEV_FUNCTION_GATEWAY_DEPLOYMENT = Object.freeze({
     "AGENT_API_JWT_SECRET",
     "AGENT_REVIEW_JWT_SECRET",
     "OPENAI_API_KEY",
-    "KNOWGRPH_MCP_FUNCTION_BEARER_TOKEN",
+    "AGENTIC_OS_MCP_FUNCTION_BEARER_TOKEN",
   ]),
 });

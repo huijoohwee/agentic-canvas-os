@@ -5,7 +5,7 @@ import {
   boundedText,
   hasExactKeys,
   isPlainObject,
-} from "./knowgrph-mcp-contract-utils.js";
+} from "./agentic-graph-mcp-contract-utils.js";
 
 const PRIVATE_PATH_KEYS = /^(?:artifactPath|outputPath|rootPath|storePath|absolutePath|createdPaths|removedPaths)$/iu;
 const MAX_PROJECTION_NODES = 1_000;
@@ -68,7 +68,7 @@ function validGraphEdge(value) {
 
 function validGraphData(value) {
   if (!hasExactKeys(value, ["context", "type", "nodes", "edges"])
-    || value.context !== "agenticgraph-knowledge-graph-projection"
+    || value.context !== "agentic-graph-knowledge-graph-projection"
     || value.type !== "Graph"
     || !Array.isArray(value.nodes)
     || !Array.isArray(value.edges)

@@ -11,66 +11,66 @@ import { withPrivateOperationLock } from "./private-operation-lock.mjs";
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultAgenticCanvasOsRoot = path.resolve(path.dirname(scriptPath), "..");
 
-export function resolveKnowgrphRoot({
+export function resolveAgenticGraphRoot({
   agenticCanvasOsRoot = defaultAgenticCanvasOsRoot,
   env = process.env,
 } = {}) {
-  const configuredRoot = String(env.AGENTICGRAPH_ROOT || "").trim();
+  const configuredRoot = String(env.AGENTIC_GRAPH_ROOT || "").trim();
   return configuredRoot
     ? path.resolve(configuredRoot)
-    : path.resolve(agenticCanvasOsRoot, "..", "knowgrph");
+    : path.resolve(agenticCanvasOsRoot, "..", "agentic-graph");
 }
 
-export function assertKnowgrphCollaborationGate({
-  knowgrphRoot,
+export function assertAgenticGraphCollaborationGate({
+  agenticGraphRoot,
   fileExists = existsSync,
   readText = (filePath) => readFileSync(filePath, "utf8"),
 }) {
-  const packagePath = path.join(knowgrphRoot, "package.json");
-  const ownerPath = path.join(knowgrphRoot, "scripts", "check-collaboration-readiness.mjs");
+  const packagePath = path.join(agenticGraphRoot, "package.json");
+  const ownerPath = path.join(agenticGraphRoot, "scripts", "check-collaboration-readiness.mjs");
   if (!fileExists(packagePath) || !fileExists(ownerPath)) {
-    throw new Error(`Knowgrph collaboration owner is unavailable at ${knowgrphRoot}`);
+    throw new Error(`agentic-graph collaboration owner is unavailable at ${agenticGraphRoot}`);
   }
 
   const packageJson = JSON.parse(readText(packagePath));
   if (packageJson?.scripts?.["collaboration:readiness:check"] !== "node ./scripts/check-collaboration-readiness.mjs") {
-    throw new Error("Knowgrph must expose the canonical collaboration:readiness:check command");
+    throw new Error("agentic-graph must expose the canonical collaboration:readiness:check command");
   }
-  return knowgrphRoot;
+  return agenticGraphRoot;
 }
 
 export function runCollaborationGate({
   agenticCanvasOsRoot = defaultAgenticCanvasOsRoot,
   env = process.env,
   spawn = spawnSync,
-  validateOwner = assertKnowgrphCollaborationGate,
+  validateOwner = assertAgenticGraphCollaborationGate,
   createSandbox = createCollaborationGateSandbox,
   readProof = readCollaborationProof,
 } = {}) {
-  const knowgrphRoot = validateOwner({
-    knowgrphRoot: resolveKnowgrphRoot({ agenticCanvasOsRoot, env }),
+  const agenticGraphRoot = validateOwner({
+    agenticGraphRoot: resolveAgenticGraphRoot({ agenticCanvasOsRoot, env }),
   });
   const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-  const sandbox = createSandbox({ agenticCanvasOsRoot, knowgrphRoot, env });
+  const sandbox = createSandbox({ agenticCanvasOsRoot, agenticGraphRoot, env });
   let passed = false;
 
   try {
-    process.stdout.write(`[collaboration-gate] runtime owner ${knowgrphRoot}\n`);
+    process.stdout.write(`[collaboration-gate] runtime owner ${agenticGraphRoot}\n`);
     process.stdout.write(`[collaboration-gate] isolated run ${sandbox.runId} ports owner=${sandbox.ports.owner} guest=${sandbox.ports.guest} worker=${sandbox.ports.worker}\n`);
     const result = spawn(npmCommand, ["run", "collaboration:readiness:check"], {
-      cwd: knowgrphRoot,
+      cwd: agenticGraphRoot,
       env: sandbox.environment,
       stdio: "inherit",
     });
     if (result.error) throw result.error;
     if (result.status !== 0) {
       throw gateError(
-        `Knowgrph collaboration readiness failed with exit code ${result.status ?? "unknown"}`,
-        blockedResult({ knowgrphRoot, sandbox, exitCode: result.status }),
+        `agentic-graph collaboration readiness failed with exit code ${result.status ?? "unknown"}`,
+        blockedResult({ agenticGraphRoot, sandbox, exitCode: result.status }),
       );
     }
     const proof = readProof(sandbox.proofPath);
-    const output = passedResult({ knowgrphRoot, sandbox, proof });
+    const output = passedResult({ agenticGraphRoot, sandbox, proof });
     passed = true;
     process.stdout.write("[collaboration-gate] ok\n");
     return output;
@@ -78,7 +78,7 @@ export function runCollaborationGate({
     if (error?.gateResult) throw error;
     throw gateError(
       error instanceof Error ? error.message : String(error),
-      blockedResult({ knowgrphRoot, sandbox, exitCode: null }),
+      blockedResult({ agenticGraphRoot, sandbox, exitCode: null }),
     );
   } finally {
     sandbox.release({ preserveArtifacts: !passed });
@@ -86,33 +86,33 @@ export function runCollaborationGate({
 }
 
 export function readCollaborationProof(proofPath) {
-  if (!existsSync(proofPath)) throw new Error("Knowgrph collaboration proof artifact is missing.");
+  if (!existsSync(proofPath)) throw new Error("agentic-graph collaboration proof artifact is missing.");
   const proof = JSON.parse(readFileSync(proofPath, "utf8"));
   return validateCollaborationProof(proof);
 }
 
 export function validateCollaborationProof(proof) {
   const identity = proof?.runtimeIdentity;
-  if (proof?.ok !== true || identity?.status !== "pass") throw new Error("Knowgrph collaboration proof did not pass.");
+  if (proof?.ok !== true || identity?.status !== "pass") throw new Error("agentic-graph collaboration proof did not pass.");
   if (identity.observedDeviceCount < 2 || identity.requiredDeviceCount < 2) {
-    throw new Error("Knowgrph collaboration proof requires at least two authenticated runtime peers.");
+    throw new Error("agentic-graph collaboration proof requires at least two authenticated runtime peers.");
   }
   if (!/^[0-9a-f]{64}$/.test(String(identity.verificationDigest || ""))) {
-    throw new Error("Knowgrph collaboration proof has no common verification digest.");
+    throw new Error("agentic-graph collaboration proof has no common verification digest.");
   }
-  for (const field of ["agenticgraphRevision", "agenticCanvasOsRevision", "catalogRevision"]) {
+  for (const field of ["agenticGraphRevision", "agenticCanvasOsRevision", "catalogRevision"]) {
     if (!/^[0-9a-f]{40}$/.test(String(identity[field] || ""))) {
-      throw new Error(`Knowgrph collaboration proof has an invalid ${field}.`);
+      throw new Error(`agentic-graph collaboration proof has an invalid ${field}.`);
     }
   }
   if (identity.catalogRevision !== identity.agenticCanvasOsRevision) {
-    throw new Error("Knowgrph collaboration proof catalog revision does not match Agentic Canvas OS.");
+    throw new Error("agentic-graph collaboration proof catalog revision does not match Agentic Canvas OS.");
   }
   if (identity.catalogHydrationStatus !== "fresh" || identity.catalogHydrationAttempts > 2) {
-    throw new Error("Knowgrph collaboration proof catalog hydration is not fresh and bounded.");
+    throw new Error("agentic-graph collaboration proof catalog hydration is not fresh and bounded.");
   }
   if (!Array.isArray(identity.devices) || new Set(identity.devices).size < 2) {
-    throw new Error("Knowgrph collaboration proof runtime devices are not distinct.");
+    throw new Error("agentic-graph collaboration proof runtime devices are not distinct.");
   }
   return proof;
 }
@@ -169,7 +169,7 @@ export function withRecoverableGitMutationFence({
   return acquire(0);
 }
 
-function passedResult({ knowgrphRoot, sandbox, proof }) {
+function passedResult({ agenticGraphRoot, sandbox, proof }) {
   const identity = proof.runtimeIdentity;
   return {
     schema: "agentic-collaboration-gate-result/v2",
@@ -177,14 +177,14 @@ function passedResult({ knowgrphRoot, sandbox, proof }) {
     parityStatus: "passed",
     blockScope: null,
     runId: sandbox.runId,
-    knowgrphRoot,
+    agenticGraphRoot,
     ports: sandbox.ports,
     proof: {
       observedDeviceCount: identity.observedDeviceCount,
       requiredDeviceCount: identity.requiredDeviceCount,
       verificationDigest: identity.verificationDigest,
       devices: identity.devices,
-      agenticgraphRevision: identity.agenticgraphRevision,
+      agenticGraphRevision: identity.agenticGraphRevision,
       agenticCanvasOsRevision: identity.agenticCanvasOsRevision,
       catalogRevision: identity.catalogRevision,
       catalogHydrationStatus: identity.catalogHydrationStatus,
@@ -193,14 +193,14 @@ function passedResult({ knowgrphRoot, sandbox, proof }) {
   };
 }
 
-function blockedResult({ knowgrphRoot, sandbox, exitCode }) {
+function blockedResult({ agenticGraphRoot, sandbox, exitCode }) {
   return {
     schema: "agentic-collaboration-gate-result/v2",
     status: "blocked",
     parityStatus: "blocked",
     blockScope: "runtime-proof",
     runId: sandbox.runId,
-    knowgrphRoot,
+    agenticGraphRoot,
     ports: sandbox.ports,
     artifactRoot: sandbox.runRoot,
     exitCode,

@@ -13,7 +13,7 @@ const AUTHORIZATION_MAX_AGE_MS = 60 * 60 * 1000;
 const AUTHORIZATION_TIMEOUT_MS = 10 * 1000;
 const DEV_TIMEOUT_MS = 120 * 1000;
 const DEV_COMMANDS = new Set(["npm run dev:apex", "npm run dev"]);
-const SHARED_SUBSTRATE_REPOSITORY = "huijoohwee/knowgrph";
+const SHARED_SUBSTRATE_REPOSITORY = "huijoohwee/agentic-graph";
 const execFileAsync = promisify(execFile);
 
 const STAGES = Object.freeze({

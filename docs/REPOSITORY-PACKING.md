@@ -9,8 +9,8 @@ frontmatter_contract: "required"
 status: "spec-complete"
 invocation: "/repository.pack #repository-packing @repository-root @runtime-proof"
 skill_id: "repository.pack"
-mcp_tool: "agenticgraph.repository.pack"
-runtime_owner: "$GITHUB_ROOT/knowgrph/mcp/repository-pack-contract.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-error.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-format.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-git.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-publisher.js; $GITHUB_ROOT/knowgrph/mcp/repository-pack-runtime.js; $GITHUB_ROOT/knowgrph/mcp/local-tool-contract.js; $GITHUB_ROOT/knowgrph/mcp/os-status-runtime.js; $GITHUB_ROOT/knowgrph/mcp/server.js"
+mcp_tool: "agentic-graph.repository.pack"
+runtime_owner: "$GITHUB_ROOT/agentic-graph/mcp/repository-pack-contract.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-error.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-format.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-git.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-publisher.js; $GITHUB_ROOT/agentic-graph/mcp/repository-pack-runtime.js; $GITHUB_ROOT/agentic-graph/mcp/local-tool-contract.js; $GITHUB_ROOT/agentic-graph/mcp/os-status-runtime.js; $GITHUB_ROOT/agentic-graph/mcp/server.js"
 runtime_surface: "local stdio MCP"
 publish_policy: "Dev-only; no Prod or Cloudflare authority"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -23,7 +23,7 @@ external_dependency: "forbidden"
 
 Repository packing creates one deterministic, AI-friendly Markdown artifact from
 the eligible text files in one local Git worktree. Agentic Canvas OS owns the
-invocation, safety, output, and proof contract. Knowgrph owns the executable
+invocation, safety, output, and proof contract. agentic-graph owns the executable
 local stdio MCP tool.
 
 ## Canonical Invocation
@@ -35,12 +35,12 @@ local stdio MCP tool.
 | Semantic route | `#repository-packing` | Classify deterministic repository packing. |
 | Root binding | `@repository-root` | Bind one exact local Git worktree root. |
 | Proof binding | `@runtime-proof` | Bind the structured result and focused checks. |
-| MCP wire tool | `agenticgraph.repository.pack` | Execute through Knowgrph local stdio MCP only. |
+| MCP wire tool | `agentic-graph.repository.pack` | Execute through agentic-graph local stdio MCP only. |
 
 The exact host alias is
 `/repository.pack #repository-packing @repository-root @runtime-proof`.
 The slash, hash, and at tokens are host metadata; they are not alternate MCP
-method names. `/repomix`, `#repomix`, `@repomix`, and `knowgrph.repomix*` are
+method names. `/repomix`, `#repomix`, `@repomix`, and `agentic-graph.repomix*` are
 unsupported aliases.
 
 ## Owner Boundary
@@ -48,7 +48,7 @@ unsupported aliases.
 | Owner | Owns | Does not own |
 |---|---|---|
 | Agentic Canvas OS | Invocation truth, request/result shape, safety rules, bounds, validation, and readiness language. | Repository traversal, file reads, artifact writes, MCP transport, or deployment. |
-| Knowgrph local MCP | Git-backed discovery, path validation, bounded reads, deterministic rendering, atomic artifact publication, and typed proof. | Invocation dictionaries, external compatibility, model calls, remote repositories, Prod, or Cloudflare. |
+| agentic-graph local MCP | Git-backed discovery, path validation, bounded reads, deterministic rendering, atomic artifact publication, and typed proof. | Invocation dictionaries, external compatibility, model calls, remote repositories, Prod, or Cloudflare. |
 | Operator | Selects the repository and output request. | Implicit authority outside the selected root or deployment approval. |
 
 The runtime is local-only. It performs no network request, remote clone, package
@@ -61,7 +61,7 @@ The MCP input schema is closed and accepts only these fields:
 
 | Field | Type | Default | Rule |
 |---|---|---|---|
-| `repositoryPath` | string | `.` | Repository-relative path under the configured Knowgrph MCP root; it must resolve to an exact Git worktree root. |
+| `repositoryPath` | string | `.` | Repository-relative path under the configured agentic-graph MCP root; it must resolve to an exact Git worktree root. |
 | `outputDirectory` | string | `data/outputs/repository-packs` | Repository-relative directory beneath the selected Git worktree; it must remain outside the packed inventory. |
 | `includePaths` | array of strings | `[]` | Optional repository-relative file or directory prefixes; empty means every eligible path. |
 | `excludePaths` | array of strings | `[]` | Optional repository-relative file or directory prefixes applied after inclusion. |
@@ -142,7 +142,7 @@ absolute path, environment detail, credential fragment, or packed content.
 
 ## Closed Result
 
-The tool returns `knowgrph-repository-pack-result/v1` with:
+The tool returns `agentic-graph-repository-pack-result/v1` with:
 
 - `ok`, `status`, `tool`, and `invocation`;
 - repository-relative `artifactPath`, `artifactSha256`, and `sourceSetSha256`;
@@ -192,7 +192,7 @@ A separate provenance and similarity review is required.
 ## Validation Contract
 
 Readiness requires all of the following against exact Agentic Canvas OS and
-Knowgrph revisions:
+agentic-graph revisions:
 
 - one and only one canonical `/`, `#`, `@`, skill, and MCP identity;
 - MCP `tools/list` schema and annotations equal the source contract;
@@ -214,7 +214,7 @@ Knowgrph revisions:
 | VCC | Pass condition |
 |---|---|
 | Invocation parity | The exact host tuple resolves once through the three dictionaries and facts. |
-| MCP parity | `agenticgraph.repository.pack` is listed once and its closed schema matches this request. |
+| MCP parity | `agentic-graph.repository.pack` is listed once and its closed schema matches this request. |
 | Determinism | An unchanged fixture produces byte-identical artifacts and the same two digests. |
 | Containment | Traversal, symlink, root swap, and output escape cases fail closed. |
 | Completeness | Every selected candidate is embedded or receives one typed state in the path index; policy-excluded paths are counted without disclosure. |

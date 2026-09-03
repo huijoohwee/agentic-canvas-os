@@ -9,11 +9,11 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "canonical role-based team invocation, source shape, lifecycle semantics, bounds, and owner separation"
 runtime_scope: "provider-neutral role-playing collaboration composed from existing Agentic Canvas OS agent owners"
-runtime_claim: "Agentic Canvas OS supplies the model-free validated contract; the matching Knowgrph local stdio MCP now proves durable plan/start/list/control execution with host-owned verification, control, review receipts, and an explicitly configured local model"
-runtime_owner: "$GITHUB_ROOT/knowgrph/mcp"
-runtime_proof: "../scripts/agent-team-contract.mjs; ../__tests__/agent-team-contract.test.mjs; $GITHUB_ROOT/knowgrph npm run agent-team:check"
+runtime_claim: "Agentic Canvas OS supplies the model-free validated contract; the matching agentic-graph local stdio MCP now proves durable plan/start/list/control execution with host-owned verification, control, review receipts, and an explicitly configured local model"
+runtime_owner: "$GITHUB_ROOT/agentic-graph/mcp"
+runtime_proof: "../scripts/agent-team-contract.mjs; ../__tests__/agent-team-contract.test.mjs; $GITHUB_ROOT/agentic-graph npm run agent-team:check"
 invocation: "/agent.team #role-based-agent-team @agent-team"
-mcp_tools: ["agenticgraph.agent_team.plan", "agenticgraph.agent_team.start", "agenticgraph.agent_team.list", "agenticgraph.agent_team.control"]
+mcp_tools: ["agentic-graph.agent_team.plan", "agentic-graph.agent_team.start", "agentic-graph.agent_team.list", "agentic-graph.agent_team.control"]
 external_pattern_source: "https://github.com/crewaiinc/crewai"
 external_source_policy: "official abstract capability inspiration only; local source, vocabulary, schemas, prompts, fixtures, tests, and prose are independently authored"
 external_dependency: "forbidden"
@@ -24,7 +24,7 @@ publish_policy: "runtime-ready in local Dev only; provider, remote Worker, Prod,
 
 `/agent.team #role-based-agent-team @agent-team` selects one exact, source-backed team whose members collaborate through existing Agent Definitions, Agent Orchestration, and Progressive Agents owners. It does not create another agent registry, loop, model router, tool gateway, state store, approval system, or dynamic swarm.
 
-The tuple is a host invocation alias. MCP clients call the four exact `agenticgraph.agent_team.*` wire tools. Unknown aliases remain unsupported.
+The tuple is a host invocation alias. MCP clients call the four exact `agentic-graph.agent_team.*` wire tools. Unknown aliases remain unsupported.
 
 ## Owner Separation
 
@@ -34,7 +34,7 @@ The tuple is a host invocation alias. MCP clients call the four exact `agenticgr
 | Agent Definitions | Each exact agent id and revision, source digest, model route, instructions, reference-only capabilities, guardrails, and output contract. | Team authority, conversation ownership, or execution. |
 | Agent Orchestration | Registered workflow revision, allowed branches, `delegate` and `handoff` behavior, conversation owner, and final-answer owner. | Durable team supervision or caller-invented routes. |
 | Progressive Agents | The existing facade that prepares and executes exact agents and workflows through their owners. | A new definition, workflow, state, or provider registry. |
-| Knowgrph local stdio MCP | Durable plan/start/list/control records, serialized transitions, checkpoints, replay fences, cancellation, review state, and bounded projection. | New agent definitions, branch semantics, capability grants, model routes, tool policy, or deployment authority. |
+| agentic-graph local stdio MCP | Durable plan/start/list/control records, serialized transitions, checkpoints, replay fences, cancellation, review state, and bounded projection. | New agent definitions, branch semantics, capability grants, model routes, tool policy, or deployment authority. |
 | Existing model, tool, guardrail, review, and persistence owners | Their own authorization, execution, receipts, usage, policy, and storage. | Authority inferred from a role, goal, persona, team membership, or MCP request. |
 | Operator | Explicit approval and human-review decisions where policy requires them. | Silent approval through presence, metadata, or a prior unrelated decision. |
 
@@ -65,14 +65,14 @@ The source verifier must reproduce the exact URI and digest. Every participant r
 
 ## Typed MCP Lifecycle
 
-Every response uses `knowgrph-agent-team-result/v1` with `ok`, `operation`, `teamId`, `teamRevision`, `runId`, `state`, `stateVersion`, `planDigest`, bounded `evidence`, measured `usage`, and either typed `result` or typed `error`. Secrets, hidden instructions, private intermediate outputs, and raw provider payloads are excluded.
+Every response uses `agentic-graph-agent-team-result/v1` with `ok`, `operation`, `teamId`, `teamRevision`, `runId`, `state`, `stateVersion`, `planDigest`, bounded `evidence`, measured `usage`, and either typed `result` or typed `error`. Secrets, hidden instructions, private intermediate outputs, and raw provider payloads are excluded.
 
 | Tool | Required input | Typed result | Mutation boundary |
 |---|---|---|---|
-| `agenticgraph.agent_team.plan` | Exact invocation, team source identity, requested task, bounds, policy references, and idempotency key. | Immutable `planId`, `planDigest`, resolved revisions, branch set, owner map, effective bounds, and `planned` state. | Read-only and model-free; no durable run, agent call, tool call, checkpoint, or spend. |
-| `agenticgraph.agent_team.start` | `planId`, `planDigest`, exact `teamRevision`, expected plan state version, and idempotency key. | Durable `runId`, state version, initial checkpoint, manager ownership, and queued or running state. | Creates only the bounded team run after all fences and current policy pass. |
-| `agenticgraph.agent_team.list` | Bounded filters, page limit, and optional exact run id. | Sanitized summaries, current owner, state, budget use, blockers, review status, and evidence references. | Read-only and zero-model; no polling loop or private output disclosure. |
-| `agenticgraph.agent_team.control` | Exact `runId`, expected state version, action, idempotency key, reason, and review receipt when required. | One serialized transition, checkpoint reference, new state version, and typed next action. | Only `pause`, `resume`, `cancel`, `retry`, `request_review`, and `record_review` are supported. |
+| `agentic-graph.agent_team.plan` | Exact invocation, team source identity, requested task, bounds, policy references, and idempotency key. | Immutable `planId`, `planDigest`, resolved revisions, branch set, owner map, effective bounds, and `planned` state. | Read-only and model-free; no durable run, agent call, tool call, checkpoint, or spend. |
+| `agentic-graph.agent_team.start` | `planId`, `planDigest`, exact `teamRevision`, expected plan state version, and idempotency key. | Durable `runId`, state version, initial checkpoint, manager ownership, and queued or running state. | Creates only the bounded team run after all fences and current policy pass. |
+| `agentic-graph.agent_team.list` | Bounded filters, page limit, and optional exact run id. | Sanitized summaries, current owner, state, budget use, blockers, review status, and evidence references. | Read-only and zero-model; no polling loop or private output disclosure. |
+| `agentic-graph.agent_team.control` | Exact `runId`, expected state version, action, idempotency key, reason, and review receipt when required. | One serialized transition, checkpoint reference, new state version, and typed next action. | Only `pause`, `resume`, `cancel`, `retry`, `request_review`, and `record_review` are supported. |
 
 Planning canonicalizes the exact team source, resolved definition revisions, workflow revision, branch ids and modes, review-policy revision, task digest, and effective bounds into `planDigest`. Start, resume, retry, review continuation, and every checkpoint must match that digest and `teamRevision`. Control must also match the current `stateVersion`; stale or skipped versions fail without mutation.
 
@@ -134,11 +134,11 @@ The effective value is the lowest of the source, caller, application, provider, 
 
 `npm run agent-team:check` is model-free. Its deterministic fixture validates exact document projections, owner and state tables, bounds, dependency and reference-name guards, line ceilings, and fail-closed mutations with `tokens: 0` and `costUsd: 0`.
 
-A matching Knowgrph deterministic runtime proof must use exact fake source digests, fixed Agent Definition revisions, a fixed Agent Orchestration workflow, an injected response table, and a temporary durable-state adapter. It must prove plan idempotency, start fencing, manager-owned delegate synthesis, target-owned handoff, private-output suppression, checkpoint recovery, stale-version rejection, replay rejection, cancellation precedence, human-review continuation, every hard bound, the four wire tools, and durable restart behavior before runtime-ready promotion. Neither proof makes a provider, production, or deployment readiness claim.
+A matching agentic-graph deterministic runtime proof must use exact fake source digests, fixed Agent Definition revisions, a fixed Agent Orchestration workflow, an injected response table, and a temporary durable-state adapter. It must prove plan idempotency, start fencing, manager-owned delegate synthesis, target-owned handoff, private-output suppression, checkpoint recovery, stale-version rejection, replay rejection, cancellation precedence, human-review continuation, every hard bound, the four wire tools, and durable restart behavior before runtime-ready promotion. Neither proof makes a provider, production, or deployment readiness claim.
 
 ## Matching Local Dev Runtime
 
-Knowgrph's canonical local stdio registrar now privately installs the four
+agentic-graph's canonical local stdio registrar now privately installs the four
 required host owners: exact Agent Definition/workflow/review verification,
 local control authorization, file-backed expiring review-receipt verification,
 and a revisioned replay-safe local Ollama adapter with a zero-spend estimate.
@@ -148,7 +148,7 @@ The checked-in `team.collaborative-intelligence@1.0.0` source binds
 `agent.collaboration-manager@1.0.0`, `agent.evidence-scout@1.0.0`, and
 `agent.risk-reviewer@1.0.0` to two ordered delegate branches. The manager owns
 both branch synthesis and the final public answer. The operator must explicitly
-select an exact model with `AGENTICGRAPH_AGENT_TEAM_MODEL`; loopback Ollama is the
+select an exact model with `AGENTIC_OS_AGENT_TEAM_MODEL`; loopback Ollama is the
 default, no model is downloaded or hard-coded, and unconfigured execution
 fails before durable state or model work.
 

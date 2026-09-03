@@ -48,7 +48,7 @@ Each shard is created once with immutable YAML frontmatter. New entries are appe
 ```markdown
 ---
 schema: memory-log/v1
-agent: knowgrph-harness
+agent: agentic-graph-harness
 device: mbp-m3
 timestamp_format: YYYYMMDDTHHmmssZ
 ---

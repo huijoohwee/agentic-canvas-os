@@ -19,7 +19,7 @@ const ALLOCATION_TTL_MS = 20 * 60_000;
 
 export function createCollaborationGateSandbox({
   agenticCanvasOsRoot,
-  knowgrphRoot,
+  agenticGraphRoot,
   env = process.env,
   runId = randomUUID().replaceAll("-", ""),
   pid = process.pid,
@@ -28,7 +28,7 @@ export function createCollaborationGateSandbox({
   portsAvailable = defaultPortsAvailable,
 } = {}) {
   if (!agenticCanvasOsRoot) throw new Error("Collaboration gate sandbox requires the Agentic Canvas OS root.");
-  const workspaceRoot = path.resolve(knowgrphRoot || agenticCanvasOsRoot, "..");
+  const workspaceRoot = path.resolve(agenticGraphRoot || agenticCanvasOsRoot, "..");
   const runtimeRoot = path.resolve(
     String(env.AGENTIC_COLLABORATION_STATE_ROOT || "").trim()
       || path.join(workspaceRoot, ".runtime-state", "agentic-canvas-os", "collaboration-gates"),

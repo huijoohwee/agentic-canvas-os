@@ -1,6 +1,6 @@
 ---
-title: "Knowgrph Runtime-Ready Agentic Canvas OS PRD/TAD"
-graphId: "md:knowgrph-agentic-canvas-os-prd-tad-local"
+title: "agentic-graph Runtime-Ready Agentic Canvas OS PRD/TAD"
+graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "Combined PRD/TAD"
 date: "2026-07-18"
 lang: "en-US"
@@ -12,10 +12,10 @@ source_docs:
   - "FACTS.md"
   - "MEMORY.md"
   - "SKILLS.md"
-  - "$AGENTICGRAPH_ROOT/docs/documents/knowgrph-agentic-os-prd-tad.md"
-  - "$AGENTICGRAPH_ROOT/docs/documents/knowgrph-mcp/knowgrph-mcp-agentic-os-prd-tad.md"
-  - "$GITHUB_ROOT/.kiro/specs/knowgrph-agentic-os"
-  - "$GITHUB_ROOT/.kiro/specs/knowgrph-acos-mcp-connector"
+  - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-agentic-os-prd-tad.md"
+  - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-mcp/agentic-graph-mcp-agentic-os-prd-tad.md"
+  - "$GITHUB_ROOT/.kiro/specs/agentic-graph-agentic-os"
+  - "$GITHUB_ROOT/.kiro/specs/agentic-graph-acos-mcp-connector"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs product and architecture contract; external runtime proof remains gated"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -97,11 +97,11 @@ flow:
       type: {key: type, type: string, value: "prd_proof_signal"}
 ---
 
-# Knowgrph Runtime-Ready Agentic Canvas OS PRD/TAD
+# agentic-graph Runtime-Ready Agentic Canvas OS PRD/TAD
 
 ## Scope
 
-Make `knowgrph` a runtime-ready Agentic Canvas OS: a local-first and Cloudflare-ready control plane for discovering, orchestrating, observing, validating, and rendering AI harness work through Canvas.
+Make `agentic-graph` a runtime-ready Agentic Canvas OS: a local-first and Cloudflare-ready control plane for discovering, orchestrating, observing, validating, and rendering AI harness work through Canvas.
 
 This contract consolidates the native-in-repo direction: no new Vercel, AWS, Supabase, dashboard-only graph store, or browser-secret surface. Superseded connector topology remains reference material only.
 
@@ -109,7 +109,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 
 ### Problem
 
-`knowgrph` already has multiple AI and automation harnesses, but runtime state, tool discovery, approvals, cost logs, and proof paths are distributed across local MCP tools, source documents, Canvas views, and Worker surfaces. A solo operator needs one Agentic Canvas OS contract that makes those capabilities discoverable, inspectable, and runnable without introducing a second runtime.
+`agentic-graph` already has multiple AI and automation harnesses, but runtime state, tool discovery, approvals, cost logs, and proof paths are distributed across local MCP tools, source documents, Canvas views, and Worker surfaces. A solo operator needs one Agentic Canvas OS contract that makes those capabilities discoverable, inspectable, and runnable without introducing a second runtime.
 
 ### Personas
 
@@ -275,7 +275,7 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Tool Gateway | Per-tool routing for web search, image generation, TTS, and cloud browser automation through existing infrastructure | `docs/FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and `MCP-GATEWAY.md` |
 | Tool Search | Opt-in deferred schema search, describe, and bridge call for eligible MCP and non-core plugin tools | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and tool catalog owners |
 | Agent instructions | Editing and validation rules for this folder | `docs/AGENTS.md` |
-| OS status tool | Read-only process, capability, cost, gate, and circuit-breaker views | Existing `knowgrph` MCP/runtime owners |
+| OS status tool | Read-only process, capability, cost, gate, and circuit-breaker views | Existing `agentic-graph` MCP/runtime owners |
 | Capability registry | Deduplicate tool catalogs and report unreachable optional catalogs | Shared MCP catalog owners |
 | Harness catalog | Define typed input/output/cost/fallback/bound contracts | Existing harness runtimes and contracts |
 | Mixture of Agents | Run bounded reference-agent deliberation before one aggregator-owned response | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and approved local harness owners |
@@ -317,7 +317,7 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 
 | ADR | Decision | Rationale |
 |---|---|---|
-| ADR-AOS-1 | Native-in-repo Agentic Canvas OS | Existing `knowgrph` owners already carry Canvas, MCP, source docs, and Cloudflare control plane. |
+| ADR-AOS-1 | Native-in-repo Agentic Canvas OS | Existing `agentic-graph` owners already carry Canvas, MCP, source docs, and Cloudflare control plane. |
 | ADR-AOS-2 | Discovery-first MCP gateway, no fifth proxy | Avoid duplicated dispatch, latency, schema drift, and cost-accounting split. |
 | ADR-AOS-3 | Read-time OS aggregation, no new datastore | Keeps TCO at zero and avoids stale OS-level copies. |
 | ADR-AOS-4 | Dev-only until explicit deploy approval | Prevents accidental Prod mirror or Cloudflare mutation. |
@@ -328,7 +328,7 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | ADR-AOS-9 | Context references are explicit attached context | Enables per-message file, folder, diff, staged, git, and URL context without turning normal `@` bindings into expansion targets or mutating unsupported surfaces. |
 | ADR-AOS-10 | Kanban is row-based collaboration | Enables multiple named profiles to coordinate through durable task and handoff rows without fragile in-process subagent swarms. |
 | ADR-AOS-11 | Toolsets are platform-scoped | Keeps tools useful while preventing global capability leakage, copied registries, and implicit cross-surface access. |
-| ADR-AOS-12 | Tool Gateway uses existing infrastructure | Routes useful tools through current `knowgrph` surfaces while avoiding another proxy, browser secrets, and deploy assumptions. |
+| ADR-AOS-12 | Tool Gateway uses existing infrastructure | Routes useful tools through current `agentic-graph` surfaces while avoiding another proxy, browser secrets, and deploy assumptions. |
 | ADR-AOS-13 | Tool Search is opt-in progressive disclosure | Keeps large eligible MCP/plugin schemas out of model-visible context while preserving session scope, real tool policy, and direct exposure for core required tools. |
 | ADR-AOS-14 | MoA is one-shot and aggregator-owned | Enables multiple perspectives while avoiding copied provider presets, recursive routers, and uncapped fan-out. |
 | ADR-AOS-15 | Learning loop is proposal-first | Enables self-improvement from experience while forbidding copied external artifacts, unreviewed self-modification, and unsupported identity inference. |

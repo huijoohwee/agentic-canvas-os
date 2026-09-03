@@ -50,7 +50,7 @@ export function resolveAutonomousRuntimeEnvironment(
   const agentId = cleanText(env.AGENT_RUNTIME_AGENT_ID);
   const agentRevision = cleanText(env.AGENT_RUNTIME_AGENT_REVISION);
   const sourceUri = cleanText(env.AGENT_RUNTIME_AGENT_SOURCE_URI);
-  const controlPlaneConfigured = Boolean(cleanText(env.KNOWGRPH_MCP_ENDPOINT));
+  const controlPlaneConfigured = Boolean(cleanText(env.AGENTIC_OS_MCP_ENDPOINT));
   const sourceDigest = cleanText(env.AGENT_RUNTIME_AGENT_SOURCE_SHA256).toLowerCase();
   const maxProviderCalls = boundedProviderCalls(env.AGENT_RUNTIME_MAX_PROVIDER_CALLS);
   const parsedSource = parseSource(env.AGENT_RUNTIME_AGENT_SOURCE);

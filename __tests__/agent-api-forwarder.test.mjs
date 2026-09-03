@@ -1,5 +1,5 @@
 // Tests for the thin keyless Agent-API forwarder + session auth
-// (agentic-canvas-os). ZERO network — the knowgrph MCP client is injected as a
+// (agentic-canvas-os). ZERO network — the agentic-graph MCP client is injected as a
 // stub. Covers session minting/verification, request validation, the
 // auth-gated forward, fail-closed config, and the auth≠approval boundary.
 
@@ -100,7 +100,7 @@ test("auth/session mints a token; 501 when unconfigured", async () => {
   assert.equal(unconfigured.statusCode, 501);
 });
 
-// --- run handler (forward to knowgrph MCP) ----------------------------------
+// --- run handler (forward to agentic-graph MCP) ----------------------------------
 
 function stubMcpClient(onCall) {
   return {
@@ -112,7 +112,7 @@ function stubMcpClient(onCall) {
       if (onCall) onCall(input, opts);
       return {
         ok: true,
-        catalog: [{ token: input.query, kind: "command", summary: "Resolved from knowgrph MCP." }],
+        catalog: [{ token: input.query, kind: "command", summary: "Resolved from agentic-graph MCP." }],
       };
     },
   };
@@ -123,7 +123,7 @@ async function tokenFor() {
   return res.body.token;
 }
 
-test("a valid authed request forwards to knowgrph MCP and returns the manifest", async () => {
+test("a valid authed request forwards to agentic-graph MCP and returns the manifest", async () => {
   let forwarded;
   const handler = createRunHandler({ secret: SECRET, mcpClient: stubMcpClient((input) => (forwarded = input)) });
   const token = await tokenFor();
@@ -151,7 +151,7 @@ test("an invalid body is 400 with named fields and no forward", async () => {
   assert.equal(called, false);
 });
 
-test("fail-closed 501 when no knowgrph MCP client is configured", async () => {
+test("fail-closed 501 when no agentic-graph MCP client is configured", async () => {
   const handler = createRunHandler({ secret: SECRET });
   const token = await tokenFor();
   const res = await handler({ headers: { authorization: `Bearer ${token}` }, body: VALID_RUN });
@@ -170,9 +170,9 @@ test("auth never substitutes for approval: the forward carries empty approvals t
   assert.ok(res.body.approvalGates.length >= 5);
 });
 
-// --- invoke handler (forward grammar queries to knowgrph MCP) ---------------
+// --- invoke handler (forward grammar queries to agentic-graph MCP) ---------------
 
-test("a valid authed invoke request forwards the query to knowgrph MCP", async () => {
+test("a valid authed invoke request forwards the query to agentic-graph MCP", async () => {
   let forwarded;
   let forwardedOpts;
   const handler = createInvokeHandler({

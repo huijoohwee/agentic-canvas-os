@@ -45,7 +45,7 @@ function withReplacement(name, before, after) {
 test("repository keeps one canonical AI Voice Studio contract", async () => {
   assert.equal(VOICE_STUDIO_COMMAND, "/voice.studio");
   assert.deepEqual(VOICE_STUDIO_OPERATIONS, ["clone", "dictate", "create"]);
-  assert.equal(VOICE_STUDIO_MCP_TOOL, "agenticgraph.voice.studio");
+  assert.equal(VOICE_STUDIO_MCP_TOOL, "agentic-graph.voice.studio");
   assert.deepEqual(VOICE_STUDIO_ROUTES, {
     clone: "/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof",
     dictate: "/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof",
@@ -155,7 +155,7 @@ test("operation vocabulary and safe promotion status fail closed on drift", () =
   assert.equal(failures.some((failure) => failure.includes("runtime-ready status is forbidden")), true);
 });
 
-test("one MCP wire identity preserves ACOS metadata and Knowgrph execution ownership", () => {
+test("one MCP wire identity preserves ACOS metadata and agentic-graph execution ownership", () => {
   const duplicateTool = withReplacement(
     "MCP-GATEWAY.md",
     `| \`${VOICE_STUDIO_MCP_TOOL}\` |`,
@@ -169,7 +169,7 @@ test("one MCP wire identity preserves ACOS metadata and Knowgrph execution owner
 
   const movedOwner = withReplacement(
     "MCP-GATEWAY.md",
-    "Knowgrph owns execution, media identity, persistence, and proof",
+    "agentic-graph owns execution, media identity, persistence, and proof",
     "Agentic Canvas OS owns execution, media identity, persistence, and proof",
   );
   assert.equal(

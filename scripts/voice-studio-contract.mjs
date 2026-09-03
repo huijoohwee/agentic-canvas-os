@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 export const VOICE_STUDIO_COMMAND = "/voice.studio";
 export const VOICE_STUDIO_OPERATIONS = Object.freeze(["clone", "dictate", "create"]);
-export const VOICE_STUDIO_MCP_TOOL = "agenticgraph.voice.studio";
+export const VOICE_STUDIO_MCP_TOOL = "agentic-graph.voice.studio";
 export const VOICE_STUDIO_ROUTES = Object.freeze({
   clone: "/voice.studio #voice-clone @audio @voice-profile @approval-gate @cost-log @runtime-proof",
   dictate: "/voice.studio #speech-to-text @audio @text @approval-gate @cost-log @runtime-proof",
@@ -232,7 +232,7 @@ export function validateVoiceStudioContractDocuments(documents) {
     "fail-before-spend",
     "tokens: 0",
     "costUsd: 0",
-    "The contract remains `spec-complete` until an exact integrated Knowgrph revision proves",
+    "The contract remains `spec-complete` until an exact integrated agentic-graph revision proves",
     "No Voicebox code, prose, prompt, schema, API shape, tool name, test, fixture, asset, UI layout, style, package, dependency, model stack, provider configuration, generated artifact, or repository structure is copied, imported, invoked, vendored, or required.",
     "Removing network access and the external repository changes neither this contract nor its deterministic validation.",
     "The automated guard detects dependency and runtime reference names; it is not a similarity detector.",
@@ -255,7 +255,7 @@ export function validateVoiceStudioContractDocuments(documents) {
     );
   }
   if (/^status:\s*"runtime-ready(?:-dev)?"\s*$/m.test(contract)) {
-    failures.push("VOICE-STUDIO.md: runtime-ready status is forbidden without exact combined Knowgrph proof");
+    failures.push("VOICE-STUDIO.md: runtime-ready status is forbidden without exact combined agentic-graph proof");
   }
 
   const skills = required["SKILLS.md"];
@@ -273,7 +273,7 @@ export function validateVoiceStudioContractDocuments(documents) {
   requireMarkers(mcpSection, "MCP-GATEWAY.md Voice Studio owner separation", [
     "host metadata, not MCP wire methods",
     "Agentic Canvas OS owns the canonical operation and safety contract",
-    "Knowgrph owns execution, media identity, persistence, and proof",
+    "agentic-graph owns execution, media identity, persistence, and proof",
     "exactly one discriminated `clone`, `dictate`, or `create` request",
     "fails before audio read, adapter work, spend, or persistence",
   ], failures);
@@ -312,7 +312,7 @@ export function validateVoiceStudioContractDocuments(documents) {
   );
   requireMarkers(findPlainTableRow(required["RUNTIME-READINESS.md"], "AI Voice Studio contract"), "RUNTIME-READINESS.md: AI Voice Studio projection", [
     "Spec-complete",
-    "exact integrated Knowgrph local stdio MCP",
+    "exact integrated agentic-graph local stdio MCP",
     "fail-before-spend proof required",
   ], failures);
 
@@ -334,14 +334,14 @@ export function validateVoiceStudioContractDocuments(documents) {
   );
   requireMarkers(promotionSection, "RUNTIME-PROOF.md: AI Voice Studio promotion boundary", [
     "| AI Voice Studio contract | Spec-complete |",
-    "Runtime-ready promotion requires exact integrated Knowgrph revisions",
+    "Runtime-ready promotion requires exact integrated agentic-graph revisions",
     "live cloning",
     "biometric deletion",
   ], failures);
   requireMarkers(required["VALIDATION-RUNBOOK.md"], "VALIDATION-RUNBOOK.md Voice Studio projection", [
     'run voice-studio-contract:check',
     "exact clone, dictate, and create metadata routes",
-    "one `agenticgraph.voice.studio` wire identity",
+    "one `agentic-graph.voice.studio` wire identity",
   ], failures);
   return failures;
 }

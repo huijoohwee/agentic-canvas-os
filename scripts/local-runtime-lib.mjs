@@ -26,7 +26,7 @@ import {
 import { createLocalReviewCandidate } from "./production-release-authorization-contract.mjs";
 
 const STORAGE_EXPORT_PATH = "/api/storage/export/kgws%3Acanonical-docs";
-const STORAGE_LOCAL_RUNTIME_WRANGLER_VAR = "AGENTICGRAPH_STORAGE_LOCAL_RUNTIME:true";
+const STORAGE_LOCAL_RUNTIME_WRANGLER_VAR = "AGENTIC_OS_STORAGE_LOCAL_RUNTIME:true";
 
 export async function ensureLocalRuntime(options = {}, dependencies = {}) {
   const deps = createDependencies(dependencies);
@@ -82,8 +82,8 @@ export async function endLocalRuntimeTurn(options = {}, dependencies = {}) {
     const reviewCandidate = createLocalReviewCandidate(runtime, {
       source: {
         repository: runtime.source.repository,
-        revision: candidate.knowgrph.headSha,
-        tree: candidate.knowgrph.treeSha,
+        revision: candidate.agenticGraph.headSha,
+        tree: candidate.agenticGraph.treeSha,
       },
       agenticCanvasOs: {
         repository: runtime.agenticCanvasOs.repository,
@@ -119,9 +119,9 @@ async function startRuntime(candidate, options, locations, deps) {
   const environment = {
     ...process.env,
     AGENTIC_LOCAL_RUNTIME_TOKEN: token,
-    AGENTICGRAPH_SOURCE_REVISION: candidate.knowgrph.headSha,
-    AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
-    AGENTICGRAPH_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
+    AGENTIC_OS_SOURCE_REVISION: candidate.agenticGraph.headSha,
+    AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
+    AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
     VITE_WORKSPACE_INITIALIZATION_AGENTIC_CANVAS_OS_DOCS_ABS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
   };
   const started = [];
@@ -152,9 +152,9 @@ async function startRuntime(candidate, options, locations, deps) {
     const state = {
       schema: LOCAL_RUNTIME_SCHEMA,
       status: "runtime-ready",
-      application: "knowgrph",
+      application: "agentic-os",
       surface: "apex",
-      source: { repository: "huijoohwee/knowgrph", revision: candidate.knowgrph.headSha },
+      source: { repository: "huijoohwee/agentic-graph", revision: candidate.agenticGraph.headSha },
       agenticCanvasOs: {
         repository: "huijoohwee/agentic-canvas-os",
         revision: candidate.agenticCanvasOs.headSha,
@@ -204,7 +204,10 @@ async function inspectRuntimeState(state, candidate, locations, deps) {
 
 function validateStateShape(state, candidate) {
   if (state?.schema !== LOCAL_RUNTIME_SCHEMA) throw new Error("Local runtime state has an unsupported schema.");
-  if (state.source?.revision !== candidate.knowgrph.headSha) throw new Error("Recorded Knowgrph SHA does not match canonical main.");
+  if (state.application !== "agentic-os" || state.surface !== "apex") {
+    throw new Error("Local runtime state has an unexpected application surface.");
+  }
+  if (state.source?.revision !== candidate.agenticGraph.headSha) throw new Error("Recorded agentic-graph SHA does not match canonical main.");
   if (state.agenticCanvasOs?.revision !== candidate.agenticCanvasOs.headSha) throw new Error("Recorded Agentic Canvas OS SHA does not match canonical main.");
   if (state.catalogRevision !== candidate.agenticCanvasOs.headSha) throw new Error("Recorded catalog SHA does not match Agentic Canvas OS.");
   if (!state.services?.storage || !state.services?.apex) throw new Error("Local runtime state is missing a required service.");
@@ -248,9 +251,9 @@ function stoppedProjection(candidate) {
     schema: LOCAL_RUNTIME_SCHEMA,
     status: "stopped",
     ready: false,
-    application: "knowgrph",
+    application: "agentic-os",
     surface: "apex",
-    source: { repository: "huijoohwee/knowgrph", revision: candidate.knowgrph.headSha },
+    source: { repository: "huijoohwee/agentic-graph", revision: candidate.agenticGraph.headSha },
     agenticCanvasOs: { repository: "huijoohwee/agentic-canvas-os", revision: candidate.agenticCanvasOs.headSha },
     catalogRevision: candidate.agenticCanvasOs.headSha,
     host: LOCAL_RUNTIME_HOST,

@@ -4,8 +4,8 @@ export const URL_INGEST_INVOCATION = Object.freeze({
   semantic: "#canvas",
   skill: "url.ingest",
   text: "/ingest-url @url:https://example.com @reference-policy #canvas",
-  discoveryTool: "agenticgraph.agentic_canvas_os.docs.invoke",
-  executionTool: "agenticgraph.control_local_import_url",
+  discoveryTool: "agentic-graph.agentic_canvas_os.docs.invoke",
+  executionTool: "agentic-graph.control_local_import_url",
 });
 
 const FORBIDDEN_ALIASES = Object.freeze([
@@ -142,7 +142,7 @@ export function validateUrlIngestContractDocuments(documents) {
     URL_INGEST_INVOCATION.text,
     URL_INGEST_INVOCATION.skill,
     URL_INGEST_INVOCATION.executionTool,
-    "integrated Knowgrph browser execution and persistence proof remain separate",
+    "integrated agentic-graph browser execution and persistence proof remain separate",
   ], failures);
 
   for (const alias of FORBIDDEN_ALIASES) {

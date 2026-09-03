@@ -158,7 +158,7 @@ residual cost is one extra level of nesting in this record and a slightly less f
 **The conflict, verified**: `/skill.propose` already exists. It is declared once in
 `docs/DICTIONARY-COMMAND.md` with bindings `@experience`, `@skill-catalog`, `@operator` and semantics
 `#skill-evolution`, `#harness`, `#vcc`; `docs/MCP-GATEWAY.md` declares its tool identity as
-`knowgrph.skill.propose`; `docs/FACTS.md` describes it under "Skill creation - new skills start as
+`agentic-graph.skill.propose`; `docs/FACTS.md` describes it under "Skill creation - new skills start as
 proposals"; `docs/DICTIONARY-BINDING.md` records the invocation
 `/skill.propose #skill-evolution @skill-catalog`. `/propose-skill`, `#skill-candidate`, and
 `@skill-registry` appear in no repository document.
@@ -167,8 +167,8 @@ proposals"; `docs/DICTIONARY-BINDING.md` records the invocation
 
 | | `/skill.propose` (existing) | `/propose-skill` (new) |
 |---|---|---|
-| Owner | knowgrph skill catalog | ACOS Skill_Proposer harness |
-| Tool identity | `knowgrph.skill.propose` | `acos.skill_proposer.propose` |
+| Owner | agentic-graph skill catalog | ACOS Skill_Proposer harness |
+| Tool identity | `agentic-graph.skill.propose` | `acos.skill_proposer.propose` |
 | Typed arguments | `{ experience_refs, skill_id }` | `{ gap_signal }` |
 | Artifact produced | skill text contract proposal | Agent Definition draft, `status: proposed` |
 | Promotion owner | `/skill.manage` | Promotion_Gate |
@@ -180,10 +180,10 @@ proposals"; `docs/DICTIONARY-BINDING.md` records the invocation
 declare `/propose-skill` with owner Skill_Proposer and typed arguments `{ gap_signal }`. Retiring
 `/propose-skill` would violate it. Retiring `/skill.propose` would delete a declared command from a
 canonical register that four documents already reference, which is a larger change than this feature
-needs and which touches the knowgrph MCP tool surface this repository does not own.
+needs and which touches the agentic-graph MCP tool surface this repository does not own.
 
-**The material difference that makes coexistence legitimate**: `knowgrph.skill.propose` is a
-**knowgrph** MCP tool identity; `acos.skill_proposer.propose` is an **ACOS-owned** tool identity.
+**The material difference that makes coexistence legitimate**: `agentic-graph.skill.propose` is a
+**agentic-graph** MCP tool identity; `acos.skill_proposer.propose` is an **ACOS-owned** tool identity.
 They live in different ownership columns, take different argument types, and produce different
 artifact types. The Invocation Surface Contract's exactly-one-register rule is a rule about token
 declaration, not about purpose-space disjointness: each of the six tokens in Requirement 15 is
@@ -210,7 +210,7 @@ the in-Worker **Agent Definition** registry created by `createAgentDefinitionReg
 
 | Artifact type | Proposal owner | Promotion / persistence owner | Store |
 |---|---|---|---|
-| `skill-text` | Skill Evolution contract (`/skill.evolve`, `knowgrph.skill.evolve`), terminating in a `review_pending` proposal | `/skill.manage` | knowgrph skill catalog |
+| `skill-text` | Skill Evolution contract (`/skill.evolve`, `agentic-graph.skill.evolve`), terminating in a `review_pending` proposal | `/skill.manage` | agentic-graph skill catalog |
 | `agent-definition` | Skill_Proposer (`/propose-skill`, `acos.skill_proposer.propose`) | Promotion_Gate (`acos.skill_registry.promote`) | Draft_Registry_Store, then Active_Registry |
 
 **Satisfies**: Requirement 16 criteria 1, 2, 3, 6.
@@ -355,7 +355,7 @@ Corrected against the PRD's topology table. The Draft Registry Store node is the
 ```mermaid
 flowchart TB
   subgraph adapter_lane["Adapter trust boundary: adapter-owned files only"]
-    ADP["Adapter (knowgrph today)
+    ADP["Adapter (agentic-graph today)
     role: registration producer"]
   end
 
@@ -652,7 +652,7 @@ criterion 4).
 - throwing an untyped error. Every rejection path returns a frozen finding (Requirement 14
   criterion 5);
 - appearing by name in `worker/index.js` for any specific adapter. The entrypoint constructs the
-  interface; it never names knowgrph or any successor (Requirement 13 criterion 4).
+  interface; it never names agentic-graph or any successor (Requirement 13 criterion 4).
 
 ### Injection summary
 
@@ -1330,7 +1330,7 @@ diff subject.
 4. asserts the set of changed paths under the working tree is a subset of the fixture adapter's own
    prefix;
 5. asserts `worker/index.js` contains no occurrence of the fixture adapter's identity string, and no
-   occurrence of any known adapter identity (`knowgrph` included) introduced by this feature.
+   occurrence of any known adapter identity (`agentic-graph` included) introduced by this feature.
 
 Step 5 is the one that keeps criterion 13.4 honest: an empty diff proves nothing if the adapter name
 was already hardcoded.
@@ -1374,7 +1374,7 @@ was already hardcoded.
 
 ### Component Inventory
 
-Corrected against the PRD's inventory: file paths are made concrete, and the knowgrph adapter row
+Corrected against the PRD's inventory: file paths are made concrete, and the agentic-graph adapter row
 carries its honest dependency.
 
 | Layer | Component | File / Module | Local rung | Delivered rung | Evidence Reference | Operator instruction |
@@ -1384,7 +1384,7 @@ carries its honest dependency.
 | Harness | Adapter Registration Interface | `agent-api/src/adapter-registration.js` (new) | `spec-complete` | `undocumented` | none yet | `none` |
 | Registry | Agent Definition status extension plus snapshot | `agent-api/src/agent-definitions.js` (extended) | `spec-complete` | `undocumented` | none yet | `none` |
 | Store | Skill draft store factory | `agent-api/src/durable-object-state-store.js` (extended) | `spec-complete` | `undocumented` | none yet | `none` |
-| Adapter | knowgrph adapter migration | `adapters/knowgrph/*` (pending the prior extraction plan) | `spec-complete` | `undocumented` | none yet | `none` |
+| Adapter | agentic-graph adapter migration | `adapters/agentic-graph/*` (pending the prior extraction plan) | `spec-complete` | `undocumented` | none yet | `none` |
 
 No Evidence Reference exists for any row. This document invents none.
 
@@ -1542,10 +1542,10 @@ instruction. Recommended, outside this increment.
 function-calling gateway path, a scheduled audit, or an explicit operator invocation is unresolved,
 and the readiness block does not claim a gap detector exists.
 
-**Q3. Does the tool allowlist have an owner module, or is it the `KNOWGRPH_FUNCTION_TOOL_ALLOWLIST`
+**Q3. Does the tool allowlist have an owner module, or is it the `AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST`
 environment variable?** Verified: `env.dev.vars` declares
-`KNOWGRPH_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note"` and
-`KNOWGRPH_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note"`, both comma-separable strings. If the
+`AGENTIC_OS_FUNCTION_TOOL_ALLOWLIST: "update_agent_run_note"` and
+`AGENTIC_OS_FUNCTION_REVIEW_REQUIRED: "update_agent_run_note"`, both comma-separable strings. If the
 allowlist is ultimately an environment variable, then "the gate adds its tool allowlist entry"
 (criterion 8.4) is a deploy-time change, not a runtime one, and the gate can only stage the entry
 rather than apply it. This design treats the allowlist as an injected `toolAllowlist` object with

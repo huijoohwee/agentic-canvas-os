@@ -1,8 +1,8 @@
 # agentic-canvas-os
 
-Cloudflare Worker product tier demonstrating AgenticGraph MCP Readiness & Command Grammar Integration.
+Cloudflare Worker product tier demonstrating agentic-graph MCP Readiness & Command Grammar Integration.
 One Worker serves the static UI, authenticates callers, forwards `/api/invoke` and `/api/run` 
-to the AgenticGraph MCP control plane, exposes runtime readiness, and embeds the live AgenticGraph canvas.
+to the agentic-graph MCP control plane, exposes runtime readiness, and embeds the live agentic-graph canvas.
 
 This repo holds no model provider keys in source or client bundles. Runtime
 secrets are Cloudflare secret bindings; the browser only sees public URLs.
@@ -59,20 +59,20 @@ creates lifecycle or deployment authority.
 agentic-canvas-os Cloudflare Worker
   /                  -> Workers Static Assets from web/dist
   /api/auth/session  -> stateless Auth_Token
-  /api/invoke        -> MCP forward to agenticgraph.agentic_canvas_os.docs.invoke
-  /api/run           -> MCP forward to agenticgraph.video_remix.run
+  /api/invoke        -> MCP forward to agentic-graph.agentic_canvas_os.docs.invoke
+  /api/run           -> MCP forward to agentic-graph.video_remix.run
   /api/agent/run     -> opt-in authenticated composed agent execution
   /api/ready         -> sanitized runtime readiness
 
-AgenticGraph control plane
-  airvio.co/knowgrph/control-plane/mcp
-  airvio.co/knowgrph/doc-view?run=<runId>
+agentic-graph control plane
+  airvio.co/agentic-os/control-plane/mcp
+  airvio.co/agentic-os/doc-view?run=<runId>
 
 application-registered model provider
   provider adapter + selected transport
 ```
 
-The connector contracts are authored and proven in the AgenticGraph (`knowgrph`) repository. This
+The connector contracts are authored and proven in the agentic-graph (`agentic-graph`) repository. This
 repo is the split product tier and keeps only the runtime seams it needs:
 Cloudflare request adaptation, MCP forwarding, model-provider selection, and the
 run-scoped canvas embed URL.
@@ -85,8 +85,8 @@ run-scoped canvas embed URL.
 | `worker/index.js` | Cloudflare Worker entrypoint for API routes and static asset delegation. |
 | `src/config.js` | Public config: Agent-API base and canvas base only. |
 | `src/agent-api-endpoints.js` | Same-origin browser request helper for Cloudflare API routes. |
-| `src/knowgrph-mcp-client.js` | Keyless MCP Streamable HTTP client. |
-| `src/canvas-embed.js` | Run-scoped AgenticGraph canvas doc-view URL + embed descriptor. |
+| `src/agentic-graph-mcp-client.js` | Keyless MCP Streamable HTTP client. |
+| `src/canvas-embed.js` | Run-scoped agentic-graph canvas doc-view URL + embed descriptor. |
 | `src/fail-soft-fan-out.js` | Provider- and transport-neutral all-branch settlement with successful values, sanitized audit records, and explicit partial or exhausted totals. |
 | `agent-api/src/app.js` | Platform-neutral Agent-API core: auth, MCP forward, readiness. |
 | `agent-api/src/auth.js` | Stateless HS256 session token; server-side secret only. |
@@ -95,8 +95,8 @@ run-scoped canvas embed URL.
 | `agent-api/src/function-calling.js` | Strict direct function-call controller, exact call-id continuation, application-gateway dispatch, and bounded final evidence. |
 | `agent-api/src/function-calling-manager.js` | Durable reviewed-call checkpoint, opaque resume token, atomic cross-isolate claim, and terminal settlement owner. |
 | `agent-api/src/openai-responses-function-adapter.js` | Responses translation, strict function selection, same-response continuation, and usage-derived cost evidence. |
-| `agent-api/src/knowgrph-function-gateway.js` | Explicit allowlist, tool guardrails, signed-review pause, and policy-preserving Knowgrph MCP mapping. |
-| `agent-api/src/knowgrph-function-tools.js` | Strict status and immutable review-required run-note function records, validators, guardrails, and native output projections. |
+| `agent-api/src/agentic-graph-function-gateway.js` | Explicit allowlist, tool guardrails, signed-review pause, and policy-preserving agentic-graph MCP mapping. |
+| `agent-api/src/agentic-graph-function-tools.js` | Strict status and immutable review-required run-note function records, validators, guardrails, and native output projections. |
 | `agent-api/src/function-calling-handler.js` | Authenticated bounded start and review-resume HTTP boundaries for direct function calls. |
 | `agent-api/src/programmatic-tool-calling.js` | Bounded hosted-program controller, caller-lineage enforcement, direct-call safety boundary, and compact final evidence. |
 | `agent-api/src/tool-search.js` | Session-scoped deferred-definition controller, metadata-only initial exposure, exact search loading, and call authorization. |
@@ -125,7 +125,7 @@ run-scoped canvas embed URL.
 requires:
 
 - `AGENT_API_JWT_SECRET`
-- `KNOWGRPH_MCP_ENDPOINT`
+- `AGENTIC_OS_MCP_ENDPOINT`
 - one complete `AGENT_MODEL_*` provider, model, adapter, and transport definition
 - the secret binding named by `AGENT_MODEL_API_KEY_ENV`
 
@@ -160,7 +160,7 @@ downstream model response explicitly confirms the effective context.
 Function-calling readiness exposes the separate direct-call controller. Strict
 schemas, explicit selection modes, exact call-id outputs, reasoning-item replay,
 and bounded parallel calls are contract-ready. A server-configured OpenAI
-Responses adapter and explicit Knowgrph function allowlist wire
+Responses adapter and explicit agentic-graph function allowlist wire
 `POST /api/function-call` to the existing MCP owner; callers cannot submit
 schemas, routing, credentials, or policy. A review pause returns an opaque token;
 `POST /api/function-call/recover` can re-read that safe pause envelope after a
@@ -181,7 +181,7 @@ The reviewed Function Calling proof has an isolated Cloudflare Dev lane. Run
 `npm run function-gateway:live-proof:check` and a Wrangler `--env dev --dry-run`
 before deployment. `npm run function-gateway:deploy:dev` accepts only model and
 pricing variables; credentials must be configured as Dev Worker secrets.
-`npm run function-gateway:live-proof` then seeds one dry-run Knowgrph manifest,
+`npm run function-gateway:live-proof` then seeds one dry-run agentic-graph manifest,
 pauses one forced run-note call for exact signed review, resumes the same
 Responses chain, and emits sanitized usage plus application and native receipt
 evidence. Neither Dev environment declares a production route.
@@ -222,7 +222,7 @@ bounded approval interruption and single-consume resume state; approve, reject,
 and edit decisions require a purpose-scoped reviewer token before they resume
 the same Running Agents turn, and edits must be validated again. The Worker
 uses one Durable Object identity per review and per paused conversation. The
-concrete Knowgrph gateway proves guarded status reads plus an intrinsically
+concrete agentic-graph gateway proves guarded status reads plus an intrinsically
 reviewed run-note mutation with native receipt echo and one-revision recovery
 offline; live provider and deployed Worker behavior remain unverified. See
 [`docs/GUARDRAILS-HUMAN-REVIEW.md`](./docs/GUARDRAILS-HUMAN-REVIEW.md).
@@ -239,7 +239,7 @@ live provider behavior stays `unverified`. See
 Application Composition adds a versioned application layer over those owners.
 The canonical host aliases compile exact component, interface, schema, and
 capability revisions into one immutable deterministic dependency plan; the
-three `agenticgraph.application.*` MCP tools catalog, plan, and optionally sequence
+three `agentic-graph.application.*` MCP tools catalog, plan, and optionally sequence
 bounded ready steps through existing agent, model, tool, integration, policy,
 and persistence owners. Opaque integration profiles keep endpoints, commands,
 and credentials outside manifests, while explicit migration diagnostics avoid

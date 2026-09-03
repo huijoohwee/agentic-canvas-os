@@ -1,6 +1,6 @@
 ---
-title: "Knowgrph Agentic Canvas OS Harness Contracts"
-graphId: "md:knowgrph-agentic-canvas-os-harness-contracts"
+title: "agentic-graph Agentic Canvas OS Harness Contracts"
+graphId: "md:agentic-graph-agentic-canvas-os-harness-contracts"
 doc_type: "Harness Contract Catalog"
 date: "2026-07-18"
 lang: "en-US"
@@ -122,7 +122,7 @@ harness:
 |---|---|---|---|---|
 | OS Status | Read process, capability, cost, gate, and breaker views | `{ view, filters }` | Typed read view with zero cost | None; read-only |
 | Capability Discovery | Deduplicate local, browser, Pages, and control-plane catalogs | `{ includeRemote, trustBoundary }` | `Capability_Entry[]`, `sourceCatalogs[]`, `unreachableCatalogs[]` | None; discovery must be zero-token |
-| Repository Packing | Convert one exact local Git worktree into a deterministic content-addressed Markdown artifact | `{ repositoryPath, outputDirectory, includePaths, excludePaths, maxFiles, maxFileBytes, maxTotalBytes }` | `knowgrph-repository-pack-result/v1` metadata, typed omissions, verified digests, or source-byte-free block | Explicit local artifact request only; secrets, escape, drift, overflow, external dependency, network, model, Prod, and Cloudflare fail before publication |
+| Repository Packing | Convert one exact local Git worktree into a deterministic content-addressed Markdown artifact | `{ repositoryPath, outputDirectory, includePaths, excludePaths, maxFiles, maxFileBytes, maxTotalBytes }` | `agentic-graph-repository-pack-result/v1` metadata, typed omissions, verified digests, or source-byte-free block | Explicit local artifact request only; secrets, escape, drift, overflow, external dependency, network, model, Prod, and Cloudflare fail before publication |
 | Soul Identity | Load durable agent identity into prompt slot 1 | `{ soulRef, promptSlot, overlayRef }` | Identity packet, typed fallback, scan result, or blocked reason | Mutation only when editing `SOUL.md`; prompt use requires scan |
 | Mixture Of Agents | Run bounded advisory reference fan-out and one aggregator-owned response | `{ prompt, presetRef, contextRef, approvals[] }` | Aggregator response, reference ledger, cost log, or blocked reason | Paid reference calls, paid aggregator calls, tool calls, mutation, deploy |
 | Video Remix Director | Research, storyboard, render, publish, checkout workflow | `{ referenceUrl, brief, budgetUsd, approvals[] }` | Run manifest, evidence pack, storyboard, asset or blocked state | Paid model, render, payment, deploy |
@@ -275,7 +275,7 @@ MoA harnesses are one-shot deliberation contracts. External MoA systems may info
 
 ## Tool Gateway Harness Contract
 
-Tool gateway harnesses route concrete tool calls through existing `knowgrph` infrastructure. External gateway systems may inform category semantics, but local harnesses must not import external gateway code, provider tables, model lists, config examples, tests, fixtures, or prose.
+Tool gateway harnesses route concrete tool calls through existing `agentic-graph` infrastructure. External gateway systems may inform category semantics, but local harnesses must not import external gateway code, provider tables, model lists, config examples, tests, fixtures, or prose.
 
 | Stage | Harness input | Harness output | Guard |
 |---|---|---|---|
@@ -359,7 +359,7 @@ Only a fully reported aggregate cost becomes a downstream cost log. Missing or p
 The separately approved Node-only live proof injects an OpenAI Responses adapter without changing Worker defaults. It permits exactly one specialist-manager-specialist sequence and at most three provider attempts, uses stored previous-response continuation only for the returning specialist, requires provider-confirmed effective reasoning context and complete usage, and emits no raw response id, output, reasoning, or credential.
 ## Opt-In Autonomous Runtime Harness Contract
 
-The Worker may construct one composed OpenAI text agent only when the operator enables the runtime, records explicit spend approval, sets a bounded provider-call ceiling, aligns provider selection with the Responses adapter, and supplies source JSON whose SHA-256 is re-verified at preparation. The authenticated caller supplies only run id, conversation id, and bounded input; principal-scoped hashes isolate continuation while the server owns identity, model, transport, source, signal, and policy. Tools, workflows, schemas, MCP names, credentials, and review claims are rejected. Function Calling and Knowgrph retain tool allowlists, signed review, durable receipts, idempotency, and mutation policy. Missing or conflicting gates return `runtime_unconfigured` before provider execution; live proof, Prod, and Cloudflare remain separate.
+The Worker may construct one composed OpenAI text agent only when the operator enables the runtime, records explicit spend approval, sets a bounded provider-call ceiling, aligns provider selection with the Responses adapter, and supplies source JSON whose SHA-256 is re-verified at preparation. The authenticated caller supplies only run id, conversation id, and bounded input; principal-scoped hashes isolate continuation while the server owns identity, model, transport, source, signal, and policy. Tools, workflows, schemas, MCP names, credentials, and review claims are rejected. Function Calling and agentic-graph retain tool allowlists, signed review, durable receipts, idempotency, and mutation policy. Missing or conflicting gates return `runtime_unconfigured` before provider execution; live proof, Prod, and Cloudflare remain separate.
 
 ## Progressive Agents Harness Contract
 
@@ -393,7 +393,7 @@ Direct function calling exposes strict application-owned declarations to a model
 
 The controller bounds tools, schema size, model turns, total calls, parallel width, result size, and stage duration. Tool Search supplies only direct or already-loaded definitions; Programmatic Tool Calling remains a separate route for predictable read-only reductions. Offline proof does not establish live provider or gateway execution.
 
-The concrete Dev adapter uses the OpenAI Responses protocol only after explicit server-side model, key, and pricing configuration. The HTTP caller supplies no schemas, routes, review ids, stored state, or approval arrays. `read_agentic_os_status` maps through an explicit allowlist to Knowgrph's existing `agenticgraph.os.status` MCP owner, where caller type, immutable policy, tool-input guardrail, result shape, tool-output guardrail, and zero-cost evidence are revalidated. Optional application review policy pauses that same path. The manager stores the private response chain under a per-run Durable Object identity, while a separate receipt owner stores reviewed execution authorization before MCP, fences one claimant, sends a stable idempotency key, and replays terminal output. Mutating mappings additionally require an exact native receipt from Knowgrph; none is enabled yet. Returned provider reasoning stays private and is deleted with terminal continuation state.
+The concrete Dev adapter uses the OpenAI Responses protocol only after explicit server-side model, key, and pricing configuration. The HTTP caller supplies no schemas, routes, review ids, stored state, or approval arrays. `read_agentic_os_status` maps through an explicit allowlist to agentic-graph's existing `agentic-graph.os.status` MCP owner, where caller type, immutable policy, tool-input guardrail, result shape, tool-output guardrail, and zero-cost evidence are revalidated. Optional application review policy pauses that same path. The manager stores the private response chain under a per-run Durable Object identity, while a separate receipt owner stores reviewed execution authorization before MCP, fences one claimant, sends a stable idempotency key, and replays terminal output. Mutating mappings additionally require an exact native receipt from agentic-graph; none is enabled yet. Returned provider reasoning stays private and is deleted with terminal continuation state.
 
 ## Programmatic Tool Calling Harness Contract
 
@@ -435,7 +435,7 @@ Learning harnesses are source-backed and proposal-first. External self-improving
 | Session search | `{ query, cursor, topK }` | Cited prior-session matches or empty result. | Search results are not memory until explicitly captured. |
 | Experience capture | `{ sourceRef, proofRef, eventType, lesson }` | Experience record with applicability, expiry risk, cost, and approval state. | Reject missing provenance, secrets, copied code, or deploy artifacts. |
 | Skill proposal | `{ experienceRefs[], targetGap }` | Skill draft with schemas, fallback, bounds, cost fields, and VCCs. | Reject duplicate catalog entries and hardcoded provider assumptions. |
-| Skill evolution | Load the canonical request from `SKILL-EVOLUTION.md`. | `knowgrph-skill-evolution-result/v1` full snapshot. | The selected owner exclusively defines operations, schemas, candidate roles, validation isolation, bounds, and review-only behavior; this table defines no alternate input contract. |
+| Skill evolution | Load the canonical request from `SKILL-EVOLUTION.md`. | `agentic-graph-skill-evolution-result/v1` full snapshot. | The selected owner exclusively defines operations, schemas, candidate roles, validation isolation, bounds, and review-only behavior; this table defines no alternate input contract. |
 | Identity reflection | `{ proposedFact, evidenceRefs[], sensitivity }` | Stable identity note or rejected inference result. | Store only non-secret, source-backed operator and project facts. |
 
 ## Skill System Harness Contract

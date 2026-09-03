@@ -70,7 +70,7 @@ export function upstreamToolSearchEnabled(
   { openAiFunctionConfig = {}, autonomousRuntimeEnvironment = {} } = {},
 ) {
   return Boolean(
-    cleanText(env.KNOWGRPH_MCP_ENDPOINT)
+    cleanText(env.AGENTIC_OS_MCP_ENDPOINT)
     && (openAiFunctionConfig.ready || autonomousRuntimeEnvironment.ready),
   );
 }

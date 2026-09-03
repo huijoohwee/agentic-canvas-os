@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Cloudflare Worker product tier that calls the knowgrph control plane over MCP and embeds the live knowgrph canvas. Holds no model provider keys.",
+  "description": "Cloudflare Worker product tier that calls the agentic-graph control plane over MCP and embeds the live agentic-graph canvas. Holds no model provider keys.",
   "engines": {
     "node": ">=22"
   },
@@ -41,7 +41,7 @@
     "goal-completion:check": "node --test __tests__/goal-completion-runtime.test.mjs && npm run docs:check",
     "kanban:project": "node ./scripts/kanban-projection.mjs --write",
     "function-calling:check": "node --test __tests__/function-calling.test.mjs",
-    "function-gateway:check": "node --test __tests__/function-calling.test.mjs __tests__/function-calling-continuation.test.mjs __tests__/function-execution-receipts.test.mjs __tests__/openai-function-gateway.test.mjs __tests__/knowgrph-mcp-client.test.mjs",
+    "function-gateway:check": "node --test __tests__/function-calling.test.mjs __tests__/function-calling-continuation.test.mjs __tests__/function-execution-receipts.test.mjs __tests__/openai-function-gateway.test.mjs __tests__/agentic-graph-mcp-client.test.mjs",
     "function-gateway:cross-repo-proof": "node ./scripts/function-gateway-run-note-proof.mjs",
     "function-gateway:deploy:dev": "npm run web:build && node ./scripts/deploy-dev-function-gateway.mjs",
     "function-gateway:live-proof": "node ./scripts/live-function-run-note-proof.mjs",
@@ -90,7 +90,7 @@
     "upstream-dependency-admission:check": "node --test __tests__/upstream-dependency-admission.test.mjs && npm run docs:check",
     "upstream-dependency-admission:application:check": "node --test __tests__/upstream-dependency-admission.test.mjs __tests__/upstream-dependency-admission-application.test.mjs __tests__/upstream-dependency-admission-deployment.test.mjs && npm run web:build && npm run docs:check",
     "upstream-dependency-admission:deploy:dev": "node ./scripts/deploy-dev-upstream-dependency-admission.mjs",
-    "skill-evolution:check": "node --test __tests__/skill-evolution-contract.test.mjs __tests__/knowgrph-mcp-client.test.mjs && node ./scripts/skill-evolution-contract.mjs",
+    "skill-evolution:check": "node --test __tests__/skill-evolution-contract.test.mjs __tests__/agentic-graph-mcp-client.test.mjs && node ./scripts/skill-evolution-contract.mjs",
     "native-skill-harness:check": "node --test __tests__/native-skill-harness-*.test.mjs __tests__/agent-definitions.test.mjs && node ./scripts/native-skill-harness-prerequisite-gate.mjs && node ./scripts/native-skill-harness-import-graph.mjs && node ./scripts/native-skill-harness-ownership.mjs && node ./scripts/native-skill-harness-dependency-audit.mjs && node ./scripts/native-skill-harness-module-budget.mjs && node ./scripts/native-skill-harness-invocation-register.mjs && node ./scripts/native-skill-harness-entrypoint-diff.mjs && npm run docs:check",
     "durable-agent-state:check": "node --test __tests__/durable-agent-state.test.mjs",
     "smoke": "node ./scripts/smoke.mjs",

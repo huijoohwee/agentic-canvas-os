@@ -3,22 +3,22 @@ import {
   skillEvolutionResultValidationFields,
 } from "./skill-evolution-result.js";
 import {
-  createKnowgrphAgenticGraphClient,
+  createAgenticGraphClient,
   AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE,
   AGENTIC_GRAPH_MCP_TOOLS,
-  KnowgrphMcpError,
-} from "./knowgrph-mcp-contract.js";
+  AgenticGraphMcpError,
+} from "./agentic-graph-mcp-contract.js";
 
 export {
-  createKnowgrphAgenticGraphClient,
+  createAgenticGraphClient,
   AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE,
   AGENTIC_GRAPH_MCP_TOOLS,
-  KnowgrphMcpError,
+  AgenticGraphMcpError,
   validateAgenticGraphIngestResult,
   validateAgenticGraphParserResult,
   validateAgenticGraphReadResult,
   validateAgenticGraphRequest,
-} from "./knowgrph-mcp-contract.js";
+} from "./agentic-graph-mcp-contract.js";
 
 // Keyless MCP Streamable HTTP client for the agentic-canvas-os product tier.
 // Transport is injectable for deterministic tests and fails closed on non-2xx,
@@ -32,7 +32,7 @@ function isPlainObject(value) {
 export function validateSkillEvolutionResult(value, { expectedOperation } = {}) {
   const fields = skillEvolutionResultValidationFields(value, { expectedOperation });
   if (fields.length > 0) {
-    throw new KnowgrphMcpError("invalid Skill Evolution result", {
+    throw new AgenticGraphMcpError("invalid Skill Evolution result", {
       code: "mcp_skill_evolution_result_invalid",
       data: { fields },
     });
@@ -47,7 +47,7 @@ function normalizeExecutionMetadata(value) {
     || Object.keys(value).sort().join("\0") !== [...keys].sort().join("\0")
     || value.schema !== "function-execution-receipt/v1"
     || keys.slice(1).some((key) => typeof value[key] !== "string" || !value[key].trim())) {
-    throw new KnowgrphMcpError(
+    throw new AgenticGraphMcpError(
       "invalid function execution metadata",
       { code: "mcp_execution_metadata_invalid" },
     );
@@ -77,7 +77,7 @@ export function parseMcpReply(bodyText, contentType = "") {
         // Continue to the previous data frame.
       }
     }
-    throw new KnowgrphMcpError(
+    throw new AgenticGraphMcpError(
       "no parseable SSE data frame in MCP reply",
       { code: "mcp_parse_error" },
     );
@@ -86,7 +86,7 @@ export function parseMcpReply(bodyText, contentType = "") {
   try {
     return JSON.parse(text);
   } catch {
-    throw new KnowgrphMcpError(
+    throw new AgenticGraphMcpError(
       "MCP reply was not valid JSON",
       { code: "mcp_parse_error" },
     );
@@ -98,11 +98,11 @@ export function parseMcpReply(bodyText, contentType = "") {
  */
 export function extractToolResult(rpc) {
   if (!isPlainObject(rpc)) {
-    throw new KnowgrphMcpError("empty MCP response", { code: "mcp_empty" });
+    throw new AgenticGraphMcpError("empty MCP response", { code: "mcp_empty" });
   }
   if (rpc.error) {
     const error = rpc.error;
-    throw new KnowgrphMcpError(error.message || "knowgrph MCP returned an error", {
+    throw new AgenticGraphMcpError(error.message || "agentic-graph MCP returned an error", {
       code: "mcp_rpc_error",
       data: error.data,
     });
@@ -125,24 +125,24 @@ export function extractToolResult(rpc) {
 }
 
 /**
- * Create a knowgrph MCP client bound to an endpoint.
+ * Create a agentic-graph MCP client bound to an endpoint.
  *
  * @param {object} opts
- * @param {string} opts.endpoint knowgrph MCP Streamable HTTP endpoint
+ * @param {string} opts.endpoint agentic-graph MCP Streamable HTTP endpoint
  * @param {(req: { url, method, headers, body }) => Promise<{ status, headers, text }>} [opts.fetchImpl]
  * @param {string} [opts.authToken] opaque caller bearer; never a model key
  */
-export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {}) {
+export function createAgenticGraphMcpClient({ endpoint, fetchImpl, authToken } = {}) {
   if (typeof endpoint !== "string" || !endpoint.trim()) {
-    throw new KnowgrphMcpError(
-      "knowgrph MCP endpoint is required",
+    throw new AgenticGraphMcpError(
+      "agentic-graph MCP endpoint is required",
       { code: "mcp_no_endpoint" },
     );
   }
   const url = endpoint.trim();
   const doFetch = fetchImpl || (typeof fetch === "function" ? fetch : null);
   if (!doFetch) {
-    throw new KnowgrphMcpError(
+    throw new AgenticGraphMcpError(
       "no fetch transport available",
       { code: "mcp_no_transport" },
     );
@@ -177,8 +177,8 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     });
     const status = typeof response.status === "number" ? response.status : 0;
     if (status < 200 || status >= 300) {
-      throw new KnowgrphMcpError(
-        `knowgrph MCP init responded ${status}`,
+      throw new AgenticGraphMcpError(
+        `agentic-graph MCP init responded ${status}`,
         { code: "mcp_http_error", status },
       );
     }
@@ -191,8 +191,8 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     };
     mcpSessionId = getHeader("mcp-session-id");
     if (!mcpSessionId) {
-      throw new KnowgrphMcpError(
-        "knowgrph MCP init missing mcp-session-id",
+      throw new AgenticGraphMcpError(
+        "agentic-graph MCP init missing mcp-session-id",
         { code: "mcp_protocol_error" },
       );
     }
@@ -239,8 +239,8 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
       ? await response.text()
       : typeof response.body === "string" ? response.body : "";
     if (status < 200 || status >= 300) {
-      throw new KnowgrphMcpError(
-        `knowgrph MCP responded ${status}`,
+      throw new AgenticGraphMcpError(
+        `agentic-graph MCP responded ${status}`,
         { code: "mcp_http_error", status },
       );
     }
@@ -260,7 +260,7 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
       || hostname === "[::1]"
       || /^127(?:\.[0-9]{1,3}){3}$/u.test(hostname);
     if (!loopback) {
-      throw new KnowgrphMcpError(
+      throw new AgenticGraphMcpError(
         "agentic graph calls require a local MCP endpoint",
         { code: "mcp_agentic_graph_local_transport_required" },
       );
@@ -268,28 +268,28 @@ export function createKnowgrphMcpClient({ endpoint, fetchImpl, authToken } = {})
     return callTool(toolName, args, opts);
   }
 
-  const agenticGraph = createKnowgrphAgenticGraphClient({
+  const agenticGraph = createAgenticGraphClient({
     callTool: localAgenticGraphCall,
   });
   return {
     endpoint: url,
     callTool,
     runVideoRemix(input, opts) {
-      return callTool("agenticgraph.video_remix.run", input, opts);
+      return callTool("agentic-graph.video_remix.run", input, opts);
     },
     invokeDocsGrammar(input, opts) {
-      return callTool("agenticgraph.agentic_canvas_os.docs.invoke", input, opts);
+      return callTool("agentic-graph.agentic_canvas_os.docs.invoke", input, opts);
     },
     ...agenticGraph,
     async evolveSkill(input, opts) {
       const expectedOperation = input?.operation;
       if (!isSkillEvolutionOperation(expectedOperation)) {
-        throw new KnowgrphMcpError("invalid Skill Evolution request operation", {
+        throw new AgenticGraphMcpError("invalid Skill Evolution request operation", {
           code: "mcp_skill_evolution_request_invalid",
           data: { fields: ["operation"] },
         });
       }
-      const result = await callTool("agenticgraph.skill.evolve", input, opts);
+      const result = await callTool("agentic-graph.skill.evolve", input, opts);
       return validateSkillEvolutionResult(result, { expectedOperation });
     },
   };

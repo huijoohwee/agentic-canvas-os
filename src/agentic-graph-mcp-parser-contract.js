@@ -6,10 +6,10 @@ import {
   isUniqueStringArray,
   sha256,
   stableStringify,
-} from "./knowgrph-mcp-contract-utils.js";
+} from "./agentic-graph-mcp-contract-utils.js";
 
-const PARSER_REGISTRY_SCHEMA = "agenticgraph-knowledge-graph-parser-registry/v2";
-const DECLARATIVE_GRAMMAR_SCHEMA = "knowgrph-declarative-grammar/v1";
+const PARSER_REGISTRY_SCHEMA = "agentic-graph-knowledge-graph-parser-registry/v2";
+const DECLARATIVE_GRAMMAR_SCHEMA = "agentic-graph-declarative-grammar/v1";
 const ADAPTER_FIDELITIES = Object.freeze({
   "brace-code": "structural-parser",
   "declarative-grammar": "ast",

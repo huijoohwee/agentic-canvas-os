@@ -169,7 +169,7 @@ is the source authority for this adapter.
 1. Keep the protected guideline revision and successful guideline checks bound here.
 2. Rerun focused evaluator tests, target audit, docs contract, and no-copy review.
 3. Integrate Agentic Canvas OS through its protected repository.
-4. Advance Knowgrph's exact docs pin in a separately owned downstream scope before MCP or browser parity claims.
+4. Advance agentic-graph's exact docs pin in a separately owned downstream scope before MCP or browser parity claims.
 
 No candidate or task head authorizes Prod mirror or Cloudflare action.
 

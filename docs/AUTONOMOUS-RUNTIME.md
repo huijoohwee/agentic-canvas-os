@@ -31,7 +31,7 @@ This route closes the default composition wiring gap. It does not enable Agent S
 | OpenAI Responses agent adapter | Translate stable instructions plus dynamic input, confirm reasoning context, return usage-derived cost, and enforce the isolate provider-call ceiling. |
 | Agent Runtime Composition and Running Agents | Prepare, resolve, execute, continue, bound, and validate the final text result. |
 | HTTP handler | Require the existing session token, reject caller-owned agent controls, scope run and conversation identities to the authenticated principal, and return bounded output. |
-| Existing Function Calling and Knowgrph gateway | Retain all tool schemas, MCP routing, signed review, idempotency, native receipts, and mutation policy. The autonomous route does not bypass or duplicate them. |
+| Existing Function Calling and agentic-graph gateway | Retain all tool schemas, MCP routing, signed review, idempotency, native receipts, and mutation policy. The autonomous route does not bypass or duplicate them. |
 
 ## Required Configuration
 
@@ -44,7 +44,7 @@ Enablement requires all of the following server-side values:
 | Source evidence | `AGENT_RUNTIME_AGENT_SOURCE_URI`, lowercase SHA-256 in `AGENT_RUNTIME_AGENT_SOURCE_SHA256`, and exact JSON source text in `AGENT_RUNTIME_AGENT_SOURCE`. |
 | Provider registry | Complete `AGENT_MODEL_*` configuration with provider `openai`, adapter `openai-responses-agent`, delivery `complete`, connection `per-run`, and a present server key binding. |
 | Responses adapter | Model, endpoint, key binding, and pricing through `OPENAI_AGENT_*`; model, endpoint, and key-binding name must match `AGENT_MODEL_*`, while reasoning effort and output tokens retain bounded defaults when omitted. |
-| Control plane | `KNOWGRPH_MCP_ENDPOINT` names the server-side MCP target; tool execution still remains on the separate reviewed Function Calling path. |
+| Control plane | `AGENTIC_OS_MCP_ENDPOINT` names the server-side MCP target; tool execution still remains on the separate reviewed Function Calling path. |
 | Authentication | `AGENT_API_JWT_SECRET` for the existing session-token boundary. |
 
 The source text is strict JSON with only `name` and `instructions`:
@@ -81,7 +81,7 @@ Run and conversation identities are hashed with the authenticated principal befo
 - Provider calls stop at the explicit isolate ceiling; the adapter also enforces configured output tokens.
 - Running Agents retains its step, input, state, output, event, conversation, and timeout bounds.
 - The route registers a text-only definition. It accepts no caller tool definitions, MCP routes, workflow topology, or review evidence.
-- Session authentication grants route access only. It does not authorize a Function Calling review or a Knowgrph mutation.
+- Session authentication grants route access only. It does not authorize a Function Calling review or a agentic-graph mutation.
 - Tool use stays on the existing Function Calling route, explicit allowlist, signed human review, durable receipt, and native MCP policy path.
 - General provider behavior remains `unverified` until a separately approved bounded live proof records actual usage and continuation evidence.
 - No configuration, test, or route in this contract authorizes Prod, Cloudflare deployment, or repeated paid proof calls.

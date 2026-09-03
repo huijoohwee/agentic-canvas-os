@@ -36,8 +36,8 @@ test("repository keeps one canonical Game Mode invocation tuple", () => {
     invocation: "/game.mode @canvas #gameplay",
   });
   assert.deepEqual(GAME_MODE_WEB_MCP_TOOLS, [
-    "agenticgraph.inspect_local_game_mode",
-    "agenticgraph.control_local_game_mode",
+    "agentic-graph.inspect_local_game_mode",
+    "agentic-graph.control_local_game_mode",
   ]);
   assert.deepEqual(validateGameModeInvocationContractDocuments(repositoryDocuments), []);
 });
@@ -77,7 +77,7 @@ test("the shared Canvas binding requires one FACTS direct resolution", () => {
 test("Game Mode cannot move browser runtime ownership into the dictionary", () => {
   const documents = withReplacement(
     "DICTIONARY-COMMAND.md",
-    "Knowgrph remains the single game, ECS, renderer, camera/input, and Decision-persistence owner",
+    "agentic-graph remains the single game, ECS, renderer, camera/input, and Decision-persistence owner",
     "Agentic Canvas OS becomes the game and renderer owner",
   );
   const failures = validateGameModeInvocationContractDocuments(documents);

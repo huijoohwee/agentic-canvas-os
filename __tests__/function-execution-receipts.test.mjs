@@ -4,7 +4,7 @@ import test from "node:test";
 import { createDurableObjectFunctionExecutionReceiptStore } from "../agent-api/src/durable-object-state-store.js";
 import { createFunctionExecutionReceiptRuntime } from "../agent-api/src/function-execution-receipts.js";
 import { createGuardrailsHumanReviewRuntime } from "../agent-api/src/guardrails-human-review.js";
-import { createKnowgrphFunctionGateway } from "../agent-api/src/knowgrph-function-gateway.js";
+import { createAgenticGraphFunctionGateway } from "../agent-api/src/agentic-graph-function-gateway.js";
 import { AgentState } from "../worker/agent-state.js";
 
 class MemoryStorage {
@@ -58,7 +58,7 @@ const MUTATION_REQUEST = Object.freeze({
 
 function upstreamReceipt(execution, status) {
   return Object.freeze({
-    schema: "knowgrph-tool-execution-receipt/v1",
+    schema: "agentic-os-tool-execution-receipt/v1",
     idempotencyKey: execution.idempotencyKey,
     requestDigest: execution.requestDigest,
     status,
@@ -161,7 +161,7 @@ test("gateway persists review authorization before mutation and replays a fresh-
     mapOutput: (payload) => ({ ok: payload.ok, value: payload.value }),
     inputGuardrails: [{ name: "mutation-input", stage: "tool-input" }],
     outputGuardrails: [{ name: "mutation-output", stage: "tool-output" }],
-    mcpToolName: "agenticgraph.record.update",
+    mcpToolName: "agentic-graph.record.update",
   });
   const toolRecords = Object.freeze({ update_record: mutationRecord });
   const reviewRuntime = () => createGuardrailsHumanReviewRuntime({
@@ -207,7 +207,7 @@ test("gateway persists review authorization before mutation and replays a fresh-
       };
     },
   };
-  const createGateway = () => createKnowgrphFunctionGateway({
+  const createGateway = () => createAgenticGraphFunctionGateway({
     allowedToolNames: ["update_record"], reviewRequiredToolNames: ["update_record"],
     toolRecords, mcpClient, guardrailsHumanReview: reviewRuntime(), executionReceiptStore: receiptStore,
   });

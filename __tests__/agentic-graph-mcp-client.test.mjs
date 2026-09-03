@@ -1,4 +1,4 @@
-// Tests for the keyless knowgrph MCP Streamable HTTP client (agentic-canvas-os).
+// Tests for the keyless agentic-graph MCP Streamable HTTP client (agentic-canvas-os).
 // Injectable fetch → ZERO network. Covers JSON + SSE reply parsing, structured
 // result extraction, fail-closed on non-2xx + JSON-RPC error, and bearer
 // forwarding.
@@ -7,14 +7,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  createKnowgrphMcpClient,
+  createAgenticGraphMcpClient,
   parseMcpReply,
   extractToolResult,
   validateSkillEvolutionResult,
-  KnowgrphMcpError,
-} from "../src/knowgrph-mcp-client.js";
+  AgenticGraphMcpError,
+} from "../src/agentic-graph-mcp-client.js";
 
-const ENDPOINT = "https://airvio.co/knowgrph/control-plane/mcp";
+const ENDPOINT = "https://airvio.co/agentic-os/control-plane/mcp";
 
 function jsonResponse(status, obj, contentType = "application/json") {
   return {
@@ -46,7 +46,7 @@ const DIGEST = Object.freeze({
 
 function skillEvolutionSnapshot(overrides = {}) {
   return {
-    schema: "knowgrph-skill-evolution-result/v1",
+    schema: "agentic-graph-skill-evolution-result/v1",
     runId: "skill-run-1",
     revision: 2,
     operation: "status",
@@ -186,7 +186,7 @@ function initialSkillEvolutionSnapshot(overrides = {}) {
 }
 
 test("requires an endpoint", () => {
-  assert.throws(() => createKnowgrphMcpClient({}), KnowgrphMcpError);
+  assert.throws(() => createAgenticGraphMcpClient({}), AgenticGraphMcpError);
 });
 
 test("forwards tools/call and returns the structured Run_Manifest", async () => {
@@ -212,13 +212,13 @@ test("forwards tools/call and returns the structured Run_Manifest", async () => 
 
     return jsonResponse(200, rpcOk(req.body.id, { state: "blocked", approvalGates: [1, 2, 3, 4, 5] }));
   };
-  const client = createKnowgrphMcpClient({ endpoint: ENDPOINT, fetchImpl });
+  const client = createAgenticGraphMcpClient({ endpoint: ENDPOINT, fetchImpl });
   const manifest = await client.runVideoRemix({ referenceUrl: "https://x", brief: "b", budgetUsd: 25 });
 
   assert.equal(seen.req.url, ENDPOINT);
   assert.equal(seen.req.method, "POST");
   assert.equal(seen.req.body.method, "tools/call");
-  assert.equal(seen.req.body.params.name, "agenticgraph.video_remix.run");
+  assert.equal(seen.req.body.params.name, "agentic-graph.video_remix.run");
   assert.equal(manifest.state, "blocked");
   assert.equal(manifest.approvalGates.length, 5);
 });
@@ -232,14 +232,14 @@ test("forwards the caller bearer (Auth_Token) but never a model key", async () =
     }
     return jsonResponse(200, rpcOk(req.body.id, { state: "complete" }));
   };
-  const client = createKnowgrphMcpClient({ endpoint: ENDPOINT, fetchImpl, authToken: "tok-123" });
+  const client = createAgenticGraphMcpClient({ endpoint: ENDPOINT, fetchImpl, authToken: "tok-123" });
   await client.runVideoRemix({ referenceUrl: "https://x", brief: "b", budgetUsd: 1 });
   assert.equal(authHeader, "Bearer tok-123");
 });
 
 test("forwards gateway-owned execution identity in the idempotency header and MCP metadata", async () => {
   let toolRequest;
-  const client = createKnowgrphMcpClient({
+  const client = createAgenticGraphMcpClient({
     endpoint: ENDPOINT,
     fetchImpl: async (req) => {
       if (req.body?.method === "initialize") {
@@ -259,7 +259,7 @@ test("forwards gateway-owned execution identity in the idempotency header and MC
     idempotencyKey: "stable-key-1",
     requestDigest: "request-digest-1",
   };
-  await client.callTool("agenticgraph.record.update", { value: "updated" }, { execution });
+  await client.callTool("agentic-graph.record.update", { value: "updated" }, { execution });
   assert.equal(toolRequest.headers["idempotency-key"], execution.idempotencyKey);
   assert.deepEqual(
     toolRequest.body.params._meta["io.agentic-canvas-os/execution"],
@@ -269,7 +269,7 @@ test("forwards gateway-owned execution identity in the idempotency header and MC
 
 test("evolveSkill forwards the canonical resumable Skill Evolution tool", async () => {
   let toolRequest;
-  const client = createKnowgrphMcpClient({
+  const client = createAgenticGraphMcpClient({
     endpoint: ENDPOINT,
     fetchImpl: async (req) => {
       if (req.body?.method === "initialize") {
@@ -284,7 +284,7 @@ test("evolveSkill forwards the canonical resumable Skill Evolution tool", async 
     },
   });
   const input = {
-    schema: "knowgrph-skill-evolution-request/v1",
+    schema: "agentic-graph-skill-evolution-request/v1",
     operation: "status",
     invocation: SKILL_EVOLUTION_INVOCATION,
     runId: "skill-run-1",
@@ -292,7 +292,7 @@ test("evolveSkill forwards the canonical resumable Skill Evolution tool", async 
 
   const result = await client.evolveSkill(input, { bearer: "caller-session" });
 
-  assert.equal(toolRequest.body.params.name, "agenticgraph.skill.evolve");
+  assert.equal(toolRequest.body.params.name, "agentic-graph.skill.evolve");
   assert.deepEqual(toolRequest.body.params.arguments, input);
   assert.equal(toolRequest.headers.authorization, "Bearer caller-session");
   assert.equal(result.status, "running");
@@ -312,7 +312,7 @@ test("Skill Evolution result validation rejects schema, operation, status, and s
   for (const value of cases) {
     assert.throws(
       () => validateSkillEvolutionResult(value, { expectedOperation: "status" }),
-      (error) => error instanceof KnowgrphMcpError
+      (error) => error instanceof AgenticGraphMcpError
         && error.code === "mcp_skill_evolution_result_invalid"
         && Array.isArray(error.data?.fields),
     );
@@ -467,7 +467,7 @@ test("Skill Evolution result validation enforces held-out identities and zero-wo
 });
 
 test("evolveSkill rejects an unsafe structured MCP result", async () => {
-  const client = createKnowgrphMcpClient({
+  const client = createAgenticGraphMcpClient({
     endpoint: ENDPOINT,
     fetchImpl: async (req) => {
       if (req.body?.method === "initialize") {
@@ -500,7 +500,7 @@ test("extractToolResult reads a JSON text content block", () => {
 });
 
 test("fail-closed on a non-2xx response", async () => {
-  const client = createKnowgrphMcpClient({ endpoint: ENDPOINT, fetchImpl: async (req) => {
+  const client = createAgenticGraphMcpClient({ endpoint: ENDPOINT, fetchImpl: async (req) => {
     if (req.body && req.body.method === "initialize") return { status: 200, headers: { get: (n) => n.toLowerCase() === "mcp-session-id" ? "test-session-id" : "" }, text: async () => "" };
     return jsonResponse(503, "busy", "text/plain");
   } });
@@ -512,7 +512,7 @@ test("fail-closed on a non-2xx response", async () => {
 });
 
 test("fail-closed on a JSON-RPC error frame", async () => {
-  const client = createKnowgrphMcpClient({
+  const client = createAgenticGraphMcpClient({
     endpoint: ENDPOINT,
     fetchImpl: async (req) => {
       if (req.body && req.body.method === "initialize") return { status: 200, headers: { get: (n) => n.toLowerCase() === "mcp-session-id" ? "test-session-id" : "" }, text: async () => "" };
@@ -526,5 +526,5 @@ test("fail-closed on a JSON-RPC error frame", async () => {
 });
 
 test("fail-closed on an unparseable body", () => {
-  assert.throws(() => parseMcpReply("<<not json>>", "application/json"), KnowgrphMcpError);
+  assert.throws(() => parseMcpReply("<<not json>>", "application/json"), AgenticGraphMcpError);
 });

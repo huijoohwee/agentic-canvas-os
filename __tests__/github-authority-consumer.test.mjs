@@ -193,8 +193,8 @@ test('the transition policy is canonical and authorizes only exact repositories'
     targetRepositories: [
       'github.com/huijoohwee/agentic-canvas-os',
       'github.com/huijoohwee/agentic-commerce-os',
+      'github.com/huijoohwee/agentic-graph',
       'github.com/huijoohwee/agentic-os',
-      'github.com/huijoohwee/knowgrph',
     ],
     workflowPath: '.github/workflows/adlc-transition.yml',
   })

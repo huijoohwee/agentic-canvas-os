@@ -17,7 +17,7 @@ const SOURCE_DIGEST = createHash("sha256").update(SOURCE).digest("hex");
 function runtimeEnv(overrides = {}) {
   return {
     AGENT_API_JWT_SECRET: "autonomous-session-secret",
-    KNOWGRPH_MCP_ENDPOINT: "https://control.example/mcp",
+    AGENTIC_OS_MCP_ENDPOINT: "https://control.example/mcp",
     AGENT_MODEL_PROVIDER: "openai",
     AGENT_MODEL_PROVIDER_REVISION: "openai-agent-v1",
     AGENT_MODEL_ADAPTER: "openai-responses-agent",
@@ -80,7 +80,7 @@ test("keeps the autonomous runtime disabled until every operator gate aligns", (
     [{ AGENT_RUNTIME_AGENT_SOURCE_SHA256: "a".repeat(64) }, "agent_source_sha256_mismatch"],
     [{ AGENT_MODEL_ID: "other-model" }, "model_mismatch"],
     [{ AGENT_RUNTIME_MAX_PROVIDER_CALLS: "65" }, "max_provider_calls_invalid"],
-    [{ KNOWGRPH_MCP_ENDPOINT: "" }, "control_plane_unconfigured"],
+    [{ AGENTIC_OS_MCP_ENDPOINT: "" }, "control_plane_unconfigured"],
   ]) {
     const env = runtimeEnv(overrides);
     const config = resolveAutonomousRuntimeEnvironment(env, {

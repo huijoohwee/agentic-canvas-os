@@ -124,4 +124,4 @@ VCC: verify `status: reset`, `stable: false`, the prior response id remains pres
 
 ## Promotion Boundary
 
-The bounded registry, request planner, readiness projection, and offline tests are runtime-ready in Dev. A live reasoning-preservation claim remains gated because this Worker forwards to the Knowgrph MCP control plane and does not own the Responses API call. Promotion requires the downstream adapter to declare actual model capabilities, apply the exact patch, return the new response id and effective reasoning context, log tokens and cost, and pass one bounded approved provider run.
+The bounded registry, request planner, readiness projection, and offline tests are runtime-ready in Dev. A live reasoning-preservation claim remains gated because this Worker forwards to the agentic-graph MCP control plane and does not own the Responses API call. Promotion requires the downstream adapter to declare actual model capabilities, apply the exact patch, return the new response id and effective reasoning context, log tokens and cost, and pass one bounded approved provider run.

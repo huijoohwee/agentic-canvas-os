@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { chmodSync, writeFileSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -22,6 +23,7 @@ import {
   SESSION_RUNTIME_SCHEMA,
   STORAGE_PORT,
   acquireLock,
+  runtimeLocations,
   validateOwnedService,
 } from "../scripts/local-runtime-supervisor-lib.mjs";
 
@@ -314,7 +316,7 @@ test("session Vite ownership binds exact session, process start, repository, com
   }), /ownership token/);
 });
 
-test("turn end atomically stops the exact session Vite group and proves canonical runtime ready", async () => {
+test("turn end migrates local storage before handoff and proves canonical runtime ready", async t => {
   const workspaceRoot = await mkdtemp(path.join(tmpdir(), "agentic-session-runtime-"));
   const candidate = {
     workspaceRoot,
@@ -334,15 +336,34 @@ test("turn end atomically stops the exact session Vite group and proves canonica
   const listeners = new Map();
   const processes = new Map();
   const launchedCommands = [];
+  const runtimeEffects = [];
   const stoppedGroups = [];
+  let migrationError = null;
   let nextGroup = 100;
   const dependencies = {
     inspectCanonicalCandidate: () => candidate,
     openLog: () => 1,
     closeLog: () => {},
+    runCommand: async invocation => {
+      runtimeEffects.push("migrate-storage");
+      assert.equal(invocation.cwd, candidate.agenticGraph.root);
+      assert.equal(invocation.command, "npm");
+      assert.deepEqual(invocation.args, ["run", "storage:d1:migrate:local"]);
+      assert.equal(invocation.env.AGENTIC_OS_SOURCE_REVISION, applicationSha);
+      assert.equal(invocation.env.AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_ROOT, "/workspace/agentic-canvas-os/docs");
+      assert.equal(invocation.env.AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION, docsSha);
+      assert.equal(invocation.env.AGENTIC_LOCAL_RUNTIME_TOKEN, undefined);
+      if (migrationError) throw migrationError;
+    },
+    writePrivateFile: (filePath, text) => {
+      runtimeEffects.push(`write-token:${path.basename(filePath)}`);
+      writeFileSync(filePath, text, { encoding: "utf8", mode: 0o600 });
+      chmodSync(filePath, 0o600);
+    },
     spawnService: ({ cwd, env, args }) => {
       launchedCommands.push(args);
       const port = args.includes(String(STORAGE_PORT)) ? STORAGE_PORT : APEX_PORT;
+      runtimeEffects.push(`spawn:${port}`);
       const supervisorPid = nextGroup;
       nextGroup += 100;
       const listenerPid = supervisorPid + 1;
@@ -366,6 +387,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     waitForHttp: async () => 200,
     stopProcessGroup: supervisorPid => {
       stoppedGroups.push(supervisorPid);
+      runtimeEffects.push(`stop:${supervisorPid}`);
       for (const [port, listenerPid] of listeners) {
         if (processes.get(listenerPid)?.processGroupId === supervisorPid) listeners.delete(port);
       }
@@ -373,6 +395,7 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     waitForPortRelease: async port => assert.equal(listeners.has(port), false),
     now: () => new Date("2026-07-26T05:00:00.000Z"),
   };
+  const locations = runtimeLocations(workspaceRoot);
   const options = {
     repository: candidate.agenticGraph.root,
     agenticCanvasOsRoot: candidate.agenticCanvasOsRoot,
@@ -390,6 +413,21 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     assert.deepEqual(stoppedGroups, []);
     assert.equal(listeners.get(APEX_PORT), 101);
 
+    await t.test("migration failure leaves the active session and canonical runtime effects untouched", async () => {
+      migrationError = new Error("local D1 migration failed");
+      runtimeEffects.length = 0;
+      await assert.rejects(() => endLocalRuntimeTurn(options, dependencies), /local D1 migration failed/);
+      assert.deepEqual(runtimeEffects, ["migrate-storage"]);
+      assert.deepEqual(stoppedGroups, []);
+      assert.equal(listeners.get(APEX_PORT), 101);
+      assert.equal(JSON.parse(await readFile(locations.sessionStatePath, "utf8")).sessionId, "session-a");
+      await assert.rejects(readFile(locations.tokenPath), error => error?.code === "ENOENT");
+      await assert.rejects(readFile(locations.statePath), error => error?.code === "ENOENT");
+      await assert.rejects(readFile(locations.reviewCandidatePath), error => error?.code === "ENOENT");
+    });
+
+    migrationError = null;
+    runtimeEffects.length = 0;
     const result = await endLocalRuntimeTurn(options, dependencies);
     assert.equal(result.schema, LOCAL_RUNTIME_SCHEMA);
     assert.equal(result.status, "runtime-ready");
@@ -400,6 +438,13 @@ test("turn end atomically stops the exact session Vite group and proves canonica
     assert.ok(stoppedGroups.includes(100));
     assert.equal(listeners.get(STORAGE_PORT), 201);
     assert.equal(listeners.get(APEX_PORT), 301);
+    assert.deepEqual(runtimeEffects, [
+      "migrate-storage",
+      "stop:100",
+      "write-token:owner.token",
+      `spawn:${STORAGE_PORT}`,
+      `spawn:${APEX_PORT}`,
+    ]);
     assert.deepEqual(launchedCommands[1], [
       "run", "storage:worker:dev", "--", "--local", "--var",
       "AGENTIC_OS_STORAGE_LOCAL_RUNTIME:true", "--ip", "127.0.0.1", "--port", "8787",

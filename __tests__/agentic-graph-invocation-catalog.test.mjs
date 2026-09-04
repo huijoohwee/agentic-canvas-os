@@ -17,15 +17,16 @@ test("current positive invocation grammar uses the agentic-graph namespace", () 
     "agentic-graph.agentic_canvas_os.docs.invoke",
     "agentic-graph.video_remix.run",
     "agentic-graph.application.*",
-    "agentic-graph.agentic_sdlc.observe",
+    "agentic-graph.adlc.observe",
   ]) {
     assert.match(currentCatalog, new RegExp(token.replaceAll(".", "\\.").replaceAll("*", "\\*")));
   }
 
   assert.doesNotMatch(
     currentCatalog,
-    new RegExp(`\\b${retiredNamespace}\\.(?:agentic_canvas_os|video_remix|application|agentic_sdlc)(?:\\.|\\b)`),
+    new RegExp(`\\b${retiredNamespace}\\.(?:agentic_canvas_os|video_remix|application|agentic_sdlc|adlc)(?:\\.|\\b)`),
   );
+  assert.doesNotMatch(currentCatalog, /agentic-graph\.agentic_sdlc\.observe|\/sdlc\.observe|#agentic-sdlc-observability/);
 });
 
 test("public product labels retain agentic-graph while the runtime route uses Agentic OS", () => {

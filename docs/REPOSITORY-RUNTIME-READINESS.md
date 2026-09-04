@@ -2,7 +2,7 @@
 title: "Repository Runtime Readiness"
 graphId: "md:agentic-repository-runtime-readiness"
 doc_type: "Repository Runtime Readiness Contract"
-date: "2026-07-30"
+date: "2026-09-05"
 lang: "en-US"
 schema: "agentic-repository-runtime-readiness/v1"
 frontmatter_contract: "required"
@@ -69,7 +69,7 @@ Outputs:
 - actual and expected source revisions
 - bounded scan counts and typed omissions
 - dependency, runtime, configuration, generation, build, start, health, browser, mobile, offline, cost, and dynamic-resolution evidence
-- stable reason codes mapped to the existing Agentic SDLC finding vocabulary
+- stable reason codes mapped to the existing ADLC finding vocabulary
 - independent `source`, `local`, `browser`, `integration`, and `deployed` verdicts
 - exact zero model, provider, paid-call, and token cost
 - unchanged mutation, network, integration, release, and deployment boundaries

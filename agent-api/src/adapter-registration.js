@@ -7,9 +7,9 @@
 // register calls beyond the monotonic counters stats() reports.
 
 export const REGISTRATION_FINDING_TYPES = Object.freeze(["unfederated-tool", "uncatalogued-tool"]);
-export const REGISTRATION_RECORD_SCHEMA = "acos-adapter-registration/v1";
-export const REGISTRATION_FINDING_SCHEMA = "acos-adapter-registration-finding/v1";
-export const ADAPTER_REGISTRATION_OWNER = "acos-adapter-registration";
+export const REGISTRATION_RECORD_SCHEMA = "agentic-os-adapter-registration/v1";
+export const REGISTRATION_FINDING_SCHEMA = "agentic-os-adapter-registration-finding/v1";
+export const ADAPTER_REGISTRATION_OWNER = "agentic-os-adapter-registration";
 
 const REGISTRATION_OPTION_KEYS = [
   "agentDefinitionRegistry",

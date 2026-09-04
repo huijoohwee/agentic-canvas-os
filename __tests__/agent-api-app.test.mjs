@@ -282,7 +282,7 @@ test("createAgentApiApp wires auth + a forwarding run handler", async () => {
   assert.equal(app.readiness().skillRegistryGate.providerExecutionStatus, "unverified");
   assert.equal(app.readiness().adapterRegistration.contractReady, true);
   assert.equal(app.readiness().adapterRegistration.configured, false);
-  assert.equal(app.readiness().adapterRegistration.registrationOwner, "acos-adapter-registration");
+  assert.equal(app.readiness().adapterRegistration.registrationOwner, "agentic-os-adapter-registration");
   assert.equal(app.readiness().adapterRegistration.sharedEntrypointAdapterNames, 0);
   assert.equal(app.readiness().adapterRegistration.requestScopedState, false);
   assert.equal(app.readiness().adapterRegistration.registryConfigured, true);

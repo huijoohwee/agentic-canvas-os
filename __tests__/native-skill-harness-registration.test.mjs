@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import fc from "fast-check";
 
 import {
+  ADAPTER_REGISTRATION_OWNER,
+  REGISTRATION_FINDING_SCHEMA,
   REGISTRATION_FINDING_TYPES,
   REGISTRATION_RECORD_SCHEMA,
   RegistrationBlock,
@@ -26,7 +28,7 @@ const REGISTERED_TOKENS = [
   "/propose-skill",
   "#skill-candidate",
   "@skill-registry",
-  "acos.adapter.register",
+  "agentic-os.adapter.register",
 ];
 
 function createRegistry() {
@@ -63,7 +65,7 @@ function validInvocationRegisterEntry(overrides = {}) {
     route: "/propose-skill",
     tag: "#skill-candidate",
     binding: "@skill-registry",
-    tool_identity: "acos.adapter.register",
+    tool_identity: "agentic-os.adapter.register",
     ...overrides,
   };
 }
@@ -157,7 +159,10 @@ async function executeTriples(triples, order) {
   return outcomes;
 }
 
-test("REGISTRATION_FINDING_TYPES is the closed two-value set", () => {
+test("registration identity is owned by the agentic-os generation", () => {
+  assert.equal(ADAPTER_REGISTRATION_OWNER, "agentic-os-adapter-registration");
+  assert.equal(REGISTRATION_RECORD_SCHEMA, "agentic-os-adapter-registration/v1");
+  assert.equal(REGISTRATION_FINDING_SCHEMA, "agentic-os-adapter-registration-finding/v1");
   assert.deepEqual(REGISTRATION_FINDING_TYPES, ["unfederated-tool", "uncatalogued-tool"]);
 });
 
@@ -191,6 +196,7 @@ test("a missing or malformed tool allowlist entry is an unfederated-tool finding
   for (const entry of [undefined, null, "not-an-object", { entry_id: "x" }]) {
     const outcome = await registrationInterface.register(createValidAgentDefinition(), entry, validInvocationRegisterEntry(), OPERATOR_REF);
     assert.equal(outcome.status, "rejected");
+    assert.equal(outcome.finding.schema, REGISTRATION_FINDING_SCHEMA);
     assert.equal(outcome.finding.type, "unfederated-tool");
   }
   assertSnapshotUnchanged(snapshotBefore, captureSnapshot(registry));

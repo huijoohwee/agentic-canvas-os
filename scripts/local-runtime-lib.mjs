@@ -132,6 +132,7 @@ function runtimeEnvironment(candidate) {
     AGENTIC_OS_SOURCE_REVISION: candidate.agenticGraph.headSha,
     AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
     AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
+    AGENTIC_OS_STORAGE_DEV_PROXY_TARGET: `http://${LOCAL_RUNTIME_HOST}:${STORAGE_PORT}`,
     VITE_WORKSPACE_INITIALIZATION_AGENTIC_CANVAS_OS_DOCS_ABS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
   };
   delete environment.AGENTIC_LOCAL_RUNTIME_TOKEN;

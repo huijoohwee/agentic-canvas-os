@@ -41,7 +41,7 @@ import {
   createAgenticGraphGuardrailEvaluator,
   parseAgenticGraphFunctionToolAllowlist,
 } from "./agentic-graph-function-gateway.js";
-import { createAdapterRegistrationInterface } from "./adapter-registration.js";
+import { ADAPTER_REGISTRATION_OWNER, createAdapterRegistrationInterface } from "./adapter-registration.js";
 import { createDurableObjectSkillDraftStore } from "./durable-object-state-store.js";
 import { resolveModelProviderEnvironment } from "./model-config.js";
 import { createModelProviderRuntime } from "./model-providers.js";
@@ -631,7 +631,7 @@ export function createAgentApiApp({
           configured: adapterRegistrationStats.registryConfigured
             && adapterRegistrationStats.operatorInstructionResolverConfigured,
           contractReady: true,
-          registrationOwner: "acos-adapter-registration",
+          registrationOwner: ADAPTER_REGISTRATION_OWNER,
           sharedEntrypointAdapterNames: 0,
           requestScopedState: false,
           providerExecutionStatus: "unverified",

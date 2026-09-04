@@ -423,7 +423,7 @@ test("Property 12: Promotion is the sole proposed-to-active transition", async (
                 route: "/propose-skill",
                 tag: "#skill-candidate",
                 binding: "@skill-registry",
-                tool_identity: "acos.adapter.register",
+                tool_identity: "agentic-os.adapter.register",
               },
             );
           }

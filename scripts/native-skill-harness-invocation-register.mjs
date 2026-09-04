@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Invocation Register token declaration count check for the native skill
-// creation harness. Each of the six tokens this feature declares must appear
+// creation harness. Each token this feature declares must appear
 // in exactly one register file with a declaration count of exactly 1.
 
 import { readFile } from "node:fs/promises";
@@ -20,7 +20,7 @@ const TOKENS = Object.freeze([
   "@skill-registry",
   "acos.skill_proposer.propose",
   "acos.skill_registry.promote",
-  "acos.adapter.register",
+  "agentic-os.adapter.register",
   "#webmcp",
   "@webmcp-surface",
   "/goal.advance",
@@ -39,7 +39,7 @@ const TOKEN_OWNER_FILE = Object.freeze({
   "@skill-registry": "docs/DICTIONARY-BINDING.md",
   "acos.skill_proposer.propose": "docs/MCP-GATEWAY.md",
   "acos.skill_registry.promote": "docs/MCP-GATEWAY.md",
-  "acos.adapter.register": "docs/MCP-GATEWAY.md",
+  "agentic-os.adapter.register": "docs/MCP-GATEWAY.md",
   "#webmcp": "docs/DICTIONARY-SEMANTIC.md",
   "@webmcp-surface": "docs/DICTIONARY-BINDING.md",
   "/goal.advance": "docs/DICTIONARY-COMMAND.md",

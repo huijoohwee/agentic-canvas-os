@@ -22,7 +22,7 @@ const FIXTURE_PREFIX = "entrypoint-diff-fixture";
 const FIXTURE_RELATIVE_PREFIX = `adapters/${FIXTURE_PREFIX}/`;
 const FIXTURE_DIRECTORY = path.join(REPOSITORY_ROOT, "adapters", FIXTURE_PREFIX);
 const OPERATOR_REF = "operator-instruction/entrypoint-diff-fixture/2026-08-17";
-const DECLARED_TOKENS = ["/propose-skill", "#skill-candidate", "@skill-registry", "acos.adapter.register"];
+const DECLARED_TOKENS = ["/propose-skill", "#skill-candidate", "@skill-registry", "agentic-os.adapter.register"];
 // An empty diff proves nothing if an adapter name was already hardcoded, so
 // every known adapter identity is asserted absent from the entrypoint.
 const KNOWN_ADAPTER_IDENTITIES = Object.freeze(["agentic-graph", FIXTURE_PREFIX]);
@@ -47,12 +47,12 @@ async function run() {
     await writeFile(
       path.join(FIXTURE_DIRECTORY, "registration.json"),
       JSON.stringify({
-        schema: "acos-adapter-registration-fixture/v1",
+        schema: "agentic-os-adapter-registration-fixture/v1",
         adapter_identity: FIXTURE_PREFIX,
         route: "/propose-skill",
         tag: "#skill-candidate",
         binding: "@skill-registry",
-        tool_identity: "acos.adapter.register",
+        tool_identity: "agentic-os.adapter.register",
       }, null, 2),
     );
 
@@ -101,7 +101,7 @@ async function run() {
         route: "/propose-skill",
         tag: "#skill-candidate",
         binding: "@skill-registry",
-        tool_identity: "acos.adapter.register",
+        tool_identity: "agentic-os.adapter.register",
       },
       OPERATOR_REF,
     );

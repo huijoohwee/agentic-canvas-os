@@ -157,7 +157,7 @@ test("ACOS has no competing lane, worktree, session, guard, or synchronization c
   }
 });
 
-test("ACOS docs expose only the non-promoting observation compatibility route", () => {
+test("ACOS docs expose only the native non-promoting observation route", () => {
   const sources = [
     path.join(ROOT, "COLLABORATION.md"),
     path.join(ROOT, "README.md"),
@@ -199,6 +199,8 @@ test("ACOS docs expose only the non-promoting observation compatibility route", 
 
   const observation = read("docs/IMPLEMENTATION-RUN-OBSERVATION.md");
   assert.match(observation, /^status: "spec-complete"$/mu);
-  assert.match(observation, /\/sdlc\.observe #agentic-sdlc-observability/u);
-  assert.match(observation, /grants no Agentic SDLC\s+lifecycle authority/u);
+  assert.match(observation, /\/adlc\.observe #adlc-observability/u);
+  assert.match(observation, /grants no lifecycle authority/u);
+  assert.match(observation, /no native canonical-run evaluator for `adlc-run\/v1`/u);
+  assert.doesNotMatch(sources, /\/sdlc\.observe|#agentic-sdlc-observability|agentic-graph\.agentic_sdlc\.observe/u);
 });

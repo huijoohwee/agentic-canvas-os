@@ -2,7 +2,7 @@
 title: "Agentic OS Binding Dictionary"
 graphId: "md:agentic-os-dictionary-binding"
 doc_type: "Invocation Dictionary"
-date: "2026-07-31"
+date: "2026-09-05"
 lang: "en-US"
 schema: "agentic-os-dictionary-binding/v1"
 frontmatter_contract: "required"
@@ -304,7 +304,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@attached-context` | Bounded appended context packet produced by reference expansion. | Approved `/reference.expand` runtime owner. | Packet records source token, normalized source, size, truncation, warnings, refusal, and cost posture. |
 | `@kanban-board` | Durable `kanban.md` task board. | Authored Markdown table source plus existing multi-dimensional table/Kanban utilities. | Board rows are the SSOT for task and handoff state; no browser-only, process-only, or copied board store. |
 | `@task-row` | One validated task row in `kanban.md`. | Shared table row parser and operator-approved task schema. | Requires stable id, title, owner profile, status, priority, acceptance, evidence, and next action. |
-| `@implementation-run` | Immutable identity and revision for one externally owned implementation-run receipt. | The caller-selected receipt source; ACOS consumes it only through the read-only `/sdlc.observe` compatibility shim. | Carries no worktree, branch, lease, claim, review, integration, release, cleanup, or deployment authority. |
+| `@implementation-run` | Immutable identity and revision for one externally owned implementation-run receipt. | The caller-selected receipt source; ACOS consumes it only through the read-only `/adlc.observe` projection. | Carries no worktree, branch, lease, claim, review, integration, release, cleanup, or deployment authority. |
 | `@application-manifest` | Bounded source-backed application slots, dependency edges, entrypoints, outputs, bounds, and exact revisions and digests. | Authored application source selected by the operator or project owner. | No latest tags, ranges, fallbacks, callbacks, packages, commands, endpoints, headers, environment maps, credentials, or embedded code. |
 | `@component-catalog` | Immutable exact component, source, interface, schema, capability, runtime-owner, risk, and readiness records. | agentic-graph local component catalog owner. | Same-revision drift, missing evidence, disabled records, and implicit fallback or upgrade block planning. |
 | `@integration-profile` | Opaque host-approved integration id, exact profile revision, and exact declared capability revision. | Existing integration registry, gateway, or transport owner. | Executable, arguments, transport, endpoint, headers, secrets, credentials, sessions, and provider payloads remain owner-private. |

@@ -2,14 +2,14 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-07-31"
+date: "2026-09-05"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
 status: "runtime-ready"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "f23cc0a71040e4387ea10c2bb6ddc1ce2b74e7f9a3c5760bd58bd91aa9510ba3"
+catalog_digest: "7075de061ff7762a2866117cb81497c5c8d92222f7f713cbd7009edfb89d6b80"
 catalog_entry_count: 406
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "scripts/dictionary-catalog-contract.mjs"
@@ -120,7 +120,7 @@ dictionary_entries:
   - "/runtime-ready.check"
   - "/instruction.audit"
   - "/instruction.quality-evaluate"
-  - "/sdlc.observe"
+  - "/adlc.observe"
   - "/ecs.session-start"
   - "/ecs.world-tick"
   - "/ecs.decision-persist"
@@ -281,7 +281,7 @@ This file defines `/` command-route content for Agentic Canvas OS docs. It is a 
 | `/runtime-ready.check` | Verify whether a spec-complete artifact or exact local Git worktree is runnable. | `@local-harness`, `@runtime-proof`, and `@repository-root` for repository audits | `#harness`, `#vcc`, `#runtime-ready` | Focused checks or the bounded source-admission evaluator emit layer-specific proof, stable findings, zero-cost evidence, and unchanged deploy boundaries; exit 0 applies only to the requested proven layer. |
 | `/instruction.audit` | Audit always-on guidance and skill catalog context without model calls or source mutation. | `@instruction-source`, `@local-harness`, `@runtime-proof` | `#instruction-audit`, `#progressive-disclosure`, `#runtime-ready` | Required intent remains present; context budgets, duplicate instructions, embedded procedures, and owner leakage pass with exact zero model cost. |
 | `/instruction.quality-evaluate` | Score recorded or live final answers against the bounded instruction task-quality suite. | `@instruction-eval-suite`, `@runtime-proof`, `@operator` | `#instruction-quality`, `#vcc`, `#runtime-ready` | Every registered case passes required concepts, forbidden-claim screening, and word budgets with explicit candidate provenance and human review. |
-| `/sdlc.observe` | Project one immutable local Agentic SDLC ledger receipt into end-to-end execution, evidence, cost, gate, and release-lifecycle graph context through the existing agentic-graph Canvas owner. | exactly `@implementation-run`, `@canvas`, and `@runtime-proof` | exactly `#agentic-sdlc-observability` | `agentic-graph.agentic_sdlc.observe` returns `agentic-graph-agentic-sdlc-observation/v1` with source identity, typed status and conformance, deterministic GraphData plus KGC Markdown, cache evidence, and zero model, network, token, and cost use; `verified`, `delivery_ready`, and `deployed` remain distinct claims, and no ledger, Canvas source, release state, Prod mirror, or Cloudflare target is mutated. |
+| `/adlc.observe` | Project one immutable local ADLC ledger receipt into end-to-end execution, evidence, cost, gate, and release-lifecycle graph context through the existing agentic-graph Canvas owner. | exactly `@implementation-run`, `@canvas`, and `@runtime-proof` | exactly `#adlc-observability` | `agentic-graph.adlc.observe` returns `agentic-graph-adlc-observation/v1` with source identity, typed status and conformance, deterministic GraphData plus KGC Markdown, cache evidence, and zero model, network, token, and cost use; `verified`, `delivery_ready`, and `deployed` remain distinct claims, and no ledger, Canvas source, release state, Prod mirror, or Cloudflare target is mutated. |
 | `/ecs.session-start` | Hydrate one bounded native ECS session from a repository-owned KGC Markdown document. | `@source.frontmatter`, `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#mcp`, `#dev-only` | `agentic-graph.ecs.session_start` validates a safe workspace-relative `.md` path, hydrates registered components and entities deterministically, and returns a private session id plus zero-spend proof without network, Prod, or Cloudflare capability. |
 | `/ecs.world-tick` | Advance one hydrated ECS session through its ordered systems and bounded reasoning boundary. | `@ecs-session`, `@runtime-proof` | `#agentic-ecs`, `#token-economics`, `#dev-only` | `agentic-graph.ecs.world_tick` resolves a live session, commits successful systems in order, rolls back only a failing system, and reports decisions plus `cost_logs`; timeout or unavailable reasoning defers without invented decisions or spend. |
 | `/ecs.decision-persist` | Persist only pending ECS decisions from one live session into its source KGC document. | `@ecs-session`, `@source.frontmatter`, `@runtime-proof` | `#agentic-ecs`, `#frontmatter`, `#dev-only` | `agentic-graph.ecs.decision_persist` atomically and idempotently appends validated `EcsDecision` nodes, preserves unrelated authored bytes, closes the session on success or zero pending decisions, and retains it after failure for retry. |
@@ -399,7 +399,7 @@ command:
 | `/tool.call` lacks described schema or real tool policy | Block before execution; never treat the bridge as approval. |
 | `/moa` references an MoA preset as aggregator | Reject with a typed recursion error before token spend. |
 | `/superagent.run` lacks sandbox scope, message gateway, checkpoint policy, or stop condition | Reject before execution; do not start an open-ended agent loop. |
-| `/sdlc.observe` lacks an exact immutable `agentic-sdlc-ledger-receipt/v1`, expected revision, or expected ledger digest, or the source bytes drift | Return a typed read-only block before projection; do not infer a receipt, repair a ledger, translate `delivery_ready` into `verified`, infer `deployed`, call a model or network, or create a second graph store or renderer. |
+| `/adlc.observe` lacks an exact immutable `adlc-ledger-receipt/v1`, expected revision, or expected ledger digest, or the source bytes drift, or its exact evaluator is absent | Return a typed read-only block before projection (`adlc_evaluator_unavailable` is nonretryable); do not infer a receipt, repair a ledger, translate `delivery_ready` into `verified`, infer `deployed`, call a model or network, or create a second graph store or renderer. |
 | `/application.compose` receives missing bindings, mutable or inexact references, digest drift, an incompatible capability or schema, a cyclic or ambiguous DAG, or executable, connection, or secret material | Reject before owner execution or spend; do not choose a fallback, upgrade, install, retry, migrate, connect, or deploy. |
 | `/agentic.graph.parser.generate` receives a missing, mutable, executable, ambiguous, oversized, or unsupported parser specification | Reject before registry compilation or publication; do not infer source matchers, download an adapter, execute caller code, fall back to a model or remote service, or start ingestion. |
 | `/repository.pack` receives a non-Git root, unsafe path, symlink escape, changed source, sensitive content, unknown field, or exceeded bound | Block before artifact publication, remove staging residue, and return a source-byte-free typed error; do not fall back to a remote service, external binary, model, or alternate alias. |
@@ -417,7 +417,7 @@ command:
 | `/agentic.graph.query` | `FACTS.md` direct-resolution entry for deterministic local graph queries. |
 | `/agentic.graph.explain` | `FACTS.md` direct-resolution entry for exact stored edge evidence and explanation. |
 | `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
-| `/sdlc.observe` | `FACTS.md` direct-resolution entry for deterministic read-only Agentic SDLC ledger projection through the existing Canvas. |
+| `/adlc.observe` | `FACTS.md` direct-resolution entry for deterministic read-only ADLC ledger projection through the existing Canvas. |
 | `/agent.team` | `FACTS.md` direct-resolution entry for exact role-based Agent Team planning and durable agentic-graph MCP control. |
 | `/soul.load` | `FACTS.md` direct-resolution entry for durable identity loading. |
 | `/personality.overlay` | `FACTS.md` direct-resolution entry for temporary personality overlays. |
@@ -464,4 +464,4 @@ command:
 | No duplicate runtime | No body section claims a new parser, command server, or provider panel. |
 | Fail-closed command path | Every command row names required bindings and a measurable completion signal. |
 | Deploy boundary preserved | `/deploy.guard` remains Dev-only unless explicit operator approval is present. |
-| Agentic SDLC observation stays read-only | `/sdlc.observe #agentic-sdlc-observability @implementation-run @canvas @runtime-proof` resolves exactly one local tool and requires an immutable ledger receipt before deterministic existing-Canvas projection. |
+| ADLC observation stays read-only | `/adlc.observe #adlc-observability @implementation-run @canvas @runtime-proof` resolves exactly one local tool and requires an immutable ledger receipt before deterministic existing-Canvas projection. |

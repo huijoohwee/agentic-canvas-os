@@ -5,13 +5,16 @@ import { createCommerceAdmissionAuthority } from "../agent-api/src/commerce-admi
 import {
   AUTHORING_HEADERS,
   COMMERCE_ADMISSION_PATH,
+  COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER,
   authoringMutationHeaders,
+  canonicalJson,
 } from "../agent-api/src/commerce-admission-contract.js";
 import { COMMERCE_ADMISSION_DEFAULTS, createCommerceAdmissionProvider } from "../agent-api/src/commerce-admission-provider.js";
 import { handleCloudflareRequest } from "../worker/index.js";
 import { createGraphAuthorityFixture } from "./lib/commerce-admission-auth-fixture.mjs";
 import {
   AUTH_SECRET,
+  DEPLOYMENT_IDENTITY,
   NOW,
   OPERATOR_REF,
   URL,
@@ -36,6 +39,8 @@ test("readyz is exact and the private route is not reachable through a public ho
   assert.equal(readyBody.contract, "commerce.agentic-os-admission-provider/v3");
   assert.equal(readyBody.receiptSchema, "agentic-os-adapter-registration/v2");
   assert.deepEqual(readyBody.operations, ["register-fenced"]);
+  assert.equal(readyBody.productionReady, true);
+  assert.deepEqual(readyBody.deploymentIdentity, DEPLOYMENT_IDENTITY);
   assert.equal(readyBody.authority.issuer_repository, "huijoohwee/agentic-graph");
   const publicResponse = await runtime.provider.handle(new Request(
     `https://airvio.co${COMMERCE_ADMISSION_PATH}/readyz`,
@@ -91,11 +96,19 @@ test("the Worker entrypoint wires the configured private service-binding route",
     AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE: authorityFixture.evidence,
     AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET: authorityFixture.secret,
     AGENTIC_OS_ADMISSION_AUTH_SECRET: AUTH_SECRET,
+    ACOS_SOURCE_REVISION: DEPLOYMENT_IDENTITY.sourceRevision,
+    ACOS_CANDIDATE_DIGEST: DEPLOYMENT_IDENTITY.candidateDigest,
+    CF_VERSION_METADATA: {
+      id: DEPLOYMENT_IDENTITY.versionId,
+      tag: DEPLOYMENT_IDENTITY.versionTag,
+      timestamp: DEPLOYMENT_IDENTITY.versionTimestamp,
+    },
   };
   const ready = await handleCloudflareRequest(readyRequest(), env);
   assert.equal(ready.status, 200);
   const readyBody = await ready.json();
   assert.equal(readyBody.contract, "commerce.agentic-os-admission-provider/v3");
+  assert.deepEqual(readyBody.deploymentIdentity, DEPLOYMENT_IDENTITY);
   assert.equal(readyBody.authority.issuer_repository, "huijoohwee/agentic-graph");
   const publicEnv = { ...env, ASSETS: { fetch: () => Response.json({ leaked: true }) } };
   for (const path of [
@@ -134,6 +147,7 @@ test("the authority and unavailable runtime fail closed without broadening autho
     store: { snapshot: runtime.store.snapshot, register: async () => ({ status: "unknown" }) },
     registrationInterface: runtime.registrationInterface,
     authority: runtime.authority,
+    deploymentIdentity: DEPLOYMENT_IDENTITY,
     authSecret: AUTH_SECRET,
     now: () => NOW,
   });
@@ -156,6 +170,7 @@ test("invalid Graph authority rejects an authenticated admission before JSON pro
     store: runtime.store,
     registrationInterface: runtime.registrationInterface,
     authority: invalidAuthority,
+    deploymentIdentity: DEPLOYMENT_IDENTITY,
     authSecret: AUTH_SECRET,
     now: () => NOW,
   });
@@ -185,6 +200,7 @@ test("the Durable Object rejects an authority projection that is not bound to th
     store: runtime.store,
     registrationInterface: runtime.registrationInterface,
     authority: inconsistentAuthority,
+    deploymentIdentity: DEPLOYMENT_IDENTITY,
     authSecret: AUTH_SECRET,
     now: () => NOW,
   });
@@ -334,6 +350,43 @@ test("A/A and A/B/A return the byte-identical durable receipt", async () => {
   const finalReplay = await responseBody(await provider.handle(requestFor(body, permit)));
   assert.equal(finalReplay.text, first.text);
   assert.equal(namespace.writes(), writesAfterFirst);
+});
+
+test("a new Worker identity replays the immutable writer receipt with its current serving identity", async () => {
+  const namespace = createNamespace();
+  const firstRuntime = createRuntime(namespace);
+  const body = registrationBody("agent-version-replay");
+  const permit = await permitFor(body);
+  const first = await responseBody(await firstRuntime.provider.handle(requestFor(body, permit)));
+  assert.equal(first.response.status, 200);
+  assert.equal(
+    first.response.headers.get(COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER),
+    canonicalJson(DEPLOYMENT_IDENTITY),
+  );
+  const writes = namespace.writes();
+
+  namespace.restart();
+  const nextIdentity = Object.freeze({
+    ...DEPLOYMENT_IDENTITY,
+    sourceRevision: "b".repeat(40),
+    candidateDigest: "e".repeat(64),
+    versionId: "22222222-2222-4222-8222-222222222222",
+    versionTag: `acos-prod-${"e".repeat(64)}`,
+    versionTimestamp: "2026-09-04T00:00:00.000Z",
+  });
+  const restarted = createRuntime(namespace, { deploymentIdentity: nextIdentity });
+  const ready = await restarted.provider.handle(readyRequest());
+  assert.equal(ready.status, 200);
+  assert.deepEqual((await ready.json()).deploymentIdentity, nextIdentity);
+  const replay = await responseBody(await restarted.provider.handle(requestFor(body, permit)));
+  assert.equal(replay.response.status, 200);
+  assert.equal(replay.text, first.text);
+  assert.equal(
+    replay.response.headers.get(COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER),
+    canonicalJson(nextIdentity),
+  );
+  assert.deepEqual(JSON.parse(replay.text).record.deployment_identity, DEPLOYMENT_IDENTITY);
+  assert.equal(namespace.writes(), writes);
 });
 
 test("an exact A outcome replays after a higher-sequence B outcome advances the fence", async () => {

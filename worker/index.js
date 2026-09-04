@@ -13,6 +13,11 @@ import { isSecureRoomCapability, sessionCanJoinRoom, verifySessionToken } from "
 import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
 import { createCommerceAdmissionAuthority } from "../agent-api/src/commerce-admission-authority.js";
 import { COMMERCE_ADMISSION_PATH } from "../agent-api/src/commerce-admission-contract.js";
+import { resolveCommerceDeploymentIdentity } from "../agent-api/src/commerce-deployment-identity.js";
+import {
+  COMMERCE_RELEASE_PROOF_PATH,
+  createCommerceReleaseProofHandler,
+} from "../agent-api/src/commerce-release-proof.js";
 import {
   createCommerceAdmissionProvider,
   createCommerceInvocationRegister,
@@ -297,6 +302,7 @@ function createWorkerApp(env) {
         store: commerceAdmissionStore,
         registrationInterface: commerceRegistration,
         authority,
+        deploymentIdentity: resolveCommerceDeploymentIdentity(env),
         authSecret: env.AGENTIC_OS_ADMISSION_AUTH_SECRET,
       }));
     }
@@ -328,7 +334,7 @@ function createWorkerApp(env) {
   return app;
 }
 
-async function dispatchCloudflareRequest(request, env = {}) {
+async function dispatchCloudflareRequest(request, env = {}, ctx = {}) {
   const url = new URL(request.url);
 
   if (url.hostname === "agentic-os-admission.internal") {
@@ -339,6 +345,16 @@ async function dispatchCloudflareRequest(request, env = {}) {
   if (url.pathname === "/agentic-os/internal"
     || url.pathname.startsWith("/agentic-os/internal/")) {
     return json(404, { error: "not found" });
+  }
+  if (url.pathname === COMMERCE_RELEASE_PROOF_PATH) {
+    const service = ctx?.exports?.CommerceAdmissionProbe;
+    return createCommerceReleaseProofHandler({
+      token: env.ACOS_RELEASE_PROBE_TOKEN,
+      admissionAuthSecret: env.AGENTIC_OS_ADMISSION_AUTH_SECRET,
+      serviceFetch: typeof service?.fetch === "function"
+        ? (input) => service.fetch(input)
+        : undefined,
+    }).handle(request);
   }
 
   if (url.pathname === "/api/canvas/room" || url.pathname === "/canvas/room") {
@@ -488,9 +504,9 @@ async function dispatchCloudflareRequest(request, env = {}) {
   return json(404, { error: "not found" });
 }
 
-export async function handleCloudflareRequest(request, env = {}) {
+export async function handleCloudflareRequest(request, env = {}, ctx = {}) {
   try {
-    return await dispatchCloudflareRequest(request, env);
+    return await dispatchCloudflareRequest(request, env, ctx);
   } catch (error) {
     if (error instanceof JsonBodyError) {
       return json(error.statusCode, { error: error.message, code: error.code });
@@ -500,7 +516,15 @@ export async function handleCloudflareRequest(request, env = {}) {
 }
 
 export default {
+  fetch(request, env, ctx) {
+    return handleCloudflareRequest(request, env, ctx);
+  },
+};
+
+// A same-Worker authenticated loopback; Commerce still binds the default
+// agentic-canvas-os entrypoint and therefore does not acquire entrypoint drift.
+export const CommerceAdmissionProbe = Object.freeze({
   fetch(request, env) {
     return handleCloudflareRequest(request, env);
   },
-};
+});

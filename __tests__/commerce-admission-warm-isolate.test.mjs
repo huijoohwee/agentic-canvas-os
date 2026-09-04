@@ -9,6 +9,7 @@ import {
   createGraphAuthorityBinding,
   createGraphAuthorityFixture,
 } from "./lib/commerce-admission-auth-fixture.mjs";
+import { DEPLOYMENT_IDENTITY } from "./lib/commerce-admission-provider-fixture.mjs";
 
 const AUTH_SECRET = "agentic-os-admission-dev-secret-rotate-before-production";
 
@@ -68,6 +69,13 @@ function environment(namespace, fixture) {
     AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF: authority.operatorInstructionRef,
     AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE: authority.evidence,
     AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET: authority.secret,
+    ACOS_SOURCE_REVISION: DEPLOYMENT_IDENTITY.sourceRevision,
+    ACOS_CANDIDATE_DIGEST: DEPLOYMENT_IDENTITY.candidateDigest,
+    CF_VERSION_METADATA: {
+      id: DEPLOYMENT_IDENTITY.versionId,
+      tag: DEPLOYMENT_IDENTITY.versionTag,
+      timestamp: DEPLOYMENT_IDENTITY.versionTimestamp,
+    },
   };
 }
 

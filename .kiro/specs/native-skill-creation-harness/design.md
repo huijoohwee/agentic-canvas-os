@@ -456,7 +456,7 @@ Following the verified pattern in `worker/index.js` and `app.js`:
 |---|---|---|
 | `skillProposer` | `stats().draftStoreConfigured && stats().modelAdapterConfigured` | `contractReady: true`, `proposalOwner: "acos-skill-proposer"`, `registryWriteCapability: false`, `iterationBound`, `circuitBreakerConsecutiveNoCandidate`, `p95GapToDraftMs`, `providerExecutionStatus: "unverified"` |
 | `skillRegistryGate` | `stats().draftStoreConfigured && stats().operatorInstructionResolverConfigured` | `contractReady: true`, `boundaryState: "closed"`, `promotionOwner: "acos-skill-registry-gate"`, `artifactType: "agent-definition"`, `modelCallCapability: false` |
-| `adapterRegistration` | `stats().registryConfigured && stats().operatorInstructionResolverConfigured` | `contractReady: true`, `registrationOwner: "acos-adapter-registration"`, `sharedEntrypointAdapterNames: 0`, `requestScopedState: false` |
+| `adapterRegistration` | `stats().registryConfigured && stats().operatorInstructionResolverConfigured` | `contractReady: true`, `registrationOwner: "agentic-os-adapter-registration"`, `sharedEntrypointAdapterNames: 0`, `requestScopedState: false` |
 
 The existing `agentDefinitions` block gains `statusCounts` and `snapshotDigestAlgorithm: "sha-256"`.
 All three new blocks report `configured: false` in the shipped default, because no model adapter and
@@ -802,7 +802,7 @@ Gate invariant, asserted before emission:
 
 ```ts
 interface RegistrationRecord {
-  schema: "acos-adapter-registration/v1";
+  schema: "agentic-os-adapter-registration/v2";
   adapter_identity: string;
   agent_definition_id: string;
   tool_allowlist_entry_id: string;
@@ -813,7 +813,7 @@ interface RegistrationRecord {
 }
 
 interface RegistrationFinding {
-  schema: "acos-adapter-registration-finding/v1";
+  schema: "agentic-os-adapter-registration-finding/v1";
   type: "unfederated-tool" | "uncatalogued-tool";
   adapter_identity: string | null;
   reason_code: string;

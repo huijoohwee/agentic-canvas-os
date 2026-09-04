@@ -352,6 +352,7 @@ test("turn end migrates local storage before handoff and proves canonical runtim
       assert.equal(invocation.env.AGENTIC_OS_SOURCE_REVISION, applicationSha);
       assert.equal(invocation.env.AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_ROOT, "/workspace/agentic-canvas-os/docs");
       assert.equal(invocation.env.AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION, docsSha);
+      assert.equal(invocation.env.AGENTIC_OS_STORAGE_DEV_PROXY_TARGET, "http://127.0.0.1:8787");
       assert.equal(invocation.env.AGENTIC_LOCAL_RUNTIME_TOKEN, undefined);
       if (migrationError) throw migrationError;
     },

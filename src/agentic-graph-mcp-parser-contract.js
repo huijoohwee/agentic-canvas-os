@@ -8,7 +8,7 @@ import {
   stableStringify,
 } from "./agentic-graph-mcp-contract-utils.js";
 
-const PARSER_REGISTRY_SCHEMA = "agentic-graph-knowledge-graph-parser-registry/v2";
+const PARSER_REGISTRY_SCHEMA = "agentic-graph-agent-graph-parser-registry/v2";
 const DECLARATIVE_GRAMMAR_SCHEMA = "agentic-graph-declarative-grammar/v1";
 const ADAPTER_FIDELITIES = Object.freeze({
   "brace-code": "structural-parser",

@@ -68,7 +68,7 @@ function validGraphEdge(value) {
 
 function validGraphData(value) {
   if (!hasExactKeys(value, ["context", "type", "nodes", "edges"])
-    || value.context !== "agentic-graph-knowledge-graph-projection"
+    || value.context !== "agentic-graph-agent-graph-projection"
     || value.type !== "Graph"
     || !Array.isArray(value.nodes)
     || !Array.isArray(value.edges)

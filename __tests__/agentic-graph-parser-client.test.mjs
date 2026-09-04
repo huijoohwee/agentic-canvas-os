@@ -48,12 +48,12 @@ const digestFor = (descriptors) => createHash("sha256")
 const registryResult = (descriptors) => {
   const digest = digestFor(descriptors);
   return {
-    schema: "agentic-graph-knowledge-graph-parser-generate/v1",
+    schema: "agentic-graph-agent-graph-parser-generate/v1",
     ok: true,
     operation: "parser_generate",
     parserRegistryDigest: digest,
     parserRegistry: {
-      schema: "agentic-graph-knowledge-graph-parser-registry/v2",
+      schema: "agentic-graph-agent-graph-parser-registry/v2",
       digest,
       descriptors,
     },
@@ -62,7 +62,7 @@ const registryResult = (descriptors) => {
 
 test("parser generation validates a built-in profile or source-backed descriptors", () => {
   const invocation = {
-    schema: "agentic-graph-knowledge-graph-invocation/v1",
+    schema: "agentic-graph-agent-graph-invocation/v1",
     tool: AGENTIC_GRAPH_MCP_TOOLS.generateParser,
     action: "/agentic.graph.parser.generate",
     semantics: ["#agentic-graph", "#parser-generation", "#mcp"],

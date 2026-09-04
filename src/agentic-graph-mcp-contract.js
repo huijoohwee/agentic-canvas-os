@@ -32,21 +32,21 @@ export class AgenticGraphMcpError extends Error {
 }
 
 export const AGENTIC_GRAPH_MCP_TOOLS = Object.freeze({
-  ingest: "agentic-graph.knowledge_graph.ingest",
-  generateParser: "agentic-graph.knowledge_graph.parser_generate",
-  query: "agentic-graph.knowledge_graph.query",
-  explainEdge: "agentic-graph.knowledge_graph.explain_edge",
+  ingest: "agentic-graph.agent_graph.ingest",
+  generateParser: "agentic-graph.agent_graph.parser_generate",
+  query: "agentic-graph.agent_graph.query",
+  explainEdge: "agentic-graph.agent_graph.explain_edge",
 });
 
 export const AGENTIC_GRAPH_DEFAULT_PARSER_PROFILE = "default-source";
 
-const INVOCATION_SCHEMA = "agentic-graph-knowledge-graph-invocation/v1";
+const INVOCATION_SCHEMA = "agentic-graph-agent-graph-invocation/v1";
 const ROUTING_SCHEMA = "agentic-canvas-os-docs-routing/v1";
 const RESULT_SCHEMAS = Object.freeze({
-  ingest: "agentic-graph-knowledge-graph-ingest/v1",
-  parser_generate: "agentic-graph-knowledge-graph-parser-generate/v1",
-  query: "agentic-graph-knowledge-graph-query/v1",
-  explain_edge: "agentic-graph-knowledge-graph-explain-edge/v1",
+  ingest: "agentic-graph-agent-graph-ingest/v1",
+  parser_generate: "agentic-graph-agent-graph-parser-generate/v1",
+  query: "agentic-graph-agent-graph-query/v1",
+  explain_edge: "agentic-graph-agent-graph-explain-edge/v1",
 });
 const TOOL_BY_OPERATION = Object.freeze({
   ingest: AGENTIC_GRAPH_MCP_TOOLS.ingest,

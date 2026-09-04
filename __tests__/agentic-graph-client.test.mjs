@@ -21,10 +21,10 @@ const EDGE_ID = `kg:edge:${"4".repeat(28)}`;
 const SOURCE_NODE_ID = "kg:source-file:source";
 const TARGET_NODE_ID = "kg:syntax-node:target";
 const RESULT_SCHEMAS = {
-  ingest: "agentic-graph-knowledge-graph-ingest/v1",
-  parser_generate: "agentic-graph-knowledge-graph-parser-generate/v1",
-  query: "agentic-graph-knowledge-graph-query/v1",
-  explain_edge: "agentic-graph-knowledge-graph-explain-edge/v1",
+  ingest: "agentic-graph-agent-graph-ingest/v1",
+  parser_generate: "agentic-graph-agent-graph-parser-generate/v1",
+  query: "agentic-graph-agent-graph-query/v1",
+  explain_edge: "agentic-graph-agent-graph-explain-edge/v1",
 };
 const stableValue = (value) => (
   Array.isArray(value)
@@ -160,7 +160,7 @@ function createRecordingClient() {
               truncated: false,
               limit: 200,
               graphData: {
-                context: "agentic-graph-knowledge-graph-projection",
+                context: "agentic-graph-agent-graph-projection",
                 type: "Graph",
                 nodes: [],
                 edges: [],
@@ -173,7 +173,7 @@ function createRecordingClient() {
             operation: "parser_generate",
             parserRegistryDigest: registryDigest,
             parserRegistry: {
-              schema: "agentic-graph-knowledge-graph-parser-registry/v2",
+              schema: "agentic-graph-agent-graph-parser-registry/v2",
               digest: registryDigest,
               descriptors: parserDescriptors,
             },
@@ -227,10 +227,10 @@ function createRecordingClient() {
 
 test("agentic graph methods use the four exact agentic-graph tool identities", async () => {
   assert.deepEqual(AGENTIC_GRAPH_MCP_TOOLS, {
-    ingest: "agentic-graph.knowledge_graph.ingest",
-    generateParser: "agentic-graph.knowledge_graph.parser_generate",
-    query: "agentic-graph.knowledge_graph.query",
-    explainEdge: "agentic-graph.knowledge_graph.explain_edge",
+    ingest: "agentic-graph.agent_graph.ingest",
+    generateParser: "agentic-graph.agent_graph.parser_generate",
+    query: "agentic-graph.agent_graph.query",
+    explainEdge: "agentic-graph.agent_graph.explain_edge",
   });
 
   const { client, requests } = createRecordingClient();
@@ -312,8 +312,8 @@ test("query and edge explanation require an exact lowercase SHA-256 digest", asy
 
 test("agentic graph request validation keeps server-owned optional fields intact", () => {
   const invocation = {
-    schema: "agentic-graph-knowledge-graph-invocation/v1",
-    tool: "agentic-graph.knowledge_graph.ingest",
+    schema: "agentic-graph-agent-graph-invocation/v1",
+    tool: "agentic-graph.agent_graph.ingest",
     action: "/source.resolved.ingest",
     semantics: ["#source-backed"],
     bindings: ["@working-directory"],
@@ -339,7 +339,7 @@ test("agentic graph request validation keeps server-owned optional fields intact
   assert.equal(validateAgenticGraphRequest("ingest", ingest), ingest);
   assert.equal(validateAgenticGraphRequest("query", query), query);
   for (const invalidInvocation of [
-    { ...invocation, tool: "agentic-graph.knowledge_graph.query" },
+    { ...invocation, tool: "agentic-graph.agent_graph.query" },
     { ...invocation, action: "#source.resolved.ingest" },
     { ...invocation, routingDigest: "c".repeat(63) },
     { ...invocation, extra: true },
@@ -435,7 +435,7 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
       truncated: false,
       limit: 200,
       graphData: {
-        context: "agentic-graph-knowledge-graph-projection",
+        context: "agentic-graph-agent-graph-projection",
         type: "Graph",
         nodes: [],
         edges: [],
@@ -445,7 +445,7 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
   assert.equal(validateAgenticGraphIngestResult(result), result);
 
   for (const invalid of [
-    { ...result, schema: "agentic-graph-knowledge-graph-ingest/v2" },
+    { ...result, schema: "agentic-graph-agent-graph-ingest/v2" },
     { ...result, graphId: "workspace" },
     { ...result, projection: { ...result.projection, token: "projection:workspace" } },
     {
@@ -492,7 +492,7 @@ test("ingest exposes canonical graph and Canvas projection identity without arti
         ...result.projection,
         graphData: {
           type: "Graph",
-          context: "agentic-graph-knowledge-graph-projection",
+          context: "agentic-graph-agent-graph-projection",
           nodes: Array.from({ length: 2_001 }, (_, index) => ({ id: `node:${index}` })),
           edges: [],
         },
@@ -576,7 +576,7 @@ test("read results require versioned operation-specific query and explanation pa
   };
   assert.equal(validateAgenticGraphReadResult("query", summaryRequest, validSummary), validSummary);
   for (const invalid of [
-    { ...validSummary, schema: "agentic-graph-knowledge-graph-query/v2" },
+    { ...validSummary, schema: "agentic-graph-agent-graph-query/v2" },
     {
       schema: RESULT_SCHEMAS.query,
       ok: true,

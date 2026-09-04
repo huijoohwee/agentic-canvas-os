@@ -14,10 +14,10 @@ import {
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const EXPECTED_TOOLS = [
-  "agentic-graph.knowledge_graph.ingest",
-  "agentic-graph.knowledge_graph.parser_generate",
-  "agentic-graph.knowledge_graph.query",
-  "agentic-graph.knowledge_graph.explain_edge",
+  "agentic-graph.agent_graph.ingest",
+  "agentic-graph.agent_graph.parser_generate",
+  "agentic-graph.agent_graph.query",
+  "agentic-graph.agent_graph.explain_edge",
 ];
 const EXPECTED_DISPATCH = [
   ["/agentic.graph.ingest", EXPECTED_TOOLS[0]],
@@ -64,7 +64,7 @@ test("canonical commands map to exactly four agentic-graph-owned MCP tools", () 
 
   const contract = read("docs/AGENTIC-GRAPH.md");
   const dispatch = [...readFrontmatter(contract).matchAll(
-    /^  "(\/agentic\.graph(?:\.[a-z]+)+)": "(agentic-graph\.knowledge_graph\.[a-z_]+)"$/gmu,
+    /^  "(\/agentic\.graph(?:\.[a-z]+)+)": "(agentic-graph\.agent_graph\.[a-z_]+)"$/gmu,
   )].map((match) => [match[1], match[2]]);
   assert.deepEqual(dispatch, EXPECTED_DISPATCH);
 
@@ -73,7 +73,7 @@ test("canonical commands map to exactly four agentic-graph-owned MCP tools", () 
     "docs/MCP-GATEWAY.md",
   ]) {
     assert.deepEqual(
-      [...new Set(read(file).match(/agentic-graph\.knowledge_graph\.[a-z_]+/gu) ?? [])],
+      [...new Set(read(file).match(/agentic-graph\.agent_graph\.[a-z_]+/gu) ?? [])],
       EXPECTED_TOOLS,
       `${file} tool projection`,
     );

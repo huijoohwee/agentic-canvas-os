@@ -18,10 +18,10 @@ invocations:
   - {action: "/agentic.graph.query", semantics: ["#agentic-graph", "#mcp", "#vcc"], bindings: ["@agentic-graph", "@runtime-proof"]}
   - {action: "/agentic.graph.explain", semantics: ["#agentic-graph", "#mcp", "#vcc"], bindings: ["@agentic-graph", "@runtime-proof"]}
 mcp_dispatch:
-  "/agentic.graph.ingest": "agentic-graph.knowledge_graph.ingest"
-  "/agentic.graph.parser.generate": "agentic-graph.knowledge_graph.parser_generate"
-  "/agentic.graph.query": "agentic-graph.knowledge_graph.query"
-  "/agentic.graph.explain": "agentic-graph.knowledge_graph.explain_edge"
+  "/agentic.graph.ingest": "agentic-graph.agent_graph.ingest"
+  "/agentic.graph.parser.generate": "agentic-graph.agent_graph.parser_generate"
+  "/agentic.graph.query": "agentic-graph.agent_graph.query"
+  "/agentic.graph.explain": "agentic-graph.agent_graph.explain_edge"
 external_dependency: "forbidden"
 ---
 
@@ -45,10 +45,10 @@ agentic-graph transport.
 
 | Agentic Canvas OS invocation | Exact agentic-graph tool |
 |---|---|
-| `/agentic.graph.ingest #agentic-graph #mcp #runtime-ready @working-directory @agentic-graph @operator @runtime-proof` | `agentic-graph.knowledge_graph.ingest` |
-| `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` | `agentic-graph.knowledge_graph.parser_generate` |
-| `/agentic.graph.query #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | `agentic-graph.knowledge_graph.query` |
-| `/agentic.graph.explain #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | `agentic-graph.knowledge_graph.explain_edge` |
+| `/agentic.graph.ingest #agentic-graph #mcp #runtime-ready @working-directory @agentic-graph @operator @runtime-proof` | `agentic-graph.agent_graph.ingest` |
+| `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` | `agentic-graph.agent_graph.parser_generate` |
+| `/agentic.graph.query #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | `agentic-graph.agent_graph.query` |
+| `/agentic.graph.explain #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | `agentic-graph.agent_graph.explain_edge` |
 
 `createAgenticGraphClient` binds `ingestAgenticGraph`,
 `generateAgenticGraphParser`, `queryAgenticGraph`, and

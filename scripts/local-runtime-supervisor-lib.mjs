@@ -169,6 +169,7 @@ export function createDependencies(overrides) {
     writePrivateFile: (filePath, text) => { writeFileSync(filePath, text, { encoding: "utf8", mode: 0o600 }); chmodSync(filePath, 0o600); },
     readPrivateFile: filePath => readFileSync(filePath, "utf8"),
     removeFile: filePath => { if (existsSync(filePath)) rmSync(filePath); },
+    runCommand: ({ cwd, env, command, args }) => execFileSync(command, args, { cwd, env, encoding: "utf8" }),
     spawnService: ({ cwd, env, command, args, logFd }) => spawn(command, args, { cwd, env, detached: true, stdio: ["ignore", logFd, logFd] }),
     readListenerPid,
     readListenerPids,

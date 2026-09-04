@@ -77,8 +77,9 @@ export async function endLocalRuntimeTurn(options = {}, dependencies = {}) {
   const locations = runtimeLocations(candidate.workspaceRoot);
   const releaseLock = deps.acquireLock(locations.lockPath);
   try {
+    const environment = await prepareLocalStorage(candidate, deps);
     const handoff = await stopOwnedSessionRuntimeLocked(candidate, normalized, locations, deps);
-    const runtime = await ensureLocalRuntimeLocked(candidate, normalized, locations, deps);
+    const runtime = await ensureLocalRuntimeLocked(candidate, normalized, locations, deps, environment);
     const reviewCandidate = createLocalReviewCandidate(runtime, {
       source: {
         repository: runtime.source.repository,
@@ -98,31 +99,53 @@ export async function endLocalRuntimeTurn(options = {}, dependencies = {}) {
   }
 }
 
-async function ensureLocalRuntimeLocked(candidate, options, locations, deps) {
+async function ensureLocalRuntimeLocked(candidate, options, locations, deps, preparedEnvironment = null) {
   const currentState = readJson(locations.statePath);
   if (currentState) {
     const currentStatus = await inspectRuntimeState(currentState, candidate, locations, deps);
     if (currentStatus.ready) return currentStatus;
+  }
+  const environment = preparedEnvironment ?? await prepareLocalStorage(candidate, deps);
+  if (currentState) {
     await stopRecordedServices(currentState, candidate, locations, deps);
     deps.removeFile(locations.statePath);
     deps.removeFile(locations.tokenPath);
   }
   assertPortsUnclaimed(deps);
-  return startRuntime(candidate, options, locations, deps);
+  return startRuntime(candidate, options, locations, deps, environment);
 }
 
-async function startRuntime(candidate, options, locations, deps) {
+async function prepareLocalStorage(candidate, deps) {
+  const environment = runtimeEnvironment(candidate);
+  await deps.runCommand({
+    cwd: candidate.agenticGraph.root,
+    env: environment,
+    command: "npm",
+    args: ["run", "storage:d1:migrate:local"],
+  });
+  return environment;
+}
+
+function runtimeEnvironment(candidate) {
+  const environment = {
+    ...process.env,
+    AGENTIC_OS_SOURCE_REVISION: candidate.agenticGraph.headSha,
+    AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
+    AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
+    VITE_WORKSPACE_INITIALIZATION_AGENTIC_CANVAS_OS_DOCS_ABS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
+  };
+  delete environment.AGENTIC_LOCAL_RUNTIME_TOKEN;
+  return environment;
+}
+
+async function startRuntime(candidate, options, locations, deps, runtimeEnvironment) {
   deps.mkdir(locations.runtimeRoot);
   const token = randomUUID();
   deps.writePrivateFile(locations.tokenPath, `${token}\n`);
   const tokenDigest = sha256(token);
   const environment = {
-    ...process.env,
+    ...runtimeEnvironment,
     AGENTIC_LOCAL_RUNTIME_TOKEN: token,
-    AGENTIC_OS_SOURCE_REVISION: candidate.agenticGraph.headSha,
-    AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
-    AGENTIC_OS_AGENTIC_CANVAS_OS_DOCS_REVISION: candidate.agenticCanvasOs.headSha,
-    VITE_WORKSPACE_INITIALIZATION_AGENTIC_CANVAS_OS_DOCS_ABS_ROOT: path.join(candidate.agenticCanvasOsRoot, "docs"),
   };
   const started = [];
   try {

@@ -1,6 +1,7 @@
 import { COMMERCE_ADMISSION_RECEIPT_SCHEMA, canonicalJson, commerceAdmissionInputsDigest, commerceAdmissionPermitDigest,
   commerceAdmissionRequestDigest, permitBoundaryRefusal, readAuthoringMutationPermitValue, readCommerceAdmissionIntent, sha256Hex } from "../agent-api/src/commerce-admission-contract.js";
 import { readGraphAuthorityProjection } from "../agent-api/src/commerce-admission-authority.js";
+import { readCommerceDeploymentIdentity } from "../agent-api/src/commerce-deployment-identity.js";
 const JSON_HEADERS = Object.freeze({ "content-type": "application/json" });
 const ACTIVE_KEY = "active";
 const CLAIM_KEY = "claim";
@@ -15,7 +16,6 @@ const COMMERCE_OUTCOME_COMPACTION_KEY = "commerce-admission:outcome-compaction";
 const COMMERCE_PROJECTION_REVISION_KEY = "commerce-admission:projection-revision";
 const MAX_COMMERCE_REGISTRATIONS = 64;
 const MAX_COMMERCE_RETAINED_OUTCOMES = 64;
-
 function json(status, body) {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 }
@@ -71,12 +71,13 @@ function validCommerceReceipt(record, intent) {
   const keys = [
     "schema", "adapter_identity", "agent_definition_id", "tool_allowlist_entry_id",
     "invocation_register_tokens", "resulting_status", "operator_instruction_reference", "registered_at_ms",
-    "agentic_graph_authority",
+    "agentic_graph_authority", "deployment_identity",
   ];
   if (!exactCommerceKeys(record, keys) || record.schema !== COMMERCE_ADMISSION_RECEIPT_SCHEMA
     || record.resulting_status !== "active" || !Number.isSafeInteger(record.registered_at_ms)
     || record.registered_at_ms < 0
-    || !readGraphAuthorityProjection(record.agentic_graph_authority)) return false;
+    || !readGraphAuthorityProjection(record.agentic_graph_authority)
+    || !readCommerceDeploymentIdentity(record.deployment_identity)) return false;
   const inputs = intent.admissionInputs;
   const definition = inputs.agentDefinition;
   const allowlist = inputs.toolAllowlistEntry;
@@ -109,7 +110,6 @@ function readCommerceIndex(value) {
   }
   return index;
 }
-
 function readOutcomeIndex(value) {
   if (value === undefined) return [];
   if (!Array.isArray(value) || value.length > MAX_COMMERCE_RETAINED_OUTCOMES) {

@@ -1,0 +1,149 @@
+name: Protected ACOS production release
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact 40-character ACOS protected-main commit
+        required: true
+        type: string
+      candidate_digest:
+        description: Exact SHA-256 ACOS deployment candidate digest
+        required: true
+        type: string
+      authorized_release_candidate_json:
+        description: Exact agentic-production-release-candidate/v1 JSON
+        required: true
+        type: string
+      graph_authority_ref:
+        description: Exact Agentic Graph admission authority reference
+        required: true
+        type: string
+      graph_operator_instruction_ref:
+        description: Exact Agentic Graph operator instruction reference
+        required: true
+        type: string
+      graph_authority_issuer_revision:
+        description: Exact Agentic Graph authority issuer commit
+        required: true
+        type: string
+      graph_authority_evidence_digest:
+        description: Exact SHA-256 digest of the signed Graph authority evidence
+        required: true
+        type: string
+      public_ready_origin:
+        description: Exact production origin; contract permits only https://airvio.co
+        required: true
+        type: string
+      preserve_receipt_json:
+        description: Exact prior preserve-required receipt; empty for a new candidate
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  deployments: read
+
+concurrency:
+  group: agentic-canvas-os-production
+  cancel-in-progress: false
+
+jobs:
+  seal-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.candidate_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run web:build
+      - name: Seal exact protected-main source, artifact, manifest, and Graph authority
+        env:
+          ACOS_EXPECTED_SOURCE_REVISION: ${{ inputs.candidate_sha }}
+          ACOS_EXPECTED_CANDIDATE_DIGEST: ${{ inputs.candidate_digest }}
+          ACOS_AUTHORIZED_RELEASE_CANDIDATE_JSON: ${{ inputs.authorized_release_candidate_json }}
+          ACOS_GRAPH_AUTHORITY_REF: ${{ inputs.graph_authority_ref }}
+          ACOS_GRAPH_OPERATOR_INSTRUCTION_REF: ${{ inputs.graph_operator_instruction_ref }}
+          ACOS_GRAPH_AUTHORITY_ISSUER_REVISION: ${{ inputs.graph_authority_issuer_revision }}
+          ACOS_GRAPH_AUTHORITY_EVIDENCE_DIGEST: ${{ inputs.graph_authority_evidence_digest }}
+          ACOS_PUBLIC_READY_ORIGIN: ${{ inputs.public_ready_origin }}
+        run: >-
+          node scripts/acos-production-release-controller.mjs prepare
+          --output "$RUNNER_TEMP/acos-production-candidate.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: acos-production-candidate
+          path: ${{ runner.temp }}/acos-production-candidate.json
+          if-no-files-found: error
+          retention-days: 1
+
+  production-release:
+    needs: seal-candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.candidate_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run web:build
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: acos-production-candidate
+          path: ${{ runner.temp }}/acos-production-candidate
+      - name: Rebuild and compare the exact environment-approved candidate
+        env:
+          ACOS_EXPECTED_SOURCE_REVISION: ${{ inputs.candidate_sha }}
+          ACOS_EXPECTED_CANDIDATE_DIGEST: ${{ inputs.candidate_digest }}
+          ACOS_AUTHORIZED_RELEASE_CANDIDATE_JSON: ${{ inputs.authorized_release_candidate_json }}
+          ACOS_GRAPH_AUTHORITY_REF: ${{ inputs.graph_authority_ref }}
+          ACOS_GRAPH_OPERATOR_INSTRUCTION_REF: ${{ inputs.graph_operator_instruction_ref }}
+          ACOS_GRAPH_AUTHORITY_ISSUER_REVISION: ${{ inputs.graph_authority_issuer_revision }}
+          ACOS_GRAPH_AUTHORITY_EVIDENCE_DIGEST: ${{ inputs.graph_authority_evidence_digest }}
+          ACOS_PUBLIC_READY_ORIGIN: ${{ inputs.public_ready_origin }}
+        run: |
+          node scripts/acos-production-release-controller.mjs prepare --output "$RUNNER_TEMP/acos-production-candidate-rebuilt.json"
+          cmp "$RUNNER_TEMP/acos-production-candidate/acos-production-candidate.json" "$RUNNER_TEMP/acos-production-candidate-rebuilt.json"
+      - name: Upload inactive, activate exact version, and prove authenticated readyz
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ACOS_RELEASE_PROBE_TOKEN: ${{ secrets.ACOS_RELEASE_PROBE_TOKEN }}
+          AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE: ${{ secrets.AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE }}
+          ACOS_PRESERVE_RECEIPT_JSON: ${{ inputs.preserve_receipt_json }}
+        run: >-
+          node scripts/acos-production-release-controller.mjs release
+          --candidate "$RUNNER_TEMP/acos-production-candidate/acos-production-candidate.json"
+          --receipt "$RUNNER_TEMP/acos-production-receipt.json"
+      - name: Persist mandatory deployed receipt
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: acos-production-receipt
+          path: ${{ runner.temp }}/acos-production-receipt.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Persist preserve or failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: acos-production-failure-evidence
+          path: ${{ runner.temp }}/acos-production-receipt.json
+          if-no-files-found: warn
+          retention-days: 30

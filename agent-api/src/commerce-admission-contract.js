@@ -12,6 +12,7 @@ export const COMMERCE_ADMISSION_SCOPE = "operator-registry";
 export const COMMERCE_ADMISSION_WRITE_TARGET = "registry";
 export const COMMERCE_ADMISSION_AUTH_SCHEMA = "commerce-agentic-os-admission-auth/v1";
 export const COMMERCE_ADMISSION_CANDIDATE_BINDING_SCHEMA = "agentic-os-commerce-admission-binding/v1";
+export const COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER = "x-agentic-os-serving-deployment-identity";
 export const COMMERCE_ADMISSION_AUTH_HEADERS = Object.freeze({
   schema: "x-agentic-os-admission-auth-schema",
   signature: "x-agentic-os-admission-auth-signature",

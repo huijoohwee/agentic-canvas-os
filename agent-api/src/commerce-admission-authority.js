@@ -112,6 +112,12 @@ function readAuthorityShape(evidence, { authorityRef, operatorInstructionRef } =
   return Object.freeze({ ...evidence });
 }
 
+// The protected release controller owns only shape and digest comparison. The
+// Worker remains the sole HMAC/time verifier through status().
+export function readCommerceAdmissionAuthorityEvidence(value, options = {}) {
+  return readAuthorityShape(readAuthorityEvidence(value), options);
+}
+
 function readAuthorizationBinding(value) {
   if (!exactKeys(value, AUTHORIZATION_BINDING_KEYS)
     || !SHA256_PATTERN.test(value.admissionInputsDigest ?? "")
@@ -150,8 +156,10 @@ export function createCommerceAdmissionAuthority({
       || typeof operatorInstructionRef !== "string") {
       return Object.freeze({ ok: false, code: "authority_unconfigured" });
     }
-    const parsed = readAuthorityEvidence(evidence);
-    const envelope = readAuthorityShape(parsed, { authorityRef, operatorInstructionRef });
+    const envelope = readCommerceAdmissionAuthorityEvidence(evidence, {
+      authorityRef,
+      operatorInstructionRef,
+    });
     if (!envelope) {
       return Object.freeze({ ok: false, code: "authority_invalid" });
     }

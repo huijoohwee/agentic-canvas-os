@@ -250,7 +250,7 @@ This feature proposes three harness modules plus an `adapters/` tree while the p
 3. WHEN a new adapter completes registration, THE set of changed files SHALL contain only files owned by that adapter.
 4. THE Shared_Entrypoint SHALL contain no adapter name, adapter-specific route, or adapter-specific branch introduced by this feature.
 5. WHEN two or more adapters call `register` concurrently, THE Adapter_Registration_Interface SHALL produce one Registration_Record per successful call and SHALL leave no Registration_Record partially written.
-6. THE Adapter_Registration_Interface SHALL require an Operator_Instruction_Reference for a registration that results in an `active` Agent Definition, consistent with the approval-gated trust boundary declared for `acos.adapter.register`.
+6. THE Adapter_Registration_Interface SHALL require an Operator_Instruction_Reference for a registration that results in an `active` Agent Definition, consistent with the approval-gated trust boundary declared for `agentic-os.adapter.register`.
 
 ### Requirement 14: Malformed Registration Surfaces As A Finding (Must tier, ADR-2)
 
@@ -273,7 +273,7 @@ This feature proposes three harness modules plus an `adapters/` tree while the p
 1. THE Invocation_Register SHALL declare the command `/propose-skill` with owner Skill_Proposer, typed arguments `{ gap_signal }`, and trust boundary `approval-gated`.
 2. THE Invocation_Register SHALL declare the tag `#skill-candidate` with owner Promotion_Gate and trust boundary `read`.
 3. THE Invocation_Register SHALL declare the binding `@skill-registry` with owner Active_Registry and trust boundary `read`.
-4. THE Invocation_Register SHALL declare the tool identities `acos.skill_proposer.propose` with arguments `{ gap_signal }`, `acos.skill_registry.promote` with arguments `{ draft_id, operator_instruction_ref }`, and `acos.adapter.register` with arguments `{ agent_definition, tool_allowlist_entry }`, each with trust boundary `approval-gated`.
+4. THE Invocation_Register SHALL declare the tool identities `acos.skill_proposer.propose` with arguments `{ gap_signal }`, `acos.skill_registry.promote` with arguments `{ draft_id, operator_instruction_ref }`, and `agentic-os.adapter.register` with arguments `{ agent_definition, tool_allowlist_entry }`, each with trust boundary `approval-gated`.
 5. THE Invocation_Register SHALL declare each of these tokens in exactly one register file, and a repository check SHALL report a declaration count of exactly 1 per token.
 6. THE recorded decision SHALL state whether `/propose-skill` and the existing `/skill.propose` remain two distinct commands or whether one is retired, and SHALL name the surviving owner.
 7. THE recorded decision SHALL state whether `@skill-registry` and the existing `@skill-catalog` remain two distinct bindings, and SHALL name what each binding resolves to.

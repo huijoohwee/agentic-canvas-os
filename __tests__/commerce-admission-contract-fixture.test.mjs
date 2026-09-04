@@ -7,6 +7,7 @@ import { createAdapterRegistrationInterface } from "../agent-api/src/adapter-reg
 import { createCommerceAdmissionAuthority } from "../agent-api/src/commerce-admission-authority.js";
 import {
   AUTHORING_HEADERS,
+  COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER,
   canonicalJson,
   readAuthoringMutationPermit,
 } from "../agent-api/src/commerce-admission-contract.js";
@@ -21,6 +22,7 @@ import {
   createGraphAuthorityBinding,
   createGraphAuthorityFixture,
 } from "./lib/commerce-admission-auth-fixture.mjs";
+import { DEPLOYMENT_IDENTITY } from "./lib/commerce-admission-provider-fixture.mjs";
 
 const FIXTURE_URL = new URL("../test/contracts/agentic-os-admission-v2.fixture.json", import.meta.url);
 const MANIFEST_URL = new URL("../test/contracts/agentic-os-admission-v2.fixture.sha256", import.meta.url);
@@ -59,7 +61,7 @@ test("the content-addressed Commerce vector passes the Graph-authorized provider
     readFile(MANIFEST_URL, "utf8"),
   ]);
   const digest = createHash("sha256").update(bytes).digest("hex");
-  assert.equal(digest, "3fede7b38f3d8a5004870f31d798cb4218f7d7f59607144ba2fd0b431ac93a61");
+  assert.equal(digest, "a2283f809470bf3044ed1e810bea67bb793bc975df0ab6f53f0e10e85fabbdd0");
   assert.equal(manifest.trim(), `${digest}  agentic-os-admission-v2.fixture.json`);
 
   const fixture = JSON.parse(bytes);
@@ -100,6 +102,7 @@ test("the content-addressed Commerce vector passes the Graph-authorized provider
     store,
     registrationInterface,
     authority,
+    deploymentIdentity: DEPLOYMENT_IDENTITY,
     authSecret: AUTH_SECRET,
     now: () => NOW,
   });
@@ -113,6 +116,10 @@ test("the content-addressed Commerce vector passes the Graph-authorized provider
   const first = await invoke();
   const firstText = await first.text();
   assert.equal(first.status, 200);
+  assert.equal(
+    first.headers.get(COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER),
+    canonicalJson(DEPLOYMENT_IDENTITY),
+  );
   const firstBody = JSON.parse(firstText);
   assert.equal(firstBody.status, "registered");
   for (const [key, value] of Object.entries(fixture.expectedReceiptIdentity)) {
@@ -122,6 +129,10 @@ test("the content-addressed Commerce vector passes the Graph-authorized provider
 
   const replay = await invoke();
   assert.equal(replay.status, 200);
+  assert.equal(
+    replay.headers.get(COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER),
+    canonicalJson(DEPLOYMENT_IDENTITY),
+  );
   assert.equal(await replay.text(), firstText);
   assert.equal(store.writes(), 1);
 });

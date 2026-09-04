@@ -17,7 +17,7 @@ import {
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // Pinned identity-migration digests: later work must not broaden this narrow rename.
-const WRANGLER_SHA256 = "66c445c9e5a8bd0e67786bce4c2113e7f0a68fc70add9341a7518ca052d7d59c";
+const WRANGLER_SHA256 = "31c7cf34b50f71be0cb2ff721ef49415060f30e0f23f34d2c47250b136cc0126";
 const SKILL_EVOLUTION_SHA256 = "e2c17a57a15de7ad47699908739abfc4c8f4b42760cc280d937be6ad2d521a08";
 const PROPERTY_SEED = 20260817;
 const retiredNamespace = ["k", "now", "grph"].join("");
@@ -86,6 +86,9 @@ test("wrangler.jsonc pins the identity migration and private admission boundary"
   );
   assert.match(text, /AGENTIC_OS_MCP_ENDPOINT/);
   assert.match(text, /agentic-mcp-dev/);
+  assert.match(text, /CF_VERSION_METADATA/);
+  assert.match(text, /ACOS_SOURCE_REVISION/);
+  assert.match(text, /ACOS_CANDIDATE_DIGEST/);
   assert.equal(text.toLowerCase().includes(retiredNamespace), false, "retired worker identity must not return");
   assert.equal(new RegExp(`\\b${retiredProductEnvPrefix}`).test(text), false, "retired product runtime env names must not return");
   assert.equal(text.includes("/agentic-graph"), false, "agentic-graph runtime routes must not return");
@@ -110,9 +113,10 @@ test("wrangler.jsonc pins the identity migration and private admission boundary"
     assert.match(config.vars.AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE, /^__AGENTIC_OS_/u);
     assert.ok(config.assets.run_worker_first.includes("/agentic-os/internal"));
     assert.ok(config.assets.run_worker_first.includes("/agentic-os/internal/*"));
-    assert.ok(config.assets.run_worker_first.includes("/agentic-os/internal/*"));
+    assert.ok(config.assets.run_worker_first.includes("/release-proof/*"));
     assert.ok(config.secrets.required.includes("AGENTIC_OS_ADMISSION_AUTH_SECRET"));
     assert.ok(config.secrets.required.includes("AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET"));
+    assert.ok(config.secrets.required.includes("ACOS_RELEASE_PROBE_TOKEN"));
   }
   assert.equal(/\bACOS_ADMISSION\b/.test(text), false, "legacy admission runtime variables must not return");
   assert.equal("kv_namespaces" in parsed, false);

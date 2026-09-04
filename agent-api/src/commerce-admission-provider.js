@@ -3,6 +3,7 @@ import {
   COMMERCE_ADMISSION_PATH,
   COMMERCE_ADMISSION_PROVIDER_CONTRACT,
   COMMERCE_ADMISSION_RECEIPT_SCHEMA,
+  COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER,
   authoringMutationHeaders,
   canonicalJson,
   commerceAdmissionInputsDigest,
@@ -18,6 +19,7 @@ import {
 import {
   readGraphAuthorityProjection,
 } from "./commerce-admission-authority.js";
+import { readCommerceDeploymentIdentity } from "./commerce-deployment-identity.js";
 
 const JSON_CONTENT_TYPE = "application/json";
 const MAX_BODY_BYTES = 65_536;
@@ -131,9 +133,11 @@ export function createCommerceAdmissionProvider({
   store,
   registrationInterface,
   authority,
+  deploymentIdentity = null,
   authSecret,
   now = () => Date.now(),
 } = {}) {
+  const exactDeploymentIdentity = readCommerceDeploymentIdentity(deploymentIdentity);
   const registrationStats = typeof registrationInterface?.stats === "function"
     ? registrationInterface.stats()
     : {};
@@ -148,6 +152,7 @@ export function createCommerceAdmissionProvider({
     && registrationStats.toolAllowlistPreflightConfigured === true
     && registrationStats.invocationRegisterConfigured === true
     && authority && typeof authority.status === "function" && typeof authority.authorize === "function"
+    && exactDeploymentIdentity !== null
     && isCommerceAdmissionAuthSecret(authSecret),
   );
   let rehydrated = false;
@@ -156,7 +161,9 @@ export function createCommerceAdmissionProvider({
 
   async function projectIntent(intent, record) {
     const graphAuthority = readGraphAuthorityProjection(record?.agentic_graph_authority);
+    const storedDeploymentIdentity = readCommerceDeploymentIdentity(record?.deployment_identity);
     if (!graphAuthority) throw new TypeError("Durable registration has no valid Graph authority projection.");
+    if (!storedDeploymentIdentity) throw new TypeError("Durable registration has no valid deployment identity.");
     const inputs = intent.admissionInputs;
     const requestDigest = await commerceAdmissionRequestDigest(intent);
     const admissionInputsDigest = await commerceAdmissionInputsDigest(inputs);
@@ -176,6 +183,7 @@ export function createCommerceAdmissionProvider({
       ...registrationInterface.createRecord(validated.registration, record.registered_at_ms),
       schema: COMMERCE_ADMISSION_RECEIPT_SCHEMA,
       agentic_graph_authority: graphAuthority,
+      deployment_identity: storedDeploymentIdentity,
     };
     if (canonicalJson(expected) !== canonicalJson(record)) throw new TypeError("Durable registration receipt does not match its projection source.");
     await registrationInterface.project(validated.registration, record);
@@ -271,6 +279,7 @@ export function createCommerceAdmissionProvider({
       ...registrationInterface.createRecord(validated.registration, now()),
       schema: COMMERCE_ADMISSION_RECEIPT_SCHEMA,
       agentic_graph_authority: authorized.projection,
+      deployment_identity: exactDeploymentIdentity,
     });
     let terminal;
     try {
@@ -305,7 +314,13 @@ export function createCommerceAdmissionProvider({
       status: "registered",
       record: terminal.record,
       finding: null,
-    }, authoringMutationHeaders(permit));
+    }, {
+      ...authoringMutationHeaders(permit),
+      [COMMERCE_ADMISSION_SERVING_IDENTITY_HEADER]: canonicalJson(
+        exactDeploymentIdentity,
+        "commerce admission serving deployment identity",
+      ),
+    });
   }
 
   async function handle(request) {
@@ -338,6 +353,8 @@ export function createCommerceAdmissionProvider({
         contract: COMMERCE_ADMISSION_PROVIDER_CONTRACT,
         receiptSchema: COMMERCE_ADMISSION_RECEIPT_SCHEMA,
         operations: ["register-fenced"],
+        productionReady: true,
+        deploymentIdentity: exactDeploymentIdentity,
         authority: authorityStatus.projection,
       });
     }

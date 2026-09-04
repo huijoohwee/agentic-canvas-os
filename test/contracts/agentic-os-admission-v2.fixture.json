@@ -176,7 +176,7 @@
     ],
     "resulting_status": "active",
     "operator_instruction_reference": "operator://agentic-graph/commerce-adapter-admission/2026-09-03",
-    "agentic_graph_authority": {
+      "agentic_graph_authority": {
       "schema": "agentic-graph-commerce-admission-authority-projection/v1",
       "admission_inputs_digest": "19d3e17d32872ef4d7acd218bf3eb591ed7db097c638c2ab9a90f6d94ab391eb",
       "admission_request_digest": "fec4d3f616fbda388e6392be63e9b5fb5bbe8f899901aacb3407ad7fb60de7f2",
@@ -184,8 +184,16 @@
       "evidence_digest": "9c9b05a417290037f36b06b859010d1c065e7d72fd01e5da2fbbc1c59baad319",
       "issuer_repository": "huijoohwee/agentic-graph",
       "issuer_revision": "dddddddddddddddddddddddddddddddddddddddd",
-      "permit_digest": "97596dbeb489c81faabdf78e492fd6e0028810731cd2b55e7aee742cf0df2f8f",
-      "expires_at_ms": 1788396460000
-    }
+        "permit_digest": "97596dbeb489c81faabdf78e492fd6e0028810731cd2b55e7aee742cf0df2f8f",
+        "expires_at_ms": 1788396460000
+      },
+      "deployment_identity": {
+        "schema": "acos-cloudflare-deployment-identity/v1",
+        "sourceRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "candidateDigest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "versionId": "11111111-1111-4111-8111-111111111111",
+        "versionTag": "acos-prod-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "versionTimestamp": "2026-09-03T00:00:00.000Z"
+      }
   }
 }

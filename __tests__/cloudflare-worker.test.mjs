@@ -371,7 +371,7 @@ test("GET /api/ready reports provider-neutral runtime readiness without leaking 
   assert.equal(body.skillRegistryGate.providerExecutionStatus, "unverified");
   assert.equal(body.adapterRegistration.contractReady, true);
   assert.equal(body.adapterRegistration.configured, false);
-  assert.equal(body.adapterRegistration.registrationOwner, "acos-adapter-registration");
+  assert.equal(body.adapterRegistration.registrationOwner, "agentic-os-adapter-registration");
   assert.equal(body.adapterRegistration.sharedEntrypointAdapterNames, 0);
   assert.equal(body.adapterRegistration.requestScopedState, false);
   assert.equal(body.adapterRegistration.registryConfigured, true);

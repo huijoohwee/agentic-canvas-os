@@ -500,7 +500,7 @@ at the end and is not part of this increment.
     - Implement
       `register(agent_definition, tool_allowlist_entry, invocation_register_entry, operator_instruction_ref)`
       so the PRD's two-argument shape is a prefix of the signature, and require all three parts
-    - Emit a Registration_Record with `schema: "acos-adapter-registration/v1"`, the adapter identity,
+    - Emit a Registration_Record with `schema: "agentic-os-adapter-registration/v2"`, the adapter identity,
       the registered Agent Definition identity, the tool allowlist entry identity, the invocation
       register tokens, the resulting status, the operator instruction reference, and
       `registered_at_ms`, constructed and frozen only after the registry write returns
@@ -577,7 +577,7 @@ at the end and is not part of this increment.
 
   - [ ] 10.4 Declare the three ACOS tool identities
     - Add `acos.skill_proposer.propose` with `{ gap_signal }`, `acos.skill_registry.promote` with
-      `{ draft_id, operator_instruction_ref }`, and `acos.adapter.register` with
+      `{ draft_id, operator_instruction_ref }`, and `agentic-os.adapter.register` with
       `{ agent_definition, tool_allowlist_entry }` to `docs/MCP-GATEWAY.md`, each with trust boundary
       `approval-gated`, leaving the existing `agentic-graph.skill.propose` row unchanged
     - _Requirements: 15.4_
@@ -587,7 +587,7 @@ at the end and is not part of this increment.
       `docs/DICTIONARY-COMMAND.md`, `docs/DICTIONARY-SEMANTIC.md`, `docs/DICTIONARY-BINDING.md`, and
       `docs/MCP-GATEWAY.md` and asserts a declaration count of exactly 1 for each of `/propose-skill`,
       `#skill-candidate`, `@skill-registry`, `acos.skill_proposer.propose`,
-      `acos.skill_registry.promote`, and `acos.adapter.register`
+      `acos.skill_registry.promote`, and `agentic-os.adapter.register`
     - Fail with the token name and every file that declared it when a count is not 1
     - _Requirements: 15.5_
 

@@ -22,6 +22,7 @@ import { AgentState } from "../worker/agent-state.js";
 import {
   GRAPH_AUTHORITY_OPERATOR_REF,
 } from "./lib/commerce-admission-auth-fixture.mjs";
+import { DEPLOYMENT_IDENTITY } from "./lib/commerce-admission-provider-fixture.mjs";
 
 const NOW = 1_800_000_000_000;
 const OPERATOR_REF = GRAPH_AUTHORITY_OPERATOR_REF;
@@ -223,6 +224,7 @@ function runtimeState(namespace, storeOverride) {
     store,
     registrationInterface,
     authority,
+    deploymentIdentity: DEPLOYMENT_IDENTITY,
     authSecret: AUTH_SECRET,
     now: namespace.now,
   });

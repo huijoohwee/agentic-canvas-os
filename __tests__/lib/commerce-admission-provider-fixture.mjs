@@ -26,6 +26,14 @@ export const NOW = 1_800_000_000_000;
 export const OPERATOR_REF = GRAPH_AUTHORITY_OPERATOR_REF;
 export const URL = `https://agentic-os-admission.internal${COMMERCE_ADMISSION_PATH}`;
 export const AUTH_SECRET = AGENTIC_OS_ADMISSION_TEST_SECRET;
+export const DEPLOYMENT_IDENTITY = Object.freeze({
+  schema: "acos-cloudflare-deployment-identity/v1",
+  sourceRevision: "a".repeat(40),
+  candidateDigest: "f".repeat(64),
+  versionId: "11111111-1111-4111-8111-111111111111",
+  versionTag: `acos-prod-${"f".repeat(64)}`,
+  versionTimestamp: "2026-09-03T00:00:00.000Z",
+});
 const authFixture = createAdmissionAuthFixture(URL);
 export const { authenticatedPost, readyRequest } = authFixture;
 
@@ -184,7 +192,11 @@ export function requestFor(body, permit, { headers = {}, rawBody } = {}) {
   });
 }
 
-export function createRuntime(namespace, { projectionFail, now = () => NOW } = {}) {
+export function createRuntime(namespace, {
+  projectionFail,
+  now = () => NOW,
+  deploymentIdentity = DEPLOYMENT_IDENTITY,
+} = {}) {
   const registry = createAgentDefinitionRegistry();
   const authority = createBoundTestAuthority();
   const registrationInterface = createAdapterRegistrationInterface({
@@ -201,6 +213,7 @@ export function createRuntime(namespace, { projectionFail, now = () => NOW } = {
     store,
     provider: createCommerceAdmissionProvider({
       store, registrationInterface, authority, now,
+      deploymentIdentity,
       authSecret: AUTH_SECRET,
     }),
     authority,

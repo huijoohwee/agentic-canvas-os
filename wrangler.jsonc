@@ -46,6 +46,7 @@
       "/function-call/recover",
       "/function-call/resume",
       "/canvas/room",
+      "/release-proof/*",
       "/agentic-os/internal",
       "/agentic-os/internal/*"
     ]
@@ -62,16 +63,19 @@
     { "tag": "v1-canvas-room", "new_sqlite_classes": ["CanvasRoom"] },
     { "tag": "v2-agent-state", "new_sqlite_classes": ["AgentState"] }
   ],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "vars": {
     "AGENTIC_OS_MCP_ENDPOINT": "https://airvio.co/agentic-os/control-plane/mcp",
     "AGENTIC_OS_ADMISSION_AUTHORITY_REF": "__AGENTIC_OS_ADMISSION_AUTHORITY_REF__",
     "AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF": "__AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF__",
     "AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE": "__AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE__",
+    "ACOS_SOURCE_REVISION": "__PROTECTED_RELEASE_SOURCE_REVISION__",
+    "ACOS_CANDIDATE_DIGEST": "__PROTECTED_RELEASE_CANDIDATE_DIGEST__",
     "CANVAS_BASE_URL": "https://airvio.co/agentic-os",
     "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
   },
   "secrets": {
-    "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "AGENTIC_OS_ADMISSION_AUTH_SECRET", "AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET"]
+    "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "AGENTIC_OS_ADMISSION_AUTH_SECRET", "AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET", "ACOS_RELEASE_PROBE_TOKEN"]
   },
   "env": {
     "dev": {
@@ -118,6 +122,7 @@
           "/function-call/recover",
           "/function-call/resume",
           "/canvas/room",
+          "/release-proof/*",
           "/agentic-os/internal",
           "/agentic-os/internal/*"
         ]
@@ -132,6 +137,7 @@
         { "tag": "v1-canvas-room", "new_sqlite_classes": ["CanvasRoom"] },
         { "tag": "v2-agent-state", "new_sqlite_classes": ["AgentState"] }
       ],
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
       "services": [
         { "binding": "AGENTIC_OS_MCP_SERVICE", "service": "agentic-mcp-dev" }
       ],
@@ -146,11 +152,13 @@
         "AGENTIC_OS_ADMISSION_AUTHORITY_REF": "__AGENTIC_OS_ADMISSION_AUTHORITY_REF__",
         "AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF": "__AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF__",
         "AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE": "__AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE__",
+        "ACOS_SOURCE_REVISION": "__PROTECTED_RELEASE_SOURCE_REVISION__",
+        "ACOS_CANDIDATE_DIGEST": "__PROTECTED_RELEASE_CANDIDATE_DIGEST__",
         "CANVAS_BASE_URL": "https://airvio.co/agentic-os",
         "AGENT_TOOLKIT_TELEMETRY_ENABLED": "true"
       },
       "secrets": {
-        "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "AGENTIC_OS_MCP_FUNCTION_BEARER_TOKEN", "AGENTIC_OS_ADMISSION_AUTH_SECRET", "AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET"]
+        "required": ["AGENT_API_JWT_SECRET", "AGENT_REVIEW_JWT_SECRET", "OPENAI_API_KEY", "AGENTIC_OS_MCP_FUNCTION_BEARER_TOKEN", "AGENTIC_OS_ADMISSION_AUTH_SECRET", "AGENTIC_OS_ADMISSION_AUTHORITY_HMAC_SECRET", "ACOS_RELEASE_PROBE_TOKEN"]
       }
     }
   }

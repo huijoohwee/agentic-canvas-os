@@ -17,9 +17,10 @@ const BASELINE = Object.freeze({ agentApiModules: 59, totalLines: 19_834 });
 // The original native-skill projection added four modules and roughly 1,250
 // lines. The separately bounded commerce-admission contract adds three
 // modules and 1,449 observed lines for its HMAC boundary, request-bound
-// admission evidence, durable projection, and Worker wiring. Keep this exact
-// audited ceiling rather than allowing either surface to drift silently.
-const PROJECTION = Object.freeze({ agentApiModules: 66, totalLines: 22_549 });
+// admission evidence, durable projection, and Worker wiring. The production
+// deployment-identity/readiness lane adds two bounded modules and 245 lines.
+// Keep this exact audited ceiling rather than allowing either surface to drift.
+const PROJECTION = Object.freeze({ agentApiModules: 68, totalLines: 22_794 });
 
 async function countLines(files) {
   let lines = 0;

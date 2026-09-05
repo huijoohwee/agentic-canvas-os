@@ -1,24 +1,10 @@
 #!/usr/bin/env node
-// Responsibility: Hold the <600 authored line budget non-increasing for tracked
-// source files so the rule that docs already satisfy stops being unenforced in
-// code.
-//
-// The repository states "keep authored files under 600 lines" in
-// docs/PROJECT-RULES.md, and scripts/docs-contract.mjs enforces it for every
-// Markdown artifact under docs/. Nothing enforced it for scripts/, __tests__/,
-// src/, worker/, web/, agent-api/, or adapters/.
-//
-// Retrofitting every existing offender is not MVP work, so this contract is a
-// ratchet, not a sweep:
-//   - a tracked authored file already over budget must not grow,
-//   - a tracked authored file at or under budget must not cross it,
-//   - a baseline entry that drops to or below budget must leave the baseline.
-// The baseline is recorded evidence of debt, not permission to add more.
-//
-// Generated and vendored trees are out of scope because they are not authored.
+// Enforce the strict <600 authored line budget with no repository exemptions.
+// Recording only clears resolved historical entries; it cannot add allowances.
+// Generated and vendored trees remain outside the authored-source contract.
 
 import { execFile } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { lstat, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -52,10 +38,10 @@ export function evaluateLineBudget({ measured, baseline }) {
 
   for (const [relativePath, lineCount] of measured) {
     const allowance = baseline[relativePath];
-    if (lineCount > AUTHORED_LINE_BUDGET) overBudget.set(relativePath, lineCount);
+    if (lineCount >= AUTHORED_LINE_BUDGET) overBudget.set(relativePath, lineCount);
 
     if (allowance === undefined) {
-      if (lineCount > AUTHORED_LINE_BUDGET) {
+      if (lineCount >= AUTHORED_LINE_BUDGET) {
         failures.push(
           `${relativePath}: ${lineCount} lines crosses the <${AUTHORED_LINE_BUDGET} authored line `
           + "budget; split by responsibility instead of adding a baseline entry",
@@ -68,7 +54,7 @@ export function evaluateLineBudget({ measured, baseline }) {
         `${relativePath}: ${lineCount} lines exceeds its recorded ceiling of ${allowance}; `
         + "the authored line budget is non-increasing",
       );
-    } else if (lineCount <= AUTHORED_LINE_BUDGET) {
+    } else if (lineCount < AUTHORED_LINE_BUDGET) {
       failures.push(
         `${relativePath}: ${lineCount} lines is now within the <${AUTHORED_LINE_BUDGET} budget; `
         + "remove its baseline entry with --write",
@@ -99,8 +85,16 @@ export async function measureAuthoredFiles({ repositoryRoot = REPOSITORY_ROOT } 
     let text;
     try {
       text = await readFile(path.join(repositoryRoot, relativePath), "utf8");
-    } catch {
-      continue;
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        try {
+          await lstat(path.join(repositoryRoot, relativePath));
+        } catch (identityError) {
+          if (identityError.code === "ENOENT") continue; // Tracked deletion, not an unreadable node.
+          throw identityError;
+        }
+      }
+      throw error;
     }
     measured.set(relativePath, countLines(text));
   }
@@ -122,7 +116,12 @@ async function runCli() {
   const { failures, overBudget } = evaluateLineBudget({ measured, baseline });
 
   if (write) {
-    const ceilings = Object.fromEntries([...overBudget].sort(([left], [right]) => left.localeCompare(right)));
+    if (overBudget.size > 0) {
+      console.error(`Cannot record size exemptions: ${overBudget.size} authored files require responsibility-based splits.`);
+      process.exitCode = 1;
+      return;
+    }
+    const ceilings = {};
     await writeFile(
       BASELINE_PATH,
       `${JSON.stringify({
@@ -132,7 +131,7 @@ async function runCli() {
       }, null, 2)}\n`,
       "utf8",
     );
-    console.log(`authored line budget baseline written: ${Object.keys(ceilings).length} files over ${AUTHORED_LINE_BUDGET} lines`);
+    console.log(`authored line budget baseline written: ${Object.keys(ceilings).length} files at or above ${AUTHORED_LINE_BUDGET} lines`);
     return;
   }
 
@@ -143,7 +142,7 @@ async function runCli() {
   }
   console.log(
     `authored line budget ok: ${measured.size} tracked authored files; `
-    + `${overBudget.size} held at recorded ceilings above ${AUTHORED_LINE_BUDGET} lines`,
+    + `${overBudget.size} held at recorded ceilings at or above ${AUTHORED_LINE_BUDGET} lines`,
   );
 }
 

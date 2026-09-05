@@ -46,7 +46,7 @@ test("upsertNode on an existing node bumps its version, not just the room rev", 
   assert.equal(state2.nodes.a.x, 5);
 });
 
-test("deleteNode cascades to remove links touching it (mirrors web/app.js deleteSelection)", () => {
+test("deleteNode cascades to remove links touching it", () => {
   let state = createEmptyRoomState();
   ({ state } = applyOp(state, { type: "upsertNode", node: { id: "a", x: 0, y: 0 } }));
   ({ state } = applyOp(state, { type: "upsertNode", node: { id: "b", x: 1, y: 1 } }));

@@ -153,7 +153,7 @@ export function applyOp(state, op, opts = {}) {
     }
     const nodes = { ...state.nodes };
     delete nodes[id];
-    // Cascade: drop links touching the deleted node (mirrors web/app.js deleteSelection).
+    // Cascade: drop links touching the deleted node.
     const links = {};
     for (const [linkId, link] of Object.entries(state.links)) {
       if (link.source !== id && link.target !== id) links[linkId] = link;

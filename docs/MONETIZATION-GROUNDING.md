@@ -15,7 +15,7 @@ operating_priorities: ["minimum-viable-maximum-value", "time-to-value", "high-RO
 shipped_surface:
   worker: "Cloudflare Worker product tier calling the agentic-graph control plane over MCP; holds no model provider keys"
   agentic_graph_client: "typed deterministic agentic-graph ingest, parser-generate, query, and edge-explanation client (src/agentic-graph-mcp-*.js)"
-  canvas: "embedded live agentic-graph canvas with interactive HTML export (web/app.js)"
+  canvas: "embedded live agentic-graph canvas; interactive HTML export is not verified by this repository"
 first_dollar_boundary: "manual concierge delivery from the Dev boundary; production deployment remains separately gated"
 ---
 
@@ -46,17 +46,17 @@ Demand-evidence obligation (fail-closed before any paid pitch):
 
 ## Solution
 
-The deliverable this repository can already produce: a **deterministic,
-evidence-backed interactive codebase graph**.
+The proposed deliverable is a **deterministic, evidence-backed interactive
+codebase graph**. Its portable export still needs an executable owner and proof.
 
 | Shipped surface | Role in the deliverable |
 |---|---|
 | Agentic-graph MCP client | `/agentic.graph.ingest` compiles the client workspace into a digest-fenced explained-edge snapshot through the agentic-graph executable owner; every edge carries source evidence, with zero model or network spend. |
 | Query and explanation | `/agentic.graph.query` and `/agentic.graph.explain` answer scoped audit questions with ordered, reproducible evidence instead of model guesses. |
 | Embedded canvas | The live canvas renders the snapshot for guided walkthroughs. |
-| Interactive HTML export | `web/app.js` exports a self-contained interactive graph file a client can open with no installation, account, or hosted dependency. |
+| Interactive HTML export | Unverified. The former `web/app.js` had no loader and was excluded from `web/build.mjs`; removing it changes no shipped build. Verify an active export owner before promising a portable file. |
 
-The buyer receives the exported interactive graph plus a short written brief
+The planned buyer deliverable is an exported interactive graph plus a short written brief
 whose statements cite graph evidence. Determinism is the differentiator: the
 same workspace reproduces the same digest-fenced result, so conclusions are
 auditable rather than plausible.
@@ -69,24 +69,24 @@ recorded a typed blocking finding.
 
 | Rank | Offer | Distance from built | New code required |
 |---|---|---|---|
-| 1 | Concierge codebase-audit deliverable: operator runs ingest locally, curates the canvas view, exports the interactive HTML graph, writes the evidence brief, invoices. | Zero - every step uses shipped surfaces. | None. |
-| 2 | Repeat-audit retainer: same deliverable re-run per release; digest fencing proves what changed between snapshots. | Zero surface distance; packaging only. | None. |
+| 1 | Concierge codebase-audit deliverable: operator runs ingest locally, curates the canvas view, exports the interactive HTML graph, writes the evidence brief, invoices. | Export remains unverified; keep this offer gated until its active owner is demonstrated. | Undetermined until export verification. |
+| 2 | Repeat-audit retainer: same deliverable re-run per release; digest fencing proves what changed between snapshots. | Depends on the same export verification as rank 1. | Undetermined until export verification. |
 | 3 | Hosted read-only graph share links through the existing Worker product tier. | Worker tier exists; sharing route and authorization do not. | Minimal, but gated behind the deployment boundary and therefore not a first-dollar path. |
 | 4 | Premium demo surfaces (voice studio, XR, game mode) attached to audits. | Contracts exist; sales evidence does not. | Deferred until rank 1 revenue exists. |
 
 ## Fastest Path To A Real First Dollar
 
 1. Satisfy the demand-evidence obligation above for one named customer.
-2. Produce the rank-1 deliverable for that customer's repository using only
-   shipped surfaces: ingest, query, canvas walkthrough, HTML export, brief.
+2. Verify the active HTML-export path, then produce the rank-1 deliverable
+   for that customer's repository: ingest, query, canvas walkthrough, export, brief.
 3. Invoice a fixed price anchored to the hours the artifact replaces.
 4. Record the transaction evidence (invoice, payment, acceptance) in the
    memory log; only that record upgrades this contract's demand claim from
    provable to proven.
 
-This path requires no deployment, no Prod mirror, no Cloudflare authority, no
-model spend, and no new code. A second dollar from a second customer, not more
-features, is the required next validation step.
+The intended path uses no deployment, Prod mirror, Cloudflare authority, or
+model spend. Its no-new-code claim remains unverified until the export path is
+proven. A second paying customer is the next validation step after the first.
 
 ## Boundaries
 
@@ -99,8 +99,8 @@ features, is the required next validation step.
 
 ## VCC
 
-Given the shipped Worker tier, agentic-graph MCP client, canvas, and HTML
-export, when the rank-1 concierge deliverable is produced for one named
+Given the shipped Worker tier, agentic-graph MCP client and canvas, plus a
+verified active HTML-export path, when the rank-1 deliverable is produced for one named
 customer and paid, then the payment evidence is appended to the memory log and
 this contract's demand claim is marked proven; stop without deployment,
 provider spend, or new surface work.

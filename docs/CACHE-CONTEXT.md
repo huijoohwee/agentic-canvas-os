@@ -73,9 +73,10 @@ cache:
 1. Register identity, operating rules, schemas, tools, examples, or other stable segments before request-specific data.
 2. Preserve array order and canonicalize object keys so the same logical prefix produces the same digest.
 3. Reuse the returned handle for later dynamic tails instead of resupplying and recompiling the stable prefix.
-4. Invalidate older entries automatically when the same namespace registers a new revision.
+4. Commit revision invalidation and insertion together after hashing. The latest admitted registration revision wins within each namespace; a slower superseded registration fails without replacing it. Revisions are opaque, so a later explicit registration may reuse an earlier revision name.
 5. Evict least-recent entries when the bounded registry reaches capacity.
 6. Treat token eligibility as an estimate only. The default threshold is 1,024 estimated tokens and can be overridden by the owning runtime.
+7. Concurrent exact registrations share hashing and compile once. Hash identity first; an existing exact prefix skips routing hashing. At most `maxEntries` distinct registrations may be pending; excess requests fail explicitly. Each slot remains occupied until its current digest settles, including failure.
 
 ## Cache Truth And Cost Log
 
@@ -101,6 +102,8 @@ Every model-bearing consumer records:
 | Missing, empty, cyclic, undefined, non-finite, or oversized stable input | Reject before registration or provider spend. |
 | Missing or evicted handle | Return a typed stale-context error and require registration again. |
 | Revision change | Remove prior entries for that namespace before reuse. |
+| Superseded in-flight revision | Reject its registration; retain the newer completed prefix. |
+| Pending registration capacity reached | Reject before hashing; retry after an operation completes. |
 | Registry capacity reached | Evict the least-recent entry; never grow without a bound. |
 | Provider usage missing | Keep provider cache status `unreported` or `unverified`; do not infer a hit from latency. |
 | Provider adapter absent | Keep live provider readiness gated; local deterministic proof remains valid. |
@@ -109,7 +112,7 @@ Every model-bearing consumer records:
 
 Given one namespace, revision, and stable prefix, when two requests assemble different dynamic tails through the same handle, then the prefix is compiled once, appears first and unchanged in both prompts, and local reuse increments twice.
 
-VCC: run `npm run cache-context:check`; require six passing tests covering exact reuse, idempotent registration, revision invalidation, bounded eviction, eligibility honesty, and cache read/write telemetry; stop on the first failure with zero provider calls.
+VCC: run `npm run cache-context:check`; require passing tests covering exact reuse, concurrent hashing deduplication, reordered revision completion, pending-capacity failure recovery, revision invalidation, bounded eviction, eligibility honesty, and cache read/write telemetry; stop on the first failure with zero provider calls.
 
 Given returned provider usage, when telemetry normalization runs, then cache reads and writes remain distinct from local prefix reuse.
 

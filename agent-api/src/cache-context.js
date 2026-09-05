@@ -79,6 +79,8 @@ export function createCacheContextRegistry({
   assertPositiveInteger(minCacheableTokens, "minCacheableTokens");
 
   const entries = new Map();
+  const namespaces = new Map();
+  let pendingCount = 0;
   let compileCount = 0;
   let localReuseCount = 0;
   let evictionCount = 0;
@@ -107,34 +109,77 @@ export function createCacheContextRegistry({
       throw new RangeError(`stablePrefix exceeds ${maxStablePrefixChars} characters.`);
     }
 
-    const identity = await sha256Hex(`${safeNamespace}\u0000${safeRevision}\u0000${serializedPrefix}`);
-    const handle = `ctx_${identity.slice(0, 40)}`;
-    const existing = entries.get(handle);
-    if (existing) {
-      touch(handle, existing);
-      return publicRegistration(existing, "already_registered");
+    let namespaceState = namespaces.get(safeNamespace);
+    const pending = namespaceState?.current.revision === safeRevision
+      ? namespaceState.current.pending.get(serializedPrefix)
+      : null;
+    if (pending) {
+      const registration = await pending;
+      return Object.freeze({ ...registration, status: "already_registered" });
+    }
+    if (pendingCount >= maxEntries) {
+      throw new Error("Cache context registration capacity is occupied; wait for a pending registration before retrying.");
+    }
+    if (!namespaceState) {
+      namespaceState = { current: null, pendingCount: 0 };
+      namespaces.set(safeNamespace, namespaceState);
+    }
+    if (namespaceState.current?.revision !== safeRevision) {
+      namespaceState.current = { revision: safeRevision, pending: new Map() };
+    }
+    const generation = namespaceState.current;
+    namespaceState.pendingCount += 1;
+    pendingCount += 1;
+    const operation = compile();
+    generation.pending.set(serializedPrefix, operation);
+    try {
+      return await operation;
+    } finally {
+      generation.pending.delete(serializedPrefix);
+      namespaceState.pendingCount -= 1;
+      pendingCount -= 1;
+      if (namespaceState.pendingCount === 0) namespaces.delete(safeNamespace);
     }
 
-    for (const [candidateHandle, entry] of entries) {
-      if (entry.namespace === safeNamespace && entry.revision !== safeRevision) deleteEntry(candidateHandle);
+    async function compile() {
+      const identity = await sha256Hex(`${safeNamespace}\u0000${safeRevision}\u0000${serializedPrefix}`);
+      assertCurrentRevision();
+      const handle = `ctx_${identity.slice(0, 40)}`;
+      const existing = entries.get(handle);
+      if (existing) {
+        touch(handle, existing);
+        return publicRegistration(existing, "already_registered");
+      }
+
+      const routingDigest = await sha256Hex(`routing\u0000${safeRevision}\u0000${serializedPrefix}`);
+      // Commit without another await; a slow older revision cannot replace the latest request.
+      assertCurrentRevision();
+      for (const [candidateHandle, entry] of entries) {
+        if (entry.namespace === safeNamespace && entry.revision !== safeRevision) deleteEntry(candidateHandle);
+      }
+
+      const estimatedStablePrefixTokens = Math.ceil(serializedPrefix.length / 4);
+      const entry = {
+        handle,
+        namespace: safeNamespace,
+        revision: safeRevision,
+        routingKey: `pc_${routingDigest.slice(0, 48)}`,
+        stablePrefix: canonicalPrefix,
+        stablePrefixDigest: identity,
+        estimatedStablePrefixTokens,
+        providerEligible: estimatedStablePrefixTokens >= minCacheableTokens,
+      };
+      compileCount += 1;
+      entries.set(handle, entry);
+      trimToBound();
+      return publicRegistration(entry, "registered");
     }
 
-    const routingDigest = await sha256Hex(`routing\u0000${safeRevision}\u0000${serializedPrefix}`);
-    const estimatedStablePrefixTokens = Math.ceil(serializedPrefix.length / 4);
-    const entry = {
-      handle,
-      namespace: safeNamespace,
-      revision: safeRevision,
-      routingKey: `pc_${routingDigest.slice(0, 48)}`,
-      stablePrefix: canonicalPrefix,
-      stablePrefixDigest: identity,
-      estimatedStablePrefixTokens,
-      providerEligible: estimatedStablePrefixTokens >= minCacheableTokens,
-    };
-    compileCount += 1;
-    entries.set(handle, entry);
-    trimToBound();
-    return publicRegistration(entry, "registered");
+    function assertCurrentRevision() {
+      if (namespaceState.current !== generation) {
+        throw new Error("Cache context registration was superseded by a newer namespace revision; register again.");
+      }
+    }
   }
 
   function assemble({ handle, dynamicTail }) {

@@ -54,7 +54,7 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.equal(promptBytes.at(-1), 0x0a);
   const prompt = new TextDecoder("utf-8", { fatal: true }).decode(promptBytes);
   assert.match(guideline, /^schema: agentic-os\/adlc-guidelines\/v1$/mu);
-  assert.match(guideline, /^version: 1\.1\.0$/mu);
+  assert.match(guideline, /^version: 1\.2\.0$/mu);
   assert.match(guideline, /^supersedes: agentic-sdlc$/mu);
   assert.match(guideline, /^runtime_contract: enforced$/mu);
   assert.match(guideline, /^runtime_evaluator: npm run evals$/mu);

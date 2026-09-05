@@ -146,8 +146,10 @@ npm run reap
 ACOS's committed profile opts only exact worktree projection and registration
 into quarantine cleanup. It retains local and remote branches, remote-tracking
 refs, and unreachable objects. A green check, merged pull request, or integration
-proof grants no cleanup authority; `reap` requires the target-specific ADLC
-authorization and receipt for every effect it performs.
+proof grants no cleanup authority. `reap` reports integration classification;
+the pinned `agentic-os finish --ref=<lane>` separately verifies and removes the
+exact clean integrated worktree. Follow the upstream release workflow and retain
+the branch; canonical sync, runtime verification, and deployment remain separate.
 
 Restart or reload the local application from `mainSha` and rerun the original
 browser failure path. Git evidence without matching runtime identity and browser

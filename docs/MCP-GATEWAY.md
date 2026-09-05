@@ -113,6 +113,12 @@ The Agentic Canvas OS gateway is discovery-first federation over existing MCP su
 
 ## Invocation Grammar Projection
 
+The pinned `agentic-os/invocation` export owns the browser-safe token grammar,
+argument-binding canonicalization, and catalog digest serialization. ACOS keeps
+the three Markdown dictionaries, their source paths, and Node dictionary reads.
+Resolver cardinality and structured application invocation proof remain owned by
+their existing consumers; shared token parsing grants no execution authority.
+
 | Consumer surface | Route owner | Source and boundary |
 |---|---|---|
 | agentic-graph Skills & Commands and shared composer menus | `agentic-graph.agentic_canvas_os.docs.invoke` through the existing local or deployed `/agentic-os/control-plane/mcp` owner | Read-only discovery reads the three dictionary files from this canonical docs revision and returns metadata, exact full-catalog counts, and one deterministic SHA-256 `catalogDigest`; it never executes `/ingest-url` or another grammar command. Every filtered `/`, `#`, or `@` response carries the same digest; the browser replaces each sigil slice and recomputes the assembled catalog before marking hydration fresh. No downstream registry is copied, and local Vite dev/preview grants no mutation, spend, Prod, or Cloudflare authority. |

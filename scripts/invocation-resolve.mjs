@@ -4,6 +4,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  canonicalInvocationToken,
+  malformedInvocationRuleFor,
+} from "agentic-os/invocation";
+
+export { canonicalInvocationToken, malformedInvocationRuleFor };
 
 export const INVOCATION_RESOLUTION_SCHEMA = "agentic-game-os-invocation-resolution/v1";
 
@@ -45,41 +51,6 @@ const normalizeTokens = (input) => {
   if (typeof input !== "string") return [String(input ?? "")];
   const trimmed = input.trim();
   return trimmed ? trimmed.split(/\s+/u) : [""];
-};
-
-const ARGUMENT_BEARING_PREFIX = "@";
-const MAX_REMAINDER_LENGTH = 128;
-const MAX_ARGUMENT_LENGTH = 1_024;
-
-// Argument-bearing bindings are declared in the binding dictionary in their
-// canonical `@name:` form and invoked as `@name:<argument>`. Only the `@`
-// dictionary declares them; `/` and `#` remainders stay colon-free.
-export const malformedInvocationRuleFor = (token) => {
-  if (!descriptorsByPrefix.has(token.slice(0, 1))) return "invalid-prefix";
-  const remainder = token.slice(1);
-  if (!remainder) return "empty-remainder";
-  const colonIndex = remainder.indexOf(":");
-  if (colonIndex < 0) {
-    if (remainder.length > MAX_REMAINDER_LENGTH) return "remainder-too-long";
-    if (!/^[a-z0-9.-]+$/u.test(remainder)) return "invalid-remainder-character";
-    return "";
-  }
-  if (token.slice(0, 1) !== ARGUMENT_BEARING_PREFIX) return "invalid-remainder-character";
-  const name = remainder.slice(0, colonIndex);
-  const argument = remainder.slice(colonIndex + 1);
-  if (!name) return "empty-remainder";
-  if (name.length > MAX_REMAINDER_LENGTH) return "remainder-too-long";
-  if (!/^[a-z0-9.-]+$/u.test(name)) return "invalid-remainder-character";
-  if (argument.length > MAX_ARGUMENT_LENGTH) return "argument-too-long";
-  return "";
-};
-
-// The declared dictionary entry for an argument-bearing binding is its
-// `@name:` form; the opaque argument is never part of the declared token.
-export const canonicalInvocationToken = (token) => {
-  if (token.slice(0, 1) !== ARGUMENT_BEARING_PREFIX) return token;
-  const colonIndex = token.indexOf(":");
-  return colonIndex < 0 ? token : token.slice(0, colonIndex + 1);
 };
 
 const malformedRuleFor = malformedInvocationRuleFor;

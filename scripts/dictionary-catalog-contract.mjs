@@ -26,7 +26,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { malformedInvocationRuleFor } from "./invocation-resolve.mjs";
+import {
+  canonicalCatalogInput,
+  malformedInvocationRuleFor,
+} from "agentic-os/invocation";
+
+export { canonicalCatalogInput };
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -60,22 +65,6 @@ export const DICTIONARY_DESCRIPTORS = Object.freeze([
 
 export function labelFromToken(token) {
   return token.slice(1);
-}
-
-const KIND_ORDER = DICTIONARY_DESCRIPTORS.map(({ kind }) => kind);
-
-export function canonicalCatalogInput(entries) {
-  const sorted = [...entries].sort((left, right) => {
-    const byKind = KIND_ORDER.indexOf(left.kind) - KIND_ORDER.indexOf(right.kind);
-    return byKind !== 0 ? byKind : (left.token < right.token ? -1 : left.token > right.token ? 1 : 0);
-  });
-  return JSON.stringify(sorted.map(({ token, kind, label, summary, sourcePath }) => ({
-    token,
-    kind,
-    label,
-    summary,
-    sourcePath,
-  })));
 }
 
 export function computeCatalogDigest(entries) {

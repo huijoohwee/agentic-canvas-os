@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 import {
   ABSENT_FIELD,
@@ -25,19 +27,31 @@ test("the committed board matches the regenerated ledger projection", async () =
   assert.deepEqual(validateKanbanProjection(await boardDocuments()), []);
 });
 
-test("the projection covers every active-period ledger record exactly once", async () => {
-  const { rows, period, failures } = collectProjectedRows();
-  assert.deepEqual(failures, []);
-  assert.match(period, /^\d{4}-(?:0[1-9]|1[0-2])$/);
-  assert.ok(rows.length > 1, "the board must project more than the single authored row");
-  assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
-  for (const row of rows) {
-    assert.equal(row.context_refs, `\`todo/${period}/${row.id}.md\``);
-  }
-});
+for (const [label, contexts, expected] of [
+  ["empty", [], []],
+  ["one-record", ["single-task"], ["single-task"]],
+  ["multiple-record", ["beta-task", "alpha-task", "later-task"], ["alpha-task", "beta-task", "later-task"]],
+]) {
+  test(`the ${label} month projects exactly its active records`, async (t) => {
+    const fixture = await createFixture(t, contexts);
+    const { rows, period, failures } = collectProjectedRows({ repository: fixture.repository });
+    assert.deepEqual(failures, []);
+    assert.equal(period, "2026-09");
+    assert.deepEqual(rows.map(({ id }) => id), expected);
+    assert.deepEqual(rows.map(({ context_refs }) => context_refs),
+      expected.map((context) => `\`todo/2026-09/${context}.md\``));
+    assert.equal(new Set(rows.map(({ id }) => id)).size, contexts.length);
+    assert.deepEqual(validateKanbanProjection(fixture.documents, {
+      repository: fixture.repository,
+    }), []);
+    assert.match(fixture.text, new RegExp(`^projection_row_count: ${contexts.length}$`, "m"));
+  });
+}
 
-test("every projected cell is either recorded or a declared absent value", async () => {
-  const { rows } = collectProjectedRows();
+test("every projected cell is either recorded or a declared absent value", async (t) => {
+  const fixture = await createFixture(t);
+  const { rows } = collectProjectedRows({ repository: fixture.repository });
+  assert.equal(rows.length, 2);
   for (const row of rows) {
     assert.deepEqual(Object.keys(row), [...BOARD_COLUMNS]);
     assert.equal(row.type, PROJECTED_TYPE);
@@ -88,30 +102,34 @@ test("the rendered block is fenced, digest-stamped, and priority-aligned", () =>
   assert.match(digest, /^[0-9a-f]{64}$/);
 });
 
-test("a hand edit inside the fence fails closed", async () => {
-  const text = await boardText();
+test("a hand edit inside the fence fails closed", async (t) => {
+  const { text, repository } = await createFixture(t);
   const tampered = text.replace(/^\| ([a-z0-9-]+) \| task \| review \|/m, "| $1 | task | done |");
   assert.notEqual(tampered, text, "the fixture must contain a projected row");
-  const failures = validateKanbanProjection(new Map([[KANBAN_DOCS_PATH, tampered]]));
+  const failures = validateKanbanProjection(new Map([[KANBAN_DOCS_PATH, tampered]]), { repository });
   assert.equal(failures.length, 1);
   assert.match(failures[0], /drifted from the immutable ledger/);
   assert.match(failures[0], /npm run kanban:project/);
 });
 
-test("a stale declared row count or digest fails closed", async () => {
-  const text = await boardText();
-  for (const [pattern, replacement, expected] of [
-    [/^projection_row_count: \d+$/m, "projection_row_count: 1", "projection_row_count"],
-    [/^projection_digest: ".*"$/m, `projection_digest: "${"0".repeat(64)}"`, "projection_digest"],
-    [/^projection_period: ".*"$/m, 'projection_period: "1999-01"', "projection_period"],
-  ]) {
-    const failures = validateKanbanProjection(
-      new Map([[KANBAN_DOCS_PATH, text.replace(pattern, replacement)]]),
-    );
-    assert.ok(
-      failures.some((failure) => failure.includes(expected)),
-      `${expected} drift must fail closed`,
-    );
+test("stale declared row count, digest, and period fail for empty and populated months", async (t) => {
+  for (const contexts of [[], ["single-task"], ["beta-task", "alpha-task"]]) {
+    const { text, repository } = await createFixture(t, contexts);
+    for (const [pattern, replacement, expected] of [
+      [/^projection_row_count: \d+$/m, `projection_row_count: ${contexts.length + 1}`, "projection_row_count"],
+      [/^projection_digest: ".*"$/m, `projection_digest: "${"0".repeat(64)}"`, "projection_digest"],
+      [/^projection_period: ".*"$/m, 'projection_period: "1999-01"', "projection_period"],
+    ]) {
+      const tampered = text.replace(pattern, replacement);
+      assert.notEqual(tampered, text, `${expected} control must change the fixture`);
+      const failures = validateKanbanProjection(
+        new Map([[KANBAN_DOCS_PATH, tampered]]), { repository },
+      );
+      assert.ok(
+        failures.some((failure) => failure.includes(expected)),
+        `${expected} drift must fail closed with ${contexts.length} records`,
+      );
+    }
   }
 });
 
@@ -133,10 +151,64 @@ test("authored rows keep the full status vocabulary and stay outside the fence",
   assert.ok(!projected.includes("KANBAN-"), "authored ids must not appear inside the fence");
 });
 
-test("legacy monthly shards are not projected", async () => {
-  const text = await boardText();
+test("legacy monthly shards and inactive context records are not projected", async (t) => {
+  const { text } = await createFixture(t);
   const projected = text.slice(text.indexOf(BEGIN_MARKER), text.indexOf(END_MARKER));
-  const { period } = collectProjectedRows();
   assert.ok(!/`todo\/\d{4}-\d{2}\.md`/.test(projected), "legacy shard rows must stay history");
-  assert.ok(projected.includes(`todo/${period}/`));
+  assert.ok(!projected.includes("legacy-task"));
+  assert.ok(!projected.includes("past-task"));
+  assert.ok(projected.includes("todo/2026-09/alpha-task.md"));
+  assert.ok(projected.includes("todo/2026-09/beta-task.md"));
 });
+
+async function createFixture(t, contexts = ["beta-task", "alpha-task"]) {
+  const repository = await mkdtemp(path.join(os.tmpdir(), "kanban-projection-"));
+  t.after(() => rm(repository, { recursive: true, force: true }));
+  await mkdir(path.join(repository, "docs"), { recursive: true });
+  const index = await readFile(new URL("../docs/TODO.md", import.meta.url), "utf8");
+  assert.match(index, /^active_period: "\d{4}-\d{2}"$/m);
+  await writeFile(path.join(repository, "docs", "TODO.md"),
+    index.replace(/^active_period: .*$/m, 'active_period: "2026-09"'));
+
+  await writeContextRecord(repository, "past-task", "2026-08-02");
+  await writeFile(path.join(repository, "todo", "2026-08.md"), [
+    "---", 'schema: "todo-log/v1"', 'period: "2026-08"',
+    'scope: "cross-repository"', 'status: "append-only"',
+    'append_policy: "append-only"', 'date_heading_format: "YYYY-MM-DD"',
+    'source_contract: "../docs/TODO.md"', 'adoption_date: "2026-07-14"',
+    "---", "", "# Synthetic legacy history", "", "## 2026-08-01", "",
+    "| legacy-task | intent | directive | module | object | method | input | output | logic | next | 2026-08-01 |", "",
+  ].join("\n"));
+  for (const context of contexts) {
+    const date = context === "later-task" ? "2026-09-03" : "2026-09-02";
+    await writeContextRecord(repository, context, date);
+  }
+
+  const { rows, period, failures } = collectProjectedRows({ repository });
+  assert.deepEqual(failures, []);
+  const { block, digest } = renderProjection({ rows, period });
+  const replaced = replaceProjectionBlock(await boardText(), block);
+  assert.notEqual(replaced, null);
+  const text = replaced
+    .replace(/^projection_period: .*$/m, `projection_period: "${period}"`)
+    .replace(/^projection_row_count: .*$/m, `projection_row_count: ${rows.length}`)
+    .replace(/^projection_digest: .*$/m, `projection_digest: "${digest}"`);
+  const documents = new Map([[KANBAN_DOCS_PATH, text]]);
+  assert.deepEqual(validateKanbanProjection(documents, { repository }), []);
+  return { repository, text, documents };
+}
+
+async function writeContextRecord(repository, context, date) {
+  const period = date.slice(0, 7);
+  const directory = path.join(repository, "todo", period);
+  await mkdir(directory, { recursive: true });
+  await writeFile(path.join(directory, `${context}.md`), [
+    "---", 'schema: "todo-context-record/v2"', `period: "${period}"`,
+    `context: "${context}"`, 'scope: "cross-repository"', 'status: "immutable"',
+    'record_policy: "immutable"', 'source_contract: "../../docs/TODO.md"',
+    `updated_date: "${date}"`, "---", "", `# ${context}`, "", `## ${date}`, "",
+    "| Context | Intent | Directive | Module | Class/Object | Function/Method | Input | Output | Decision Logic | Next Step Recommendation | Updated Date |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
+    `| ${context} | intent | Preserve exact records. | module | object | method | input | recorded output | recorded logic | recorded next step | ${date} |`, "",
+  ].join("\n"));
+}

@@ -123,8 +123,9 @@ For delivery planning or repeated mechanical failure, lazy-load only
 - A caller can discover and load project-local context files from scoped working directories without letting them override facts, identity, safety, approval, or deploy gates.
 - A caller can expand explicit `@` context references into bounded attached context while preserving raw text on unsupported surfaces.
 - A caller can coordinate named profiles through durable `kanban.md` task and handoff rows instead of hidden in-process subagent swarms.
-- A caller can load one bounded TODO index and the relevant `todo/YYYY-MM.md` shard without sending the full planning history to every model call.
-- A task can preserve planning history through one base-ref-anchored row in the active `todo/YYYY-MM.md` shard whose declared Context passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
+- A caller can load `TODO.md` and one exact `todo/YYYY-MM/<context>.md` record; flat monthly shards remain immutable history.
+- A task can preserve planning history through one base-absent Context record in the active month whose complete row passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
+- Shared check discovery belongs to `agentic-os/catalog/repository-checks.json`; it references repository-owned profiles, package scripts, and workflows. Executable tests and fixtures stay with their source owners; `VALIDATION-RUNBOOK.md` retains Canvas validation guidance. Combined results identify repository, revision, command, coverage, and outcome without implying ecosystem-wide E2E or Production readiness.
 - A caller can discover callable tool functions and enable or disable logical toolsets per platform without copying a registry or granting global access.
 - A caller can route web search, image generation, TTS, and cloud browser tools through existing `agentic-graph` infrastructure with per-tool provider state, approval gates, and cost logs.
 - A caller can opt into Tool Search so eligible MCP and non-core plugin schemas stay behind session-scoped metadata search and exact definition loading while the real tool gateway retains execution policy.

@@ -1,8 +1,39 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,566 passed, 262 failed, 4,828 total.**
+Latest recorded result: **Graph — 4,571 passed, 259 failed, 4,830 total.**
 
 This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
+
+## Graph workspace initialization and validation isolation — 2026-09-07 (v81)
+
+| Field | Recorded evidence |
+| --- | --- |
+| Full command | `npm test` from Graph source root |
+| Completed registry | 4,571 passed / 259 failed / 4,830 total |
+| Aggregate exit | `1` — failed |
+| Duration | 222.927 seconds; a repeatable speedup is not established |
+| Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `125ffb7e8b9134734a0a024ba892c651c089b36b1bbf2a8a14b4f81c39a369b9` |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned process |
+| Exact comparison with v74 | 3 fixed; 0 regressed; 2 added and passing; 0 omitted |
+| Declared source checks | Passed in 15.168 seconds |
+| Independent standalone export | Passed in 10.115 seconds; four unchanged artifacts below 500 kB |
+
+Workspace initialization now shares concurrent initialization and fences stale completion after reset. The fallback memory filesystem is created only after persisted initialization fails. Two new behavior cases cover concurrent reuse and reset races.
+
+Fixed fixtures preserve import-artifact isolation, user deletion with the established protected XR exception, and separate local, published and seed-only document configurations. Published D1 fixtures declare row ownership and exercise the 501-file bound through six valid pages. The local XR bootstrap fixture explicitly models Vite development in Node and clears published caches; all seven XR cases pass independently in 5.594 seconds. This resolves the focused/full discrepancy without changing production fallback policy.
+
+The full suite remains failed. Runtime deployment, Commerce independent evaluator trust and source-release approval remain separate requirements.
+
+### v81 receipt fingerprints
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `graph-v81-full.json` | `f81ef494ae77e60d8896c0925ef6ad1881705621063b82227f11aa17106d6724` |
+| `graph-v81-case-comparison.json` | `fcef0cf3b3135b50f131eb4753d66f892a2fcb6262faff12d13776e6f4f6d6b3` |
+| `graph-v81-declared-check.json` | `1fcfc806786728faa6940377263673fcb0ebae887bbd9923dcf9a3edeea44446` |
+| `graph-v81-standalone.json` | `a25361a818f5f3140c28c4ce8eb95cd20be7d2a28fb2c17a5616ed8bfadd67ec` |
 
 ## Graph bounded fallback cache and incremental layout — 2026-09-07 (v74)
 
@@ -181,9 +212,9 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `validation-economy-release.json` | `c64b669c9dde88e218388d048eec72c7061f3be7c4f9894123e205b047c4a311` |
 | `upstream-validation-plan-release.json` | `3dc29f4e853bdf1a7b0c30a301ff124ad31ed14fc7e8f41e39cf73e84bb8ab49` |
 
-### Unresolved registry cases (262; complete v74)
+### Unresolved registry cases (259; complete v81)
 
-| Case ID | Failures |
+| Case ID | Failed occurrences |
 | --- | --- |
 | `canvas.viewSelection.xrSurfaceMode` | 1 |
 | `canvas.xrMode.sharedSurfaceOwnershipBoundaries` | 1 |
@@ -255,7 +286,6 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `strybldr.markdown.fullGraphRichMediaTopology` | 1 |
 | `canvas.xrMode.physics.nativeController.documentActivation` | 1 |
 | `city.sim.mcp.inspectPurity` | 1 |
-| `workspace.import.agentGraph.incompleteSkipsSourceFilesArtifact` | 1 |
 | `policy.pagesHeaders.agenticGraphReportOnlyCsp.omitsIgnoredUpgradeDirective` | 1 |
 | `policy.pagesHeaders.agenticGraphAppShellHtml.addsNoTransformForCloudflareJsd` | 1 |
 | `policy.storage.deployScripts.seedDocsMirrorIntoD1` | 1 |
@@ -337,7 +367,6 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `groupBoxNoStickRegression.deepNesting` | 1 |
 | `markdownWorkspace.explorer.crudActions.createDelete` | 1 |
 | `markdown.sourceFiles.panel.dnd` | 1 |
-| `workspaceFs.seed.noReseedAfterUserDeletesAll` | 1 |
 | `workspaceFs.seedProvider.runtimeReflectsSourceFilesFromDynamicDocsRoot` | 1 |
 | `workspaceFs.bootstrap.materialize.activePathRematerializeStaysHydrationOnly` | 1 |
 | `geospatial.host.overlayNotGatedBySidebar` | 1 |
@@ -431,7 +460,6 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `ui.lazyLoading.gates.heavyFeatureSurfaces` | 1 |
 | `d3.labels.strictCollisionWiring` | 1 |
 | `flowAndDesign.budgetedCollisionRelaxWiring` | 1 |
-| `workspaceFs.seedProvider.publishedStorageOwnsAgenticDocs` | 1 |
 | `chat.responseContract.docs.agenticOsPromptContractCanonical` | 1 |
 | `queryableCorpus.mediaImport.metadataSourceUnit` | 1 |
 | `strybldr.markdown.consolidatedDemoRoutesPanelsAndStoryboardRenderers` | 1 |

@@ -1,34 +1,33 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,537 passed, 289 failed, 4,826 total.**
+Latest recorded result: **Graph — 4,539 passed, 287 failed, 4,826 total.**
 
 This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
 
-## Graph commerce efficiency — 2026-09-07 (v57)
+## Graph commerce efficiency — 2026-09-07 (v58)
 
 | Field | Recorded evidence |
 | --- | --- |
 | Owner | `agentic-graph` |
 | Full command | `npm test` from the source repository root |
-| Completed registry | 4,537 passed / 289 failed / 4,826 total |
+| Completed registry | 4,539 passed / 287 failed / 4,826 total |
 | Aggregate exit | `1` — failed |
-| Duration | 256.374 seconds; observation, not a controlled benchmark |
+| Duration | 236.808 seconds; observation, not a controlled benchmark |
 | Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
 | Source branch | `agent/huis-macbook-pro-3.local/commerce-request-efficiency-validation` |
 | Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
-| Full source observation digest (SHA-256) | `e5ff52e02f99fd29614b16f8e4ac35f92e924562de0ea66de0dce0389598dd9b` |
+| Full source observation digest (SHA-256) | `98ed44968f225be40b7da0e582e4afe887db92c37d45dbbf7f0eba4acdfd82b8` |
 | Pinned Canvas docs | `b62ba844b8c68e3b542099ee90acdcf8a5ba9e64` |
 | Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned process |
-| Exact comparison with v56 | 3 fixed; 0 regressed; 1 added (0 failed); 0 omitted |
+| Exact comparison with v57 | 2 fixed; 0 regressed; 0 added (0 failed); 0 omitted |
 | Original regression cohort | 47 passed / 0 failed / 0 omitted |
 
-Test cleanup now releases the previous case's chat authentication mode, key and message override. The production workspace reset still preserves user preferences. The new regression reproduces contamination and verifies the next real OpenAI settings panel.
+The FlowCanvas integration fixture now uses the production active-graph hook, source-owned edge-port constants, real camera actions and drawn port handles. Presentation toggles must reuse the scene. The 957-line test owner was split into three files below 600 lines; all registered case identities remain. Production source is unchanged.
 
 Fixed existing cases:
 
-- `ui.mainPanel.integrationsHub.serverManagedDefaultMemoryOnlyByok` (occurrence 1)
-- `ui.mainPanel.integrationsHub.openAiServerManagedKey` (occurrence 1)
-- `ui.mainPanel.requestedIntegrationsSearch.miromindApiKeyServerManaged` (occurrence 1)
+- `flowCanvas.integration.renderDataAndZoomState` (occurrence 1)
+- `flowCanvas.scene.rebuildsWhenPortHandlesToggleChangesSchemaPresentation` (occurrence 1)
 
 ### Result history
 
@@ -37,16 +36,17 @@ Fixed existing cases:
 | v49, preserved in Canvas PR #892 at `f664e09843afd1edbd665b199f5743f5c7a1fefc` | 4,511 | 303 | 4,814 |
 | v55 | 4,532 | 293 | 4,825 |
 | v56 | 4,533 | 292 | 4,825 |
+| v57, preserved in Canvas PR #893 | 4,537 | 289 | 4,826 |
 
 ### Applicable checks
 
 | Check | Result | Command / scope |
 | --- | --- | --- |
-| Declared Canvas checks | Passed, 59.009 s | `npm --prefix canvas run check`; TypeScript and local browser-harness checks |
-| Test isolation | 18 passed, 5.582 s | `test:ci:unit -- testIsolation.`; includes credentials, real DOM consumers and cleanup after failed fixtures |
-| MainPanel focused run | 87 passed / 4 failed, 22.234 s | `test:ci:unit -- ui.mainPanel.`; three prior credential-default failures fixed |
+| Declared Canvas checks | Passed, 86.400 s | `npm --prefix canvas run check`; TypeScript and local browser-harness checks |
+| FlowCanvas before | 48 passed / 4 failed, 24.798 s | `test:ci:unit -- flowCanvas.` |
+| FlowCanvas after | 50 passed / 2 failed, 5.072 s | Same command, about 80% faster on this machine; two existing timeouts corrected |
 | Payment ledger | 163 passed | First stage of the full `npm test` |
-| Historical v54 browser / standalone | 4 passed / 4 passed | Original source identities retained; no new browser or standalone run is claimed for v57 |
+| Historical v54 browser / standalone | 4 passed / 4 passed | Original source identities retained; no new browser or standalone run is claimed for v58 |
 
 Whole-run success and production readiness remain unproven. Remaining registry failures, independent Commerce evaluator inputs and deployed payment evidence are unresolved. No failure was waived.
 
@@ -56,18 +56,25 @@ The eleven-case malformed-body matrix measured **28.116 s before / 6.082 s after
 
 Full `npm run check`: **670 passed / 0 failed / 0 skipped**, plus evaluations, in **169.430 s**. Required CI `test` and `budgets` passed for `71abdccb3a2886a4dbc0943ad49b5d47efbad53b`. The source candidate remains separately unmerged; no new deployment or cleanup authority is inferred.
 
+## Upstream reusable validation plan — agentic-os PR #67
+
+The existing CLI, `/checks` and MCP discovery owner now plans 10 commands from 19 six-repository catalog entries. Exact npm chains retain authored order and hooks; covered commands can be omitted only after successful complete execution. Failed or filtered runs grant no inferred coverage. This is command-count reuse, not a measured ecosystem elapsed-time speedup.
+
+Full upstream checks: 671/671 tests and evaluations passed in 181.608 seconds. Required CI passed at `07bf15291c46999f73a39e5e92b449058a74c844`; native handoff recovered. Exact source-release approval remains pending.
+
 ### Receipt fingerprints
 
 Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-7310-9060-816b4837e059/`. Counts and case identities are self-contained here; exact machine observations and raw logs remain in the named receipts.
 
 | Receipt | SHA-256 |
 | --- | --- |
-| `graph-v57-case-comparison.json` | `062791f3ae7afed690ebcec45764e764e5132fe77793c2cdada9f786cf462357` |
-| `graph-v57-source-freeze.json` | `425a450864f532cfe2989e159ad40db8be75c16d4742ef77851124579f248a2f` |
-| `graph-v57-validation-manifest.json` | `08fa39eb2e42b1fd7ecaa4925084e4771d37ae3342ca49a8b57a8ebaba1def7c` |
+| `graph-v58-case-comparison.json` | `ea82e097bd9ee841e44f34da9f99dca7d945a759823ecab93ac6318ac10c0956` |
+| `graph-v58-source-freeze.json` | `193eb20ffc7c820114d6fd3f0a0681497bd6592521c7d12d5aac7c15aaf44978` |
+| `graph-v58-validation-manifest.json` | `042c9f834658540efbe119a1a0424dff1fccf4032d4dd3b4e9203eb991c441d3` |
 | `validation-economy-release.json` | `c64b669c9dde88e218388d048eec72c7061f3be7c4f9894123e205b047c4a311` |
+| `upstream-validation-plan-release.json` | `3dc29f4e853bdf1a7b0c30a301ff124ad31ed14fc7e8f41e39cf73e84bb8ab49` |
 
-### Unresolved registry cases (289)
+### Unresolved registry cases (287)
 
 Exact IDs retain their occurrence identity.
 
@@ -229,10 +236,8 @@ Exact IDs retain their occurrence identity.
 | `floatingPanel.media.storyboardCanvasNestedDropTargets` | 1 |
 | `flow.widget.richMediaPanel.proxyAttrsAlignWithFlowWidget` | 1 |
 | `flow.widget.richMediaPanel.dragHandlers.rendererScoped` | 1 |
-| `flowCanvas.integration.renderDataAndZoomState` | 1 |
 | `storyboardWidget.integration.wheelPanInfiniteCanvasNoLayoutWrites` | 1 |
 | `storyboardWidget.integration.dragZoomWorkspaceToggleCollectiveLayoutStable` | 1 |
-| `flowCanvas.scene.rebuildsWhenPortHandlesToggleChangesSchemaPresentation` | 1 |
 | `groupBoxNoStickRegression.deepNesting` | 1 |
 | `sourceFiles.composed.boot.prefersEnabledReadmeFrontmatterPreset` | 1 |
 | `sourceFiles.composed.orderOnly.noPresetReplay` | 1 |

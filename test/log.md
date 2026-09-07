@@ -1,8 +1,41 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,558 passed, 268 failed, 4,826 total.**
+Latest recorded result: **Graph — 4,566 passed, 262 failed, 4,828 total.**
 
 This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
+
+## Graph bounded fallback cache and incremental layout — 2026-09-07 (v74)
+
+| Field | Recorded evidence |
+| --- | --- |
+| Full command | `npm test` from Graph source root |
+| Completed registry | 4,566 passed / 262 failed / 4,828 total |
+| Aggregate exit | `1` — failed |
+| Duration | 241.351 seconds; no whole-registry speedup established |
+| Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `13bc8220f62ec5399cfab07e4546f51d0b5d8557fcf920542f4a4ba98e3c4206` |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned process |
+| Exact comparison with v70 | 6 fixed; 0 regressed; 2 added and passing; 0 omitted |
+| Declared source checks | Passed in 16.689 seconds after final source correction |
+| Independent standalone export | Passed in 11.136 seconds; four unchanged artifacts below 500 kB |
+
+The Storyboard fallback now reuses the existing TTL/LRU owner with 32 entries and 60-second validity. Expiry is lazy on access or insertion; this is an entry-count bound, not an absolute byte bound for graph references. Source invalidation remains explicit. The generic cache also evicts an oldest `undefined` key correctly. Two new behavior cases cover capacity, recency, expiry, deletion and graph-reference reuse.
+
+Graph initialization preserves stable partial cached or authored positions, seeds only missing nodes, and retains repair of extreme coordinates. The unchanged seeding algorithm moved into a 159-line helper; its initializer shrank from 634 to 484 lines. Four layout cases pass with coverage across sparse cache ratios and both force modes.
+
+Tests now use explicit owning-package exports, including the shared chain-evidence contract and separate geospatial test entrypoints. Native tests passed 131/131, affected registry cases 22/22 and boundary checks 8/8. Nine chat-flow fixtures now use the migrated document tag while preserving their assertions and case identities; four prior failures are fixed. The other two fixed cases are partial-layout reuse and the repository import boundary.
+
+The full suite remains failed. These checks do not establish Commerce evaluator, deployed payment or Production readiness. Pending exact source-release candidates retain their separate approval boundaries.
+
+### v74 receipt fingerprints
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `graph-v74-full.json` | `b8c041003317b8b71f3997ef462e95a17deec43c78e6e19fd35287f595151fcd` |
+| `graph-v74-case-comparison.json` | `44300ad3f2cbab5cd8c5d33397a0081d78d57b20b2bc611029de5baf10f68f9b` |
+| `graph-v74-declared-check.json` | `c09f8ac05d4998b1b4152e1e5d97537a4daca8da85a827b5268a779e281dc671` |
+| `graph-v74-standalone.json` | `41a373a046164ea827490fecec2c01877aa5073da6137c97030c60b3c12a58ac` |
 
 ## Graph native compiler cache and fixture validation — 2026-09-07 (v70)
 
@@ -148,7 +181,7 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `validation-economy-release.json` | `c64b669c9dde88e218388d048eec72c7061f3be7c4f9894123e205b047c4a311` |
 | `upstream-validation-plan-release.json` | `3dc29f4e853bdf1a7b0c30a301ff124ad31ed14fc7e8f41e39cf73e84bb8ab49` |
 
-### Unresolved registry cases (268; complete v70)
+### Unresolved registry cases (262; complete v74)
 
 | Case ID | Failures |
 | --- | --- |
@@ -164,15 +197,10 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `markdown.frontmatterFlowGraph.fidelity.tokenEconomicsRenderableWidgetHandles` | 1 |
 | `markdown.frontmatterFlowGraph.fidelity.agenticGraphVideoDemo.directorBriefShots` | 1 |
 | `markdown.frontmatterFlowGraph.fidelity.agenticGraphVideoDemo.16x9CompositionContract` | 1 |
-| `markdown.frontmatterFlowGraph.chatAgenticGraph.outputNodeSourceHandles.keptForWidgetAnchors` | 1 |
-| `markdown.frontmatterFlowGraph.chatAgenticGraph.removesConflictingComputeAndWiringData` | 1 |
-| `markdown.frontmatterFlowGraph.chatAgenticGraph.agenticOsSample.typedTurnDetailPortsOnly` | 1 |
-| `markdown.frontmatterFlowGraph.chatAgenticGraph.prunesUnreferencedHandlesAndKeepsEdgeMappedPorts` | 1 |
 | `importRenderPipeline.frontmatterFlow.agenticGraphVideoDemo.autoModes` | 1 |
 | `importRenderPipeline.markdownGraphApply.rejectsStaleStrybldrSourceGraph` | 1 |
 | `importRenderPipeline.markdownGraphApply.rejectsEmptyCachedStrybldrSourceGraph` | 1 |
 | `importRenderPipeline.markdownGraphApply.requestsFitAfterViewPresetGraphApply` | 1 |
-| `policy.boundary.forbidSiblingRepoSourceImports` | 1 |
 | `ui.floatingPanel.geo.clickableWhenDisabledByState` | 1 |
 | `modeLock.viewLock.rendererGuardsStayConsistent` | 1 |
 | `viewport.d3.groups.zIndexOverrideKey` | 1 |
@@ -274,7 +302,6 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `ui.designWireframe.cacheClearEpoch` | 1 |
 | `layout.datasetKey.reusesSharedReaders` | 1 |
 | `pipeline.2dRenderer.sharedSurfaceHelpers` | 1 |
-| `layout.init.seedsOnlyMissingWhenStable` | 1 |
 | `chat.floatingPanel.sharedLookup.rootFix` | 1 |
 | `selection.normalization.sharedHook.rootFix` | 1 |
 | `frontmatterMode.effective.whenSeedsExist` | 1 |

@@ -1,8 +1,39 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,580 passed, 250 failed, 4,830 total.**
+Latest recorded result: **Graph — 4,582 passed, 248 failed, 4,830 total.**
 
 This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
+
+## Graph camera framing isolation and native XR prerequisites — 2026-09-07 (v92)
+
+| Field | Recorded evidence |
+| --- | --- |
+| Full command | `npm test` from Graph source root |
+| Completed registry | 4,582 passed / 248 failed / 4,830 total |
+| Aggregate exit | `1` — failed |
+| Duration | 235.933 seconds; no repeatable speedup established |
+| Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `1ea65926fd1a2d82f22272b5e0ee9e4aa4ca309f8e2b282ca1c2e5d8ee9b920b` |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned validation process |
+| Exact comparison with v87 | 2 fixed; 0 regressed; 0 added; 0 omitted |
+| Declared source check | Passed in 55.516 seconds |
+| Independent standalone export | Passed in 11.118 seconds; four unchanged artifacts below 500 kB |
+
+Native camera-framing cleanup now releases the preceding fixture's claim and document identity, preserves live subscribers, and avoids revision/notification churn on repeated resets. The document reset still retains an operator claim for the same document. A producer/consumer pair changes from one pass/one failure to two passes; the affected camera/Physics/XR group passes all 18 cases.
+
+The XR surface selection fixture now loads its existing FPS, Flight and City runtime declarations before exercising their activation. All original registration, activation and rollback assertions remain. The previous Flight fixture prerequisite also passes focused validation. The full-run fixes are XR surface selection and Physics document activation; focused results are not added to full totals.
+
+The full suite remains failed. Canvas #900 completed its authorized source lifecycle. Its v90 local canonical runtime receipt passed all three HTTP probes; a later v91 refresh failed on GitHub transport, so no newer readiness is inferred. Graph successor release, Commerce independent evaluator evidence and Production deployment remain unresolved.
+
+### v92 receipt fingerprints
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `graph-v92-full.json` | `56486b27520462a9fae584557e4a60a646803ccbaf6d16c793a5585db1673bba` |
+| `graph-v92-case-comparison.json` | `9612244b9d60c9e5f31e0316711fa7e5e4f06281324cb63108a471631e849af3` |
+| `graph-v92-declared-check.json` | `6c086ce9172501a153485f46ddf85497804cc6201a83187c6c5043d5cce44050` |
+| `graph-v92-standalone.json` | `89ea3c1a5e6ad167f0ec87631e192afc948e4c167166f26cfde57242d2ffa7ac` |
 
 ## Graph shared active-document test cleanup — 2026-09-07 (v87)
 

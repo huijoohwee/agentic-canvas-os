@@ -1,8 +1,39 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,571 passed, 259 failed, 4,830 total.**
+Latest recorded result: **Graph — 4,580 passed, 250 failed, 4,830 total.**
 
 This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
+
+## Graph shared active-document test cleanup — 2026-09-07 (v87)
+
+| Field | Recorded evidence |
+| --- | --- |
+| Full command | `npm test` from Graph source root |
+| Completed registry | 4,580 passed / 250 failed / 4,830 total |
+| Aggregate exit | `1` — failed |
+| Duration | 218.623 seconds; no repeatable speedup established |
+| Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `9a83ddbab79280737d95ff6587d0fadc3a0065504914c8253bfe122e98705b4e` |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned process |
+| Exact comparison with v81 | 9 fixed; 0 regressed; 0 added; 0 omitted |
+| Declared source checks | Passed in 57.990 seconds |
+| Independent standalone export | Passed in 10.622 seconds; four unchanged artifacts below 500 kB |
+
+The shared test cleanup now restores active markdown name, text, source URL and apply-view-preset state from initial store values. A failed document activation previously left stale source state that redirected later graph rendering. A six-case producer/consumer sequence confirms five layout failures disappear while the original producer failure remains visible. The broader 416-case group improves from 388/28 to 393/23 without changing layout implementation or assertions.
+
+The full run also confirms two workspace fixture repairs: shared scheduler delegation keeps hydration-only behavior, and the local-mirror fixture verifies native discovery, cache-expiry refresh and Source Files propagation. All 84 workspace filesystem cases pass independently. Fit-request and workspace-auto-open cases also pass after cleanup repair.
+
+The full registry remains failed. Graph release and Commerce independent runtime evidence remain unresolved. Canvas #899 was merged with authorized exact cleanup and clean-main fast-forward; that documentation release is not runtime deployment evidence.
+
+### v87 receipt fingerprints
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `graph-v87-full.json` | `0bcca197721aa6967618c032cc236f2d55bb92f8b5a05332c85a8882dd6bb408` |
+| `graph-v87-case-comparison.json` | `649faf28793b1c418413b858c5a5444ed5928307c28e84e863709d4e1da3f2a7` |
+| `graph-v87-declared-check.json` | `fbb1440268c518d3dc7cdf72e6478968f46cb8701a66dda0d9072f43a97850bd` |
+| `graph-v87-standalone.json` | `1b8263bae162018521bedf2690c750323dbaea0839031af6b10742bf1df8143d` |
 
 ## Graph workspace initialization and validation isolation — 2026-09-07 (v81)
 
@@ -212,7 +243,7 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `validation-economy-release.json` | `c64b669c9dde88e218388d048eec72c7061f3be7c4f9894123e205b047c4a311` |
 | `upstream-validation-plan-release.json` | `3dc29f4e853bdf1a7b0c30a301ff124ad31ed14fc7e8f41e39cf73e84bb8ab49` |
 
-### Unresolved registry cases (259; complete v81)
+### Unresolved registry cases (250; complete v87)
 
 | Case ID | Failed occurrences |
 | --- | --- |
@@ -231,17 +262,11 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `importRenderPipeline.frontmatterFlow.agenticGraphVideoDemo.autoModes` | 1 |
 | `importRenderPipeline.markdownGraphApply.rejectsStaleStrybldrSourceGraph` | 1 |
 | `importRenderPipeline.markdownGraphApply.rejectsEmptyCachedStrybldrSourceGraph` | 1 |
-| `importRenderPipeline.markdownGraphApply.requestsFitAfterViewPresetGraphApply` | 1 |
 | `ui.floatingPanel.geo.clickableWhenDisabledByState` | 1 |
 | `modeLock.viewLock.rendererGuardsStayConsistent` | 1 |
 | `viewport.d3.groups.zIndexOverrideKey` | 1 |
 | `viewport.storyboardWidget.overlay.collision.convergesWithoutRetryChurn` | 1 |
 | `viewport.d3.groups.altDrag.reusesSharedLookup` | 1 |
-| `viewport.storyboardWidget.overlay.initCenteredGrid` | 1 |
-| `viewport.storyboardWidget.overlay.initCenteredGridWithViewportOffset` | 1 |
-| `viewport.storyboardWidget.overlay.reseedsAfterViewportStabilizes` | 1 |
-| `viewport.storyboardWidget.overlay.reseedsWhenInitiallyStacked` | 1 |
-| `viewport.storyboardWidget.overlay.reseedsWhenInitiallyVerticalStrip` | 1 |
 | `viewport.storyboardWidget.overlay.indexing.rebalancesOnGraphContentRevision` | 1 |
 | `ui.flowCanvas.richMediaOverlay.resizePersistsVisualSize` | 1 |
 | `ui.flowCanvas.richMediaOverlay.selectionChromeParity` | 1 |
@@ -367,8 +392,6 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `groupBoxNoStickRegression.deepNesting` | 1 |
 | `markdownWorkspace.explorer.crudActions.createDelete` | 1 |
 | `markdown.sourceFiles.panel.dnd` | 1 |
-| `workspaceFs.seedProvider.runtimeReflectsSourceFilesFromDynamicDocsRoot` | 1 |
-| `workspaceFs.bootstrap.materialize.activePathRematerializeStaysHydrationOnly` | 1 |
 | `geospatial.host.overlayNotGatedBySidebar` | 1 |
 | `geospatial.canvas.forbidGraphWhenGeoEnabled` | 1 |
 | `geospatial.widgetPanels.defaultFloatingAndHideDots` | 1 |
@@ -456,7 +479,6 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `ui.toolMenu.drag.usesSharedPointerDrag` | 1 |
 | `ui.floatingPanel.defaultGeometry.commandPanelAligned` | 1 |
 | `ui.mainPanel.drag.noChurn` | 1 |
-| `ui.workspaceAutoOpen.skipsWhenSelectionSourceChangesToEditor` | 1 |
 | `ui.lazyLoading.gates.heavyFeatureSurfaces` | 1 |
 | `d3.labels.strictCollisionWiring` | 1 |
 | `flowAndDesign.budgetedCollisionRelaxWiring` | 1 |

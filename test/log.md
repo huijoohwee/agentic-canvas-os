@@ -1,8 +1,28 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,547 passed, 279 failed, 4,826 total.**
+Latest recorded result: **Graph — 4,553 passed, 273 failed, 4,826 total.**
 
 This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
+
+## Graph bounded import materialization — 2026-09-07 (v63)
+
+| Field | Recorded evidence |
+| --- | --- |
+| Full command | `npm test` from Graph source root |
+| Completed registry | 4,553 passed / 273 failed / 4,826 total |
+| Aggregate exit | `1` — failed |
+| Duration | 239.732 seconds; observation, not a controlled benchmark |
+| Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `6d8ea8e67eb6e33a8d592e719e402453ef149ecc0c88ba6cc99a3a07ad1f79f1` |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned process |
+| Exact comparison with v59 | 6 fixed; 0 regressed; 0 added; 0 omitted |
+| Declared source checks | Passed in 61.172 seconds |
+| Independent standalone export | Passed in 10.620 seconds; four unchanged artifacts, each below 500 kB |
+
+Import materialization now admits requested paths, existing Source Files, and companion files registered with the imported URL. It avoids reading unrelated document text and preserves empty disabled documents. Explicit removals are published even when the surviving records are unchanged. The URL import primary-landing contract remains intact. Regression coverage retains its case ID in a focused source-owned module.
+
+The six fixes also include the composed-document transition fixtures and export/overlay source checks from v60–v62. An intermediate v63 run had 4,551 passes and 275 failures, including two new contract regressions; that candidate was superseded. The final complete run above has no regressions against v59. This is source validation, not Production or independent Commerce evaluator evidence.
 
 ## Graph commerce efficiency — 2026-09-07 (v59)
 
@@ -72,6 +92,10 @@ The existing CLI, `/checks` and MCP discovery owner now plans 10 commands from 1
 
 Full upstream checks: 671/671 tests and evaluations passed in 181.608 seconds. Required CI passed at `07bf15291c46999f73a39e5e92b449058a74c844`; native handoff recovered. Exact source-release approval remains pending.
 
+## Upstream bounded remote reads — agentic-os PR #69
+
+Candidate `23edf927e837c415f8db5a2bf48cf927897013db` passed all 677 upstream tests plus evaluations and required CI. Full local checks took 176.035 seconds. Shared remote ref reads have a 15-second POSIX deadline, bounded output, and process-tree cleanup; partial output cannot establish success. Writes retain their existing behavior. The Windows path was not runtime tested on this Mac. This bounds an observed transport stall; it is not a measured whole-suite throughput improvement. Exact source release authority remains pending.
+
 ## Commerce independent evidence — provisioning readback
 
 The committed baseline still has zero trusted dispatch issuers. Read-only GitHub metadata found zero repository environments, Actions variables and Actions secrets. No secret values were requested. The gate requires an evaluator-owned trust anchor, signer, default-deny isolated executor and exclusive artifact sink. Candidate-generated keys or signatures cannot establish that independent authority. Provisioning and a fresh signed evaluator run remain required; deployment and live payment proof remain unestablished.
@@ -93,11 +117,9 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `validation-economy-release.json` | `c64b669c9dde88e218388d048eec72c7061f3be7c4f9894123e205b047c4a311` |
 | `upstream-validation-plan-release.json` | `3dc29f4e853bdf1a7b0c30a301ff124ad31ed14fc7e8f41e39cf73e84bb8ab49` |
 
-### Unresolved registry cases (279)
+### Unresolved registry cases (273; final v63)
 
-Exact IDs retain their occurrence identity. No case was added, omitted or newly failed against v58.
-
-| Case ID | Occurrence |
+| Case ID | Failures |
 | --- | --- |
 | `canvas.viewSelection.xrSurfaceMode` | 1 |
 | `canvas.xrMode.sharedSurfaceOwnershipBoundaries` | 1 |
@@ -341,10 +363,8 @@ Exact IDs retain their occurrence identity. No case was added, omitted or newly 
 | `workspace.sourceFiles.sync.suppressesLegacyRootSeedAliasesWhenDocsMirrorExists` | 1 |
 | `graph.data.frontmatterFlow.openWidgetIdsStayRegistryScoped` | 1 |
 | `ui.collapsibleDefaultsCompactAndAnchoredToLsKeys` | 1 |
-| `ui.export.htmlCanvas.standaloneRewriteRewritesAllUrlAttrs` | 1 |
 | `ui.graphCanvasRoot.overlays.hideSet.prefersPlanned` | 1 |
 | `ui.threeGraph.tableOverlays.allowedInMultiDim` | 1 |
-| `ui.workspaceEditor.overlay.pointerContract.noBlockingScrim` | 1 |
 | `ui.toolbar.launch.newMarkdown.sharedDocsCreator` | 1 |
 | `store.composedPositionWriteback.manualOnly` | 1 |
 | `ui.overlay.drag.cursorTracking.noSnapDuringMove.flow` | 1 |
@@ -354,15 +374,11 @@ Exact IDs retain their occurrence identity. No case was added, omitted or newly 
 | `ui.floatingPanel.defaultGeometry.commandPanelAligned` | 1 |
 | `ui.mainPanel.drag.noChurn` | 1 |
 | `ui.workspaceAutoOpen.skipsWhenSelectionSourceChangesToEditor` | 1 |
-| `ui.sourceFiles.compose.crudSync.addNodePrefersActiveMarkdownSourceLayer` | 1 |
-| `ui.sourceFiles.compose.crudSync.addNodeSeedsActiveMarkdownSourceLayerWithoutPreexistingComposedGraph` | 1 |
 | `ui.lazyLoading.gates.heavyFeatureSurfaces` | 1 |
-| `ui.overlayPanels.markdownDesign.usesTransformBox` | 1 |
 | `d3.labels.strictCollisionWiring` | 1 |
 | `flowAndDesign.budgetedCollisionRelaxWiring` | 1 |
 | `workspaceFs.seedProvider.publishedStorageOwnsAgenticDocs` | 1 |
 | `workspaceFs.activeDocument.blankPersistedTextFallsBackToDocsMirror` | 1 |
-| `workspaceFs.applyImport.forceIncludeOnlySkipsInactiveWorkspaceRecords` | 1 |
 | `chat.responseContract.docs.agenticOsPromptContractCanonical` | 1 |
 | `queryableCorpus.mediaImport.metadataSourceUnit` | 1 |
 | `strybldr.markdown.consolidatedDemoRoutesPanelsAndStoryboardRenderers` | 1 |

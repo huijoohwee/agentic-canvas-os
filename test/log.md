@@ -1,8 +1,30 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,553 passed, 273 failed, 4,826 total.**
+Latest recorded result: **Graph — 4,558 passed, 268 failed, 4,826 total.**
 
 This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
+
+## Graph native compiler cache and fixture validation — 2026-09-07 (v70)
+
+| Field | Recorded evidence |
+| --- | --- |
+| Full command | `npm test` from Graph source root |
+| Completed registry | 4,558 passed / 268 failed / 4,826 total |
+| Aggregate exit | `1` — failed |
+| Duration | 241.309 seconds; no whole-suite speedup established |
+| Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `7c6584ba09948c067f3d9fdc3a6ed2f74c35bebef2f5afab374aa33c74bc1482` |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned process |
+| Exact comparison with v63 | 5 fixed; 0 regressed; 0 added; 0 omitted |
+| Latest declared source check | Passed in 62.131 seconds after the final fixture edit |
+| Independent standalone export | Passed in 13.160 seconds; four unchanged artifacts below 500 kB |
+
+Canvas now enables its pinned TypeScript compiler's native incremental cache. On this machine, the complete declared check took 57.501 seconds without incremental compilation, 71.144 seconds on the first incremental run, and 6.093 seconds on an unchanged warm run. Later source edits took 17–62 seconds. The ignored per-worktree compiler metadata is approximately 1.65 MB; no test verdicts are cached. This does not establish a CI or whole-registry speedup.
+
+The five repaired cases retain their registry identities and cover protected initialization deletion, stale initialization refresh, authoritative empty-document hydration, table overlays across 3D/XR/voxel modes, and seed alias synchronization. Alias coverage now occupies a focused module; its original module is below 600 lines. No remaining failure was waived.
+
+Commerce's fresh diagnostic still rejects runtime setup: no enrolled issuer, missing external trust anchor, trusted Git binding and isolated executor, plus the retired lifecycle verifier. These are source migration and independent provisioning requirements. The diagnostic imported no executor and issued no attestation.
 
 ## Graph bounded import materialization — 2026-09-07 (v63)
 
@@ -100,6 +122,15 @@ Candidate `23edf927e837c415f8db5a2bf48cf927897013db` passed all 677 upstream tes
 
 The committed baseline still has zero trusted dispatch issuers. Read-only GitHub metadata found zero repository environments, Actions variables and Actions secrets. No secret values were requested. The gate requires an evaluator-owned trust anchor, signer, default-deny isolated executor and exclusive artifact sink. Candidate-generated keys or signatures cannot establish that independent authority. Provisioning and a fresh signed evaluator run remain required; deployment and live payment proof remain unestablished.
 
+### v70 receipt fingerprints
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `graph-v70-full.json` | `167aadda9312d18a6bea8e95d02ec572a6e2316f3379d20864455ea7dc20552a` |
+| `graph-v70-case-comparison.json` | `9659394b0a2f3dc461220ccfd21c244b3536fee6011a997251a10b909b115856` |
+| `graph-v70-standalone.json` | `5725d28b84772e1e65c1d5df5dbb414a8f001c9c71bd27e9feb2f1c02da1dbbd` |
+| `commerce-v70-readiness.json` | `4fb820b8f71658b23d794ce790eaebff22f2ad151c154a067f395d42e7b3d362` |
+
 ### Receipt fingerprints
 
 Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-7310-9060-816b4837e059/`. Counts and case identities are self-contained here; exact machine observations and raw logs remain in the named receipts.
@@ -117,7 +148,7 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `validation-economy-release.json` | `c64b669c9dde88e218388d048eec72c7061f3be7c4f9894123e205b047c4a311` |
 | `upstream-validation-plan-release.json` | `3dc29f4e853bdf1a7b0c30a301ff124ad31ed14fc7e8f41e39cf73e84bb8ab49` |
 
-### Unresolved registry cases (273; final v63)
+### Unresolved registry cases (268; complete v70)
 
 | Case ID | Failures |
 | --- | --- |
@@ -282,8 +313,6 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `workspaceFs.seed.noReseedAfterUserDeletesAll` | 1 |
 | `workspaceFs.seedProvider.runtimeReflectsSourceFilesFromDynamicDocsRoot` | 1 |
 | `workspaceFs.bootstrap.materialize.activePathRematerializeStaysHydrationOnly` | 1 |
-| `workspaceFs.memory.forbidsInitializationFileDelete` | 1 |
-| `workspaceFs.memory.refreshesStaleInitializationFileText` | 1 |
 | `geospatial.host.overlayNotGatedBySidebar` | 1 |
 | `geospatial.canvas.forbidGraphWhenGeoEnabled` | 1 |
 | `geospatial.widgetPanels.defaultFloatingAndHideDots` | 1 |
@@ -360,11 +389,9 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `workspace.sourceFiles.videoDemo.screenAuthorityDragPinUnpinStable` | 1 |
 | `workspace.sourceFiles.videoDemo.runtimeOpenCloseReopen.inView.1920x1080` | 1 |
 | `workspace.sourceFiles.videoDemo.runtimeInitialWorkspaceOpen.inView.1920x1080` | 1 |
-| `workspace.sourceFiles.sync.suppressesLegacyRootSeedAliasesWhenDocsMirrorExists` | 1 |
 | `graph.data.frontmatterFlow.openWidgetIdsStayRegistryScoped` | 1 |
 | `ui.collapsibleDefaultsCompactAndAnchoredToLsKeys` | 1 |
 | `ui.graphCanvasRoot.overlays.hideSet.prefersPlanned` | 1 |
-| `ui.threeGraph.tableOverlays.allowedInMultiDim` | 1 |
 | `ui.toolbar.launch.newMarkdown.sharedDocsCreator` | 1 |
 | `store.composedPositionWriteback.manualOnly` | 1 |
 | `ui.overlay.drag.cursorTracking.noSnapDuringMove.flow` | 1 |
@@ -378,7 +405,6 @@ Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-73
 | `d3.labels.strictCollisionWiring` | 1 |
 | `flowAndDesign.budgetedCollisionRelaxWiring` | 1 |
 | `workspaceFs.seedProvider.publishedStorageOwnsAgenticDocs` | 1 |
-| `workspaceFs.activeDocument.blankPersistedTextFallsBackToDocsMirror` | 1 |
 | `chat.responseContract.docs.agenticOsPromptContractCanonical` | 1 |
 | `queryableCorpus.mediaImport.metadataSourceUnit` | 1 |
 | `strybldr.markdown.consolidatedDemoRoutesPanelsAndStoryboardRenderers` | 1 |

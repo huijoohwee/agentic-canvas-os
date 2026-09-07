@@ -1,61 +1,75 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,511 passed, 303 failed, 4,814 total.**
+Latest recorded result: **Graph — 4,537 passed, 289 failed, 4,826 total.**
 
-This file centralizes reported validation results; executable suites remain in their source repositories. A failed full suite remains failed even when its focused checks pass.
+This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
 
-## Graph commerce efficiency — 2026-09-07 (v49)
+## Graph commerce efficiency — 2026-09-07 (v57)
 
 | Field | Recorded evidence |
 | --- | --- |
 | Owner | `agentic-graph` |
 | Full command | `npm test` from the source repository root |
-| Completed registry | 4,511 passed / 303 failed / 4,814 total |
+| Completed registry | 4,537 passed / 289 failed / 4,826 total |
 | Aggregate exit | `1` — failed |
-| Duration | 249.356 seconds; observation, not a controlled performance benchmark |
+| Duration | 256.374 seconds; observation, not a controlled benchmark |
 | Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
 | Source branch | `agent/huis-macbook-pro-3.local/commerce-request-efficiency-validation` |
-| Source state | Admitted, uncommitted successor; HEAD alone does not identify the tested bytes |
-| Full source observation digest (SHA-256) | `8da7b5a98abf2c21946419259ed8598e3171f3dd8e62d66c54d6e265d37e411a` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `e5ff52e02f99fd29614b16f8e4ac35f92e924562de0ea66de0dce0389598dd9b` |
 | Pinned Canvas docs | `b62ba844b8c68e3b542099ee90acdcf8a5ba9e64` |
-| Before/after | Source, canonical Graph and pinned docs unchanged; run completed normally with no remaining owned process |
-| Previous v48 | 4,508 passed / 306 failed / 4,814 total |
-| Exact case comparison | 3 fixed; 0 new failures; 0 added; 0 omitted; duplicate IDs retain occurrence identity |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned process |
+| Exact comparison with v56 | 3 fixed; 0 regressed; 1 added (0 failed); 0 omitted |
 | Original regression cohort | 47 passed / 0 failed / 0 omitted |
+
+Test cleanup now releases the previous case's chat authentication mode, key and message override. The production workspace reset still preserves user preferences. The new regression reproduces contamination and verifies the next real OpenAI settings panel.
 
 Fixed existing cases:
 
-- `storage.enhancement.property.24.cloudOrderedRoundTrip`
-- `chat.responseContract.storage.workspaceArtifactPromotionFailureNote`
-- `chat.responseContract.coordinator.publishesValidatedAndAppliedPipelineSnapshots`
+- `ui.mainPanel.integrationsHub.serverManagedDefaultMemoryOnlyByok` (occurrence 1)
+- `ui.mainPanel.integrationsHub.openAiServerManagedKey` (occurrence 1)
+- `ui.mainPanel.requestedIntegrationsSearch.miromindApiKeyServerManaged` (occurrence 1)
+
+### Result history
+
+| Run | Passed | Failed | Total |
+| --- | ---: | ---: | ---: |
+| v49, preserved in Canvas PR #892 at `f664e09843afd1edbd665b199f5743f5c7a1fefc` | 4,511 | 303 | 4,814 |
+| v55 | 4,532 | 293 | 4,825 |
+| v56 | 4,533 | 292 | 4,825 |
 
 ### Applicable checks
 
 | Check | Result | Command / scope |
 | --- | --- | --- |
-| Declared Canvas checks | Passed, 55.483 s | `npm --prefix canvas run check`; TypeScript and three Node browser-harness checks |
-| Payment ledger | 163 passed in six files | First stage of `npm test`; native ledger suite |
-| Storage relay | 111 passed / 0 failed, 4.079 s | `npm run storage:relay:test` |
-| Standalone browser exports | 4 passed, 10.636 s | `npm --prefix canvas run test:ci:standalone-export`; separate run because the failed registry stopped the aggregate before this stage |
-| Two-tab recovery browser | 4 passed, 20.199 s | `npm --prefix canvas run test:storage-parent-child-browser-smoke`; real Chromium/IndexedDB, server closed |
+| Declared Canvas checks | Passed, 59.009 s | `npm --prefix canvas run check`; TypeScript and local browser-harness checks |
+| Test isolation | 18 passed, 5.582 s | `test:ci:unit -- testIsolation.`; includes credentials, real DOM consumers and cleanup after failed fixtures |
+| MainPanel focused run | 87 passed / 4 failed, 22.234 s | `test:ci:unit -- ui.mainPanel.`; three prior credential-default failures fixed |
+| Payment ledger | 163 passed | First stage of the full `npm test` |
+| Historical v54 browser / standalone | 4 passed / 4 passed | Original source identities retained; no new browser or standalone run is claimed for v57 |
 
-Whole-run success and production readiness remain unproven. The 303 failures below are unresolved; independent Commerce evaluator authority, runtime inputs and deployed payment evidence are also missing. Six surviving failure diagnostics changed; five first differences were dynamic fixture values and one was a Source Files list in a persistent timeout. No failure was waived.
+Whole-run success and production readiness remain unproven. Remaining registry failures, independent Commerce evaluator inputs and deployed payment evidence are unresolved. No failure was waived.
+
+## Upstream validation time — agentic-os PR #66
+
+The eleven-case malformed-body matrix measured **28.116 s before / 6.082 s after** (78% reduction on this machine). Nine cases reuse the production validator directly; two retain distinct CLI rejection boundaries. Valid publication, exact size/BOM and body-mutation CLI checks remain. This is not a full-suite or production speedup claim.
+
+Full `npm run check`: **670 passed / 0 failed / 0 skipped**, plus evaluations, in **169.430 s**. Required CI `test` and `budgets` passed for `71abdccb3a2886a4dbc0943ad49b5d47efbad53b`. The source candidate remains separately unmerged; no new deployment or cleanup authority is inferred.
 
 ### Receipt fingerprints
 
-Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-7310-9060-816b4837e059/`. The log is self-contained for counts and case identity; full machine receipts and bounded compressed raw logs are in that directory.
+Local receipt directory: `$CODEX_HOME/visualizations/2026/09/07/01a0794e-fdda-7310-9060-816b4837e059/`. Counts and case identities are self-contained here; exact machine observations and raw logs remain in the named receipts.
 
 | Receipt | SHA-256 |
 | --- | --- |
-| `graph-v49-validation-manifest.json` | `3ad2e465ffdd6055e25b6189b5a5218ef98b19c3a1e5eac9d76afed251515a72` |
-| `graph-v49-case-comparison.json` | `1d983c36eb0c15915e73af8790e3e93dd44600079a1fa54775f9b6222420f919` |
-| `graph-v49-combined-freeze.json` | `538b7bd5172f35bc2ffc65584603063f7ea37f2eadd362f740c89b6f4a1fa2be` |
-| `graph-v49-browser-recovery-validation.json` | `12d7fd08d9301851d00cd8f0ea51235b0f5ef0dce9ab80e5eab637f5ffe592ac` |
-| `graph-v49-closeout.json` | `9918e7574ae4c4c4feba5908958ef60c7a9275a01ce31abd67a6b559d8b4c9b4` |
+| `graph-v57-case-comparison.json` | `062791f3ae7afed690ebcec45764e764e5132fe77793c2cdada9f786cf462357` |
+| `graph-v57-source-freeze.json` | `425a450864f532cfe2989e159ad40db8be75c16d4742ef77851124579f248a2f` |
+| `graph-v57-validation-manifest.json` | `08fa39eb2e42b1fd7ecaa4925084e4771d37ae3342ca49a8b57a8ebaba1def7c` |
+| `validation-economy-release.json` | `c64b669c9dde88e218388d048eec72c7061f3be7c4f9894123e205b047c4a311` |
 
-### Unresolved registry cases (303)
+### Unresolved registry cases (289)
 
-Exact case IDs and occurrences from the completed native `RUN`/`DONE` ledger follow. Preserve this identity when comparing a later run.
+Exact IDs retain their occurrence identity.
 
 | Case ID | Occurrence |
 | --- | --- |
@@ -97,16 +111,13 @@ Exact case IDs and occurrences from the completed native `RUN`/`DONE` ledger fol
 | `agentReady.localMainPanelChatCanvasPipeline.renderedMcpResearchAgentDemoSuperAgentStoryboardWidget` | 1 |
 | `agentReady.localMainPanelChatCanvasPipeline.researchAgentDemoSuperAgentStoryboardWidget` | 1 |
 | `vdeoxpln.contract.registryProjection` | 1 |
-| `ui.mainPanel.integrationsHub.serverManagedDefaultMemoryOnlyByok` | 1 |
 | `ui.mainPanel.integrationsHub.surfacesBytePlusModelArkMcpConfig` | 1 |
 | `mcp.server.localToolContract.sharedAndStable` | 1 |
-| `ui.mainPanel.integrationsHub.openAiServerManagedKey` | 1 |
 | `htmlVideoRenderer.sourceContracts.sharedOwners` | 1 |
 | `videoAgent.demo.executableReplayContract` | 1 |
 | `videoAgent.timeline.bottomPanelDenseFbfNoOverlap` | 1 |
 | `richMedia.panel.iframeScrollResizeSourceContract` | 1 |
 | `docs.agenticCanvasOsDemo.marketToArtifactPipeline` | 1 |
-| `ui.mainPanel.requestedIntegrationsSearch.miromindApiKeyServerManaged` | 1 |
 | `chat.providers.openaiServerManagedEnvFiles` | 1 |
 | `ui.multiDimTable.structuredSource.presentationDefaults` | 1 |
 | `ui.multiDimTable.structuredSource.visibleTable` | 1 |
@@ -116,12 +127,10 @@ Exact case IDs and occurrences from the completed native `RUN`/`DONE` ledger fol
 | `ui.canvas.liveHero.interactiveWorkspaceCanvas` | 1 |
 | `ui.canvas.liveHero.canvasEmbedVisibleAction` | 1 |
 | `canvas.xrV2.permissionsPolicy.staticAndIframe` | 1 |
-| `storyboardWidget.outputWiring.documentSummaryUsesHeadlessCoordinator` | 1 |
 | `ui.floatingPanelChat.apiKeyPrompt.selectedProviderRendered` | 1 |
 | `ui.floatingPanelChat.videoPreset.loadsSourceBackedInvocation` | 1 |
 | `ui.floatingPanelChat.videoPreset.failsClosedWithoutSource` | 1 |
 | `ui.floatingPanelChat.videoPreset.defersHostArtifactUntilFinalization` | 1 |
-| `ui.floatingPanelChat.newChat.sendingCreatesFreshSession` | 1 |
 | `ui.floatingPanelChat.contextRail.quickActions` | 1 |
 | `ui.floatingPanelChat.composer.agenticGraphProbeTreeInvocationGrammar` | 1 |
 | `canvas.probeTree.outputLayout.runMaterializationFitsCapturedViewport` | 1 |
@@ -129,7 +138,6 @@ Exact case IDs and occurrences from the completed native `RUN`/`DONE` ledger fol
 | `ui.floatingPanelChat.storyboardTemplate.responseContract` | 1 |
 | `ui.floatingPanelChat.noSlash.cleanSlateRuntimePrompts` | 1 |
 | `ui.floatingPanelChat.prdTadSlash.mediaOnlyProviderPayload` | 1 |
-| `ui.floatingPanelChat.message.mediaChip` | 1 |
 | `ui.storyboard.fixedCardOverlay.flexInteractions` | 1 |
 | `strybldr.markdown.storyboard2dTemplateRuntimeReadyNeutral` | 1 |
 | `ui.flowWidget.storyboardCardTextLayout.readableChrome` | 1 |
@@ -225,8 +233,6 @@ Exact case IDs and occurrences from the completed native `RUN`/`DONE` ledger fol
 | `storyboardWidget.integration.wheelPanInfiniteCanvasNoLayoutWrites` | 1 |
 | `storyboardWidget.integration.dragZoomWorkspaceToggleCollectiveLayoutStable` | 1 |
 | `flowCanvas.scene.rebuildsWhenPortHandlesToggleChangesSchemaPresentation` | 1 |
-| `workspaceFs.activeEntry.prefersCanonicalDocsMirrorForCorruptedNodeTypeResidue` | 1 |
-| `workspaceFs.activeEntry.prefersCanonicalDocsMirrorForCorruptedEdgeEndpointResidue` | 1 |
 | `groupBoxNoStickRegression.deepNesting` | 1 |
 | `sourceFiles.composed.boot.prefersEnabledReadmeFrontmatterPreset` | 1 |
 | `sourceFiles.composed.orderOnly.noPresetReplay` | 1 |
@@ -234,13 +240,7 @@ Exact case IDs and occurrences from the completed native `RUN`/`DONE` ledger fol
 | `markdownWorkspace.explorer.crudActions.createDelete` | 1 |
 | `markdown.sourceFiles.panel.dnd` | 1 |
 | `workspaceFs.seed.noReseedAfterUserDeletesAll` | 1 |
-| `workspaceFs.seedProvider.prefersCompleteStorageExportDatasetForSync` | 1 |
-| `workspaceFs.seedProvider.keepsEmptyAndModelAssetDocsMirrorFiles` | 1 |
-| `workspaceFs.activeEntry.prefersCanonicalDocsMirrorForCorruptedLabelResidue` | 1 |
-| `workspaceFs.activeEntry.prefersCanonicalDocsMirrorForCorruptedNodeStringPropertyResidue` | 1 |
-| `workspaceFs.activeEntry.prefersCanonicalDocsMirrorForCorruptedEdgeStringResidue` | 1 |
 | `workspaceFs.seedProvider.runtimeReflectsSourceFilesFromDynamicDocsRoot` | 1 |
-| `workspaceFs.seedProvider.runtimeSyncsFullDocsMirrorTree` | 1 |
 | `workspaceFs.bootstrap.materializesActiveWorkspaceEntryIntoParsedSourceFile` | 1 |
 | `workspaceFs.bootstrap.materialize.sharedSnapshotHelpersCentralizeReuseRules` | 1 |
 | `workspaceFs.bootstrap.materialize.activePathRematerializeStaysHydrationOnly` | 1 |

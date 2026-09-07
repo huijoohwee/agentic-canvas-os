@@ -1,8 +1,72 @@
 # Central test log
 
-Latest recorded result: **Graph — 4,580 passed, 250 failed, 4,830 total.**
+Latest recorded result: **Graph — 4,585 passed, 245 failed, 4,830 total.**
 
 This file centralizes validation results; executable suites remain in their source repositories. A failed full suite remains failed even when focused checks pass.
+
+## Graph storage capture and constrained materialization — 2026-09-07 (v95)
+
+| Field | Recorded evidence |
+| --- | --- |
+| Full command | `npm test` from Graph source root |
+| Completed registry | 4,585 passed / 245 failed / 4,830 total |
+| Aggregate exit | `1` — failed |
+| Duration | 220.160 seconds; no repeatable whole-suite speedup established |
+| Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `0de0938cd4d608aac26bf31d994ad62b0ed72f2b102f7475b742a38797e96afa` |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned validation process |
+| Exact comparison with v92 | 3 fixed; 0 regressed; 0 added; 0 omitted |
+| Declared source check | Passed in 14.174 seconds |
+| Independent standalone export | Passed in 10.135 seconds; four unchanged artifacts below 500 kB |
+
+Local and session storage accessors now observe the browser getter once per call. Shared startup readers retain their captured backend, while writes and later session access acquire the current backend. The behavior fixture verifies repeated reads, fresh writes, denied-access fallbacks and native numeric clamping; it first reproduced two getter observations. This introduces no global backend cache.
+
+The materialization owner replaces quadratic pairwise candidate scoring with explicit width feasibility and avoids allocating the compact plan when wide stages fit. It shrinks from 560 to 520 lines. Tests cover undersized overflow without source/camera movement, feasible captured placement, wide topology and zoom projection. The capture fixture declares actual dimensions; its complete-visibility assertion uses a physically feasible viewport.
+
+The toolbar reveals existing accepted branches and never changes graph content. Its unreachable write/history branch and both callers' unused callbacks were removed. Behavior checks preserve graph identity and bytes; source synchronization precedes graph projection, and completed workflow persistence retains its existing single-write owner. All 30 associated checks pass.
+
+The full registry remains failed. The existing Canvas log worktree was reused through native successor admission; no extra checkout was created. Graph source release, exact log-candidate merge/cleanup authority and Commerce independent evaluator evidence remain separate. The v94 canonical local runtime pair passed three HTTP probes; that is not successor or Production readiness.
+
+### v95 receipt fingerprints
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `graph-v95-full.json` | `9f8dc317691e028e8928a3e606729aae8ea0a6942a307e497156dd895c22e00a` |
+| `graph-v95-case-comparison.json` | `8cf5f18066601ae52849f75ac48f6b2c1067fda0a98bdccd5b886cc72c16c54c` |
+| `graph-v95-declared-check.json` | `d4443f0042830cb773aa06ceeedc37032ca4565c98794921889a06ea3f93eb00` |
+| `graph-v95-standalone.json` | `8e5d465783d3672c7bf72ac3e9782fa80ec114e1292c0d5cb71efc7b868c9daf` |
+
+## Graph camera framing isolation and native XR prerequisites — 2026-09-07 (v92)
+
+| Field | Recorded evidence |
+| --- | --- |
+| Full command | `npm test` from Graph source root |
+| Completed registry | 4,582 passed / 248 failed / 4,830 total |
+| Aggregate exit | `1` — failed |
+| Duration | 235.933 seconds; no repeatable speedup established |
+| Source HEAD | `1e1afe87835b4f2332f4fc83a135b5ca4a8ed469` |
+| Source state | Admitted, uncommitted successor; HEAD alone does not identify tested bytes |
+| Full source observation digest (SHA-256) | `1ea65926fd1a2d82f22272b5e0ee9e4aa4ca309f8e2b282ca1c2e5d8ee9b920b` |
+| Before/after | Source, canonical Graph, pinned docs and native lane unchanged; no remaining owned validation process |
+| Exact comparison with v87 | 2 fixed; 0 regressed; 0 added; 0 omitted |
+| Declared source check | Passed in 55.516 seconds |
+| Independent standalone export | Passed in 11.118 seconds; four unchanged artifacts below 500 kB |
+
+Native camera-framing cleanup now releases the preceding fixture's claim and document identity, preserves live subscribers, and avoids revision/notification churn on repeated resets. The document reset still retains an operator claim for the same document. A producer/consumer pair changes from one pass/one failure to two passes; the affected camera/Physics/XR group passes all 18 cases.
+
+The XR surface selection fixture now loads its existing FPS, Flight and City runtime declarations before exercising their activation. All original registration, activation and rollback assertions remain. The previous Flight fixture prerequisite also passes focused validation. The full-run fixes are XR surface selection and Physics document activation; focused results are not added to full totals.
+
+The full suite remains failed. Canvas #900 completed its authorized source lifecycle. Its v90 local canonical runtime receipt passed all three HTTP probes; a later v91 refresh failed on GitHub transport, so no newer readiness is inferred. Graph successor release, Commerce independent evaluator evidence and Production deployment remain unresolved.
+
+### v92 receipt fingerprints
+
+| Receipt | SHA-256 |
+| --- | --- |
+| `graph-v92-full.json` | `56486b27520462a9fae584557e4a60a646803ccbaf6d16c793a5585db1673bba` |
+| `graph-v92-case-comparison.json` | `9612244b9d60c9e5f31e0316711fa7e5e4f06281324cb63108a471631e849af3` |
+| `graph-v92-declared-check.json` | `6c086ce9172501a153485f46ddf85497804cc6201a83187c6c5043d5cce44050` |
+| `graph-v92-standalone.json` | `89ea3c1a5e6ad167f0ec87631e192afc948e4c167166f26cfde57242d2ffa7ac` |
 
 ## Graph shared active-document test cleanup — 2026-09-07 (v87)
 

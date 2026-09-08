@@ -80,10 +80,9 @@ function environment(namespace, fixture) {
 }
 
 test("a warm isolate refreshes its public definition projection when another isolate commits", async () => {
-  const fixture = JSON.parse(await readFile(new URL(
-    "../test/contracts/agentic-os-admission-v2.fixture.json",
-    import.meta.url,
-  )));
+  const fixture = JSON.parse(await readFile(new URL(import.meta.resolve(
+    "agentic-os/test/contracts/admission-v2.fixture.json",
+  ))));
   const namespace = createNamespace();
   const isolateA = environment(namespace, fixture);
   const isolateB = environment(namespace, fixture);

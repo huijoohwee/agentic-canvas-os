@@ -24,8 +24,8 @@ import {
 } from "./lib/commerce-admission-auth-fixture.mjs";
 import { DEPLOYMENT_IDENTITY } from "./lib/commerce-admission-provider-fixture.mjs";
 
-const FIXTURE_URL = new URL("../test/contracts/agentic-os-admission-v2.fixture.json", import.meta.url);
-const MANIFEST_URL = new URL("../test/contracts/agentic-os-admission-v2.fixture.sha256", import.meta.url);
+const FIXTURE_URL = new URL(import.meta.resolve("agentic-os/test/contracts/admission-v2.fixture.json"));
+const MANIFEST_URL = new URL(import.meta.resolve("agentic-os/test/contracts/admission-v2.fixture.sha256"));
 const AUTH_SECRET = "agentic-os-admission-dev-secret-rotate-before-production";
 const NOW = 1_788_396_400_000;
 
@@ -62,7 +62,7 @@ test("the content-addressed Commerce vector passes the Graph-authorized provider
   ]);
   const digest = createHash("sha256").update(bytes).digest("hex");
   assert.equal(digest, "a2283f809470bf3044ed1e810bea67bb793bc975df0ab6f53f0e10e85fabbdd0");
-  assert.equal(manifest.trim(), `${digest}  agentic-os-admission-v2.fixture.json`);
+  assert.equal(manifest.trim(), `${digest}  admission-v2.fixture.json`);
 
   const fixture = JSON.parse(bytes);
   assert.equal(Object.keys(fixture.request.body).length, 5);

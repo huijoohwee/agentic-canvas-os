@@ -290,7 +290,7 @@ Sandbox Agents readiness exposes a separate container-workspace control plane.
 It validates one fresh workspace or saved snapshot, routes application-approved
 file, command, package, and private-preview-port work to an injected provider,
 serializes operations, and keeps provider session and resume state opaque. A
-Node host can inject the repository-owned Docker CLI adapter, deny-first policy,
+Node host can inject the repository-owned Podman CLI adapter, deny-first policy,
 atomic file checkpoint store, and independent verifier. The live check uses an
 immutable image, hardened internal networking, loopback-only preview proxies,
 workspace snapshots, cross-controller resume, and complete resource cleanup.
@@ -351,8 +351,11 @@ to three requests, keeps delegation and handoff ownership explicit, reuses only
 the specialist's stored prior response, and emits redacted usage-derived cost
 evidence. See [`docs/LIVE-AGENT-PROVIDER-PROOF.md`](./docs/LIVE-AGENT-PROVIDER-PROOF.md).
 
+On macOS start an initialized Podman machine before the check; stop it after owned work closes.
+The provider is loaded only when explicitly injected and requires no Docker executable or engine.
+
 ```bash
-AGENTIC_SANDBOX_IMAGE='node@sha256:<immutable-multiarch-digest>' npm run sandbox-docker:check
+AGENTIC_SANDBOX_IMAGE='node@sha256:<immutable-multiarch-digest>' npm run sandbox-podman:check
 ```
 
 ## Develop

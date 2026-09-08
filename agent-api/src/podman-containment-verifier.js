@@ -1,5 +1,5 @@
 import { SandboxAgentBlock, assertIdentifier } from "./sandbox-agent-contract.js";
-import { createDockerCommandRunner } from "./docker-command-runner.js";
+import { createPodmanCommandRunner } from "./podman-command-runner.js";
 
 const OWNER_LABEL = "agentic-canvas-os.sandbox";
 
@@ -25,24 +25,32 @@ function nonRootUser(value) {
   return Boolean(value) && !/^0(?::0)?$/.test(value);
 }
 
-export function createDockerContainmentVerifier({
+function noProcessCapabilities(status) {
+  const lines = status.split("\n");
+  return ["CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb"].every((key) => {
+    const matches = lines.filter((line) => line.startsWith(`${key}:`));
+    return matches.length === 1 && new RegExp(`^${key}:\\s+0{16}$`).test(matches[0]);
+  });
+}
+
+export function createPodmanContainmentVerifier({
   revision,
   image,
-  runDocker = createDockerCommandRunner({ maxOutputBytes: 1_000_000 }),
+  runPodman = createPodmanCommandRunner({ maxOutputBytes: 1_000_000 }),
   maxPids = 128,
 } = {}) {
   const safeRevision = assertIdentifier(revision, "revision");
   const safeImage = assertIdentifier(image, "image");
-  if (typeof runDocker !== "function") throw new TypeError("runDocker must be a function.");
+  if (typeof runPodman !== "function") throw new TypeError("runPodman must be a function.");
   if (!Number.isInteger(maxPids) || maxPids < 1) throw new TypeError("maxPids must be a positive integer.");
-  const descriptor = Object.freeze({ id: "docker-independent-probe", revision: safeRevision });
+  const descriptor = Object.freeze({ id: "podman-independent-probe", revision: safeRevision });
 
   async function verify({ state, provider, signal }) {
-    if (provider.id !== "docker-cli" || state?.schema !== "docker-sandbox-state/v1") {
-      throw new SandboxAgentBlock("containment_proof_failed", "Docker verifier received incompatible provider state.");
+    if (provider.id !== "podman-cli" || state?.schema !== "podman-sandbox-state/v1") {
+      throw new SandboxAgentBlock("containment_proof_failed", "Podman verifier received incompatible provider state.");
     }
     const inspected = parseInspect(
-      (await runDocker(["inspect", state.containerId], { signal })).stdout,
+      (await runPodman(["inspect", state.containerId], { signal })).stdout,
       "container",
     );
     const host = inspected.HostConfig || {};
@@ -52,7 +60,7 @@ export function createDockerContainmentVerifier({
       pass("immutable-image", config.Image === safeImage),
       pass("non-root-user", nonRootUser(config.User)),
       pass("read-only-root", host.ReadonlyRootfs === true),
-      pass("all-capabilities-dropped", host.CapDrop?.includes("ALL")),
+      pass("no-capabilities-added", Array.isArray(host.CapAdd) && host.CapAdd.length === 0),
       pass("no-new-privileges", host.SecurityOpt?.some((item) => item.includes("no-new-privileges"))),
       pass("not-privileged", host.Privileged === false),
       pass("private-pid-ipc-cgroup", host.PidMode !== "host" && host.IpcMode !== "host" && host.CgroupnsMode !== "host"),
@@ -62,34 +70,36 @@ export function createDockerContainmentVerifier({
       pass("owned-container", config.Labels?.[OWNER_LABEL] === "true" && config.Labels?.["agentic-canvas-os.provider-revision"] === provider.revision),
     ];
 
-    const engineSecurity = JSON.parse((await runDocker(["info", "--format", "{{json .SecurityOptions}}"], { signal })).stdout);
-    checks.push(pass("engine-seccomp", engineSecurity.some((item) => String(item).includes("seccomp"))));
+    const engineSecurity = JSON.parse((await runPodman(["info", "--format", "{{json .Host.Security}}"], { signal })).stdout);
+    checks.push(pass("engine-seccomp", engineSecurity.seccompEnabled === true));
     if (state.networkId) {
       const network = parseInspect(
-        (await runDocker(["network", "inspect", state.networkId], { signal })).stdout,
+        (await runPodman(["network", "inspect", state.networkId], { signal })).stdout,
         "network",
       );
-      checks.push(pass("internal-network", network.Internal === true));
+      checks.push(pass("internal-network", network.internal === true));
       checks.push(pass("agent-container-not-published", !Object.keys(host.PortBindings || {}).length));
       let proxiesHardened = state.previewPorts?.length > 0
         && state.previewBindings?.length === state.previewPorts.length;
       for (const binding of state.previewBindings || []) {
         const proxy = parseInspect(
-          (await runDocker(["inspect", binding.proxyContainerId], { signal })).stdout,
+          (await runPodman(["inspect", binding.proxyContainerId], { signal })).stdout,
           "preview proxy",
         );
         const proxyHost = proxy.HostConfig || {};
         const proxyBindings = Object.values(proxyHost.PortBindings || {}).flat();
-        const publishedPort = await runDocker(
+        const publishedPort = await runPodman(
           ["port", binding.proxyContainerId, `${binding.containerPort}/tcp`],
           { signal },
         );
+        const proxyCaps = await runPodman(["exec", binding.proxyContainerId, "cat", "/proc/1/status"], { signal });
+        proxiesHardened &&= noProcessCapabilities(proxyCaps.stdout);
         proxiesHardened &&= proxy.State?.Running === true
           && proxy.Config?.Image === safeImage
           && nonRootUser(proxy.Config?.User)
           && proxy.Config?.Labels?.["agentic-canvas-os.sandbox-role"] === "preview-proxy"
           && proxyHost.ReadonlyRootfs === true
-          && proxyHost.CapDrop?.includes("ALL")
+          && Array.isArray(proxyHost.CapAdd) && proxyHost.CapAdd.length === 0
           && proxyHost.SecurityOpt?.some((item) => item.includes("no-new-privileges"))
           && proxyHost.Privileged === false
           && proxyHost.Memory > 0
@@ -113,15 +123,17 @@ export function createDockerContainmentVerifier({
       ));
     }
 
-    const user = await runDocker(["exec", state.containerId, "id", "-u"], { signal });
+    const caps = await runPodman(["exec", state.containerId, "cat", "/proc/1/status"], { signal });
+    checks.push(pass("all-process-capabilities-dropped", noProcessCapabilities(caps.stdout)));
+    const user = await runPodman(["exec", state.containerId, "id", "-u"], { signal });
     checks.push(pass("behavior-non-root", Number(user.stdout.trim()) > 0));
-    const rootWrite = await runDocker(
+    const rootWrite = await runPodman(
       ["exec", state.containerId, "touch", "/containment-root-write"],
       { signal, acceptedExitCodes: [0, 1, 2, 126] },
     );
     checks.push(pass("behavior-root-write-denied", rootWrite.exitCode !== 0));
-    await runDocker(["exec", state.containerId, "touch", "/workspace/.containment-probe"], { signal });
-    await runDocker(["exec", state.containerId, "rm", "/workspace/.containment-probe"], { signal });
+    await runPodman(["exec", state.containerId, "touch", "/workspace/.containment-probe"], { signal });
+    await runPodman(["exec", state.containerId, "rm", "/workspace/.containment-probe"], { signal });
     checks.push(pass("behavior-workspace-write", true));
 
     const egressProbe = [
@@ -133,7 +145,7 @@ export function createDockerContainmentVerifier({
       "socket.on('error',blocked);",
       "socket.on('timeout',()=>{socket.destroy();blocked();});",
     ].join("");
-    const egress = await runDocker(
+    const egress = await runPodman(
       ["exec", state.containerId, "node", "-e", egressProbe],
       { signal, acceptedExitCodes: [0, 1] },
     );

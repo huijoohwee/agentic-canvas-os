@@ -9,15 +9,15 @@ frontmatter_contract: "required"
 status: "runtime-ready-dev"
 authority: "provider-neutral container workspace control plane for Agentic Canvas OS"
 runtime_scope: "workspace creation, authorized file and process work, package installation, preview ports, snapshots, pause, resume, and cleanup"
-runtime_claim: "the local Node runtime has a real Docker adapter, deny-first authorizer, atomic file state store, and bounded independent local proof; the default Worker remains unconfigured and unverified"
+runtime_claim: "the local Node runtime has a real Podman adapter, deny-first authorizer, atomic file state store, and bounded independent local proof; the default Worker remains unconfigured and unverified"
 runtime_owner: "../agent-api/src/sandbox-agents.js"
 contract_owner: "../agent-api/src/sandbox-agent-contract.js"
-provider_owner: "../agent-api/src/docker-sandbox-adapter.js"
-containment_owner: "../agent-api/src/docker-containment-verifier.js"
+provider_owner: "../agent-api/src/podman-sandbox-adapter.js"
+containment_owner: "../agent-api/src/podman-containment-verifier.js"
 state_owner: "../agent-api/src/sandbox-file-state-store.js"
-runtime_proof: "../scripts/check-docker-sandbox-provider.mjs"
+runtime_proof: "../scripts/check-podman-sandbox-provider.mjs"
 external_pattern_sources: ["https://developers.openai.com/api/docs/guides/agents/models", "https://developers.openai.com/api/docs/guides/agents/sandboxes"]
-implementation_docs: ["https://docs.docker.com/reference/cli/docker/container/run/", "https://docs.docker.com/engine/network/drivers/none/"]
+implementation_docs: ["https://docs.podman.io/en/latest/markdown/podman-run.1.html", "https://docs.podman.io/en/latest/markdown/podman-network-create.1.html"]
 external_source_policy: "concept reference only; forbid copied code, APIs, examples, prompts, schemas, fixtures, tests, provider defaults, or prose"
 publish_policy: "Dev-only until explicit operator approval"
 ---
@@ -36,8 +36,8 @@ The cited OpenAI guides inform only the capability class and the value of separa
 | Injected container provider | Create, operate, snapshot, suspend, resume, and close the actual isolated workspace. | Its declaration and per-operation attestation are evidence claims, not independent containment verification. |
 | Application authorizer | Approve each workspace and operation using current policy, actor, agent, run, path, command, package, and port context. | Agent instructions and provider metadata cannot grant approval. |
 | External state store | Persist opaque snapshot references and serialized resume state across controller lifetimes. | The default Worker does not install an implicit in-memory durability substitute. |
-| Docker CLI adapter | Run an immutable image as a non-root, read-only, capability-dropped, resource-bounded container; use an internal network plus hardened loopback proxy for declared previews. | Node-only and explicitly injected; it rejects image tags, environment bindings, public ports, online packages, and host bind mounts. |
-| Independent Docker verifier | Inspect engine, container, network, and preview-proxy configuration and run non-root, root-write, workspace-write, and egress-denial probes. | Verifies one local Docker boundary at run time; it is not formal third-party, cloud, or multi-tenant certification. |
+| Podman CLI adapter | Run an immutable image as a non-root, read-only, capability-dropped, resource-bounded container; use an internal network plus hardened loopback proxy for declared previews. | Node-only and explicitly injected; it rejects image tags, environment bindings, public ports, online packages, and host bind mounts. |
+| Independent Podman verifier | Inspect engine, container, network, and preview-proxy configuration and run non-root, root-write, workspace-write, and egress-denial probes. | Verifies one local Podman boundary at run time; it is not formal third-party, cloud, or multi-tenant certification. |
 | Native sandbox policy preflight | Continue to validate and authorize agentic-graph filesystem, process, network, and credential policy before execution. | `SANDBOX-RUNTIME.md` remains policy preflight only; this controller does not turn it into kernel enforcement. |
 
 ## Container Provider Contract
@@ -59,7 +59,7 @@ A sandbox starts from exactly one source:
 
 | Source | Input | Rule |
 |---|---|---|
-| Fresh workspace | Revision, bounded directories, bounded text files, named host environment bindings, and declared preview ports. | Paths are normalized workspace-relative paths. The Docker adapter rejects environment bindings so their values cannot enter container metadata or snapshots. |
+| Fresh workspace | Revision, bounded directories, bounded text files, named host environment bindings, and declared preview ports. | Paths are normalized workspace-relative paths. The Podman adapter rejects environment bindings so their values cannot enter container metadata or snapshots. |
 | Saved snapshot | One opaque application token resolved through the external state store. | Agent identity and provider revision must match; a fresh workspace cannot be mixed into the same open request. |
 
 The provider snapshot id stays inside the state store and provider call. Callers receive only a controller-issued snapshot token plus bounded, secret-scanned metadata.
@@ -70,7 +70,7 @@ The provider snapshot id stays inside the state store and provider call. Callers
 |---|---|---|
 | Files | Read or write one normalized relative path. | Absolute paths, traversal, duplicate workspace entries, oversized content, and sensitive provider output fail closed. |
 | Commands | Run one argument vector with an optional relative working directory and explicit foreground or background mode. | Shell command strings are not accepted; arguments and execution time are bounded. |
-| Packages | Install a bounded, explicit package list with a named manager. | The Docker adapter accepts only approved workspace-local npm packages with offline mode and lifecycle scripts disabled. |
+| Packages | Install a bounded, explicit package list with a named manager. | The Podman adapter accepts only approved workspace-local npm packages with offline mode and lifecycle scripts disabled. |
 | Ports | Open one predeclared container port for private or preview access. | A hardened proxy binds an ephemeral host port to `127.0.0.1`; the agent container stays only on an internal network and public audience is unsupported. |
 
 Only one operation may be active per sandbox. Competing operations return `sandbox_busy`; they are not queued or replayed. Each successful operation increments a bounded sequence and may update opaque provider state without returning that state to the caller.
@@ -96,7 +96,7 @@ Snapshots seed new work. Resume continues the same sandbox identity. Neither sur
 - Public provider output is JSON-only, bounded, and rejected when a field name indicates credentials, authorization, secrets, tokens, passwords, API keys, or opaque state.
 - Unexpected provider exceptions become a generic typed failure; raw provider messages are not returned.
 - Close is always available as lifecycle cleanup and does not require an additional approval grant.
-- Docker snapshots archive only `/workspace` into a private bounded provider directory; processes, root filesystem state, environment bindings, and host paths are excluded.
+- Podman snapshots archive only `/workspace` into a private bounded provider directory; processes, root filesystem state, environment bindings, and host paths are excluded.
 - Prod mirror, Cloudflare deployment, public ports, and paid execution remain outside this contract unless separately authorized.
 
 ## Default Bounds
@@ -124,7 +124,7 @@ Limits are explicit positive integers. Capacity is fail-closed; no sandbox, oper
 - `containerExecutionStatus` is `unverified` until an injected provider returns accepted fresh attestation, then `provider-attested`;
 - `independentContainmentProof` becomes `verified` only when the separate verifier returns fresh all-pass checks for that concrete provider session.
 
-The default Worker constructs an isolate-scoped unconfigured controller. Therefore `contractReady` is true while `configured`, `containmentVerifierConfigured`, and `liveContainerReady` are false. A Node host must inject all four concrete owners; readiness inspection never starts Docker.
+The default Worker constructs an isolate-scoped unconfigured controller. Therefore `contractReady` is true while `configured`, `containmentVerifierConfigured`, and `liveContainerReady` are false. A Node host must inject all four concrete owners; readiness inspection never starts Podman.
 
 ## Acceptance Contract
 
@@ -132,6 +132,6 @@ The default Worker constructs an isolate-scoped unconfigured controller. Therefo
 - Given a snapshot, a new sandbox receives only the provider snapshot reference after exact agent and provider-revision checks.
 - Given a pause, a second controller instance can resume the same sandbox through one exact external checkpoint without exposing serialized state.
 - Given missing capability, approval, dependency, identity, revision, attestation, containment claim, safe path, safe port audience, bound, or public-output safety, the operation blocks before a success claim.
-- Given the live Docker command, one immutable image must prove real container execution, offline local package installation, loopback preview traffic, snapshot seeding, cross-controller resume, 20 independent checks, zero reported spend, and no remaining labeled container or network.
+- Given the live Podman command, one immutable image must prove real container execution, offline local package installation, loopback preview traffic, snapshot seeding, cross-controller resume, 21 independent checks, zero reported spend, and no remaining labeled container or network.
 
-VCC: run `npm run sandbox-provider:check`, the affected app and Worker tests, and `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-docker:check`; require zero failures, exact provider fencing, application approval, atomic resume claims, 20 fresh containment checks, opaque state, complete cleanup, zero paid cost, no copied artifacts, no Prod mirror mutation, and no Cloudflare action.
+VCC: run `npm run sandbox-provider:check`, the affected app and Worker tests, and `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-podman:check`; require zero failures, exact provider fencing, application approval, atomic resume claims, 21 fresh containment checks, opaque state, complete cleanup, zero paid cost, no copied artifacts, no Prod mirror mutation, and no Cloudflare action.

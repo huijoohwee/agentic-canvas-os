@@ -6,25 +6,25 @@ import path from "node:path";
 import { SANDBOX_AGENT_CAPABILITIES } from "../agent-api/src/sandbox-agent-contract.js";
 import { createSandboxAgentRuntime } from "../agent-api/src/sandbox-agents.js";
 import { createSandboxApplicationAuthorizer } from "../agent-api/src/sandbox-application-authorizer.js";
-import { createDockerCommandRunner } from "../agent-api/src/docker-command-runner.js";
-import { createDockerContainmentVerifier } from "../agent-api/src/docker-containment-verifier.js";
-import { createDockerSandboxAdapter } from "../agent-api/src/docker-sandbox-adapter.js";
+import { createPodmanCommandRunner } from "../agent-api/src/podman-command-runner.js";
+import { createPodmanContainmentVerifier } from "../agent-api/src/podman-containment-verifier.js";
+import { createPodmanSandboxAdapter } from "../agent-api/src/podman-sandbox-adapter.js";
 import { createSandboxFileStateStore } from "../agent-api/src/sandbox-file-state-store.js";
 
 const image = process.env.AGENTIC_SANDBOX_IMAGE;
 if (!image) throw new Error("AGENTIC_SANDBOX_IMAGE must name an immutable sha256 image.");
 
-const root = await mkdtemp(path.join(os.tmpdir(), "agentic-docker-sandbox-proof-"));
+const root = await mkdtemp(path.join(os.tmpdir(), "agentic-podman-sandbox-proof-"));
 const snapshotRoot = path.join(root, "snapshots");
 const stateRoot = path.join(root, "state");
-const runDocker = createDockerCommandRunner({ maxOutputBytes: 12_000_000 });
-const versionResult = await runDocker(["version", "--format", "{{.Server.Version}}"]);
+const runPodman = createPodmanCommandRunner({ maxOutputBytes: 12_000_000 });
+const versionResult = await runPodman(["version", "--format", "{{.Server.Version}}"]);
 const serverVersion = versionResult.stdout.trim();
-if (!serverVersion) throw new Error("Docker Engine server is unavailable.");
-const providerRevision = `docker-cli-v1+engine-${serverVersion}`;
-const verifierRevision = `docker-probe-v1+engine-${serverVersion}`;
-const adapter = createDockerSandboxAdapter({ image, revision: providerRevision, snapshotRoot, runDocker });
-const verifier = createDockerContainmentVerifier({ revision: verifierRevision, image, runDocker });
+if (!serverVersion) throw new Error("Podman Engine server is unavailable.");
+const providerRevision = `podman-cli-v1+engine-${serverVersion}`;
+const verifierRevision = `podman-probe-v1+engine-${serverVersion}`;
+const adapter = createPodmanSandboxAdapter({ image, revision: providerRevision, snapshotRoot, runPodman });
+const verifier = createPodmanContainmentVerifier({ revision: verifierRevision, image, runPodman });
 const authorize = createSandboxApplicationAuthorizer({
   revision: "local-container-proof-v1",
   agents: ["sandbox-proof-agent"],

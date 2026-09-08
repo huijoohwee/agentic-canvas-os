@@ -4,15 +4,15 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { createDockerContainmentVerifier } from "../agent-api/src/docker-containment-verifier.js";
-import { createDockerSandboxAdapter } from "../agent-api/src/docker-sandbox-adapter.js";
+import { createPodmanContainmentVerifier } from "../agent-api/src/podman-containment-verifier.js";
+import { createPodmanSandboxAdapter } from "../agent-api/src/podman-sandbox-adapter.js";
 import { createSandboxApplicationAuthorizer } from "../agent-api/src/sandbox-application-authorizer.js";
 import { createSandboxFileStateStore } from "../agent-api/src/sandbox-file-state-store.js";
 
 const IMAGE = `node@sha256:${"a".repeat(64)}`;
-const REVISION = "docker-cli-v1+test";
+const REVISION = "podman-cli-v1+test";
 
-function fakeDocker() {
+function fakePodman() {
   const calls = [];
   let sandboxCount = 0;
   let proxyCount = 0;
@@ -26,6 +26,7 @@ function fakeDocker() {
       else stdout = `container-id-${++sandboxCount}\n`;
     }
     else if (args[0] === "port") stdout = "127.0.0.1:49152\n";
+    else if (args.includes("/proc/1/status")) stdout = ["CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb"].map(key => `${key}:\t0000000000000000`).join("\n");
     else if (args.includes("cat")) stdout = "hello";
     else if (args.includes("find")) stdout = "/workspace/input.txt\n/workspace/package.json\n";
     else if (args.includes("tar") && args.includes("-cf")) stdout = Buffer.from("archive");
@@ -44,7 +45,8 @@ function fakeDocker() {
       },
       HostConfig: {
         ReadonlyRootfs: true,
-        CapDrop: ["ALL"],
+        CapDrop: [],
+        CapAdd: [],
         SecurityOpt: ["no-new-privileges=true"],
         Privileged: false,
         PidMode: "",
@@ -63,8 +65,8 @@ function fakeDocker() {
       Mounts: [],
       }]);
     }
-    else if (args[0] === "info") stdout = JSON.stringify(["name=seccomp,profile=builtin"]);
-    else if (args[0] === "network" && args[1] === "inspect") stdout = JSON.stringify([{ Internal: true }]);
+    else if (args[0] === "info") stdout = JSON.stringify({ seccompEnabled: true });
+    else if (args[0] === "network" && args[1] === "inspect") stdout = JSON.stringify([{ internal: true }]);
     else if (args.includes("id")) stdout = "65532\n";
     else if (args.includes("/containment-root-write")) exitCode = 1;
     else if (args.includes("node") && args.includes("-e")) exitCode = 0;
@@ -133,11 +135,11 @@ test("application authorizer grants exact policy and denies command, path, packa
   assert.equal((await authorize({ ...base, action: "workspace.destroy" })).allowed, false);
 });
 
-test("Docker adapter emits hardened argv, offline work, snapshots, resume, and cleanup", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "docker-adapter-test-"));
-  const docker = fakeDocker();
+test("Podman adapter emits hardened argv, offline work, snapshots, resume, and cleanup", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "podman-adapter-test-"));
+  const podman = fakePodman();
   try {
-    const adapter = createDockerSandboxAdapter({ image: IMAGE, revision: REVISION, snapshotRoot: root, runDocker: docker.run });
+    const adapter = createPodmanSandboxAdapter({ image: IMAGE, revision: REVISION, snapshotRoot: root, runPodman: podman.run });
     const created = await adapter.create({
       workspace: {
         directories: ["src", "local-package"],
@@ -146,11 +148,11 @@ test("Docker adapter emits hardened argv, offline work, snapshots, resume, and c
         previewPorts: [4_173],
       },
     });
-    const createArgs = docker.calls.find((call) => call.args[0] === "create").args;
+    const createArgs = podman.calls.find((call) => call.args[0] === "create").args;
     for (const expected of ["--read-only", "--cap-drop", "--security-opt", "--pids-limit", "--memory", "--cpus", "--user"]) {
       assert.equal(createArgs.includes(expected), true);
     }
-    assert.equal(docker.calls.some((call) => call.args.some((item) => item.startsWith("127.0.0.1::4173"))), true);
+    assert.equal(podman.calls.some((call) => call.args.some((item) => item.startsWith("127.0.0.1::4173"))), true);
     const request = { providerSessionId: created.providerSessionId, state: created.state };
     assert.equal((await adapter.execute({ ...request, operation: { kind: "file.read", path: "src/input.txt" } })).output.content, "hello");
     assert.equal((await adapter.execute({ ...request, operation: { kind: "command.run", argv: ["node"], background: true } })).output.started, true);
@@ -168,19 +170,19 @@ test("Docker adapter emits hardened argv, offline work, snapshots, resume, and c
     const resumed = await adapter.resume({ serializedState: suspended.serializedState });
     await adapter.close(request);
     await adapter.close({ providerSessionId: resumed.providerSessionId, state: resumed.state });
-    assert.equal(docker.calls.some((call) => call.args[0] === "rm" && call.args[1] === "--force"), true);
+    assert.equal(podman.calls.some((call) => call.args[0] === "rm" && call.args[1] === "--force"), true);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
 test("independent verifier requires inspect hardening and behavioral denial", async () => {
-  const docker = fakeDocker();
-  const verifier = createDockerContainmentVerifier({ revision: "probe-v1", image: IMAGE, runDocker: docker.run });
+  const podman = fakePodman();
+  const verifier = createPodmanContainmentVerifier({ revision: "probe-v1", image: IMAGE, runPodman: podman.run });
   const proof = await verifier.verify({
-    provider: { id: "docker-cli", revision: REVISION },
+    provider: { id: "podman-cli", revision: REVISION },
     state: {
-      schema: "docker-sandbox-state/v1",
+      schema: "podman-sandbox-state/v1",
       containerId: "container-id-1",
       networkId: "network-id",
       previewPorts: [4_173],
@@ -192,14 +194,30 @@ test("independent verifier requires inspect hardening and behavioral denial", as
   assert.equal(proof.checks.every((check) => check.status === "pass"), true);
 });
 
-test("Docker adapter rejects mutable images and unsafe runtime identities before invoking Docker", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "docker-config-test-"));
+test("Podman adapter rejects mutable images and unsafe runtime identities before invoking Podman", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "podman-config-test-"));
   try {
-    assert.throws(() => createDockerSandboxAdapter({ image: "node:22-alpine", revision: REVISION, snapshotRoot: root }));
-    assert.throws(() => createDockerSandboxAdapter({ image: IMAGE, revision: "unsafe revision", snapshotRoot: root }));
-    assert.throws(() => createDockerSandboxAdapter({ image: IMAGE, revision: REVISION, snapshotRoot: root, user: "0:0" }));
-    assert.throws(() => createDockerSandboxAdapter({ image: IMAGE, revision: REVISION, snapshotRoot: root, cpus: "0" }));
+    assert.throws(() => createPodmanSandboxAdapter({ image: "node:22-alpine", revision: REVISION, snapshotRoot: root }));
+    assert.throws(() => createPodmanSandboxAdapter({ image: IMAGE, revision: "unsafe revision", snapshotRoot: root }));
+    assert.throws(() => createPodmanSandboxAdapter({ image: IMAGE, revision: REVISION, snapshotRoot: root, user: "0:0" }));
+    assert.throws(() => createPodmanSandboxAdapter({ image: IMAGE, revision: REVISION, snapshotRoot: root, cpus: "0" }));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("independent verifier refuses a nonzero process capability set", async () => {
+  const podman = fakePodman();
+  const verifier = createPodmanContainmentVerifier({ revision: "probe-v1", image: IMAGE,
+    runPodman: async (args, options) => {
+      const result = await podman.run(args, options);
+      return args.includes("/proc/1/status")
+        ? { ...result, stdout: result.stdout.replace("CapBnd:\t0000000000000000", "CapBnd:\t0000000000000001") }
+        : result;
+    },
+  });
+  await assert.rejects(verifier.verify({ provider: { id: "podman-cli", revision: REVISION },
+    state: { schema: "podman-sandbox-state/v1", containerId: "container-id-1", networkId: "network-id",
+      previewPorts: [4173], previewBindings: [{ containerPort: 4173, proxyContainerId: "proxy-id-1" }] },
+  }), /hardened-loopback-preview-proxies/);
 });

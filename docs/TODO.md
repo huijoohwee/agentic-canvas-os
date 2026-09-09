@@ -9,7 +9,7 @@ frontmatter_contract: "required"
 status: "runtime-ready"
 authority: "Agentic Canvas OS cross-repository planning index and context-record contract"
 todo_root: "../todo"
-active_period: "2026-08"
+active_period: "2026-09"
 legacy_shard_pattern: "../todo/YYYY-MM.md"
 context_record_pattern: "../todo/YYYY-MM/<context>.md"
 legacy_policy: "immutable"
@@ -31,7 +31,7 @@ runtime_proof: "RUNTIME-PROOF.md"
 
 The legacy monthly shards are immutable history. Each new task uses one stable kebab-case Context as its filename beneath the active UTC month. Independent tasks therefore claim only its exact context record path and never contend on a shared writable index or monthly file.
 
-Agentic Canvas OS is the sole live planning owner for participating repositories. Repository-local todo files are forbidden because they duplicate authority and drift from the monthly shards. Committed shard rows may retain retired paths as immutable historical provenance, never as current routing instructions.
+Agentic Canvas OS is the sole live planning owner for participating repositories. Repository-local todo files are forbidden because they duplicate authority and drift from immutable Context records. Committed historical rows may retain retired paths as immutable provenance, never as current routing instructions.
 
 ## Source Layout
 
@@ -95,7 +95,7 @@ Legacy `todo-log/v1` monthly shards are immutable, byte-preserved historical evi
 4. Add local BM25 ranking only after exact search becomes noisy.
 5. Add embeddings only after measured keyword-retrieval failure and approved TCO review.
 
-This keeps routine planning context bounded to one small index and one relevant shard instead of sending the full history to every model call.
+This keeps routine planning context bounded to one small index and one exact Context record instead of sending the full history to every model call.
 
 ## Size And Rollover
 

@@ -21,7 +21,7 @@ source_docs:
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
-  - "docs/documents/git-guidelines.md"
+  - "../node_modules/agentic-os/docs/adlc-guidelines.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs control surface"
 runtime_claim: "dictionary content for shared binding invocation utilities; no separate binding store"

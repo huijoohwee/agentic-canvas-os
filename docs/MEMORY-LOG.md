@@ -8,7 +8,7 @@ schema: "agentic-os-memory/v1"
 frontmatter_contract: "required"
 status: "spec-complete"
 authority: "GitHub-synchronized agent memory and session continuity"
-runtime_scope: "local canonical-checkout-scoped agent harnesses"
+runtime_scope: "memory-dependent operations in an admitted repository worktree"
 runtime_claim: "flat Markdown persistence and retrieval-escalation contract; no database, embedding, provider, or deploy claim"
 publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloudflare"
 memory_log:
@@ -20,8 +20,8 @@ memory_log:
   required_fields: ["type", "scope", "summary", "refs"]
   mutation_policy: "append-only"
   compliance_owner: "VALIDATION-RUNBOOK.md"
-  startup_gate: "START-WORKFLOW.md"
-  release_gate: "RELEASE-WORKFLOW.md"
+  startup_gate: "../node_modules/agentic-os/docs/START-WORKFLOW.md"
+  release_gate: "../node_modules/agentic-os/docs/RELEASE-WORKFLOW.md"
   retrieval_order: ["selected shard", "ripgrep", "BM25", "embedding only after measured need"]
 ---
 
@@ -29,7 +29,7 @@ memory_log:
 
 ## Decision Context
 
-For a solo-dev, AI-native startup, flat Markdown is the minimum-viable maximum-value memory layer. It minimizes time-to-value, keeps the harness inspectable, bounds orchestration, makes token economics visible, and holds 12-month marginal infrastructure TCO at zero when the existing Git remote and local compute are already available.
+For a solo-dev, AI-native startup, flat Markdown is the minimum-viable maximum-value memory layer. It minimizes time-to-value, keeps the harness inspectable, bounds orchestration, makes token economics visible, and reuses the existing Git remote and local compute. Storage, maintenance and retrieval still have workload-dependent costs.
 
 GitHub is the synchronization SSOT for three separate concerns:
 
@@ -86,11 +86,11 @@ Append-only storage reduces merge conflicts because Git's line-based merge norma
 
 | Gate | Required evidence | Blocking condition |
 |---|---|---|
-| Session start | Every shard passes the structural command in `VALIDATION-RUNBOOK.md`; the Agentic Canvas OS checkout is clean at fetched `origin/main`. | Invalid frontmatter, non-UTC-second sigil format, duplicate or unordered sigil, missing field, or unsafe content. |
-| Release | Structural validation passes and each pre-existing shard starts with the exact bytes stored at the recorded memory base ref. | Any deletion, rename, rewrite, reorder, compaction, insertion before EOF, or malformed appended record. |
+| Memory-dependent operation | Selected shards pass the structural command in `VALIDATION-RUNBOOK.md`; the pinned lifecycle owner admits the exact input revision. | Invalid frontmatter, non-UTC-second sigil format, duplicate or unordered sigil, missing field, or unsafe content. |
+| Release affecting memory | Structural validation passes and each affected pre-existing shard starts with the exact bytes stored at the recorded memory base ref. | Any deletion, rename, rewrite, reorder, compaction, insertion before EOF, or malformed appended record. |
 | New shard | Filename and `period` agree; immutable frontmatter and at least one complete entry exist. | Empty shard, mismatched month, missing identity, or unsupported source format. |
 
-Memory compliance is fail-closed. `START-WORKFLOW.md` must stop before build startup, and `RELEASE-WORKFLOW.md` must stop before integration, whenever the applicable check fails. Repair means restoring the historical bytes and appending a new superseding entry; rewriting prior history is never the repair path.
+Memory compliance is fail-closed for operations that read or write these shards. The pinned [start workflow](../node_modules/agentic-os/docs/START-WORKFLOW.md) and [release workflow](../node_modules/agentic-os/docs/RELEASE-WORKFLOW.md) own lifecycle admission; this memory contract does not introduce a second controller or require memory scans for unrelated documentation work. Repair means restoring the historical bytes and appending a new superseding entry; rewriting prior history is never the repair path.
 
 ## Retrieval Escalation
 

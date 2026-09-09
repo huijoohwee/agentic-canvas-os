@@ -4,6 +4,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { validateDocsSourceReferences } from "./docs-source-references.mjs";
+
 import { validateProbeTreeContractDocuments } from "./probe-tree-contract.mjs";
 import { validatePromptPresetContractDocuments } from "./prompt-preset-contract.mjs";
 import { validateXrInvocationContractDocuments } from "./xr-invocation-contract.mjs";
@@ -163,6 +165,7 @@ export async function runDocsContract({
     }
   }
 
+  failures.push(...await validateDocsSourceReferences(documents, { repositoryRoot }));
   failures.push(...validateProbeTreeContractDocuments(documents));
   failures.push(...validatePromptPresetContractDocuments(documents));
   failures.push(...validateXrInvocationContractDocuments(documents));

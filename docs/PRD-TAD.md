@@ -1,21 +1,22 @@
 ---
-title: "agentic-graph Runtime-Ready Agentic Canvas OS PRD/TAD"
+title: "Agentic Canvas OS PRD/TAD and Architecture Decisions"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "Combined PRD/TAD"
-date: "2026-07-18"
+date: "2026-09-09"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
 frontmatter_contract: "required"
-status: "runtime-ready"
+status: "spec-complete"
 target_status: "runtime-ready"
+load_policy: "on-demand"
+semantic_owner: "$GITHUB_ROOT/huijoohwee.github.io/guidelines/cid-guidelines.md#shared-field-contract"
+grounding_record: "$GITHUB_ROOT/huijoohwee.github.io/schema/AgenticRAG/prd-tad-adr-grounding.json"
 source_docs:
   - "FACTS.md"
   - "MEMORY.md"
   - "SKILLS.md"
   - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-agentic-os-prd-tad.md"
   - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-mcp/agentic-graph-mcp-agentic-os-prd-tad.md"
-  - "$GITHUB_ROOT/.kiro/specs/agentic-graph-agentic-os"
-  - "$GITHUB_ROOT/.kiro/specs/agentic-graph-acos-mcp-connector"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs product and architecture contract; external runtime proof remains gated"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -97,9 +98,37 @@ flow:
       type: {key: type, type: string, value: "prd_proof_signal"}
 ---
 
-# agentic-graph Runtime-Ready Agentic Canvas OS PRD/TAD
+# Agentic Canvas OS PRD/TAD and Architecture Decisions
 
 ## Scope
+
+This combined specification records requirements, architecture and decisions. Its target is
+runtime-ready; that target is not a whole-document runtime verdict. Prove each applicable criterion
+with exact owner revisions and independent evidence before advancing its status.
+
+## Codebase Grounding
+
+The shared `huijoohwee.github.io/guidelines/prd-tad-adr-codebase-grounding.md` and its single
+`schema/AgenticRAG/prd-tad-adr-grounding.json` snapshot own the seven-repository evidence map.
+Consume their reviewed revisions before baseline; no local copy of the inventory or CID/RAO/SVO
+grammar belongs here. One continuity ID joins each PRD criterion, TAD element, applicable ADR and
+bounded RAO task. The SVO object is the scoped target; outcome is the result checked by its criterion.
+
+| Concern | Source owner and validation boundary |
+|---|---|
+| Repository lifecycle | Pinned `agentic-os` start/release workflows and `npm run evals`; application docs never replace its controller |
+| Deferred tools | `agent-api/src/tool-search.js`; `npm run tool-search:check` proves its bounded application contract |
+| Commerce admission | `agent-api/src/commerce-admission-contract.js` provides the interface consumed by Commerce `src/core/acos-admission.ts`; use the shared source lock |
+| Canvas and Graph release | `agentic-graph` browser sources and release workflow; generated `huijoohwee` artifacts are consumers |
+| Commerce paid loop | `agentic-commerce-os/scripts/checks/browser.ts`; source/unit checks do not replace sandbox runtime proof |
+| Spatial runtime | `GameXR` source and reviewed shared archives; its release checks remain separate from Commerce |
+
+Select only the affected owner's code, schemas and checks. Do not load all tools or start a sandbox
+for documentation or checks that do not use it. Missing required resources block only the affected
+coverage and remain visible. Review source-grounding contradictions before execution; document status,
+check success, provider proof, protected integration and deployment are distinct evidence.
+
+## Product Target
 
 Make `agentic-graph` a runtime-ready Agentic Canvas OS: a local-first and Cloudflare-ready control plane for discovering, orchestrating, observing, validating, and rendering AI harness work through Canvas.
 
@@ -319,7 +348,7 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 |---|---|---|
 | ADR-AOS-1 | Native-in-repo Agentic Canvas OS | Existing `agentic-graph` owners already carry Canvas, MCP, source docs, and Cloudflare control plane. |
 | ADR-AOS-2 | Discovery-first MCP gateway, no fifth proxy | Avoid duplicated dispatch, latency, schema drift, and cost-accounting split. |
-| ADR-AOS-3 | Read-time OS aggregation, no new datastore | Keeps TCO at zero and avoids stale OS-level copies. |
+| ADR-AOS-3 | Read-time OS aggregation, no new datastore | Avoids a duplicate datastore and stale copies; measure runtime and operating costs separately. |
 | ADR-AOS-4 | Dev-only until explicit deploy approval | Prevents accidental Prod mirror or Cloudflare mutation. |
 | ADR-AOS-5 | Soul identity is source-backed | Replaces hardcoded default identity with a scanned durable identity contract while keeping project operations in `AGENTS.md`. |
 | ADR-AOS-6 | Persistent memory is bounded and curated | Keeps always-available context useful while avoiding raw transcript dumps, silent compaction, unsupported profile inference, and secrets. |

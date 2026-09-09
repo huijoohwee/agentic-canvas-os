@@ -2,10 +2,13 @@
 title: "Monetization Grounding Contract"
 graphId: "md:agentic-canvas-os-monetization-grounding"
 doc_type: "Monetization Grounding Contract"
-date: "2026-08-28"
+date: "2026-09-09"
 lang: "en-US"
 schema: "agentic-canvas-os-monetization-grounding/v1"
 frontmatter_contract: "required"
+load_policy: "on-demand"
+demand_status: "unvalidated"
+semantic_authority: "https://huijoohwee.github.io/guidelines/cid-guidelines.md#shared-field-contract"
 status: "spec-complete"
 authority: "pain-point-to-first-dollar grounding for what this repository already ships"
 runtime_scope: "monetization planning evidence only; no runtime, provider, or deployment claim"
@@ -29,12 +32,11 @@ speculative feature work.
 
 ## Pain Point
 
-One provable, paid-for pain: **a developer, consultant, or acquiring team must
+Candidate pain: **a developer, consultant, or acquiring team needs to
 understand an unfamiliar codebase quickly and defend the conclusions with
-evidence.** Codebase due-diligence, onboarding audits, and architecture
-briefs are already purchased today as consulting deliverables and as
-code-intelligence subscriptions; demand is provable because buyers currently
-pay humans days of effort for the same artifact.
+evidence.** This document contains no named buyer, current invoice, interview or
+budget evidence. Demand and high willingness-to-pay remain unvalidated;
+existing software and plausible consulting use cases do not prove either.
 
 Demand-evidence obligation (fail-closed before any paid pitch):
 
@@ -63,9 +65,11 @@ auditable rather than plausible.
 
 ## Feature Ranking
 
-Ranked by distance from already-built and by code required before the first
-dollar; lower rank must not start before a higher rank has either shipped or
-recorded a typed blocking finding.
+The following is a provisional reuse ordering, not an evidenced market ranking.
+Apply Constraints <-> Argumentation <-> Outranking using the shared CID contract:
+reject infeasible options, record supporting and opposing buyer evidence, then
+compare minimum change, time to value and cost. Reorder when evidence warrants it;
+absence of a buyer is a demand gap, not a reason to build the next feature.
 
 | Rank | Offer | Distance from built | New code required |
 |---|---|---|---|
@@ -81,12 +85,59 @@ recorded a typed blocking finding.
    for that customer's repository: ingest, query, canvas walkthrough, export, brief.
 3. Invoice a fixed price anchored to the hours the artifact replaces.
 4. Record the transaction evidence (invoice, payment, acceptance) in the
-   memory log; only that record upgrades this contract's demand claim from
-   provable to proven.
+   memory log; only that record upgrades the evidence for that buyer from
+   unvalidated to paid-and-accepted; one buyer does not prove market-wide demand.
 
 The intended path uses no deployment, Prod mirror, Cloudflare authority, or
 model spend. Its no-new-code claim remains unverified until the export path is
 proven. A second paying customer is the next validation step after the first.
+
+## Commerce MVP Composition
+
+For a self-serve commerce sprint, the buyer outcome may differ from the audit
+hypothesis above. Choose it from demand evidence rather than forcing a marketplace
+around the current demo. Preserve one CID/RAO/SVO lineage across requirements,
+design, material decisions, bounded tasks and independent evidence.
+
+| Repository | Sole responsibility in this composition |
+|---|---|
+| agentic-os | Repository lifecycle, shared invocation grammar and read-only check discovery |
+| huijoohwee.github.io | Shared authoring semantics and versioned schema projections |
+| agentic-canvas-os | Agent definitions, runtime composition, shared product docs and admission provider |
+| agentic-commerce-os | Commerce domain, checkout/settlement coordination and provider evidence contracts |
+| agentic-graph | Buyer-facing browser, graph capabilities, product payment adapters and production deployment |
+| huijoohwee | Published product mirror consumed through the Graph release owner |
+| GameXR | Optional XR/game capability; no commerce or lifecycle ownership |
+
+Consumers call the existing versioned owner contract. Keep lifecycle, domain
+state, browser rendering, payment effects and publication independently owned;
+do not add a shared mutable ledger or route production effects through a docs
+reader. This table routes responsibilities and grants no cross-repository authority.
+
+The declared delivery topology is Graph Dev (`npm run dev:apex`, `npm run dev`)
+to the `huijoohwee/agenticgraph` mirror and Graph-owned Cloudflare publication at
+`airvio.co` and `airvio.co/knowgrph`. This is a target topology, not a live deployment
+observation. Cloudflare services/Wallets, GitHub and Podman remain optional adapters
+selected by available owner contracts, verified limits and cost; mentioning a
+provider does not establish a working integration or add a dependency.
+
+Reuse the site's lazy-loaded `adlc-rapid-mvp-sprint.md` commerce completion criteria
+and `token-performance-economics-guidelines.md` measurement contract. A complete
+loop needs buyer evidence, a current offer, exact confirmation, one verified
+payment effect, fulfillment, receipt readback, recovery and paid acceptance.
+Check duplicate submit, denied authorization, expired offers, disconnect during
+payment and restart recovery through the actual effect owners. Offline drafts
+must not become implied settlement; uncertain effects require reconciliation.
+
+The public `https://github.com/anthropics/commerce-agents` reference separates
+shopping and merchant roles over shared contracts. Its checkout is a host handoff
+and merchant writes are staged. Use only this abstract separation as grounding;
+copy no external code, prompts, schemas, fixtures or dependencies.
+
+Use `agentic-os` check discovery for the seven owner repositories. Execute their
+existing suites at exact revisions; report unavailable owners and incomplete
+coverage explicitly. Source, fixture and browser results do not substitute for
+independent production-provider, payment and deployment evidence.
 
 ## Boundaries
 

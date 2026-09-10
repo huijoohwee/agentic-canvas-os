@@ -11,7 +11,6 @@ import {
   readVoiceStudioCleanRoomInputs,
   validateVoiceStudioCleanRoomSources,
   validateVoiceStudioContractDocuments,
-  validateVoiceStudioPlanningRow,
 } from "../scripts/voice-studio-contract.mjs";
 
 const documentNames = [
@@ -31,7 +30,6 @@ const repositoryDocuments = new Map(await Promise.all(documentNames.map(async (n
   name,
   await readFile(new URL(`../docs/${name}`, import.meta.url), "utf8"),
 ])));
-const repositoryPlanning = await readFile(new URL("../todo/2026-07.md", import.meta.url), "utf8");
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 
 function withReplacement(name, before, after) {
@@ -52,7 +50,6 @@ test("repository keeps one canonical AI Voice Studio contract", async () => {
     create: "/voice.studio #text-to-speech @text @voice-profile @audio @approval-gate @cost-log @runtime-proof",
   });
   assert.deepEqual(validateVoiceStudioContractDocuments(repositoryDocuments), []);
-  assert.deepEqual(validateVoiceStudioPlanningRow(repositoryPlanning), []);
   const cleanRoomInputs = await readVoiceStudioCleanRoomInputs(repositoryRoot);
   assert.deepEqual(validateVoiceStudioCleanRoomSources(cleanRoomInputs), []);
 });
@@ -251,21 +248,4 @@ test("Markdown table shape rejects unescaped schema drift", () => {
   );
 });
 
-test("planning ledger keeps one complete July 24 AI Voice Studio row", () => {
-  const row = repositoryPlanning.split("\n")
-    .find((line) => line.startsWith("| AI voice studio MCP invocation and clean-room runtime |"));
-  const duplicate = `${repositoryPlanning}\n${row}\n`;
-  assert.equal(
-    validateVoiceStudioPlanningRow(duplicate).some((failure) => failure.includes("expected exactly one")),
-    true,
-  );
 
-  const overlongDirective = repositoryPlanning.replace(
-    "Define one `/voice.studio` command with clone, dictate, and create semantic routes;",
-    `Define ${"bounded ".repeat(55)}voice studio routes;`,
-  );
-  assert.equal(
-    validateVoiceStudioPlanningRow(overlongDirective).some((failure) => failure.includes("maximum is 50")),
-    true,
-  );
-});

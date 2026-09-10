@@ -354,48 +354,7 @@ export function validateRepositoryPackingContractDocuments(documents) {
   return failures;
 }
 
-export function validateRepositoryPackingPlanningRow(planningText) {
-  const failures = [];
-  const ledgerRows = planningText.split("\n")
-    .filter((line) => splitTableRow(line).length === 11);
-  const ledgerMatches = ledgerRows.filter((line) => splitTableRow(line)[0] === PLANNING_CONTEXT);
-  if (ledgerMatches.length !== 1) {
-    return [`todo/2026-07.md: expected one ${PLANNING_CONTEXT} row across the ledger, found ${ledgerMatches.length}`];
-  }
-  const section = readDatedSection(planningText, PLANNING_DATE);
-  if (!section) return [`todo/2026-07.md: missing ${PLANNING_DATE} section`];
-  const rows = section.split("\n")
-    .filter((line) => splitTableRow(line).length === 11);
-  const matches = rows.filter((line) => splitTableRow(line)[0] === PLANNING_CONTEXT);
-  if (matches.length !== 1 || matches[0] !== ledgerMatches[0]) {
-    return [`todo/2026-07.md: ${PLANNING_CONTEXT} must occur in the ${PLANNING_DATE} section`];
-  }
-  const cells = splitTableRow(matches[0]);
-  if (cells.length !== 11) failures.push("todo/2026-07.md: repository packing row must have 11 cells");
-  if (cells.some((cell) => (
-    cell.length === 0
-    || /^(-|n\/a|x)$/i.test(cell)
-    || /\b(?:tbd|placeholder|unknown)\b/i.test(cell)
-  ))) {
-    failures.push("todo/2026-07.md: repository packing row has an empty or placeholder cell");
-  }
-  if (cells[10] !== PLANNING_DATE) failures.push(`todo/2026-07.md: Updated Date must be ${PLANNING_DATE}`);
-  if ((cells[2] ?? "").split(/\s+/).filter(Boolean).length > 50) {
-    failures.push("todo/2026-07.md: Directive exceeds 50 words");
-  }
-  requireMarkers(matches[0], "todo/2026-07.md repository packing row", [
-    REPOSITORY_PACKING_INVOCATION.text,
-    `\`${REPOSITORY_PACKING_INVOCATION.skill}\``,
-    `\`${REPOSITORY_PACKING_INVOCATION.tool}\``,
-    "`runRepositoryPackTool`",
-    "Agentic Canvas OS owns",
-    "agentic-graph owns",
-    "exact revision",
-    "stdio",
-    "protected integration",
-  ], failures);
-  return failures;
-}
+
 
 function requireBoundMarkers(text, failures) {
   const section = readSection(text, "## Hard Bounds", "## Clean-Room Boundary");
@@ -535,13 +494,11 @@ async function runCli() {
     name,
     await readFile(new URL(`../docs/${name}`, import.meta.url), "utf8"),
   ])));
-  const planning = await readFile(new URL("../todo/2026-07.md", import.meta.url), "utf8");
   const packageText = await readFile(new URL("../package.json", import.meta.url), "utf8");
   const lockText = await readFile(new URL("../package-lock.json", import.meta.url), "utf8").catch(() => "");
   const sourceEntries = await readRepositoryPackingSourceEntries();
   const failures = [
     ...validateRepositoryPackingContractDocuments(docs),
-    ...validateRepositoryPackingPlanningRow(planning),
     ...validateRepositoryPackingIndependence({ packageText, lockText, sourceEntries }),
   ];
   if (failures.length > 0) {

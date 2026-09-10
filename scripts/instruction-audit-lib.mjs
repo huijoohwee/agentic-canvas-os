@@ -24,7 +24,7 @@ export const DEFAULT_INSTRUCTION_POLICIES = Object.freeze({
     delegatedDetailPatterns: Object.freeze([
       Object.freeze({ owner: "START-WORKFLOW.md", pattern: /device:(?:start|resume|heartbeat)|writer-lease|fencing sha/i }),
       Object.freeze({ owner: "MEMORY-LOG.md", pattern: /@mem-[0-9]|YYYYMMDDTHHmmssZ/i }),
-      Object.freeze({ owner: "TODO.md", pattern: /11-cell|directive exceeds 50 words/i }),
+      Object.freeze({ owner: "huijoohwee.github.io/docs/TODO.md", pattern: /11-cell|directive exceeds 50 words/i }),
       Object.freeze({ owner: "runtime identity contracts", pattern: /two isolated runtime peers|Cross-device Identity Gate/i }),
     ]),
   }),

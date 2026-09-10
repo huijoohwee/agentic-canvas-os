@@ -133,7 +133,7 @@ harness:
 | Skill System | Discover, load, bundle, scan, and manage on-demand skills | `{ query, skillId, resourcePath, bundleRef, action }` | Metadata index, skill context, resource packet, bundle resolution, proposed diff, or rejection | Writes and unsafe external sources require scan, validation, and approval policy |
 | Context Files | Discover, load, scan, truncate, and audit project-local context | `{ workingDirectory, touchedPaths[], contextType }` | Effective context, skipped matches, blocked files, truncation ledger, or audit result | Context cannot override facts, identity, safety, approval, or deploy gates |
 | Context References | Expand explicit message references into bounded attached context | `{ message, workingDirectory, referencePolicy }` | Original message, attached context packets, warnings, refusals, or unsupported-platform result | URL egress, sensitive paths, binary content, hard limits, and unsafe references fail closed |
-| Kanban Collaboration | Manage durable task and handoff rows across named profiles | `{ boardRef, row, profile, workerProcess }` | Validated row, handoff row, sync ledger, conflict, or missing-board result | Board writes stay in `kanban.md`; no hidden subagent swarm or duplicate store |
+| Kanban Collaboration | Manage durable task and handoff rows across named profiles | `{ boardRef, row, profile, workerProcess }` | Validated row, handoff row, sync ledger, conflict, or missing-board result | Board writes stay in `huijoohwee.github.io/docs/kanban.md`; no hidden subagent swarm or duplicate store |
 | Tool Gateway | Route web, image, TTS, and browser tool calls through existing infrastructure | `{ category, provider, input, approvals[] }` | Tool result, unavailable provider, approval-required, cost log, or typed fallback | Paid, egress, generated-media, and browser-auth actions require approval |
 | Toolsets | Enable or disable logical bundles of existing tool functions per platform | `{ toolsetId, platformSurface, action, approvals[] }` | Scoped enablement state, missing-function list, approval-required, or blocked reason | Paid, mutating, terminal, filesystem, browser-auth, egress, and generated-media toolsets require approval |
 | Tool Search | Keep optional schemas behind session metadata and load exact selected definitions | `{ sessionId, catalogRevision, mode, query, toolName }` | Immutable initial context, append-only definitions, authorization, cost, or typed block | Search stays top-level; loading never bypasses real tool policy, approval, hooks, audit, or cost |
@@ -231,11 +231,11 @@ Context-reference harnesses attach explicit `@` references to the current messag
 
 ## Kanban Collaboration Harness Contract
 
-Kanban collaboration harnesses coordinate named profiles through `kanban.md` rows. Context-reference patterns may inform row context refs, but local harnesses must reuse shared table/Kanban utilities and must not import copied board runtimes, schema examples, tests, fixtures, or prose.
+Kanban collaboration harnesses coordinate named profiles through `huijoohwee.github.io/docs/kanban.md` rows. Context-reference patterns may inform row context refs, but local harnesses must reuse shared table/Kanban utilities and must not import copied board runtimes, schema examples, tests, fixtures, or prose.
 
 | Stage | Harness input | Harness output | Guard |
 |---|---|---|---|
-| Board read | `{ boardRef }` | Parsed task table or missing-board result. | `kanban.md` is the SSOT; no second datastore. |
+| Board read | `{ boardRef }` | Parsed task table or missing-board result. | `huijoohwee.github.io/docs/kanban.md` is the SSOT; no second datastore. |
 | Task write | `{ taskRow, profile }` | Validated task row or rejection. | Stable id, owner profile, status, acceptance, evidence, and next action are required. |
 | Handoff write | `{ handoffRow }` | Validated handoff row or rejection. | From, to, task id, context refs, blockers, resume state, and acceptance are required. |
 | Worker bind | `{ profile, process }` | Worker binding or blocked result. | Worker is a full OS process with identity, cwd, command, proof, bounds, and cleanup. |

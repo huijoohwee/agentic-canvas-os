@@ -10,7 +10,6 @@ const facts = read("docs/FACTS.md");
 const runtime = read("docs/IMPLEMENTATION-RUN-OBSERVATION.md");
 const gateway = read("docs/MCP-GATEWAY.md");
 const proof = read("docs/RUNTIME-PROOF.md");
-const planning = read("todo/2026-07.md");
 const retiredNamespace = ["k", "now", "grph"].join("");
 
 const invocation = "/adlc.observe #adlc-observability @implementation-run @canvas @runtime-proof";
@@ -178,7 +177,7 @@ test("verified, delivery_ready, and deployed remain distinct non-promoting claim
   assert.match(facts, /retains only the read-only, non-promoting .* projection[\s\S]*grants no lifecycle authority/);
 });
 
-test("economics and deployment boundaries stay exact and the planning row is complete", () => {
+test("economics and deployment boundaries stay exact", () => {
   assert.match(runtime, /^status: "spec-complete"$/m);
   assert.doesNotMatch(runtime, /^status: "runtime-ready"$/m);
   assert.match(runtime, /exact zeros for network calls, model calls,\s+prompt tokens, completion tokens, and estimated cost/);
@@ -187,12 +186,7 @@ test("economics and deployment boundaries stay exact and the planning row is com
   assert.match(proof, /Spec-complete for ACOS contract/);
   assert.match(proof, /Current-guideline evaluator parity, protected agentic-graph integration, live rendering, Prod, and Cloudflare remain unclaimed/);
 
-  const context = "Agentic SDLC end-to-end observability catalog 2026-07-29";
-  assert.equal(count(planning, `^\\| ${escapeRegExp(context)} \\|`), 1);
-  const row = planning.split("\n").find((line) => line.startsWith(`| ${context} |`));
-  assert.ok(row);
-  assert.equal(row.split("|").length, 13, "planning row must contain exactly 11 cells");
-  assert.match(row, /\| 2026-07-29 \|$/);
+
 });
 
 test("all touched authored documents remain below the repository line cap", () => {
@@ -203,7 +197,6 @@ test("all touched authored documents remain below the repository line cap", () =
     "IMPLEMENTATION-RUN-OBSERVATION.md": runtime,
     "MCP-GATEWAY.md": gateway,
     "RUNTIME-PROOF.md": proof,
-    "todo/2026-07.md": planning,
   })) {
     assert.ok(source.split("\n").length - 1 < 600, `${name} must stay below 600 lines`);
   }

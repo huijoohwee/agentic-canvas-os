@@ -161,7 +161,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Evaluate instruction task quality | Given a complete recorded or live candidate packet, when `/instruction.quality-evaluate` runs, then every final answer is scored against required concepts, unsafe claims, and concision with explicit provenance and no access to private reasoning. | Must |
 | Load project context safely | Given a working directory or touched path, when `/context.discover` and `/context.load` run, then one effective project context is discovered, scanned, bounded, and kept subordinate to facts and identity. | Must |
 | Inject inline context by reference | Given a message with approved `@` references, when `/reference.expand` runs on a supported surface, then bounded `@attached-context` is appended with warnings or refusals and raw text is preserved on unsupported surfaces. | Must |
-| Coordinate named profiles by Kanban | Given several profiles or worker processes, when `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` runs, then all coordination state is stored as validated `kanban.md` rows. | Must |
+| Coordinate named profiles by Kanban | Given several profiles or worker processes, when `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` runs, then all coordination state is stored as validated `huijoohwee.github.io/docs/kanban.md` rows. | Must |
 | Configure platform toolsets | Given a platform surface, when `/toolset.enable` or `/toolset.disable` runs, then only existing tool functions change scoped availability and risky toolsets require approval. | Must |
 | Discover deferred tools on demand | Given many eligible MCP or plugin tools, when `/tool.search`, `/tool.describe`, and `/tool.call` run, then schema disclosure is session-scoped, opt-in, and dispatched under real tool policy. | Must |
 | Route tools through existing infrastructure | Given a web, image, TTS, or browser tool request, when `/tool.route` runs, then provider state, approval, egress, schema, cost, and fallback are checked before execution. | Must |
@@ -190,7 +190,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Context loads without working-directory scope, scan, bounds, or precedence proof | 0 |
 | Context reference expansions without policy, source, size, warning, or workspace proof | 0 |
 | Sensitive, binary, outside-workspace, or disallowed-egress context injections | 0 |
-| Profile handoffs outside durable `kanban.md` rows | 0 |
+| Profile handoffs outside durable `huijoohwee.github.io/docs/kanban.md` rows | 0 |
 | In-process subagent swarms used as collaboration SSOT | 0 |
 | Toolset changes without platform scope, policy, or required approval | 0 |
 | Deferred schema exposure outside session scope, policy, or budget gates | 0 |
@@ -299,7 +299,7 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Instruction task-quality evaluation | Model-agnostic final-answer scenarios, typed rubric findings, provenance, and human-review boundary | `docs/INSTRUCTION-QUALITY-EVALUATION.md`, `evals/instruction-task-quality-cases.json`, evaluator library, and focused tests |
 | Context files | Working-directory and subdirectory project context discovery, scan, truncation, and audit | `FACTS.md`, `AGENTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and context harness owners |
 | Context references | Explicit `@` message references expanded into bounded attached context | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and approved composer or local harness owners |
-| Kanban collaboration | Durable task and handoff rows for named profiles and full OS worker processes | `kanban.md`, `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and shared table/Kanban owners |
+| Kanban collaboration | Durable task and handoff rows for named profiles and full OS worker processes | `huijoohwee.github.io/docs/kanban.md`, `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and shared table/Kanban owners |
 | Tools and toolsets | Callable tool functions plus logical bundles enabled or disabled per platform surface | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and `MCP-GATEWAY.md` |
 | Tool Gateway | Per-tool routing for web search, image generation, TTS, and cloud browser automation through existing infrastructure | `docs/FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and `MCP-GATEWAY.md` |
 | Tool Search | Opt-in deferred schema search, describe, and bridge call for eligible MCP and non-core plugin tools | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and tool catalog owners |
@@ -377,7 +377,7 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Skills load progressively | `/skill.discover` returns metadata only; `/skill.load` loads selected source and required resources with scan, validation, and no external copy. |
 | Context files are scoped | `/context.discover`, `/context.load`, and `/context.audit` name `@working-directory`, first-match context, scan/truncation state, skipped matches, and stronger facts/identity boundaries. |
 | Context references are bounded | `/reference.expand` and `/reference.audit` report `@reference-policy`, `@attached-context`, warning/refusal packets, size bounds, and unsupported-surface behavior. |
-| Kanban collaboration is durable | `/kanban.task`, `/kanban.handoff`, and `/kanban.sync` validate `kanban.md` rows, named profiles, handoff evidence, and OS worker boundaries. |
+| Kanban collaboration is durable | `/kanban.task`, `/kanban.handoff`, and `/kanban.sync` validate `huijoohwee.github.io/docs/kanban.md` rows, named profiles, handoff evidence, and OS worker boundaries. |
 | Toolsets are scoped | `/toolset.enable` or `/toolset.disable` names existing functions, `@toolset`, `@platform-surface`, `@tool-policy`, and approval state before changing availability. |
 | Tool Search is scoped | `/tool.search`, `/tool.describe`, and `/tool.call` use `@deferred-tool-catalog`, `@bridge-tool`, and `@tool-policy` without global registry discovery or bridge approval bypass. |
 | Tool routing is gated | `/tool.catalog` reports provider states; `/tool.route` validates schema, approval, egress, cost, and fallback before web, image, TTS, or browser execution. |

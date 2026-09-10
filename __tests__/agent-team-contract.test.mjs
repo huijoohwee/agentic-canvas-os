@@ -9,7 +9,6 @@ import {
   validateAgentTeamCleanRoomSources,
   validateAgentTeamContractDocuments,
   validateAgentTeamDocumentLineBudgets,
-  validateAgentTeamPlanningRow,
 } from "../scripts/agent-team-contract.mjs";
 
 const documentNames = [
@@ -31,7 +30,6 @@ const repositoryDocuments = new Map(await Promise.all(documentNames.map(async (n
   name,
   await readFile(new URL(`../docs/${name}`, import.meta.url), "utf8"),
 ])));
-const repositoryPlanning = await readFile(new URL("../todo/2026-07.md", import.meta.url), "utf8");
 
 function withReplacement(name, before, after) {
   const documents = new Map(repositoryDocuments);
@@ -70,7 +68,6 @@ test("repository keeps one canonical role-based Agent Team contract", () => {
   });
   assert.deepEqual(validateAgentTeamContractDocuments(repositoryDocuments), []);
   assert.deepEqual(validateAgentTeamDocumentLineBudgets(repositoryDocuments), []);
-  assert.deepEqual(validateAgentTeamPlanningRow(repositoryPlanning), []);
 });
 
 test("each invocation token must remain directly and truthfully resolvable", () => {
@@ -285,10 +282,4 @@ test("every authored document must remain below 600 lines", () => {
   );
 });
 
-test("the planning ledger keeps exactly one July 24 Agent Team row", () => {
-  const duplicate = `${repositoryPlanning}\n${repositoryPlanning.split("\n").find((line) => line.startsWith("| Role-agent orchestration MCP and invocation runtime |"))}\n`;
-  assert.equal(
-    validateAgentTeamPlanningRow(duplicate).some((failure) => failure.includes("expected exactly one")),
-    true,
-  );
-});
+

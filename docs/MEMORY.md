@@ -14,7 +14,7 @@ source_docs:
   - "TODO.md"
   - "AGENTIC-GRAPH.md"
   - "$GITHUB_ROOT/agentic-graph/docs/workspace-seeds/agentic-graph-strybldr-starter-template.md"
-  - "$GITHUB_ROOT/huijoohwee.github.io/guidelines/prd-tad-adr-guidelines.md"
+  - "$GITHUB_ROOT/huijoohwee.github.io/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
 implementation_contract: "FACTS.md owns shared truth; MEMORY.md persists bounded agent notes; USER.md persists bounded explicit operator profile; frontmatter and authored Markdown body are SSOT"
 publish_policy: "Dev-only until the operator explicitly authorizes Prod or Cloudflare"
 runtime_scope: "Agentic Canvas OS docs control surface"

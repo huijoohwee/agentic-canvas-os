@@ -21,6 +21,7 @@ import { validateAlignmentAuditContractDocuments } from "./alignment-audit-contr
 import { validateUrlIngestContractDocuments } from "./url-ingest-contract.mjs";
 import { validatePlanningContextRecordContract } from "./planning-context-record-contract.mjs";
 import { validateDictionaryCatalogContract } from "./dictionary-catalog-contract.mjs";
+import { validateDictionaryProjections } from "./dictionary-projections.mjs";
 import { validateKanbanProjection } from "./kanban-projection.mjs";
 
 export const MAX_DOCS_ARTIFACT_BYTES = 500_000;
@@ -178,6 +179,7 @@ export async function runDocsContract({
   failures.push(...validateAlignmentAuditContractDocuments(documents));
   failures.push(...validateUrlIngestContractDocuments(documents));
   failures.push(...validateDictionaryCatalogContract(documents));
+  failures.push(...validateDictionaryProjections(documents));
   failures.push(...validateKanbanProjection(documents, { repository: repositoryRoot }));
   failures.push(...validatePlanningContextRecordContract({ repository: repositoryRoot }).failures);
 

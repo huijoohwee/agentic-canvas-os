@@ -35,7 +35,7 @@ test("every declared entry carries a kind, a derived label, and a non-empty summ
     assert.ok(["command", "semantic", "binding"].includes(entry.kind));
     assert.equal(entry.label, labelFromToken(entry.token));
     assert.notEqual(entry.summary, "");
-    assert.match(entry.sourcePath, /^agentic-canvas-os\/docs\/DICTIONARY-[A-Z]+\.md$/);
+    assert.match(entry.sourcePath, /^agentic-os\/catalog\/dictionaries\/DICTIONARY-[A-Z]+\.md$/);
   }
 });
 

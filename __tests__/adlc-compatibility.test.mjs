@@ -54,7 +54,7 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.equal(promptBytes.at(-1), 0x0a);
   const prompt = new TextDecoder("utf-8", { fatal: true }).decode(promptBytes);
   assert.match(guideline, /^schema: agentic-os\/adlc-guidelines\/v1$/mu);
-  assert.match(guideline, /^version: 1\.2\.0$/mu);
+  assert.match(guideline, /^version: 1\.4\.0$/mu);
   assert.match(guideline, /^supersedes: agentic-sdlc$/mu);
   assert.match(guideline, /^runtime_contract: enforced$/mu);
   assert.match(guideline, /^runtime_evaluator: npm run evals$/mu);
@@ -63,12 +63,12 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.match(guideline, /^integration_policy: minimal-diff-protected-merge$/mu);
   assert.match(guideline, /^runtime_policy: fail-closed$/mu);
   assert.match(guideline, /^lifecycle_status: active$/mu);
-  assert.equal(Buffer.byteLength(prompt, "utf8"), 1_000);
+  assert.equal(Buffer.byteLength(prompt, "utf8"), 999);
   assert.ok(Buffer.byteLength(prompt, "utf8") <= 1_000);
-  assert.equal([...prompt].length, 988);
+  assert.equal([...prompt].length, 991);
   assert.ok(prompt.split("\n").every((line) => [...line].length <= 120));
   assert.equal(createHash("sha256").update(promptBytes).digest("hex"),
-    "c72415b3f0c1886bc2e98cc8779e9561501f589cca726c1441c7b8dafc531ee0");
+    "c4cb3b5cc96a2b35e80b10ae98883a54be2b7923d582afccc41fe2778523bb69");
   assert.match(prompt, /Lean time-bound sprints: state ETA\+time\/byte\/module caps;/u);
   assert.match(prompt, /External wait: blocker\+recheck, not ETA\./u);
   assert.match(guide, /on-demand ADLC guide, not an always-load instruction/u);

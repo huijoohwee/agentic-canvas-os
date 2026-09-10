@@ -6,7 +6,9 @@ date: "2026-09-05"
 lang: "en-US"
 schema: "agentic-os-dictionary-semantic/v1"
 frontmatter_contract: "required"
-status: "runtime-ready"
+status: "metadata-only"
+owner: "agentic-os"
+source_reference_root: "agentic-canvas-os/docs"
 prefix: "#"
 prefix_role: "semantic filter or topic route"
 source_docs:
@@ -24,9 +26,9 @@ source_docs:
   - "VOICE-STUDIO.md"
   - "../node_modules/agentic-os/docs/adlc-guidelines.md"
 publish_policy: "Dev-only until explicit operator approval"
-runtime_scope: "Agentic Canvas OS docs control surface"
+runtime_scope: "shared invocation metadata; execution remains consumer-owned"
 runtime_claim: "dictionary content for shared hash invocation utilities; no separate semantic registry"
-runtime_proof: "RUNTIME-PROOF.md"
+runtime_proof: "consumer-owned; metadata is not execution evidence"
 metadata_consumers:
   - id: "chat_composer"
     surface: "FloatingPanel Chat composer"
@@ -198,7 +200,10 @@ dictionary_entries:
 
 # Semantic Dictionary
 
-This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags classify intent, risk, and proof requirements. They do not create duplicate stores, stale aliases, or model prompts by themselves.
+This file defines `#` semantic-route content owned by agentic-os and reused by consumers. Tags classify intent, risk, and proof requirements. They do not create duplicate stores, stale aliases, or model prompts by themselves.
+
+Product document references resolve against `agentic-canvas-os/docs` unless repository-qualified.
+Dictionary references resolve within this directory. Runtime and approval claims remain consumer-owned.
 
 ## Contract
 
@@ -253,7 +258,7 @@ This file defines `#` semantic-route content for Agentic Canvas OS docs. Tags cl
 | `#webmcp` | Browser-local W3C Model Context surface scope for in-page tool registration and inspection. | A request routes to a browser-local `agentic-graph.inspect_local_*` or `agentic-graph.control_local_*` tool instead of a local, Pages, or control-plane MCP owner. | The recorded API revision in `@webmcp-surface` resolves; an absent registration API fails visibly as an unavailable surface before any tool is advertised, and the token grants no model, network, camera, persistence, Prod, or Cloudflare authority. |
 | `#repository-packing` | Deterministic, bounded conversion of one exact local Git worktree into one AI-friendly content-addressed Markdown artifact. | `/repository.pack #repository-packing @repository-root @runtime-proof` requests the local stdio MCP owner. | Canonical Git discovery, typed omissions, source and artifact digests, path containment, atomic publication, independence proof, and zero network, model, token, cost, Prod, and Cloudflare activity are explicit. |
 | `#git-remote` | Browser Git object/ref operations with remote transport isolated behind a Dev Worker relay. | `/git.run` inspects, commits, clones, fetches, or pushes a configured remote. | Exact object hashing, atomic authority rejection, active persistence, bounded transport, expected-old ref checks, typed conflicts, and Worker-only credentials are proven. |
-| `#git-collaboration` | Git collaboration rules. | A task enters any git stage from session start through cleanup. | `docs/documents/git-guidelines.md` resolves and the focused checker reports registration parity. |
+| `#git-collaboration` | Git collaboration rules. | A task enters any git stage from session start through cleanup. | `../node_modules/agentic-os/docs/adlc-guidelines.md` resolves and the focused checker reports registration parity. |
 | `#multi-provider-file-sync` | Bidirectional file or directory transfer through a provider-neutral browser contract. | `/file.sync` pulls or pushes a configured provider prefix. | Provider capability, pagination, hash semantics, per-file outcomes, both-sides-changed conflicts, size/time bounds, offline FIFO, and secret-free browser payloads are proven. |
 | `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, KGC, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
 | `#canvas-node` | Canvas graph node selection, creation, opening, linking, or deletion intent. | A command acts on a node, creates a node, or needs selected-node context. | Node id, type, label, graph point, mutation owner, and selection state are explicit. |

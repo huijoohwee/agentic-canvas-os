@@ -19,10 +19,9 @@ import {
 import { validateRepositoryPackingContractDocuments } from "./repository-packing-contract.mjs";
 import { validateAlignmentAuditContractDocuments } from "./alignment-audit-contract.mjs";
 import { validateUrlIngestContractDocuments } from "./url-ingest-contract.mjs";
-import { validatePlanningContextRecordContract } from "./planning-context-record-contract.mjs";
+import { validatePlanningOwner } from "./planning-owner.mjs";
 import { validateDictionaryCatalogContract } from "./dictionary-catalog-contract.mjs";
 import { validateDictionaryProjections } from "./dictionary-projections.mjs";
-import { validateKanbanProjection } from "./kanban-projection.mjs";
 
 export const MAX_DOCS_ARTIFACT_BYTES = 500_000;
 // The always-on harness header is loaded every session, so it carries a much
@@ -180,8 +179,7 @@ export async function runDocsContract({
   failures.push(...validateUrlIngestContractDocuments(documents));
   failures.push(...validateDictionaryCatalogContract(documents));
   failures.push(...validateDictionaryProjections(documents));
-  failures.push(...validateKanbanProjection(documents, { repository: repositoryRoot }));
-  failures.push(...validatePlanningContextRecordContract({ repository: repositoryRoot }).failures);
+  failures.push(...validatePlanningOwner(repositoryRoot));
 
   if (failures.length > 0) throw new Error(failures.join("\n"));
   return Object.freeze({

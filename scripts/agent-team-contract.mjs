@@ -269,34 +269,7 @@ export function validateAgentTeamDocumentLineBudgets(documents) {
   return failures;
 }
 
-export function validateAgentTeamPlanningRow(planningText) {
-  const failures = [];
-  const context = "Role-agent orchestration MCP and invocation runtime";
-  const rows = String(planningText).split("\n").filter((line) => line.startsWith(`| ${context} |`));
-  if (rows.length !== 1) {
-    failures.push(`todo/2026-07.md: expected exactly one ${context} row, found ${rows.length}`);
-    return failures;
-  }
-  const cells = splitMarkdownTableRow(rows[0]);
-  requireTableColumns(rows[0], 11, "todo/2026-07.md: Agent Team planning row", failures);
-  if (cells.some((cell) => cell.length === 0)) {
-    failures.push("todo/2026-07.md: Agent Team planning row must fill all 11 cells");
-  }
-  const directiveWords = (cells[2] || "").split(/\s+/).filter(Boolean).length;
-  if (directiveWords > 50) {
-    failures.push(`todo/2026-07.md: Agent Team directive has ${directiveWords} words; maximum is 50`);
-  }
-  requireMarkers(rows[0], "todo/2026-07.md: Agent Team planning row", [
-    AGENT_TEAM_INVOCATION.text,
-    ...AGENT_TEAM_MCP_TOOLS,
-    "2026-07-24",
-  ], failures);
-  const dateSection = readSection(String(planningText), "## 2026-07-24", "## 2026-07-25");
-  if (!dateSection.includes(rows[0])) {
-    failures.push("todo/2026-07.md: Agent Team planning row must remain under 2026-07-24");
-  }
-  return failures;
-}
+
 
 function requireBoundRows(contract, failures) {
   const rows = [
@@ -523,18 +496,16 @@ function fail(message) {
 const scriptPath = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
   const repositoryRoot = path.resolve(".");
-  const [documents, packageText, lockfileText, modules, planningText] = await Promise.all([
+  const [documents, packageText, lockfileText, modules] = await Promise.all([
     readRepositoryDocuments(path.join(repositoryRoot, "docs")),
     readFile(path.join(repositoryRoot, "package.json"), "utf8"),
     readOptional(path.join(repositoryRoot, "package-lock.json")),
     readRuntimeSources(repositoryRoot),
-    readFile(path.join(repositoryRoot, "todo", "2026-07.md"), "utf8"),
   ]);
   const failures = [
     ...validateAgentTeamContractDocuments(documents),
     ...validateAgentTeamCleanRoomSources({ packageText, lockfileText, modules }),
     ...validateAgentTeamDocumentLineBudgets(documents),
-    ...validateAgentTeamPlanningRow(planningText),
   ];
   if (failures.length > 0) fail(failures.join("\n"));
   else process.stdout.write("agent team contract ok\n");

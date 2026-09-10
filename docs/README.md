@@ -61,7 +61,7 @@ For delivery planning or repeated mechanical failure, lazy-load only
 | `FACTS.md` | Shared truth layer | Stable facts, precedence, direct `/`, `#`, and `@` definitions, deploy boundary truth, context-file and context-reference facts, tool/toolset facts, Tool Gateway and Tool Search facts, MoA facts, learning-loop facts, stateful orchestration facts, and long-horizon SuperAgent facts. |
 | `MEMORY.md` | Agent memory seed | Bounded agent notes, persistence, routing memory, MoA memory, stateful orchestration memory, reusable runtime-readiness context, and local operating lenses. |
 | `MEMORY-LOG.md` | Append-only memory contract | GitHub-as-SSOT sync boundaries, `memory-log/v1` monthly shards, sigil entries, merge rules, bounded retrieval, and the BM25-to-embedding escalation path. |
-| `TODO.md` | Bounded planning index | Immutable legacy monthly history, independent `todo-context-record/v2` task files, deterministic projection, and release compliance. |
+| `huijoohwee.github.io/docs/TODO.md` | Central planning route | Immutable legacy monthly history, independent `todo-context-record/v2` task files, deterministic projection, and release compliance. |
 | `USER.md` | User profile contract | Explicit operator preferences, communication style, expectations, profile write boundaries, and unsupported-inference rejection. |
 | `AGENTS.md` | Durable project guidance | Small always-on rules plus routing to canonical workflow, skill, proof, and validation owners. |
 | `INTEGRATION-ORDER.md` | Product dependency-order contract | Immutable product units, disjoint DAG waves, evidence-backed product frontiers, and explicit delegation of every repository lifecycle effect to pinned ADLC. |
@@ -94,7 +94,7 @@ For delivery planning or repeated mechanical failure, lazy-load only
 | `DICTIONARY-SEMANTIC.md` | Hash dictionary | `#` semantic filters for routing, proof, cost, and cleanup. |
 | `DICTIONARY-BINDING.md` | At dictionary | `@` actor, source, runtime, proof, and boundary bindings. |
 | `SKILLS.md` | Metadata-first skill catalog | Lightweight ids, families, selection rules, and links to progressively disclosed workflow owners. |
-| `kanban.md` | Durable task board | Shared task and handoff rows for named profiles and full OS worker processes using existing table/Kanban utilities. |
+| `huijoohwee.github.io/docs/kanban.md` | Central task-board route | Shared task and handoff rows for named profiles and full OS worker processes using existing table/Kanban utilities. |
 | `PRD-TAD.md` | Combined product and architecture contract | What `agentic-graph` must provide and how the runtime is shaped. |
 | `RUNTIME-READINESS.md` | Readiness matrix | Tracks spec-complete to runtime-ready gates by capability. |
 | `RUNTIME-PROOF.md` | Runtime proof ledger | Current parse, route, scan, validation, and deploy-boundary proof for this docs control surface. |
@@ -122,8 +122,8 @@ For delivery planning or repeated mechanical failure, lazy-load only
 - A caller can discover skill metadata, load selected skills and resources on demand, resolve bundles, and gate managed skill writes without a duplicate registry.
 - A caller can discover and load project-local context files from scoped working directories without letting them override facts, identity, safety, approval, or deploy gates.
 - A caller can expand explicit `@` context references into bounded attached context while preserving raw text on unsupported surfaces.
-- A caller can coordinate named profiles through durable `kanban.md` task and handoff rows instead of hidden in-process subagent swarms.
-- A caller can load `TODO.md` and one exact `todo/YYYY-MM/<context>.md` record; flat monthly shards remain immutable history.
+- A caller can coordinate named profiles through durable `huijoohwee.github.io/docs/kanban.md` task and handoff rows instead of hidden in-process subagent swarms.
+- A caller can load `huijoohwee.github.io/docs/TODO.md` and one exact `huijoohwee.github.io/todo/YYYY-MM/<context>.md` record; flat monthly shards remain immutable history.
 - A task can preserve planning history through one base-absent Context record in the active month whose complete row passes the 11-cell, non-empty, 50-word directive, and dated-section release gate.
 - Shared check discovery belongs to `agentic-os/catalog/repository-checks.json`; it references repository-owned profiles, package scripts, and workflows. Executable tests and fixtures stay with their source owners; `VALIDATION-RUNBOOK.md` retains Canvas validation guidance. Combined results identify repository, revision, command, coverage, and outcome without implying ecosystem-wide E2E or Production readiness.
 - A caller can discover callable tool functions and enable or disable logical toolsets per platform without copying a registry or granting global access.

@@ -367,37 +367,7 @@ export function validateVoiceStudioCleanRoomSources({
   return failures;
 }
 
-export function validateVoiceStudioPlanningRow(planningText) {
-  const failures = [];
-  const context = "AI voice studio MCP invocation and clean-room runtime";
-  const rows = String(planningText).split("\n").filter((line) => line.startsWith(`| ${context} |`));
-  if (rows.length !== 1) {
-    failures.push(`todo/2026-07.md: expected exactly one ${context} row, found ${rows.length}`);
-    return failures;
-  }
-  const cells = splitMarkdownTableRow(rows[0]);
-  requireTableColumns(rows[0], 11, "todo/2026-07.md: AI Voice Studio planning row", failures);
-  if (cells.some((cell) => cell.length === 0)) {
-    failures.push("todo/2026-07.md: AI Voice Studio planning row must fill all 11 cells");
-  }
-  const directiveWords = (cells[2] || "").split(/\s+/).filter(Boolean).length;
-  if (directiveWords > 50) {
-    failures.push(`todo/2026-07.md: AI Voice Studio directive has ${directiveWords} words; maximum is 50`);
-  }
-  requireMarkers(rows[0], "todo/2026-07.md: AI Voice Studio planning row", [
-    VOICE_STUDIO_COMMAND,
-    VOICE_STUDIO_MCP_TOOL,
-    "speaker consent",
-    "recording rights",
-    "no copied Voicebox artifact or dependency",
-    "2026-07-24",
-  ], failures);
-  const dateSection = readSection(String(planningText), "## 2026-07-24", "## 2026-07-25");
-  if (!dateSection.includes(rows[0])) {
-    failures.push("todo/2026-07.md: AI Voice Studio planning row must remain under 2026-07-24");
-  }
-  return failures;
-}
+
 
 export async function readVoiceStudioCleanRoomInputs(repositoryRoot = path.resolve(".")) {
   const [packageText, lockfileText, modules] = await Promise.all([
@@ -584,15 +554,13 @@ function fail(message) {
 const scriptPath = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
   const repositoryRoot = path.resolve(".");
-  const [documents, cleanRoomInputs, planningText] = await Promise.all([
+  const [documents, cleanRoomInputs] = await Promise.all([
     readRepositoryDocuments(path.join(repositoryRoot, "docs")),
     readVoiceStudioCleanRoomInputs(repositoryRoot),
-    readFile(path.join(repositoryRoot, "todo", "2026-07.md"), "utf8"),
   ]);
   const failures = [
     ...validateVoiceStudioContractDocuments(documents),
     ...validateVoiceStudioCleanRoomSources(cleanRoomInputs),
-    ...validateVoiceStudioPlanningRow(planningText),
   ];
   if (failures.length > 0) fail(failures.join("\n"));
   else process.stdout.write("voice studio contract ok\n");

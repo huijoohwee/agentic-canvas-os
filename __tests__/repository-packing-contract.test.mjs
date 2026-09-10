@@ -11,14 +11,12 @@ import {
   readRepositoryPackingSourceEntries,
   validateRepositoryPackingContractDocuments,
   validateRepositoryPackingIndependence,
-  validateRepositoryPackingPlanningRow,
 } from "../scripts/repository-packing-contract.mjs";
 
 const repositoryDocuments = new Map(await Promise.all(REPOSITORY_PACKING_DOCUMENTS.map(async (name) => [
   name,
   await readFile(new URL(`../docs/${name}`, import.meta.url), "utf8"),
 ])));
-const repositoryPlanning = await readFile(new URL("../todo/2026-07.md", import.meta.url), "utf8");
 const repositorySources = await readRepositoryPackingSourceEntries();
 
 function withReplacement(name, before, after) {
@@ -55,7 +53,6 @@ test("repository packing keeps one canonical invocation and bounded contract", (
     hardMcpResponseBytes: 65_536,
   });
   assert.deepEqual(validateRepositoryPackingContractDocuments(repositoryDocuments), []);
-  assert.deepEqual(validateRepositoryPackingPlanningRow(repositoryPlanning), []);
   assert.deepEqual(REPOSITORY_PACKING_SOURCE_ROOTS, [
     ".github",
     "__tests__",
@@ -354,56 +351,7 @@ test("every projection row proves its content instead of only its label", () => 
   }
 });
 
-test("planning row is unique, complete, dated, and directive-bounded", () => {
-  const missing = repositoryPlanning.replace("repository-packing-ai-friendly-single-file-runtime", "wrong-context");
-  assert.equal(validateRepositoryPackingPlanningRow(missing)[0].includes("expected one"), true);
 
-  const row = repositoryPlanning.split("\n")
-    .find((line) => line.includes("repository-packing-ai-friendly-single-file-runtime"));
-  const compactRow = `|${row.trim().slice(1, -1).split("|").map((cell) => cell.trim()).join("|")}|`;
-  const noOuterRow = row.trim().slice(1, -1);
-  for (const duplicateRow of [row, compactRow, `   ${row}`, noOuterRow]) {
-    const duplicate = repositoryPlanning.replace("## 2026-07-23\n", `## 2026-07-23\n${duplicateRow}\n`);
-    assert.equal(validateRepositoryPackingPlanningRow(duplicate)[0].includes("found 2"), true);
-  }
-
-  const wrongSection = repositoryPlanning
-    .replace(`${row}\n`, "")
-    .replace("## 2026-07-23\n", `## 2026-07-23\n${row}\n`);
-  assert.equal(validateRepositoryPackingPlanningRow(wrongSection)[0].includes("must occur"), true);
-
-  const placeholder = `| ${[
-    "repository-packing-ai-friendly-single-file-runtime",
-    ...Array(9).fill("x"),
-    "2026-07-24",
-  ].join(" | ")} |`;
-  assert.equal(
-    validateRepositoryPackingPlanningRow(repositoryPlanning.replace(row, placeholder))
-      .some((failure) => failure.includes("placeholder")),
-    true,
-  );
-  assert.equal(
-    validateRepositoryPackingPlanningRow(repositoryPlanning.replace(
-      row,
-      row.replace("Pack one complete local codebase", "TBD later"),
-    )).some((failure) => failure.includes("placeholder")),
-    true,
-  );
-
-  for (const [before, after, expected] of [
-    ["/repository.pack #repository-packing @repository-root @runtime-proof", "generic invocation", "missing /repository.pack"],
-    ["`agentic-graph.repository.pack`", "`other.tool`", "missing `agentic-graph.repository.pack`"],
-    ["Agentic Canvas OS owns", "A owns", "missing Agentic Canvas OS owns"],
-    ["agentic-graph owns", "B owns", "missing agentic-graph owns"],
-  ]) {
-    const changed = repositoryPlanning.replace(row, row.replace(before, after));
-    assert.equal(
-      validateRepositoryPackingPlanningRow(changed)
-        .some((failure) => failure.includes(expected)),
-      true,
-    );
-  }
-});
 
 test("all touched contract documents retain the repository line budget", () => {
   const oversized = new Map(repositoryDocuments);

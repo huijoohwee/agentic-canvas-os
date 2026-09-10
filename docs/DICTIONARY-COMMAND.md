@@ -6,13 +6,15 @@ date: "2026-09-05"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
-status: "runtime-ready"
+status: "metadata-only"
+owner: "agentic-os"
+source_reference_root: "agentic-canvas-os/docs"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "7075de061ff7762a2866117cb81497c5c8d92222f7f713cbd7009edfb89d6b80"
+catalog_digest: "c65d8fd480966ed95cff4383e327c4dc2b21603af115a788361f8e2188073e00"
 catalog_entry_count: 406
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
-catalog_digest_owner: "scripts/dictionary-catalog-contract.mjs"
+catalog_digest_owner: "src/invocation.mjs#validateDictionaryCatalogContract"
 source_docs:
   - "FACTS.md"
   - "MEMORY.md"
@@ -29,9 +31,9 @@ source_docs:
   - "../AGENTS.md"
   - "../node_modules/agentic-os/docs/adlc-guidelines.md"
 publish_policy: "Dev-only until explicit operator approval"
-runtime_scope: "Agentic Canvas OS docs control surface"
+runtime_scope: "shared invocation metadata; execution remains consumer-owned"
 runtime_claim: "dictionary content for shared slash invocation utilities; no separate command runtime"
-runtime_proof: "RUNTIME-PROOF.md"
+runtime_proof: "consumer-owned; metadata is not execution evidence"
 metadata_consumers:
   - id: "chat_composer"
     surface: "FloatingPanel Chat composer"
@@ -194,7 +196,10 @@ dictionary_entries:
 
 # Command Dictionary
 
-This file defines `/` command-route content for Agentic Canvas OS docs. It is a dictionary for shared invocation utilities, not a new command runner, parser, provider panel, or compatibility registry.
+This file defines `/` command-route content owned by agentic-os and reused by consumers. It is a dictionary for shared invocation utilities, not a new command runner, parser, provider panel, or compatibility registry.
+
+Product document references resolve against `agentic-canvas-os/docs` unless repository-qualified.
+Dictionary references resolve within this directory. Runtime and approval claims remain consumer-owned.
 
 ## Contract
 

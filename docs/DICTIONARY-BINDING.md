@@ -6,7 +6,9 @@ date: "2026-09-05"
 lang: "en-US"
 schema: "agentic-os-dictionary-binding/v1"
 frontmatter_contract: "required"
-status: "runtime-ready"
+status: "metadata-only"
+owner: "agentic-os"
+source_reference_root: "agentic-canvas-os/docs"
 prefix: "@"
 prefix_role: "source, actor, or runtime binding"
 source_docs:
@@ -23,9 +25,9 @@ source_docs:
   - "VOICE-STUDIO.md"
   - "../node_modules/agentic-os/docs/adlc-guidelines.md"
 publish_policy: "Dev-only until explicit operator approval"
-runtime_scope: "Agentic Canvas OS docs control surface"
+runtime_scope: "shared invocation metadata; execution remains consumer-owned"
 runtime_claim: "dictionary content for shared binding invocation utilities; no separate binding store"
-runtime_proof: "RUNTIME-PROOF.md"
+runtime_proof: "consumer-owned; metadata is not execution evidence"
 metadata_consumers:
   - id: "chat_composer"
     surface: "FloatingPanel Chat composer"
@@ -189,7 +191,10 @@ dictionary_entries:
 
 # Binding Dictionary
 
-This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings attach commands and semantic filters to an actor, source, runtime surface, proof artifact, or boundary. They are references only; they do not store secrets or authorize deployment.
+This file defines `@` binding-route content owned by agentic-os and reused by consumers. Bindings attach commands and semantic filters to an actor, source, runtime surface, proof artifact, or boundary. They are references only; they do not store secrets or authorize deployment.
+
+Product document references resolve against `agentic-canvas-os/docs` unless repository-qualified.
+Dictionary references resolve within this directory. Runtime and approval claims remain consumer-owned.
 
 ## Contract
 
@@ -296,7 +301,7 @@ This file defines `@` binding-route content for Agentic Canvas OS docs. Bindings
 | `@git:` | Context reference to recent commit metadata or patch range. | Current VCS repository. | Count is clamped to a small maximum, missing revisions warn, and sensitive content remains blocked. |
 | `@local-git-repository` | Browser-owned persisted Git object, ref, worktree, and outbox state. | agentic-graph storage-engine IndexedDB owner. | Carries no credential; controls require active IndexedDB, bounded paths and objects, atomic authority checks, and typed offline state. |
 | `@git-remote` | Opaque configured remote alias used for browser Git fetch or push. | Authenticated Dev Worker storage relay and its static allowlist. | Browser payloads contain neither credentials nor upstream URLs; the relay revalidates loopback origin, membership, role, size, path, and compare-before-update state. |
-| `@git-guidelines` | Git guidelines source. | `docs/documents/git-guidelines.md`. | Source-only binding; it grants no mutation, integration, release, publication, or deployment authority. |
+| `@git-guidelines` | Git guidelines source. | `../node_modules/agentic-os/docs/adlc-guidelines.md`. | Source-only binding; it grants no mutation, integration, release, publication, or deployment authority. |
 | `@persisted-cache` | Browser-owned binary and metadata cache used by file synchronization. | agentic-graph storage-engine IndexedDB owner. | Chunked values stay within browser limits, credentials are rejected, and degraded persistence blocks mutating controls. |
 | `@file-sync-provider` | Opaque configured provider alias for file or directory pull and push. | Authenticated Dev Worker provider registry. | Alias exposes no provider resource id or credential; unsupported native documents, shortcuts, symlinks, and unverifiable hashes fail explicitly. |
 | `@url:` | Operator-provided reference to bounded external content for context expansion or source import. | Approved URL fetch, extract, or Import URL owner. | Requires `@reference-policy`, egress policy, cache/citation metadata, size bounds, and no credentials in the URL or headers. |
@@ -369,7 +374,7 @@ binding:
 |---|---|
 | Missing `@operator` for paid, mutating, payment, browser-auth, Prod, or Cloudflare action | Return approval-required or blocked with zero spend. |
 | Missing `@source.frontmatter` for parser or routing claims | Keep status spec-complete and request source. |
-| Missing `@runtime-proof` for runtime-ready promotion | Do not promote; report proof gap. |
+| Missing `@runtime-proof` for runtime-readiness promotion | Do not promote; report proof gap. |
 | Missing, expired, or disposed `@ecs-session` for tick or persistence | Return a typed session error; do not recreate the world, accept caller-supplied decisions, or mutate source. |
 | Missing `@working-directory` for `/context.discover` or `/context.audit` | Return missing-working-directory; do not scan arbitrary paths. |
 | Missing, non-Git, unsafe, changed, or escaping `@repository-root` for `/repository.pack` | Return a typed repository-root block before discovery or publication; do not broaden `@working-directory`, follow a symlink, or use a remote fallback. |

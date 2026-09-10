@@ -281,5 +281,3 @@ test("every authored document must remain below 600 lines", () => {
     ["TOO-LONG.md: 600 lines exceeds the <600 line budget"],
   );
 });
-
-

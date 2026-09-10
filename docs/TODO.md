@@ -8,7 +8,7 @@ schema: "workspace-planning-owner-route/v1"
 frontmatter_contract: "required"
 status: "active"
 owner: "huijoohwee.github.io"
-target_revision: "025f5dca01215d5b83a76091855d4f59be575f94"
+target_revision: "db02db8c9959a2c9bdb5c390a000c9f09cf56633"
 migration_manifest_sha256: "653ab164ba373a65e3112be0bf945704e70ec3568275284f7f047001e4f450dc"
 source_docs:
   - "https://github.com/huijoohwee/huijoohwee.github.io/blob/main/docs/TODO.md"

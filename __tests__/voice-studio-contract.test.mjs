@@ -247,5 +247,3 @@ test("Markdown table shape rejects unescaped schema drift", () => {
     true,
   );
 });
-
-

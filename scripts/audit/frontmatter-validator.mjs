@@ -6,7 +6,7 @@ import { normalizeRepositoryPath } from "./path-portability-auditor.mjs";
 export const FRONTMATTER_VALIDATION_SCHEMA =
   "agentic-game-os-frontmatter-validation/v1";
 export const AUTHORED_DOCUMENT_PATH =
-  "huijoohwee.github.io/docs/documents/agentic-game-os-apple-vision-os-prd-tad-adr.md";
+  "huijoohwee.github.io/docs/documents/agentic-game-os-apple-vision-os-prd-tad-adr-mvp-gtm.md";
 export const AUTHORED_DOCUMENT_FIELDS = Object.freeze([
   "title",
   "doc_type",
@@ -55,9 +55,9 @@ export const GLOSSARY_COMPONENTS = Object.freeze([
   "Cost_Observer",
 ]);
 export const SIBLING_DOCUMENT_PATHS = Object.freeze([
-  "huijoohwee.github.io/docs/documents/agentic-game-os-prd-tad-adr.md",
-  "huijoohwee.github.io/docs/documents/sandbox-prd-tad-adr.md",
-  "agentic-graph/docs/documents/agentic-graph-ar-vr-xr-prd-tad-adr.md",
+  "huijoohwee.github.io/docs/documents/agentic-game-os-prd-tad-adr-mvp-gtm.md",
+  "huijoohwee.github.io/docs/documents/sandbox-prd-tad-adr-mvp-gtm.md",
+  "agentic-graph/docs/documents/agentic-graph-ar-vr-xr-prd-tad-adr-mvp-gtm.md",
 ]);
 
 const REQUIREMENT_CRITERION_COUNTS = Object.freeze([

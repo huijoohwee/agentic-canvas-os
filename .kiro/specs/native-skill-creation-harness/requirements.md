@@ -12,7 +12,7 @@ Three new harness modules are in scope:
 
 The Agent Definition schema is extended with `status: proposed | active | deprecated`.
 
-The authoritative source is `$GITHUB_ROOT/joohwee/prd-tad-ard/acos-agentic-runtime-ready-production-verified-prd-tad-adr.md` (PRD + Architecture/TAD + ADR-1 + ADR-2 + Readiness Gap Matrix). Every VCC stated there maps to at least one acceptance criterion below.
+The authoritative source is `$GITHUB_ROOT/joohwee/prd-tad-ard/acos-agentic-runtime-ready-production-verified-prd-tad-adr-mvp-gtm.md` (PRD + Architecture/TAD + ADR-1 + ADR-2 + Readiness Gap Matrix). Every VCC stated there maps to at least one acceptance criterion below.
 
 Scope tiers are carried forward from the PRD's MoSCoW list and are marked per requirement. **Min-Viable Scope is the Must tier proven against the existing `agentic-graph` adapter only.**
 

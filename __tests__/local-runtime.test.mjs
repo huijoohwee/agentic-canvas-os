@@ -134,7 +134,7 @@ test("consumer pinned docs ref parsing is conservative", () => {
 test("canonical runtime residue tolerates foreign parallel docs but blocks runtime authority drift", () => {
   const foreign = classifyCanonicalRuntimeResidue({
     repositoryId: "agentic-graph",
-    statusPorcelain: "?? docs/documents/agentic-graph-storage-sync-prd-tad-adr.md\n",
+    statusPorcelain: "?? docs/documents/agentic-graph-storage-sync-prd-tad-adr-mvp-gtm.md\n",
   });
   assert.equal(foreign.clean, false);
   assert.equal(foreign.runtimeSafe, true);
@@ -142,7 +142,7 @@ test("canonical runtime residue tolerates foreign parallel docs but blocks runti
   assert.deepEqual(
     foreign.foreign.map(entry => ({ path: entry.path, reason: entry.reason })),
     [{
-      path: "docs/documents/agentic-graph-storage-sync-prd-tad-adr.md",
+      path: "docs/documents/agentic-graph-storage-sync-prd-tad-adr-mvp-gtm.md",
       reason: "foreign-parallel-residue",
     }],
   );
@@ -216,7 +216,7 @@ test("canonical runtime accepts non-blocking foreign residue in canonical agenti
       clean: false,
       residue: classifyCanonicalRuntimeResidue({
         repositoryId: "agentic-graph",
-        statusPorcelain: "?? docs/documents/agentic-graph-storage-sync-prd-tad-adr.md\n",
+        statusPorcelain: "?? docs/documents/agentic-graph-storage-sync-prd-tad-adr-mvp-gtm.md\n",
       }),
     },
   });

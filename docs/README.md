@@ -95,7 +95,7 @@ For delivery planning or repeated mechanical failure, lazy-load only
 | `DICTIONARY-BINDING.md` | At dictionary | `@` actor, source, runtime, proof, and boundary bindings. |
 | `SKILLS.md` | Metadata-first skill catalog | Lightweight ids, families, selection rules, and links to progressively disclosed workflow owners. |
 | `huijoohwee.github.io/docs/kanban.md` | Central task-board route | Shared task and handoff rows for named profiles and full OS worker processes using existing table/Kanban utilities. |
-| `PRD-TAD.md` | Combined product and architecture contract | What `agentic-graph` must provide and how the runtime is shaped. |
+| `PRD-TAD-ADR-MVP-GTM.md` | Combined product, architecture, decision, and rollout contract | What `agentic-graph` must provide and how the runtime is shaped. |
 | `RUNTIME-READINESS.md` | Readiness matrix | Tracks spec-complete to runtime-ready gates by capability. |
 | `RUNTIME-PROOF.md` | Runtime proof ledger | Current parse, route, scan, validation, and deploy-boundary proof for this docs control surface. |
 | `HARNESS-CONTRACTS.md` | Harness contract catalog | Typed AI harness contracts, cost logs, fallback paths, and loop bounds. |

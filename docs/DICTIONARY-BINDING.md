@@ -15,7 +15,7 @@ source_docs:
   - "FACTS.md"
   - "MEMORY.md"
   - "AGENTS.md"
-  - "PRD-TAD.md"
+  - "PRD-TAD-ADR-MVP-GTM.md"
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
   - "APPLICATION-COMPOSITION.md"

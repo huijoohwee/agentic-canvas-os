@@ -28,7 +28,7 @@ source_docs:
   - "INSTRUCTION-QUALITY-EVALUATION.md"
   - "MCP-GATEWAY.md"
   - "MEMORY.md"
-  - "PRD-TAD.md"
+  - "PRD-TAD-ADR-MVP-GTM.md"
   - "PROMPT-PRESETS.md"
   - "README.md"
   - "RUNTIME-PROOF.md"

@@ -1,6 +1,5 @@
-// Offline, zero-dependency static build for the agentic-canvas-os Cloudflare
-// frontend. Assembles `web/dist` from Node built-ins only — nothing to
-// transpile or bundle, so `npm install` and `npm run web:build` both work
+// Offline static build using the pinned OS generation primitives.
+// Assembles `web/dist` with the existing Wrangler esbuild toolchain. Builds work
 // OFFLINE with zero network or Cloudflare calls.
 //
 // It (1) copies the agentic-graph static canvas shell, and (2) injects the MCP
@@ -13,6 +12,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from 'node:module';
+import { generateFile, generationKey, generationManifest } from "agentic-os/generation";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
@@ -22,6 +23,7 @@ const DIST = path.join(WEB, "dist");
 function buildGrammarOverlay() {
   const css = `
 /* MCP Command Grammar Overlay Styles (agentic-graph-Themed) */
+.kg-cmd-overlay[hidden] { display: none; }
 .kg-cmd-overlay {
   position: fixed;
   inset: 0;
@@ -328,33 +330,52 @@ if (document.readyState === 'loading') {
   return { css, js };
 }
 
-function main() {
-  // 1. Clean dist and copy index.html
-  fs.rmSync(DIST, { recursive: true, force: true });
-  fs.mkdirSync(DIST, { recursive: true });
-
-  // 2. Load agentic-graph index.html
-  const originalHtml = fs.readFileSync(path.join(WEB, "index.html"), "utf8");
-
-  // 3. Compile grammar overlay
-  const { css, js } = buildGrammarOverlay();
-
-  // 4. Inject into index.html
-  const injectedHtml = originalHtml.replace(
-    "</head>",
-    `<style>${css}</style></head>`
-  ).replace(
-    "</body>",
-    `<script>${js}</script></body>`
-  );
-
-  fs.writeFileSync(path.join(DIST, "index.html"), injectedHtml, "utf8");
-
-  process.stdout.write(
-    `agentic-canvas-os web build → ${path.relative(REPO, DIST)}\n` +
-      `  agentic-graph canvas + MCP command grammar overlay ready!\n` +
-      `  Artifacts: index.html (standalone canvas + remote grammar resolution)\n`,
-  );
+export async function buildWeb(root = REPO) {
+  const require = createRequire(import.meta.url);
+  const esbuild = createRequire(require.resolve('wrangler/package.json'))('esbuild');
+  const inputs = () => ({
+      source: generationManifest(root, { paths: ['web/index.html', 'package-lock.json'],
+        maxEntries: 4, maxBytes: 2 * 1024 * 1024, maxFileBytes: 2 * 1024 * 1024 }).digest,
+      generator: generationManifest(HERE, { paths: ['build.mjs'], maxEntries: 1 }).digest,
+      esbuild: esbuild.version,
+  });
+  let compiledKey, compiled;
+  const content = async name => {
+    const key = generationKey(inputs());
+    if (compiledKey !== key) {
+      let css = '', js = '', parts = 0;
+      const html = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8')
+        .replace(/<(style|script)\b([^>]*)>([\s\S]*?)<\/(?:style|script)>/gi, (_, type, attrs, body) => {
+          if (attrs.trim() || ++parts > 8) throw new Error('web_build_inline_contract');
+          if (type.toLowerCase() === 'style') css += `${body}\n`; else js += `${body}\n`;
+          return '';
+        }).replace('</head>', '<link rel="stylesheet" href="./canvas.css"></head>')
+        .replace('</body>', '<script src="./canvas.js"></script></body>');
+      const overlay = buildGrammarOverlay();
+      compiled = { 'index.html': html,
+        'canvas.css': (await esbuild.transform(css + overlay.css, { loader: 'css', minify: true })).code,
+        'canvas.js': (await esbuild.transform(js + overlay.js, { loader: 'js', minify: true, legalComments: 'none' })).code,
+      };
+      for (const value of Object.values(compiled)) if (Buffer.byteLength(value) >= 500000)
+        throw new Error('blocked-generation-output-byte-budget');
+      compiledKey = key;
+    }
+    return compiled[name];
+  };
+  const results = [];
+  for (const name of ['canvas.css', 'canvas.js', 'index.html']) results.push(await generateFile({
+    destination: path.join(root, 'web/dist', name),
+    receipt: path.join(root, 'node_modules/.cache/agentic-os', `web-${name}.json`),
+    maxOutputBytes: 499999, inputs, produce: () => content(name),
+  }));
+  return { ...results.at(-1), reused: results.every(result => result.reused) };
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const result = await buildWeb();
+  process.stdout.write(
+    `agentic-canvas-os web build → ${path.relative(REPO, DIST)} (${result.reused ? 'reused' : 'generated'})\n` +
+      `  agentic-graph canvas + MCP command grammar overlay ready!\n` +
+      `  Artifacts: index.html, canvas.css, canvas.js (offline assets + remote grammar resolution)\n`,
+  );
+}

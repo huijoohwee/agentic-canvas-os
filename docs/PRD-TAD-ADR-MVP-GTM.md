@@ -1,7 +1,7 @@
 ---
-title: "Agentic Canvas OS PRD/TAD and Architecture Decisions"
+title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
-doc_type: "Combined PRD/TAD"
+doc_type: "Combined PRD-TAD-ADR-MVP-GTM"
 date: "2026-09-09"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
@@ -15,8 +15,8 @@ source_docs:
   - "FACTS.md"
   - "MEMORY.md"
   - "SKILLS.md"
-  - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-agentic-os-prd-tad.md"
-  - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-mcp/agentic-graph-mcp-agentic-os-prd-tad.md"
+  - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-agentic-os-prd-tad-adr-mvp-gtm.md"
+  - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-mcp/agentic-graph-mcp-agentic-os-prd-tad-adr-mvp-gtm.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs product and architecture contract; external runtime proof remains gated"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -98,7 +98,7 @@ flow:
       type: {key: type, type: string, value: "prd_proof_signal"}
 ---
 
-# Agentic Canvas OS PRD/TAD and Architecture Decisions
+# Agentic Canvas OS PRD-TAD-ADR-MVP-GTM
 
 ## Scope
 
@@ -268,7 +268,7 @@ flowchart TB
 
 Projected counts are the Evidence Reference for each canvas-renderable claim. A non-projecting class records zero rather than omitting the row, and an empty recorded column is an unproven render claim rather than a pass.
 
-**Named check**: `node scripts/check-diagram-canvas-render.mjs docs/PRD-TAD.md` (guideline-owned; parse-only, zero model calls)
+**Named check**: `node scripts/check-diagram-canvas-render.mjs docs/PRD-TAD-ADR-MVP-GTM.md` (guideline-owned; parse-only, zero model calls)
 **Recorded result**: exit 0, no findings, 2 diagrams projecting, 15 nodes / 12 edges / 3 clusters total, cost 0 prompt + 0 completion tokens
 **Surface**: authoring
 

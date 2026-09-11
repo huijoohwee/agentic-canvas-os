@@ -343,13 +343,21 @@ export async function buildWeb(root = REPO) {
   const content = async name => {
     const key = generationKey(inputs());
     if (compiledKey !== key) {
-      let css = '', js = '', parts = 0;
-      const html = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8')
-        .replace(/<(style|script)\b([^>]*)>([\s\S]*?)<\/(?:style|script)>/gi, (_, type, attrs, body) => {
-          if (attrs.trim() || ++parts > 8) throw new Error('web_build_inline_contract');
-          if (type.toLowerCase() === 'style') css += `${body}\n`; else js += `${body}\n`;
-          return '';
-        }).replace('</head>', '<link rel="stylesheet" href="./canvas.css"></head>')
+      let html = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+      // Compile this authored shell's two exact regions; this is not an HTML sanitizer.
+      const extract = tag => {
+        const opening = `<${tag}>`, closing = `</${tag}>`, start = html.indexOf(opening);
+        if (start < 0) return '';
+        const end = html.indexOf(closing, start + opening.length);
+        if (end < 0) throw new Error('web_build_inline_contract');
+        const body = html.slice(start + opening.length, end);
+        html = html.slice(0, start) + html.slice(end + closing.length);
+        return body;
+      };
+      const css = extract('style'), js = extract('script');
+      if (/<\/?(?:script|style)\b/i.test(html) || !html.includes('</head>') || !html.includes('</body>'))
+        throw new Error('web_build_inline_contract');
+      html = html.replace('</head>', '<link rel="stylesheet" href="./canvas.css"></head>')
         .replace('</body>', '<script src="./canvas.js"></script></body>');
       const overlay = buildGrammarOverlay();
       compiled = { 'index.html': html,

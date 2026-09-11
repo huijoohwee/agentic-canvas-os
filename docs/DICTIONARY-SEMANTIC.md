@@ -15,7 +15,7 @@ source_docs:
   - "FACTS.md"
   - "MEMORY.md"
   - "AGENTS.md"
-  - "PRD-TAD-ADR-MVP-GTM.md"
+  - "PRD-TAD.md"
   - "RUNTIME-READINESS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"
@@ -252,7 +252,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `#foss` | Open-source, local, zero-egress, or vendor-neutral alternative. | A dependency or hosted service is under consideration. | Alternative path is named before paid or proprietary adoption. |
 | `#ttv` | Time to value for min-viable-max-value scope. | Scope needs prioritization or a feature could become broad. | Must/Should/Could/Won't or equivalent ROI cut is present. |
 | `#runtime-ready` | Claim can be proven from surfaced runtime output. | A spec-complete artifact is being promoted. | Parse, route, schema, cost, bound, approval, and focused validation proof are surfaced. |
-| `#agentic-ecs` | Native entity-component-system hydration, tick, decision, and projection behavior owned by agentic-graph. | One of the three ECS MCP commands operates on a Agentic OS-backed session. | Session identity, deterministic component/entity state, transactional tick outcome, decision provenance, cost logs, and the Dev-only execution boundary are explicit. |
+| `#agentic-ecs` | Native entity-component-system hydration, tick, decision, and projection behavior owned by agentic-graph. | One of the three ECS MCP commands operates on a KGC-backed session. | Session identity, deterministic component/entity state, transactional tick outcome, decision provenance, cost logs, and the Dev-only execution boundary are explicit. |
 | `#dev-only` | Local development boundary. | Work must stop before Prod mirror or Cloudflare. | Status shows no Prod mirror mutation and no Cloudflare deploy command. |
 | `#mcp` | MCP discovery, gateway federation, or tool contract. | A capability is exposed to local, Pages, browser, or control-plane agents. | Tool IDs dedupe and discovery reports zero model spend. |
 | `#webmcp` | Browser-local W3C Model Context surface scope for in-page tool registration and inspection. | A request routes to a browser-local `agentic-graph.inspect_local_*` or `agentic-graph.control_local_*` tool instead of a local, Pages, or control-plane MCP owner. | The recorded API revision in `@webmcp-surface` resolves; an absent registration API fails visibly as an unavailable surface before any tool is advertised, and the token grants no model, network, camera, persistence, Prod, or Cloudflare authority. |
@@ -260,7 +260,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `#git-remote` | Browser Git object/ref operations with remote transport isolated behind a Dev Worker relay. | `/git.run` inspects, commits, clones, fetches, or pushes a configured remote. | Exact object hashing, atomic authority rejection, active persistence, bounded transport, expected-old ref checks, typed conflicts, and Worker-only credentials are proven. |
 | `#git-collaboration` | Git collaboration rules. | A task enters any git stage from session start through cleanup. | `../node_modules/agentic-os/docs/adlc-guidelines.md` resolves and the focused checker reports registration parity. |
 | `#multi-provider-file-sync` | Bidirectional file or directory transfer through a provider-neutral browser contract. | `/file.sync` pulls or pushes a configured provider prefix. | Provider capability, pagination, hash semantics, per-file outcomes, both-sides-changed conflicts, size/time bounds, offline FIFO, and secret-free browser payloads are proven. |
-| `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, Agentic OS, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
+| `#canvas` | Source-backed Canvas projection. | Runtime state must render as graph, table, KGC, or Storyboard surface. | Existing Canvas owners render without dashboard-only storage. |
 | `#canvas-node` | Canvas graph node selection, creation, opening, linking, or deletion intent. | A command acts on a node, creates a node, or needs selected-node context. | Node id, type, label, graph point, mutation owner, and selection state are explicit. |
 | `#canvas-edge` | Canvas graph edge selection, creation, endpoint update, or provenance intent. | A command creates, opens, rewires, or serializes an edge. | Source, target, label, selected edge id, and duplicate-edge handling are explicit. |
 | `#canvas-media` | Media metadata, rich media panel, media-node projection, or bounded immersive-media presentation on the shared Canvas. | A command updates node media properties, creates media-backed graph state, or invokes `/media.immersive @canvas #canvas-media`. | Media kind, validated URL/reference when supplied, view bounds, interaction state, projection layers, annotations, overlays, capture result, and shared media and renderer owners are explicit. |
@@ -298,7 +298,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `#cost` | Cost log and budget accounting. | A path needs budget observability but not full TCO analysis. | Cost log validates and model-free views report exact zero. |
 | `#approval-gate` | Human gate for paid, mutating, payment, browser-auth, or deploy action. | A run can spend, mutate, authenticate, pay, or deploy. | Missing approval blocks before spend or mutation. |
 | `#no-legacy` | Remove stale aliases, remaps, duplicate owners, and compatibility paths. | A source contains old names, shims, or downstream patches. | Stale path is removed at source; no new alias is added. |
-| `#computing-flow` | Agentic OS/frontmatter DAG execution contract. | A document or chat request generates, validates, or runs a computing-flow. | `agentic-os-computing-flow/v1` frontmatter owns topology, typed inputs, explicit handles, bounded execution, and validation proof. |
+| `#computing-flow` | KGC/frontmatter DAG execution contract. | A document or chat request generates, validates, or runs a computing-flow. | `kgc-computing-flow/v1` frontmatter owns topology, typed inputs, explicit handles, bounded execution, and validation proof. |
 | `#learning-loop` | Closed learning cycle from experience capture to reviewed persistence. | A workflow turns run evidence, failures, or operator corrections into reusable memory or skill proposals. | Source evidence, applicability, expiry risk, bounds, approval state, and no-copy statement are present. |
 | `#persistent-memory` | Bounded curated memory that persists across sessions. | An entry records environment facts, conventions, lessons, profile preferences, or reusable project context. | Target is explicit, entry is scanned, capacity is checked, duplicate/stale handling is defined, and write result is typed. |
 | `#user-profile` | Explicit operator preferences, communication style, and expectations. | A claim belongs to the operator profile rather than agent notes or project rules. | Operator evidence or approval is present; unsupported personal inference, secrets, and sensitive profiling are rejected. |
@@ -326,7 +326,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `#profile-handoff` | Explicit row-level transfer between named agent profiles. | One worker pauses, delegates, resumes, or requests review from another profile. | Handoff row names source profile, target profile, context refs, blockers, acceptance, and resume state. |
 | `#worker-process` | Full OS process worker with its own identity and runtime state. | Work should run outside fragile in-process subagent swarms. | Worker profile, command, cwd, proof, and cleanup boundary are explicit. |
 | `#multi-agent-collaboration` | Durable collaboration through shared rows rather than transient subagents. | Several named profiles coordinate through board state. | Every task and handoff is readable/writable as rows, with no hidden process memory as SSOT. |
-| `#adlc-observability` | Deterministic read-only projection of one immutable ADLC ledger into end-to-end execution, evidence, budget, gate, checkpoint, and release-receipt graph context. | `/adlc.observe #adlc-observability @implementation-run @canvas @runtime-proof` requests a local observation of one exact run and ledger revision. | Exact receipt schema and digest, stable node and edge identities, source-backed GraphData and Agentic OS Markdown, existing Canvas ownership, typed separation of `verified`, `delivery_ready`, and `deployed`, cache identity, zero model/network/token/cost evidence, and a closed Dev-only deploy boundary are explicit. |
+| `#adlc-observability` | Deterministic read-only projection of one immutable ADLC ledger into end-to-end execution, evidence, budget, gate, checkpoint, and release-receipt graph context. | `/adlc.observe #adlc-observability @implementation-run @canvas @runtime-proof` requests a local observation of one exact run and ledger revision. | Exact receipt schema and digest, stable node and edge identities, source-backed GraphData and KGC Markdown, existing Canvas ownership, typed separation of `verified`, `delivery_ready`, and `deployed`, cache identity, zero model/network/token/cost evidence, and a closed Dev-only deploy boundary are explicit. |
 | `#application-composition` | Exact versioned component and interface composition for agent and LLM applications. | An application joins agent, model, tool, workflow, memory, guardrail, or integration components without absorbing their runtimes. | Exact source and component revisions, interface and schema digests, negotiated capabilities, runtime owners, one immutable plan digest, a deterministic dependency DAG, and explicit non-mutating migration diagnostics are present before execution. |
 | `#agentic-graph` | Local deterministic graph of source-backed codebase entities and relationships with auditable evidence. | A request generates a native parser or ingests, queries, traverses, or explains a graph derived from a bounded workspace containing code, docs, SQL, configs, or text-bearing PDFs. | Exact parser, registry, snapshot, and source digests, stable node and edge identities, deterministic ordering, typed omissions, and non-empty source evidence plus explanation for every edge are present; model, embedding, vector store, external parser, and external graph service paths are absent. |
 | `#parser-generation` | Deterministic compilation of one inert parser-registry specification into a canonical registry of native parser adapter identities. | `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` requests the agentic-graph local MCP owner. | Exact result digest, bounded source matchers, deterministic conflict rejection, declared source kinds and fidelity, no executable caller payload, no downloaded adapter, zero model/network use, and no implicit ingest are proven. |
@@ -391,11 +391,11 @@ semantic:
 | Pattern | Meaning |
 |---|---|
 | `/runtime-ready.check #runtime-ready #harness #vcc #foss #ttv @repository-root @local-harness @runtime-proof` | Prove an AI-capable contract or one exact local repository layer with bounded model-free checks. |
-| `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Hydrate one private bounded ECS session from validated Agentic OS source. |
+| `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Hydrate one private bounded ECS session from validated KGC source. |
 | `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Run ordered transactional systems and surface real or deferred reasoning cost evidence. |
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Atomically persist only pending validated decision nodes, then close the successful session. |
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @runtime-proof` | Execute authorized product deployment and require exact artifact, target, live-verification, and rollback evidence; ADLC owns repository effects. |
-| `/adlc.observe #adlc-observability @implementation-run @canvas @runtime-proof` | Read one immutable local ledger receipt and project its end-to-end graph through the existing Agentic OS, GraphData, and Canvas owners without mutation, model use, network use, spend, or deployment. |
+| `/adlc.observe #adlc-observability @implementation-run @canvas @runtime-proof` | Read one immutable local ledger receipt and project its end-to-end graph through the existing KGC, GraphData, and Canvas owners without mutation, model use, network use, spend, or deployment. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Resolve exact interfaces into one immutable deterministic plan; execution remains a bounded handoff to existing owners. |
 | `/agentic.graph.ingest #agentic-graph #mcp #runtime-ready @working-directory @agentic-graph @operator @runtime-proof` | Resolve one bounded workspace to the exact agentic-graph ingest tool after explicit operator selection. |
 | `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` | Compile one exact inert parser specification through the agentic-graph executable owner without adding an Agentic Canvas OS parser runtime. |
@@ -418,7 +418,7 @@ semantic:
 | `/canvas.media.attach #canvas-media @selected-node @media-url` | Update selected-node rich media metadata through the shared media owner. |
 | `/canvas.layout.tune #canvas-layout @layout-forces` | Tune or reset schema-owned layout force values. |
 | `/canvas.edge.rewire #canvas-edge @selected-edge @edge-endpoint` | Update a selected edge endpoint through the shared Canvas edge flow. |
-| `/computing-flow #computing-flow #frontmatter @local-harness` | Generate or validate a source-backed Agentic OS computing-flow DAG. |
+| `/computing-flow #computing-flow #frontmatter @local-harness` | Generate or validate a source-backed KGC computing-flow DAG. |
 | `/soul.load #primary-identity @soul-profile` | Load durable identity into prompt slot 1 without hardcoded default identity. |
 | `/personality.overlay #personality-overlay @personality-overlay` | Apply a temporary style overlay without mutating `SOUL.md`. |
 | `/moa #mixture-of-agents @moa-preset` | Run bounded reference-agent deliberation before one aggregator answer. |
@@ -494,7 +494,7 @@ semantic:
 | `#multi-agent-collaboration` | `FACTS.md` direct-resolution entry for durable row-based collaboration. |
 | `#agent-swarm` | `FACTS.md` direct-resolution entry for dynamic horizontal agent scaling. |
 | `#agent-toolkit` | `FACTS.md` direct-resolution entry for metadata-only observation, evaluation, comparison, and reviewed learning. |
-| `#agentic-ecs` | `FACTS.md` direct-resolution entry for Agentic OS-backed native ECS semantics. |
+| `#agentic-ecs` | `FACTS.md` direct-resolution entry for KGC-backed native ECS semantics. |
 | `#parser-generation` | `FACTS.md` direct-resolution entry for deterministic native parser generation. |
 | `#tool-gateway` | `FACTS.md` direct-resolution entry for existing-infrastructure tool routing. |
 | `#tool-function` | `FACTS.md` direct-resolution entry for callable tool functions. |

@@ -135,7 +135,7 @@ For delivery planning or repeated mechanical failure, lazy-load only
 - A caller can declare stateful orchestration graphs with typed state, nodes, edges, checkpoints, human review, streaming trace, and bounded stop conditions.
 - A caller can invoke `/superagent.run` for long-horizon research, coding, or creation only when sandbox workspace, message gateway, checkpoints, artifacts, verification, cost, and stop conditions are typed.
 - AI stages are harnessed with typed inputs, typed outputs, cost logs, fallback paths, and bounded loops.
-- Canvas renders source-backed dashboards through existing Markdown, frontmatter, KGC, Source Files, and Storyboard owners.
+- Canvas renders source-backed dashboards through existing Markdown, frontmatter, Agentic OS, Source Files, and Storyboard owners.
 - Dev, Prod mirror, and Cloudflare state remain separate unless the operator explicitly opens the deploy gate.
 
 ## Topology Boundary

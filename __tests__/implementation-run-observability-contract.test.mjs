@@ -158,9 +158,9 @@ test("the Canvas projection vocabulary, views, ordering, and existing owners are
   assert.match(runtime, /Nodes order by type rank then id; edges order by relation rank, source, target, then id/);
   assert.match(runtime, /`properties\.stub=true`/);
   assert.match(runtime, /`adlc-canvas-projection\/v1`/);
-  assert.match(runtime, /`kgSchema: "kgc-computing-flow\/v1"`/);
+  assert.match(runtime, /`kgSchema: "agentic-os-computing-flow\/v1"`/);
   for (const source of [runtime, gateway]) {
-    assert.match(source, /existing (?:KGC, GraphData, and )?Canvas owners|existing Canvas owner/);
+    assert.match(source, /existing (?:Agentic OS, GraphData, and )?Canvas owners|existing Canvas owner/);
   }
   assert.match(runtime, /not an Evaluator, runner, release controller, graph store, dashboard, or renderer/);
   assert.match(gateway, /creates no verdict, delivery state, authorization, deployment, store, dashboard, renderer/);

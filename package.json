@@ -103,7 +103,7 @@
     "dictionary:project": "node ./scripts/dictionary-projections.mjs --write"
   },
   "devDependencies": {
-    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/02ed1a08d118293a9417379ae45963699a3420b3",
+    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/a050f8e68bdbbfdbb8f69c0eafdc03a9ae90b4b1",
     "ajv": "8.20.0",
     "fast-check": "3.23.2",
     "wrangler": "4.120.0"

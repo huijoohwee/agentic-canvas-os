@@ -168,7 +168,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Deterministic agentic graph | `AGENTIC-GRAPH.md` |
 | Repository packing | `REPOSITORY-PACKING.md` |
 | Workspace artifact lifecycle | Invocation dictionaries and `MCP-GATEWAY.md` |
-| Computing flow | `PRD-TAD.md` and the invocation dictionaries |
+| Computing flow | `PRD-TAD-ADR-MVP-GTM.md` and the invocation dictionaries |
 
 Variants remain metadata aliases over registered owners: `agent.moa`,
 `agent.collaboration-manager`, `agent.evidence-scout`, `agent.risk-reviewer`,

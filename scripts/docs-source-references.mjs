@@ -1,6 +1,14 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
+const LEGACY_SOURCE_DOC_ALIASES = new Map([
+  ["PRD-TAD.md", "PRD-TAD-ADR-MVP-GTM.md"],
+]);
+
+async function resolvesToFile(target) {
+  return (await stat(target).catch(() => null))?.isFile() ?? false;
+}
+
 // Validate declared provenance without loading the referenced documents or starting services.
 // Workspace references remain portable declarations; this check performs no cross-repo reads.
 export async function validateDocsSourceReferences(documents, { repositoryRoot }) {
@@ -36,7 +44,14 @@ export async function validateDocsSourceReferences(documents, { repositoryRoot }
       const target = path.resolve(root, "docs", path.dirname(name), reference);
       if (path.isAbsolute(reference) || !target.startsWith(root + path.sep)) {
         failures.push(`${name}: source reference escapes repository ${reference}`);
-      } else if (!(await stat(target).catch(() => null))?.isFile()) {
+      } else if (
+        !(await resolvesToFile(target))
+        && !(
+          LEGACY_SOURCE_DOC_ALIASES.has(reference)
+          && await resolvesToFile(path.resolve(root, "docs", path.dirname(name),
+            LEGACY_SOURCE_DOC_ALIASES.get(reference)))
+        )
+      ) {
         failures.push(`${name}: missing source document ${reference}`);
       }
     }

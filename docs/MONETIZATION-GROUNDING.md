@@ -115,8 +115,8 @@ do not add a shared mutable ledger or route production effects through a docs
 reader. This table routes responsibilities and grants no cross-repository authority.
 
 The declared delivery topology is Graph Dev (`npm run dev:apex`, `npm run dev`)
-to the `huijoohwee/agenticgraph` mirror and Graph-owned Cloudflare publication at
-`airvio.co` and `airvio.co/knowgrph`. This is a target topology, not a live deployment
+to the `huijoohwee/agentic-graph` mirror and Graph-owned Cloudflare publication at
+`airvio.co` and `airvio.co/agentic-graph`. This is a target topology, not a live deployment
 observation. Cloudflare services/Wallets, GitHub and Podman remain optional adapters
 selected by available owner contracts, verified limits and cost; mentioning a
 provider does not establish a working integration or add a dependency.

@@ -15,7 +15,7 @@ source_docs:
   - "FACTS.md"
   - "MEMORY.md"
   - "AGENTS.md"
-  - "PRD-TAD-ADR-MVP-GTM.md"
+  - "PRD-TAD.md"
   - "RUNTIME-READINESS.md"
   - "HARNESS-CONTRACTS.md"
   - "APPLICATION-COMPOSITION.md"

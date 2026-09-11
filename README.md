@@ -387,9 +387,10 @@ caches, including 2.14 GB across 36 CodeQL entries; existing entries remain
 subject to GitHub's normal eviction policy.
 
 - ownership-only pull requests with no changed files do not start CI;
-- the four protected CI check names and merge-queue coverage remain unchanged,
-  while their dependency-free scripts run on Node 22 `ubuntu-slim` runners
-  without installing packages or restoring npm caches;
+- protected CI check names and merge-queue coverage remain unchanged;
+  dependency-free checks run on Node 22 `ubuntu-slim` without npm installation
+  or cache restoration, while the web build installs locked dependencies to
+  compile bounded assets and reuse verified local generation receipts;
 - CodeQL runs for executable source, while dependency review and `npm audit`
   share one separate package-lock-scoped job plus the weekly sweep;
 - lightweight auto-delivery and pull-request synchronization controllers also

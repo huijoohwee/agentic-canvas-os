@@ -10,7 +10,7 @@ import {
   resolveAutonomousRuntimeEnvironment,
 } from "../agent-api/src/autonomous-runtime-config.js";
 import { isSecureRoomCapability, sessionCanJoinRoom, verifySessionToken } from "../agent-api/src/auth.js";
-import { createCacheContextRegistry } from "../agent-api/src/cache-context.js";
+import { createCacheContextRegistry } from "agentic-os/context/prefix";
 import { createCommerceAdmissionAuthority } from "../agent-api/src/commerce-admission-authority.js";
 import { COMMERCE_ADMISSION_PATH } from "../agent-api/src/commerce-admission-contract.js";
 import { resolveCommerceDeploymentIdentity } from "../agent-api/src/commerce-deployment-identity.js";
@@ -38,7 +38,7 @@ import { createModelProviderRuntime } from "../agent-api/src/model-providers.js"
 import { resolveOpenAiResponsesAgentConfig } from "../agent-api/src/openai-responses-agent-adapter.js";
 import { resolveOpenAiResponsesFunctionConfig } from "../agent-api/src/openai-responses-function-adapter.js";
 import { createProgrammaticToolCallingRuntime } from "../agent-api/src/programmatic-tool-calling.js";
-import { createReasoningContinuityRegistry } from "../agent-api/src/reasoning-continuity.js";
+import { createReasoningContinuityRegistry } from "agentic-os/context/continuity";
 import { createRunningAgentRuntime } from "../agent-api/src/running-agents.js";
 import { createSandboxAgentRuntime } from "../agent-api/src/sandbox-agents.js";
 import { createSkillProposerRuntime } from "../agent-api/src/skill-proposer.js";

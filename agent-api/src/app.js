@@ -28,7 +28,7 @@ import { createAgentSwarmHandlers } from "./agent-swarm-handler.js";
 import { createAgentSwarmRuntime } from "./agent-swarm.js";
 import { createAgentToolkitHandlers } from "./agent-toolkit-handler.js";
 import { createAgentToolkitRuntime } from "./agent-toolkit.js";
-import { createCacheContextRegistry } from "./cache-context.js";
+import { createCacheContextRegistry } from "agentic-os/context/prefix";
 import {
   createFunctionCallingHandler,
   createFunctionCallingRecoveryHandler,
@@ -57,7 +57,7 @@ import {
 } from "./openai-responses-function-adapter.js";
 import { createProgrammaticToolCallingRuntime } from "./programmatic-tool-calling.js";
 import { createProgressiveAgentsRuntime } from "./progressive-agents.js";
-import { createReasoningContinuityRegistry } from "./reasoning-continuity.js";
+import { createReasoningContinuityRegistry } from "agentic-os/context/continuity";
 import { createRunningAgentRuntime } from "./running-agents.js";
 import { createSandboxAgentRuntime } from "./sandbox-agents.js";
 import { createSkillProposerRuntime } from "./skill-proposer.js";

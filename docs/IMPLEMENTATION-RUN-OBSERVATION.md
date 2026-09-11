@@ -86,8 +86,8 @@ The complete edge vocabulary is `defines`, `covers`, `dependsOn`, `transitionsTo
 The bounded views are `overview`, `plan`, `execution`, `evidence`, `economics`, `recovery`, `receipts`, and `full`.
 
 Nodes order by type rank then id; edges order by relation rank, source, target, then id. A truncated placeholder carries `properties.stub=true`. Projection uses
-`adlc-canvas-projection/v1` and `kgSchema: "kgc-computing-flow/v1"`
-through existing KGC, GraphData, and Canvas owners.
+`adlc-canvas-projection/v1` and `kgSchema: "agentic-os-computing-flow/v1"`
+through existing Agentic OS, GraphData, and Canvas owners.
 
 ## Non-promoting states
 

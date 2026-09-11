@@ -1,6 +1,6 @@
 // Run-scoped agentic-graph canvas embed for the agentic-canvas-os product tier.
 //
-// The agentic-graph Storyboard_Harness emits a Kgc_Document (`kgc-computing-flow/v1`,
+// The agentic-graph Storyboard_Harness emits an AgenticOs_Document (`agentic-os-computing-flow/v1`,
 // one node per planned shot). This product tier EMBEDS the live agentic-graph canvas
 // doc-view scoped to the run rather than reimplementing the renderer — agentic-graph
 // owns the canvas engine, agentic-canvas-os is the shell around it.
@@ -54,7 +54,7 @@ function resolveStoryboardStage(manifest) {
 
 function storyboardNodeCount(manifest) {
   const stage = resolveStoryboardStage(manifest);
-  const carriers = [manifest.kgcDocument, manifest.storyboard, stage && stage.artifact];
+  const carriers = [manifest.agenticOsDocument, manifest.storyboard, stage && stage.artifact];
   for (const carrier of carriers) {
     const flow = carrier && typeof carrier === "object" ? carrier.flow : null;
     if (flow && Array.isArray(flow.nodes) && flow.nodes.length > 0) return flow.nodes.length;
@@ -74,7 +74,7 @@ export function storyboardCanvasAvailable(manifest) {
 
 function resolveDocId(manifest) {
   const stage = resolveStoryboardStage(manifest);
-  const carriers = [manifest.kgcDocument, manifest.storyboard, stage && stage.artifact];
+  const carriers = [manifest.agenticOsDocument, manifest.storyboard, stage && stage.artifact];
   for (const carrier of carriers) {
     if (carrier && typeof carrier === "object") {
       const id = toText(carrier.graphId || carrier.docId || carrier.id);
@@ -102,7 +102,7 @@ export function resolveCanvasDocViewUrl({ baseUrl, runId, docId } = {}) {
 /**
  * Build the embedded-canvas descriptor from a agentic-graph Run_Manifest + the
  * configured canvas base. `available` is true only when a base + runId are
- * present and the storyboard produced a Kgc_Document. Pure; never throws.
+ * present and the storyboard produced an AgenticOs_Document. Pure; never throws.
  *
  * @param {unknown} manifest Run_Manifest (or manifest-bearing envelope)
  * @param {{ canvasBaseUrl?: string, runId?: string }} [opts]

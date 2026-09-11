@@ -378,7 +378,7 @@ Expected:
 - `/orchestration.graph`, `/agent.swarm`, `/agent.toolkit`, `/state.checkpoint`, `/human.review`, `/stream.trace`, orchestration, swarm, and Toolkit tags/bindings, `agent.swarm`, `agent.toolkit`, and `agent.orchestrator` route through dictionaries and `SKILLS.md`.
 - `/superagent.run`, long-horizon tags, sandbox/message bindings, and `superagent.run` route through dictionaries and `SKILLS.md`.
 - `/git.run @local-git-repository @git-remote #git-remote` and `/file.sync @persisted-cache @file-sync-provider #multi-provider-file-sync` resolve exactly once, advertise browser WebMCP execution plus local-stdio handoff, keep credentials Worker-only, and stop before Prod or Cloudflare deployment.
-- `/computing-flow`, `#computing-flow`, and `flow.computing` route through KGC/frontmatter contracts.
+- `/computing-flow`, `#computing-flow`, and `flow.computing` route through Agentic OS/frontmatter contracts.
 - No entry requires a FloatingPanel-only duplicate registry.
 
 ## agentic-graph Local Runtime Checks
@@ -420,7 +420,7 @@ repository-contract context; the former bridge is retired and absent.
 | Cost summary | Cost schema validation exits 0 and read-only views report zero. |
 | Gate catalog | Approval schema tests pass and missing approval blocks spend. |
 | Video Remix Director | Missing approvals produce blocked zero-cost manifest; approved dry-run emits storyboard evidence. |
-| Canvas dashboard | Frontmatter parses; KGC graph materializes through existing Source Files/Canvas owners. |
+| Canvas dashboard | Frontmatter parses; Agentic OS graph materializes through existing Source Files/Canvas owners. |
 | Agentic OS slash dictionary | `npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.composer.memoryInvocationRuntime` exits 0. |
 | FloatingPanel Chat action recommendation | `npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- ui.floatingPanelChat.pipeline`, `ui.floatingPanelChat.quickActions.invocationRoutes`, `ui.floatingPanelChat.composer.ingestCommandRegistry`, and `ui.floatingPanelChat.composer.slashVariableMenus` exit 0. |
 | Soul identity | Focused docs route check reports `soul route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes prompt slot 1 assembly, scan, bounds, typed fallback, and no-hardcoded-default rejection. |
@@ -445,7 +445,7 @@ repository-contract context; the former bridge is retired and absent.
 | Sandbox Agents | `npm run sandbox-provider:check` exits zero; affected app and Worker tests keep default readiness unconfigured; `AGENTIC_SANDBOX_IMAGE=<immutable-digest> npm run sandbox-podman:check` must report a fresh verified proof, 21 checks, real files, argv commands, offline local package installation, internal networking, loopback preview traffic, snapshot seeding, atomic cross-controller resume, zero cost, and zero residual labeled resources. |
 | Tool Search | `npm run tool-search:check` exits zero; app and Worker readiness tests confirm metadata-only initial exposure, exact append-only loading, top-level programmatic preloading, sanitized unconfigured state, and unverified provider context reduction. Real gateway execution remains gated by focused `agentic-graph` proof. |
 | Programmatic Tool Calling | `npm run programmatic-tool-calling:check` exits zero; affected app and Worker tests confirm sanitized unconfigured readiness, and live hosted execution remains gated until a downstream adapter returns exact capability and isolation evidence. |
-| Computing-flow | `npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.kgcComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |
+| Computing-flow | `npm -C "$AGENTIC_GRAPH_ROOT/canvas" run test:ci:unit -- chat.responseContract.prompt.agenticOsComputingFlowKtvShape` exits 0 and `/computing-flow` remains projection-only. |
 | Learning loop and Skill Evolution | Focused docs routing covers memory, experience, skill, identity, and `agent.learning`; `npm run skill-evolution:check` proves only the model-free ACOS spec and fail-closed client transport for singular invocation, resumable operations, isolated validation, strict metrics, candidate roles, complete snapshots, dependency/import clean-room checks, and safety flags. Runtime readiness requires exact integrated agentic-graph test citations. |
 | Stateful orchestration | Focused docs route check reports `orchestration route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes typed graph, checkpoint, review, and trace outputs. |
 | Long-horizon SuperAgent | Focused docs route check reports `superagent route consistency ok`; implementation proof remains gated until a touched `agentic-graph` owner exposes typed graph, sandbox workspace, message gateway, artifact manifest, verification, cost, and stop condition outputs. |

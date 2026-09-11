@@ -121,7 +121,7 @@ observation. Cloudflare services/Wallets, GitHub and Podman remain optional adap
 selected by available owner contracts, verified limits and cost; mentioning a
 provider does not establish a working integration or add a dependency.
 
-Reuse the site's lazy-loaded `adlc-rapid-mvp-sprint.md` commerce completion criteria
+Reuse the site's lazy-loaded `adlc-rapid-prd-tad-adr-mvp-gtm-sprint.md` commerce completion criteria
 and `token-performance-economics-guidelines.md` measurement contract. A complete
 loop needs buyer evidence, a current offer, exact confirmation, one verified
 payment effect, fulfillment, receipt readback, recovery and paid acceptance.

@@ -189,7 +189,7 @@ flow:
       sources: {key: sources, type: array, value: ["FACTS.md","SOUL.md","MEMORY.md","TODO.md","USER.md","SKILLS.md","DICTIONARY-COMMAND.md","DICTIONARY-SEMANTIC.md","DICTIONARY-BINDING.md"]}
       "flow:portTypes": {key: "flow:portTypes", type: object, value: {"out":{"frontmatter_contract":"agentic_os_source_signal"}}}
       "frontmatter:primitive": {key: "frontmatter:primitive", type: string, value: "node"}
-      "kgc:readingSummary": {key: "kgc:readingSummary", type: string, value: "Source docs own Agentic OS frontmatter, layer contracts, and deploy boundaries."}
+      "agentic-os:readingSummary": {key: "agentic-os:readingSummary", type: string, value: "Source docs own Agentic OS frontmatter, layer contracts, and deploy boundaries."}
     - id: {key: id, type: string, value: "invocation_routes"}
       type: {key: type, type: string, value: "InvocationRouteWidget"}
       label: {key: label, type: string, value: "/ # @ Routes"}
@@ -201,7 +201,7 @@ flow:
       bindings: {key: bindings, type: array, value: ["@source.frontmatter","@local-harness","@runtime-proof","@dev-only"]}
       "flow:portTypes": {key: "flow:portTypes", type: object, value: {"in":{"frontmatter_contract":"agentic_os_source_signal"},"out":{"route_catalog":"agentic_os_route_signal"}}}
       "frontmatter:primitive": {key: "frontmatter:primitive", type: string, value: "node"}
-      "kgc:readingSummary": {key: "kgc:readingSummary", type: string, value: "Dictionaries expose slash, semantic, and binding routes without a duplicate parser."}
+      "agentic-os:readingSummary": {key: "agentic-os:readingSummary", type: string, value: "Dictionaries expose slash, semantic, and binding routes without a duplicate parser."}
     - id: {key: id, type: string, value: "harness_contracts"}
       type: {key: type, type: string, value: "HarnessContractWidget"}
       label: {key: label, type: string, value: "Typed Harness"}
@@ -213,7 +213,7 @@ flow:
       cost_fields: {key: cost_fields, type: array, value: ["model","prompt_tokens","completion_tokens","cache_hits","estimated_cost_usd"]}
       "flow:portTypes": {key: "flow:portTypes", type: object, value: {"in":{"route_catalog":"agentic_os_route_signal"},"out":{"bounded_execution":"agentic_os_harness_signal"}}}
       "frontmatter:primitive": {key: "frontmatter:primitive", type: string, value: "node"}
-      "kgc:readingSummary": {key: "kgc:readingSummary", type: string, value: "Harness contracts fail before spend on malformed input, missing approval, or budget breach."}
+      "agentic-os:readingSummary": {key: "agentic-os:readingSummary", type: string, value: "Harness contracts fail before spend on malformed input, missing approval, or budget breach."}
     - id: {key: id, type: string, value: "runtime_proof"}
       type: {key: type, type: string, value: "RuntimeProofWidget"}
       label: {key: label, type: string, value: "Runtime Proof"}
@@ -224,7 +224,7 @@ flow:
       validation_ref: {key: validation_ref, type: string, value: "VALIDATION-RUNBOOK.md"}
       "flow:portTypes": {key: "flow:portTypes", type: object, value: {"in":{"bounded_execution":"agentic_os_harness_signal"},"out":{"proof_ledger":"agentic_os_proof_signal"}}}
       "frontmatter:primitive": {key: "frontmatter:primitive", type: string, value: "node"}
-      "kgc:readingSummary": {key: "kgc:readingSummary", type: string, value: "Runtime-ready status is backed by parsed frontmatter, focused checks, and proof ledger entries."}
+      "agentic-os:readingSummary": {key: "agentic-os:readingSummary", type: string, value: "Runtime-ready status is backed by parsed frontmatter, focused checks, and proof ledger entries."}
     - id: {key: id, type: string, value: "deploy_guard"}
       type: {key: type, type: string, value: "DeployGuardWidget"}
       label: {key: label, type: string, value: "Deploy Guard"}
@@ -235,7 +235,7 @@ flow:
       blocked_targets: {key: blocked_targets, type: array, value: ["Prod mirror","Cloudflare"]}
       "flow:portTypes": {key: "flow:portTypes", type: object, value: {"in":{"proof_ledger":"agentic_os_proof_signal"},"out":{"dev_only_boundary":"agentic_os_proof_signal"}}}
       "frontmatter:primitive": {key: "frontmatter:primitive", type: string, value: "node"}
-      "kgc:readingSummary": {key: "kgc:readingSummary", type: string, value: "Prod mirror and Cloudflare remain blocked until the operator explicitly opens the gate."}
+      "agentic-os:readingSummary": {key: "agentic-os:readingSummary", type: string, value: "Prod mirror and Cloudflare remain blocked until the operator explicitly opens the gate."}
   edges:
     - {"id":"edge_source_docs_to_invocation_routes","source":"source_docs","sourceHandle":"frontmatter_contract","target":"invocation_routes","targetHandle":"frontmatter_contract","label":"frontmatter contract","type":"agentic_os_source_signal"}
     - {"id":"edge_invocation_routes_to_harness_contracts","source":"invocation_routes","sourceHandle":"route_catalog","target":"harness_contracts","targetHandle":"route_catalog","label":"route catalog","type":"agentic_os_route_signal"}

@@ -1,7 +1,7 @@
 ---
 title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
-doc_type: "Combined PRD-TAD-ADR-MVP-GTM"
+doc_type: "PRD-TAD-ADR-MVP-GTM"
 date: "2026-09-09"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
@@ -174,7 +174,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Scale independent agent work horizontally | Given one resolved exact base agent and goal, when `/agent.swarm` runs, then runtime-generated tasks use session-owned durable atomic claims, bounded parallel workers, isolated contexts, recovery, verified receipts, and one base-agent synthesis without predefined roles or caller workflow topology. | Must |
 | Observe and improve digest-bound agent teams | Given application-authorized caller-declared target, candidate, adapter, evaluator, dataset, and metric revision digests, when `/agent.toolkit` runs, existing owners retain execution while the Toolkit records metadata-only trust labels, evaluates unique opaque evidence, excludes remote-unverified samples, compares one bounded cohort, and emits at most a review-pending proposal. | Must |
 | Run long-horizon SuperAgent work | Given a research, coding, or creation goal, when `/superagent.run` runs, then graph, memory, skills, tools, sandbox workspace, message gateway, artifacts, verification, stop condition, and cost ledger are typed before execution. | Must |
-| Render Canvas dashboards | Given a typed run manifest or source-backed document, when Canvas opens it, then existing Source Files, frontmatter, KGC, and Storyboard owners render the state without a dashboard-only renderer. | Should |
+| Render Canvas dashboards | Given a typed run manifest or source-backed document, when Canvas opens it, then existing Source Files, frontmatter, Agentic OS, and Storyboard owners render the state without a dashboard-only renderer. | Should |
 | Render this contract on Canvas | Given this document, when a declared 2D renderer surface opens it, then every diagram projects the node, edge, and cluster counts recorded in the Diagram Register, with every edge endpoint resolved and zero token spend. | Must |
 | Prove runtime readiness | Given a capability marked runtime-ready, when validation runs, then its VCCs surface parse, route, execute, cost, bound, and deploy-boundary proof. | Must |
 
@@ -239,7 +239,7 @@ flowchart TB
   subgraph local["Local Dev - local residency"]
     docs["Source docs + MEMORY.md<br/>Producer - Document"]
     mcp["Local MCP server<br/>Gateway - Service"]
-    canvas["Canvas + Source Files + KGC<br/>Consumer - Service"]
+    canvas["Canvas + Source Files + Agentic OS<br/>Consumer - Service"]
   end
   subgraph shared["Shared Owners - local residency"]
     contracts["contracts schemas<br/>Store - Contract"]
@@ -309,11 +309,11 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Harness catalog | Define typed input/output/cost/fallback/bound contracts | Existing harness runtimes and contracts |
 | Mixture of Agents | Run bounded reference-agent deliberation before one aggregator-owned response | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and approved local harness owners |
 | Learning loop | Search memory, capture experience, propose skills, evolve skills, and reflect identity facts | `FACTS.md`, `MEMORY.md`, `SKILLS.md`, and approval-gated runtime owners |
-| Stateful orchestration | Define graph state, nodes, edges, checkpoints, human review, and streaming trace | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and existing KGC/Canvas owners |
+| Stateful orchestration | Define graph state, nodes, edges, checkpoints, human review, and streaming trace | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and existing Agentic OS/Canvas owners |
 | Agent Swarm | Generate one bounded task DAG, coordinate durable atomic worker claims, recover interrupted work, and synthesize through the base agent | `agent-api/src/agent-swarm*.js`, `AGENT-SWARM.md`, `AGENT_STATE`, dictionaries, Worker routes, and focused tests |
 | Agent Toolkit | Observe application-authorized digest-bound agent/team revisions, evaluate unique opaque evidence, compare one trusted target/adapter/operation/profile cohort, and persist review-pending proposals without owning execution | `agent-api/src/agent-toolkit*.js`, `AGENT-TOOLKIT.md`, `AGENT_STATE`, dictionaries, authenticated Worker routes, and the combined Toolkit integration suite |
 | SuperAgent harness | Run long-horizon research, coding, and creation with workspace, message, artifact, verification, and cost proof | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and approved local harness owners |
-| Canvas dashboard | Render source-backed runtime state | Source Files, KGC/frontmatter, Storyboard owners |
+| Canvas dashboard | Render source-backed runtime state | Source Files, Agentic OS/frontmatter, Storyboard owners |
 | Control-plane MCP | Remote approval-gated orchestration where deployed | Cloudflare McpAgent Worker owners |
 
 ### Runtime Gates
@@ -389,6 +389,6 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Agent Swarm scales safely | Independent generated tasks overlap within `maxParallel`; stale claims fence late output; idempotent effects carry receipt-owner-verified stable keys; recovery preserves the session-owned durable ledger; and only the resolved original base agent exposes synthesis. |
 | Agent Toolkit improves only through evidence and review | Two runtime instances share principal-derived atomic run/cohort state; one stable-idempotency evaluator fence wins; persisted traces contain no raw payload; reused, remote-unverified, missing-quality, or missing-cost evidence holds; passing trusted cohort thresholds yield only an immutable `review_pending` proposal; no apply method or external dependency exists. |
 | SuperAgent run is bounded | `/superagent.run` reports sandbox workspace, message gateway, checkpoint policy, artifact manifest, verification state, cost log, stop condition, and no-copy boundary. |
-| Canvas dashboard is source-backed | Dashboard opens from Markdown/frontmatter/KGC owners; no dashboard-only graph store exists. |
+| Canvas dashboard is source-backed | Dashboard opens from Markdown/frontmatter/Agentic OS owners; no dashboard-only graph store exists. |
 | Diagrams are canvas-renderable | Projecting this document reports node, edge, and cluster counts equal to the Diagram Register expectations, resolves every declared surface in the renderer registry, resolves every edge endpoint to a declared node, and records cost fields all `0`. |
 | Deploy boundary is clean | Canonical checkout shows no Prod mirror mutation and no Cloudflare deploy command was run. |

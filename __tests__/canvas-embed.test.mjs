@@ -36,7 +36,7 @@ test("resolveCanvasDocViewUrl returns '' without base or runId", () => {
 
 test("storyboardCanvasAvailable detects ready status and shot nodes", () => {
   assert.equal(storyboardCanvasAvailable(ready()), true);
-  assert.equal(storyboardCanvasAvailable({ kgcDocument: { flow: { nodes: [{ id: "s1" }] } } }), true);
+  assert.equal(storyboardCanvasAvailable({ agenticOsDocument: { flow: { nodes: [{ id: "s1" }] } } }), true);
   assert.equal(storyboardCanvasAvailable({ stages: [{ id: "research", status: "complete" }] }), false);
 });
 
@@ -50,7 +50,7 @@ test("buildCanvasEmbed is available with base + runId + ready storyboard", () =>
 });
 
 test("buildCanvasEmbed pins the storyboard doc id when present", () => {
-  const embed = buildCanvasEmbed(ready({ kgcDocument: { graphId: "md:sb", flow: { nodes: [{ id: "s1" }] } } }), {
+  const embed = buildCanvasEmbed(ready({ agenticOsDocument: { graphId: "md:sb", flow: { nodes: [{ id: "s1" }] } } }), {
     canvasBaseUrl: BASE,
   });
   assert.equal(embed.docId, "md:sb");

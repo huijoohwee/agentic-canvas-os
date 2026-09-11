@@ -121,7 +121,7 @@ export function validateXrInvocationContractDocuments(documents) {
   requireMarkers(findPlainTableRow(facts, "Camera and XR scene invocation catalog"), "FACTS.md Camera and XR scene boundary", [
     "agentic-graph.control_local_camera",
     "agentic-graph.control_local_xr_scene",
-    "Agentic ECS stays a separate three-tool stdio/KGC composition lane",
+    "Agentic ECS stays a separate three-tool stdio/Agentic OS composition lane",
     "no renderer or physics ownership",
   ], failures);
 

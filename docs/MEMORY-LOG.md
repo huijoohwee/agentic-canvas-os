@@ -43,7 +43,7 @@ GitHub is the synchronization SSOT for three separate concerns:
 
 ## Canonical File Shape
 
-Each shard is created once with immutable YAML frontmatter. New entries are appended after the final entry. The entry shape follows the existing KGC computing-flow conventions: frontmatter owns machine identity and routing, while sigil-tagged Markdown blocks remain human-readable, greppable, and parseable.
+Each shard is created once with immutable YAML frontmatter. New entries are appended after the final entry. The entry shape follows the existing Agentic OS computing-flow conventions: frontmatter owns machine identity and routing, while sigil-tagged Markdown blocks remain human-readable, greppable, and parseable.
 
 ```markdown
 ---

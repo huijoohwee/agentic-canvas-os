@@ -151,7 +151,7 @@ test("canonical runtime residue tolerates foreign parallel docs but blocks runti
     repositoryId: "agentic-graph",
     statusPorcelain: [
       "?? src/runtime-drift.ts",
-      " M docs/documents/agentic-graph-storage-sync-document.md",
+      " M docs/documents/agentic-graph-storage-sync-prd-tad-adr-mvp-gtm.md",
     ].join("\n"),
   });
   assert.equal(blocking.runtimeSafe, false);
@@ -159,7 +159,7 @@ test("canonical runtime residue tolerates foreign parallel docs but blocks runti
     blocking.blocking.map(entry => ({ path: entry.path, reason: entry.reason })),
     [
       { path: "src/runtime-drift.ts", reason: "untracked-runtime-authority" },
-      { path: "docs/documents/agentic-graph-storage-sync-document.md", reason: "tracked-residue" },
+      { path: "docs/documents/agentic-graph-storage-sync-prd-tad-adr-mvp-gtm.md", reason: "tracked-residue" },
     ],
   );
 });

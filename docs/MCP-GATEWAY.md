@@ -280,11 +280,11 @@ Repository packing is one local stdio MCP capability. `/repository.pack #reposit
 
 ## ADLC Observability Capability
 
-`/adlc.observe #adlc-observability @implementation-run @canvas @runtime-proof` is one host composition over a local stdio wire tool. Agentic Canvas OS owns its invocation, state-meaning, graph-vocabulary, and deployment-boundary truth. agentic-graph validates the immutable local ledger receipt, performs the deterministic projection, and hands GraphData and KGC Markdown to existing Canvas owners.
+`/adlc.observe #adlc-observability @implementation-run @canvas @runtime-proof` is one host composition over a local stdio wire tool. Agentic Canvas OS owns its invocation, state-meaning, graph-vocabulary, and deployment-boundary truth. agentic-graph validates the immutable local ledger receipt, performs the deterministic projection, and hands GraphData and Agentic OS Markdown to existing Canvas owners.
 
 | Capability | MCP role | Default boundary |
 |---|---|---|
-| `agentic-graph.adlc.observe` | Read one exact `adlc-ledger-receipt/v1` plus its digest-bound local artifact and return `agentic-graph-adlc-observation/v1`; its `adlc-canvas-projection/v1` payload supplies bounded deterministic GraphData and `kgc-computing-flow/v1` Markdown for the existing Canvas. | Read-only, local, deterministic, model-free, network-free, zero-token, zero-cost, and Dev-only. Receipt, revision, digest, containment, view, cursor, and limit fail closed; the tool creates no verdict, delivery state, authorization, deployment, store, dashboard, renderer, Prod mirror write, or Cloudflare action. |
+| `agentic-graph.adlc.observe` | Read one exact `adlc-ledger-receipt/v1` plus its digest-bound local artifact and return `agentic-graph-adlc-observation/v1`; its `adlc-canvas-projection/v1` payload supplies bounded deterministic GraphData and `agentic-os-computing-flow/v1` Markdown for the existing Canvas. | Read-only, local, deterministic, model-free, network-free, zero-token, zero-cost, and Dev-only. Receipt, revision, digest, containment, view, cursor, and limit fail closed; the tool creates no verdict, delivery state, authorization, deployment, store, dashboard, renderer, Prod mirror write, or Cloudflare action. |
 
 The response keeps source, status, conformance, projection, cache, and economics
 separate. `verified`, `delivery_ready`, and `deployed` remain externally owned
@@ -358,14 +358,14 @@ capability:
 | Coordinate profile Kanban | Local stdio MCP or approved table/Kanban harness | Writes task and handoff rows in `huijoohwee.github.io/docs/kanban.md` without in-process subagent swarms. |
 | Manage skills | Local stdio MCP with skill policy | Scans and gates skill writes; no direct auto-commit when review is required. |
 | Propose skill evolution | Local stdio MCP with approval gate | Produces review-pending diff and validation packet only. |
-| Validate stateful graph | Local stdio MCP or source-backed KGC validation owner | Keeps topology source-backed and rejects hidden graph stores. |
+| Validate stateful graph | Local stdio MCP or source-backed Agentic OS validation owner | Keeps topology source-backed and rejects hidden graph stores. |
 | Resume checkpointed run | Local stdio MCP with approved state owner | Uses typed checkpoint and recovery proof before continuation. |
 | Pause for human review | Local stdio MCP or control-plane gate where deployed | Blocks paid or mutating continuation until operator result. |
 | Run long-horizon SuperAgent task | Local stdio MCP or approved control-plane harness | Composes graph, memory, skills, tools, workspace, messages, artifacts, and verification under one bounded run. |
 | Orchestrate a role-based Agent Team | Local stdio MCP | Plans and supervises one revision-fenced team through existing agent owners, durable checkpoints, explicit review, and exact delegate or handoff answer ownership. |
 | Compose a versioned agent or LLM application | Local stdio MCP | Catalogs and plans exact host-owned interfaces; bounded execution delegates ready DAG steps to existing owners without absorbing their loops or gateways. |
 | Ingest, query, or explain a codebase agentic graph | agentic-graph local MCP | Uses one bounded local digest-fenced graph, deterministic source parsers, auditable edge evidence, opaque graph identity, and explicit tool dispatch without models, embeddings, or vectors. |
-| Observe one ADLC run end to end | Local stdio MCP | Requires one immutable local ledger receipt and deterministically projects bounded KGC and GraphData through the existing Canvas without a model, network, spend, mutation, state promotion, or deployment. |
+| Observe one ADLC run end to end | Local stdio MCP | Requires one immutable local ledger receipt and deterministically projects bounded Agentic OS and GraphData through the existing Canvas without a model, network, spend, mutation, state promotion, or deployment. |
 | Pack one local Git repository | Local stdio MCP | Writes one bounded content-addressed artifact through `agentic-graph.repository.pack`; no source bytes cross the MCP response and no remote, model, or deploy route exists. |
 | Inspect browser page state | Browser WebMCP | Browser-owned session context stays local. |
 | Select a settlement rail or read payment status | Local stdio MCP | Deterministic, model-free selection and a four-field public projection stay inside the payments owner. |
@@ -409,7 +409,7 @@ capability:
 | Agent Team ownership is fenced | The four Agent Team tools require exact source, agent, workflow, branch, plan-digest, idempotency, state-version, review, and budget evidence; roles and personas grant no authority, delegate intermediates stay private, and Agent Swarm remains unchanged. |
 | Orchestration copy is blocked | Graph capabilities reject copied external runtime code, APIs, schemas, examples, tests, fixtures, and prose. |
 | SuperAgent is bounded | SuperAgent capabilities reject missing sandbox scope, message gateway, checkpoint policy, stop condition, artifact manifest, and copied external runtime layouts. |
-| ADLC observation is deterministic and read-only | The exact observer invocation resolves one local tool; an immutable receipt gates stable node and edge ordering, KGC and GraphData output, cache identity, typed state distinctions, zero economics, and the closed Dev-only boundary. |
+| ADLC observation is deterministic and read-only | The exact observer invocation resolves one local tool; an immutable receipt gates stable node and edge ordering, Agentic OS and GraphData output, cache identity, typed state distinctions, zero economics, and the closed Dev-only boundary. |
 | Repository packing is deterministic and independent | Canonical Git discovery, byte-ordered paths, typed omissions, source and artifact digests, self-exclusion, atomic publication, hard bounds, and dependency/name plus provenance review prove one local clean-room owner with zero network, model, token, cost, Prod, or Cloudflare activity. |
 
 ## Mermaid Topology

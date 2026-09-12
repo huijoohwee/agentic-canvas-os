@@ -63,7 +63,7 @@ These instructions apply under `docs/`. They contain only durable behavior that 
 | Dependency-ordered cross-repository integration | `INTEGRATION-ORDER.md` |
 | Upstream dependency admission and bounded continuation | `UPSTREAM-DEPENDENCY-ADMISSION.md` |
 | Provider-neutral lifecycle, proof, and exact cleanup | pinned `agentic-os/docs/adlc-guidelines.md` and the committed `.agentic-os.json` profile |
-| Planning lifecycle | `huijoohwee.github.io/docs/TODO.md` and one immutable Context record per task |
+| Planning lifecycle | `huijoohwee/.workspace/.todo/docs/TODO.md` and one immutable Context record per task |
 | Proof and validation | `RUNTIME-PROOF.md` and `VALIDATION-RUNBOOK.md` |
 
 ## Instruction Placement

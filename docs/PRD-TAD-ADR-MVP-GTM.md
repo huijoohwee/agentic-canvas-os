@@ -3,23 +3,23 @@ title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
 date: "2026-09-12"
-version: "1.0.0"
+version: "1.0.1"
 continuity_id: "CANVAS-CONTROL-SURFACE-001"
-prd_revision: "1.0.0"
-tad_revision: "1.0.0"
-adr_revision: "1.0.0"
-mvp_revision: "1.0.0"
-gtm_revision: "1.0.0"
+prd_revision: "1.0.1"
+tad_revision: "1.0.1"
+adr_revision: "1.0.1"
+mvp_revision: "1.0.1"
+gtm_revision: "1.0.1"
 owner: "Canvas control-surface maintainers"
 local_rung: "spec-complete"
 delivered_rung: "undocumented"
 lane: "authoring"
 universal_scope: false
-worktree_id: "device-cba000d3779d--planning-v27"
+worktree_id: "device-cba000d3779d--planning-owner-review"
 agent_id: "codex-01a0940a"
 guideline_revision: "2.7.0"
 guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/e8d2a10a8d3e5735c43edf350a22523df05fdf91/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
-reviewed_source_revision: "c2c61a35aa6da17e034cdd429c787442ec562573"
+reviewed_source_revision: "035636cd31f546195c6cba64f485425750e101d7"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
 frontmatter_contract: "required"
@@ -33,7 +33,6 @@ source_docs:
   - "MEMORY.md"
   - "SKILLS.md"
   - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-agentic-os-prd-tad-adr-mvp-gtm.md"
-  - "$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-mcp/agentic-graph-mcp-agentic-os-prd-tad-adr-mvp-gtm.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "Agentic Canvas OS docs product and architecture contract; external runtime proof remains gated"
 runtime_proof: "RUNTIME-PROOF.md"
@@ -119,7 +118,10 @@ flow:
 
 ## Scope
 
-PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.0`.
+Planning writes consume the private workspace through [TODO](TODO.md) and [Kanban](kanban.md).
+The retired website routes own no task rows; this revision changes routing contracts only.
+
+PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.1`.
 This combined specification records requirements, architecture and decisions. Its target is
 runtime-ready; that target is not a whole-document runtime verdict. Prove each applicable criterion
 with exact owner revisions and independent evidence before advancing its status.
@@ -179,7 +181,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Evaluate instruction task quality | Given a complete recorded or live candidate packet, when `/instruction.quality-evaluate` runs, then every final answer is scored against required concepts, unsafe claims, and concision with explicit provenance and no access to private reasoning. | Must |
 | Load project context safely | Given a working directory or touched path, when `/context.discover` and `/context.load` run, then one effective project context is discovered, scanned, bounded, and kept subordinate to facts and identity. | Must |
 | Inject inline context by reference | Given a message with approved `@` references, when `/reference.expand` runs on a supported surface, then bounded `@attached-context` is appended with warnings or refusals and raw text is preserved on unsupported surfaces. | Must |
-| Coordinate named profiles by Kanban | Given several profiles or worker processes, when `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` runs, then all coordination state is stored as validated `huijoohwee.github.io/docs/kanban.md` rows. | Must |
+| Coordinate named profiles by Kanban | Given several profiles or worker processes, when `/kanban.task`, `/kanban.handoff`, or `/kanban.sync` runs, then task and handoff updates produce owner-validated immutable Context records and regenerate the private workspace Kanban view. | Must |
 | Configure platform toolsets | Given a platform surface, when `/toolset.enable` or `/toolset.disable` runs, then only existing tool functions change scoped availability and risky toolsets require approval. | Must |
 | Discover deferred tools on demand | Given many eligible MCP or plugin tools, when `/tool.search`, `/tool.describe`, and `/tool.call` run, then schema disclosure is session-scoped, opt-in, and dispatched under real tool policy. | Must |
 | Route tools through existing infrastructure | Given a web, image, TTS, or browser tool request, when `/tool.route` runs, then provider state, approval, egress, schema, cost, and fallback are checked before execution. | Must |
@@ -208,7 +210,7 @@ This contract consolidates the native-in-repo direction: no new Vercel, AWS, Sup
 | Context loads without working-directory scope, scan, bounds, or precedence proof | 0 |
 | Context reference expansions without policy, source, size, warning, or workspace proof | 0 |
 | Sensitive, binary, outside-workspace, or disallowed-egress context injections | 0 |
-| Profile handoffs outside durable `huijoohwee.github.io/docs/kanban.md` rows | 0 |
+| Profile handoffs without an immutable private Context record | 0 |
 | In-process subagent swarms used as collaboration SSOT | 0 |
 | Toolset changes without platform scope, policy, or required approval | 0 |
 | Deferred schema exposure outside session scope, policy, or budget gates | 0 |
@@ -317,7 +319,7 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Instruction task-quality evaluation | Model-agnostic final-answer scenarios, typed rubric findings, provenance, and human-review boundary | `docs/INSTRUCTION-QUALITY-EVALUATION.md`, `evals/instruction-task-quality-cases.json`, evaluator library, and focused tests |
 | Context files | Working-directory and subdirectory project context discovery, scan, truncation, and audit | `FACTS.md`, `AGENTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and context harness owners |
 | Context references | Explicit `@` message references expanded into bounded attached context | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and approved composer or local harness owners |
-| Kanban collaboration | Durable task and handoff rows for named profiles and full OS worker processes | `huijoohwee.github.io/docs/kanban.md`, `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and shared table/Kanban owners |
+| Kanban collaboration | Durable task and handoff rows for named profiles and full OS worker processes | `huijoohwee/.workspace/.todo/docs/kanban.md`, `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and shared table/Kanban owners |
 | Tools and toolsets | Callable tool functions plus logical bundles enabled or disabled per platform surface | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and `MCP-GATEWAY.md` |
 | Tool Gateway | Per-tool routing for web search, image generation, TTS, and cloud browser automation through existing infrastructure | `docs/FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, and `MCP-GATEWAY.md` |
 | Tool Search | Opt-in deferred schema search, describe, and bridge call for eligible MCP and non-core plugin tools | `FACTS.md`, dictionaries, `SKILLS.md`, `HARNESS-CONTRACTS.md`, `MCP-GATEWAY.md`, and tool catalog owners |
@@ -397,7 +399,7 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Skills load progressively | `/skill.discover` returns metadata only; `/skill.load` loads selected source and required resources with scan, validation, and no external copy. |
 | Context files are scoped | `/context.discover`, `/context.load`, and `/context.audit` name `@working-directory`, first-match context, scan/truncation state, skipped matches, and stronger facts/identity boundaries. |
 | Context references are bounded | `/reference.expand` and `/reference.audit` report `@reference-policy`, `@attached-context`, warning/refusal packets, size bounds, and unsupported-surface behavior. |
-| Kanban collaboration is durable | `/kanban.task`, `/kanban.handoff`, and `/kanban.sync` validate `huijoohwee.github.io/docs/kanban.md` rows, named profiles, handoff evidence, and OS worker boundaries. |
+| Kanban collaboration is durable | `/kanban.task`, `/kanban.handoff`, and `/kanban.sync` validate immutable Context records, generated private board parity, named profiles, handoff evidence, and OS worker boundaries. |
 | Toolsets are scoped | `/toolset.enable` or `/toolset.disable` names existing functions, `@toolset`, `@platform-surface`, `@tool-policy`, and approval state before changing availability. |
 | Tool Search is scoped | `/tool.search`, `/tool.describe`, and `/tool.call` use `@deferred-tool-catalog`, `@bridge-tool`, and `@tool-policy` without global registry discovery or bridge approval bypass. |
 | Tool routing is gated | `/tool.catalog` reports provider states; `/tool.route` validates schema, approval, egress, cost, and fallback before web, image, TTS, or browser execution. |
@@ -426,7 +428,7 @@ in `RUNTIME-PROOF.md`. A documentation pass cannot satisfy the runtime VCCs abov
 entry-to-readback walkthrough in five minutes, with zero paid calls for discovery; elapsed time remains
 unmeasured. Cancelled or rejected invocation must produce a visible result without unauthorized effects.
 
-For `CANVAS-CONTROL-SURFACE-001@1.0.0`, all four experience criteria are **unassessed** in the authoring
+For `CANVAS-CONTROL-SURFACE-001@1.0.1`, all four experience criteria are **unassessed** in the authoring
 environment: Core Requirements & Functionality; Innovation & Theme Alignment; Technical Execution &
 Integration; Usefulness & Agentic Experience. No timed user study is attached. The document owner must
 capture one pilot walkthrough and criterion-specific observations using the shared maturity rubric.

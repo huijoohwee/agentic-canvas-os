@@ -100,11 +100,11 @@ agentic_os_memory:
     bindings: ["@memory-store", "@memory-entry", "@memory-snapshot", "@memory-policy", "@user-profile", "@session-index"]
     guards: ["bounded stores", "frozen session snapshot", "scan before write", "capacity error before overflow", "explicit user profile only", "no silent auto-compact", "no deploy"]
   planning_history:
-    index: "https://github.com/huijoohwee/huijoohwee.github.io/blob/main/docs/TODO.md"
-    legacy_shard_pattern: "$GITHUB_ROOT/huijoohwee.github.io/todo/YYYY-MM.md"
-    context_record_pattern: "$GITHUB_ROOT/huijoohwee.github.io/todo/YYYY-MM/<context>.md"
-    period_owner: "huijoohwee.github.io/docs/TODO.md"
-    schema: "todo-context-record/v2"
+    index: "https://github.com/huijoohwee/.workspace/blob/main/.todo/docs/TODO.md"
+    legacy_shard_pattern: "$GITHUB_ROOT/.workspace/.todo/todo/YYYY-MM.md"
+    context_record_pattern: "$GITHUB_ROOT/.workspace/.todo/todo/YYYY-MM/<context>.md"
+    period_owner: "huijoohwee/.workspace/.todo/docs/TODO.md"
+    schema: "todo-context-record/v3"
     scope: "cross-repository"
     guards: ["immutable records", "legacy immutability", "unique Context", "exact-first retrieval", "deterministic projection", "no deploy"]
   skill_system:
@@ -127,7 +127,7 @@ agentic_os_memory:
     guards: ["supported surface only", "workspace scoped", "sensitive path block", "path traversal block", "binary reject", "soft warning hard refusal", "folder and git caps", "URL egress policy", "warnings not silent failure", "no deploy"]
   kanban_collaboration:
     source_policy: "external-pattern-reference-only; forbid copied board runtime, task schema examples, fixtures, tests, and prose"
-    board: "https://github.com/huijoohwee/huijoohwee.github.io/blob/main/docs/kanban.md"
+    board: "https://github.com/huijoohwee/.workspace/blob/main/.todo/docs/kanban.md"
     commands: ["/kanban.task", "/kanban.handoff", "/kanban.sync"]
     semantics: ["#kanban-board", "#task-row", "#profile-handoff", "#worker-process", "#multi-agent-collaboration"]
     bindings: ["@kanban-board", "@task-row", "@handoff-row", "@agent-profile", "@worker-process"]
@@ -309,7 +309,7 @@ The file is spec-complete when its frontmatter can be parsed as the source of tr
 | `SOUL.md` | Durable agent identity and voice | Identity, style, and communication defaults stay separate from project operations and memory persistence. |
 | `USER.md` | Explicit operator preferences, communication style, and expectations | Save only explicit, non-secret, bounded profile entries; reject unsupported personal inference. |
 | `FACTS.md` | Shared truth and precedence | Facts override stale local memory; update the fact source instead of layering aliases. |
-| `huijoohwee.github.io/docs/TODO.md` | Cross-repository planning index and shard contract | Keep the index bounded; load or append only the exact `huijoohwee.github.io/todo/YYYY-MM.md` shard in scope. |
+| `huijoohwee/.workspace/.todo/docs/TODO.md` | Cross-repository planning index and shard contract | Keep the index bounded; load exact Context records and write only a new owner-validated record; legacy monthly shards stay immutable. |
 | Strybldr starter frontmatter | Runtime routing, renderer defaults, local-first publish gate | Frontmatter and authored source payloads own data; renderers project view state only. |
 | Strybldr starter body | Operator workflow and acceptance checklist | Live provider fields, generated media URLs, transcripts, provider IDs, and deploy claims stay empty until returned by an approved live run. |
 | PRD/TAD guidelines | Universal document and architecture contract | Requirements must stay neutral, modular, traceable, VCC-backed, TCO-aware, token-aware, and FOSS-first. |
@@ -386,13 +386,13 @@ Context references are per-message attachments, not durable memory or project co
 
 ## Kanban Collaboration Memory
 
-`huijoohwee.github.io/docs/kanban.md` is the durable shared board for named profiles and worker processes. Use shared multi-dimensional table/Kanban utilities for every task row and handoff row; do not coordinate through hidden subagent state, browser-only state, or a copied board runtime.
+The private workspace owns immutable Context records and generates `docs/kanban.md`; [TODO.md](TODO.md) resolves the source and validation contract. Use shared multi-dimensional table/Kanban utilities for every task row and handoff row; do not coordinate through hidden subagent state, browser-only state, or a copied board runtime.
 
 | Stage | Command | Memory role | Guard |
 |---|---|---|---|
-| Task | `/kanban.task` | Persist one validated work row. | Requires owner profile, status, evidence, acceptance, and next action. |
+| Task | `/kanban.task` | Record one immutable Context through the owner. | Requires owner profile, status, evidence, acceptance, and next action. |
 | Handoff | `/kanban.handoff` | Transfer work between profiles. | Requires from, to, task id, context refs, blockers, resume state, and acceptance. |
-| Sync | `/kanban.sync` | Reconcile rows across OS worker processes. | Conflict-aware; preserves `huijoohwee.github.io/docs/kanban.md` as SSOT. |
+| Sync | `/kanban.sync` | Reconcile rows across OS worker processes. | Conflict-aware; preserves immutable Context records and regenerates the private board. |
 
 ## Persistent Memory Stores
 
@@ -400,7 +400,7 @@ Persistent memory is bounded and curated. It is not a raw transcript dump, auto-
 
 Durable cross-device history lives in append-only `../memory/YYYY-MM.md` shards under the `MEMORY-LOG.md` contract. This document remains the bounded routing and runtime-readiness seed; selected shard entries are retrieved before context assembly instead of expanding this always-loaded source.
 
-Cross-repository planning history follows the same bounded-loading principle through `huijoohwee.github.io/docs/TODO.md` and append-only `huijoohwee.github.io/todo/YYYY-MM.md` shards. Planning rows stay outside this memory seed and are retrieved by exact scope, month, or Context.
+Cross-repository planning history follows the same bounded-loading principle through `huijoohwee/.workspace/.todo/docs/TODO.md` and immutable `huijoohwee/.workspace/.todo/todo/YYYY-MM/<context>.md` records; legacy monthly shards remain unchanged. Planning rows stay outside this memory seed and are retrieved by exact scope, month, or Context.
 
 | Target | Source | Stores | Limit | Rejects |
 |---|---|---|---:|---|

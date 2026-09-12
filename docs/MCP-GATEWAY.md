@@ -179,7 +179,7 @@ Learning-loop tools are discoverable like other capabilities, but mutation remai
 | `agentic-graph.context.audit` | Report effective context precedence, skipped matches, blocks, truncation, and stale risks. | Read-only; context cannot override facts, identity, approval, or deploy gates. |
 | `agentic-graph.reference.expand` | Expand explicit inline `@` references into bounded attached context. | Supported surfaces only; sensitive paths, binary content, disallowed egress, and hard-limit overflow fail closed. |
 | `agentic-graph.reference.audit` | Report reference expansion source, size, warning, refusal, and truncation state. | Read-only; no extra fetch, mutation, memory write, or deploy. |
-| `agentic-graph.kanban.task` | Create or update one durable task row in `huijoohwee.github.io/docs/kanban.md`. | Uses shared table/Kanban utilities; no second board store. |
+| `agentic-graph.kanban.task` | Record an immutable task Context through TODO.md; the private workspace generates its Kanban view. | Uses shared table/Kanban utilities; no second board store. |
 | `agentic-graph.kanban.handoff` | Create one handoff row between named profiles. | Requires source profile, target profile, context refs, blockers, resume state, and acceptance. |
 | `agentic-graph.kanban.sync` | Reconcile board rows across full OS worker processes. | Read/write is conflict-aware and deploy-free. |
 | `agentic-graph.experience.capture` | Persist typed lessons from source-backed proof or operator correction. | Write requires explicit scope and no-copy validation. |
@@ -355,7 +355,7 @@ capability:
 | Discover or load skills | Local stdio MCP or approved skill registry owner | Keeps metadata-first discovery and on-demand resource loading bounded. |
 | Discover project context | Local stdio MCP or approved context-file harness | Loads scoped working-directory context after scan and precedence checks. |
 | Expand inline context references | Local stdio MCP or approved composer harness | Appends bounded `@attached-context` while preserving raw text on unsupported surfaces. |
-| Coordinate profile Kanban | Local stdio MCP or approved table/Kanban harness | Writes task and handoff rows in `huijoohwee.github.io/docs/kanban.md` without in-process subagent swarms. |
+| Coordinate profile Kanban | Local stdio MCP or approved table/Kanban harness | Records tasks and handoffs through the private Context owner and regenerates its board; no process-local planning source. |
 | Manage skills | Local stdio MCP with skill policy | Scans and gates skill writes; no direct auto-commit when review is required. |
 | Propose skill evolution | Local stdio MCP with approval gate | Produces review-pending diff and validation packet only. |
 | Validate stateful graph | Local stdio MCP or source-backed Agentic OS validation owner | Keeps topology source-backed and rejects hidden graph stores. |
@@ -402,7 +402,7 @@ capability:
 | Skill writes are gated | Skill management requires scan, validation, compatibility check, approval policy, and no-copy guard. |
 | Context files are scoped | Context discovery uses explicit working directory and touched paths, scans before load, and keeps `FACTS.md` stronger than CLAUDE-style context. |
 | Context references are bounded | Reference expansion preserves ordinary `@` bindings, scans sources, enforces workspace and egress policy, and emits warnings or refusals before attachment. |
-| Kanban rows are durable | Kanban capabilities parse `huijoohwee.github.io/docs/kanban.md`, validate row schemas, preserve handoff evidence, and reject hidden process-only coordination. |
+| Kanban rows are durable | Kanban capabilities parse `huijoohwee/.workspace/.todo/docs/kanban.md`, validate row schemas, preserve handoff evidence, and reject hidden process-only coordination. |
 | Learning mutation is gated | Skill and identity writes require operator approval; discovery and search remain zero-spend. |
 | External copy is blocked | Learning capabilities reject copied external code, prompts, schemas, tests, fixtures, and prose. |
 | Stateful orchestration is bounded | Graph capabilities reject orphaned nodes, missing stop conditions, missing checkpoint contracts, and unbounded cycles. |

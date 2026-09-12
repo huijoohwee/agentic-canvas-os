@@ -21,3 +21,20 @@ test('recreated local ledgers and writable compatibility documents are rejected'
   assert(failures.some(message => message.includes('missing or stale')));
   assert(failures.some(message => message.includes('cannot contain task rows')));
 });
+
+test('a renamed or reworded consumer cannot restore a retired public planning owner', () => {
+  for (const target of [
+    'huijoohwee.github.io/docs/kanban.md',
+    'https://github.com/huijoohwee/huijoohwee.github.io/blob/main/docs/TODO.md',
+    'huijoohwee.github.io/todo/2026-09/another-context.md',
+  ]) {
+    const documents = new Map([['RENAMED-CONTRACT.md', `The sole durable write target is ${target}.`]]);
+    assert(validatePlanningOwner(undefined, documents).some(message => message.includes('retired public planning source')));
+  }
+});
+
+test('immutable migration evidence remains distinct from current write authority', () => {
+  const documents = new Map([['EVIDENCE.md',
+    `Prior source: https://github.com/huijoohwee/huijoohwee.github.io/blob/${'a'.repeat(40)}/docs/kanban.md\nCurrent writes consume TODO.md.`]]);
+  assert.deepEqual(validatePlanningOwner(undefined, documents), []);
+});

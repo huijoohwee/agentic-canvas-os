@@ -179,7 +179,7 @@ export async function runDocsContract({
   failures.push(...validateUrlIngestContractDocuments(documents));
   failures.push(...validateDictionaryCatalogContract(documents));
   failures.push(...validateDictionaryProjections(documents));
-  failures.push(...validatePlanningOwner(repositoryRoot));
+  failures.push(...validatePlanningOwner(repositoryRoot, documents));
 
   if (failures.length > 0) throw new Error(failures.join("\n"));
   return Object.freeze({

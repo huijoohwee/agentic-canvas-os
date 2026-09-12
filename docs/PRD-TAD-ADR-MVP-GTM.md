@@ -2,7 +2,24 @@
 title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
-date: "2026-09-09"
+date: "2026-09-12"
+version: "1.0.0"
+continuity_id: "CANVAS-CONTROL-SURFACE-001"
+prd_revision: "1.0.0"
+tad_revision: "1.0.0"
+adr_revision: "1.0.0"
+mvp_revision: "1.0.0"
+gtm_revision: "1.0.0"
+owner: "Canvas control-surface maintainers"
+local_rung: "spec-complete"
+delivered_rung: "undocumented"
+lane: "authoring"
+universal_scope: false
+worktree_id: "device-cba000d3779d--planning-v27"
+agent_id: "codex-01a0940a"
+guideline_revision: "2.7.0"
+guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/e8d2a10a8d3e5735c43edf350a22523df05fdf91/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
+reviewed_source_revision: "c2c61a35aa6da17e034cdd429c787442ec562573"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
 frontmatter_contract: "required"
@@ -102,6 +119,7 @@ flow:
 
 ## Scope
 
+PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.0`.
 This combined specification records requirements, architecture and decisions. Its target is
 runtime-ready; that target is not a whole-document runtime verdict. Prove each applicable criterion
 with exact owner revisions and independent evidence before advancing its status.
@@ -342,7 +360,9 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Render | Every diagram declares a registry-resolvable surface, sits in an ingest surface that surface parses, and projects the expected node, edge, and cluster counts at zero token cost. |
 | Proof | Focused tests or checks are surfaced in the agent output. |
 
-### ADRs
+<a id="adrs"></a>
+
+## ADR
 
 | ADR | Decision | Rationale |
 |---|---|---|
@@ -392,3 +412,31 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 | Canvas dashboard is source-backed | Dashboard opens from Markdown/frontmatter/Agentic OS owners; no dashboard-only graph store exists. |
 | Diagrams are canvas-renderable | Projecting this document reports node, edge, and cluster counts equal to the Diagram Register expectations, resolves every declared surface in the renderer registry, resolves every edge endpoint to a declared node, and records cost fields all `0`. |
 | Deploy boundary is clean | Canonical checkout shows no Prod mirror mutation and no Cloudflare deploy command was run. |
+
+## MVP - reference implementation
+
+The smallest slice consumes the PRD's discovery, invocation and proof requirements: open the native
+workspace, discover one source-owned command, invoke it within its existing bounds, and inspect the
+returned artifact and evidence. Reuse the TAD's dictionaries, validating client and native Graph runtime;
+no new renderer, provider proxy or planning store is required. ADR-AOS-1 through ADR-AOS-4 govern this slice.
+
+Verify the document contract with `npm run docs:check`; verify actual invocation and its failure path
+with the focused owner checks in `VALIDATION-RUNBOOK.md`. Record check, exact source, result and surface
+in `RUNTIME-PROOF.md`. A documentation pass cannot satisfy the runtime VCCs above. Demo target: one
+entry-to-readback walkthrough in five minutes, with zero paid calls for discovery; elapsed time remains
+unmeasured. Cancelled or rejected invocation must produce a visible result without unauthorized effects.
+
+For `CANVAS-CONTROL-SURFACE-001@1.0.0`, all four experience criteria are **unassessed** in the authoring
+environment: Core Requirements & Functionality; Innovation & Theme Alignment; Technical Execution &
+Integration; Usefulness & Agentic Experience. No timed user study is attached. The document owner must
+capture one pilot walkthrough and criterion-specific observations using the shared maturity rubric.
+
+## GTM - reference implementation
+
+The reachable payer hypothesis is a solo builder who repeatedly loses time finding the right source,
+command and proof. First test a guided setup and one accepted outcome in that builder's existing
+workspace. Reuse the MVP before offering hosted or team infrastructure. Rank that service against the
+free self-serve workflow using observed rework, offered price and support minutes; there is no commercial
+winner until those inputs exist. Demand, priced acceptance, collected payment and repeat use remain
+unvalidated. Agent usage and hosting costs require separate measurements; zero-spend discovery does
+not imply zero total cost or collected revenue. A pilot result belongs in a successor Context record.

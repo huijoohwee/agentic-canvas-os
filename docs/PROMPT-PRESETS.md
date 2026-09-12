@@ -187,6 +187,15 @@ prompt_presets:
 
 # Prompt Presets
 
+Launch Copilot r3 is an on-demand native Graph composition action. Its shared
+prompt, five-role source joins, claim validator and document serializer live in
+`../src/launch-copilot-contract.js`; consumers load that owner without copying it
+into a preset or adding a provider route. Graph retains import/parse, selection,
+Chat, canvas and workspace persistence. An editable outline is explicitly not
+AI drafting. Validation proves source membership only; human review and OS
+publication authority remain separate. No standalone Launch Copilot runtime is
+admitted. Native consumer and live-provider proof are required before readiness.
+
 This document is the single prompt-text owner for the agentic-graph FloatingPanel **Prompt Presets** catalog. The runtime reads `prompt_presets` from frontmatter and projects the selected prompt into the existing shared composer.
 
 Selection and loading are zero-spend. **Send** remains the Chat execution boundary. An `llm-chat-response` preset must use the active Chat provider, endpoint, and model; it cannot inherit stale card-local routing. A `native-chat-response` preset resolves through its named shared runtime without inventing a model route. The image-to-threejs, image-to-glb, and Probe-Tree presets may also be inserted from the shared Skills & Commands catalog into the selected Widget Card, where each expands to its canonical `/`, `@`, and `#` tokens without replacing attached source media. The Widget Card **Run** action is the execution boundary for those card-inline presets. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; each changed multi-card stage is tracked by the shared active-source GitGraph owner as `Chat Run All i/n: <card>`, while an identical already-published graph remains an accepted no-op. SME Care and Investment Research presets use the shared slash-agent response contracts; Crawler Agent uses the native Import URL workflow.

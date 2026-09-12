@@ -131,6 +131,6 @@ exception. Preserve user bytes and stop on any typed ADLC attention result.
   listeners and classify tolerated foreign residue explicitly. Documentation-only
   cleanup uses `npm run docs:check`; it does not start runtimes, browsers or VMs.
 - A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.
-- Suggest next steps in `/GitHub/huijoohwee.github.io/{docs/TODO.md, docs/kanban.md, todo/}`,
+- Suggest next steps in `/GitHub/.workspace/.todo/{docs/TODO.md, docs/kanban.md, todo/}`,
   `/GitHub/agentic-graph/docs/`, and
   `/GitHub/huijoohwee.github.io/schema/AgenticRAG` when relevant.

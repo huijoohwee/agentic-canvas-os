@@ -25,7 +25,7 @@ export const FACTS_COMPACTED_CONTRACTS = Object.freeze({
     soul: "durable agent identity and voice",
     facts: "shared truth and precedence",
     memory: "persistence, routing memory, and reusable local context",
-    planning: "bounded index plus append-only cross-repository monthly shards",
+    planning: "bounded private index plus immutable Context records and generated Kanban view",
     user: "bounded user preferences, communication style, and expectations",
     skills: "on-demand procedural knowledge and progressive disclosure contracts",
     agents: "agent roles, editing rules, and operational behavior",

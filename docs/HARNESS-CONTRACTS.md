@@ -133,7 +133,7 @@ harness:
 | Skill System | Discover, load, bundle, scan, and manage on-demand skills | `{ query, skillId, resourcePath, bundleRef, action }` | Metadata index, skill context, resource packet, bundle resolution, proposed diff, or rejection | Writes and unsafe external sources require scan, validation, and approval policy |
 | Context Files | Discover, load, scan, truncate, and audit project-local context | `{ workingDirectory, touchedPaths[], contextType }` | Effective context, skipped matches, blocked files, truncation ledger, or audit result | Context cannot override facts, identity, safety, approval, or deploy gates |
 | Context References | Expand explicit message references into bounded attached context | `{ message, workingDirectory, referencePolicy }` | Original message, attached context packets, warnings, refusals, or unsupported-platform result | URL egress, sensitive paths, binary content, hard limits, and unsafe references fail closed |
-| Kanban Collaboration | Manage durable task and handoff rows across named profiles | `{ boardRef, row, profile, workerProcess }` | Validated row, handoff row, sync ledger, conflict, or missing-board result | Board writes stay in `huijoohwee.github.io/docs/kanban.md`; no hidden subagent swarm or duplicate store |
+| Kanban Collaboration | Manage durable task and handoff rows across named profiles | `{ boardRef, row, profile, workerProcess }` | Validated row, handoff row, sync ledger, conflict, or missing-board result | Write immutable Context records through TODO.md; regenerate the private board, with no duplicate store |
 | Tool Gateway | Route web, image, TTS, and browser tool calls through existing infrastructure | `{ category, provider, input, approvals[] }` | Tool result, unavailable provider, approval-required, cost log, or typed fallback | Paid, egress, generated-media, and browser-auth actions require approval |
 | Toolsets | Enable or disable logical bundles of existing tool functions per platform | `{ toolsetId, platformSurface, action, approvals[] }` | Scoped enablement state, missing-function list, approval-required, or blocked reason | Paid, mutating, terminal, filesystem, browser-auth, egress, and generated-media toolsets require approval |
 | Tool Search | Keep optional schemas behind session metadata and load exact selected definitions | `{ sessionId, catalogRevision, mode, query, toolName }` | Immutable initial context, append-only definitions, authorization, cost, or typed block | Search stays top-level; loading never bypasses real tool policy, approval, hooks, audit, or cost |
@@ -231,24 +231,24 @@ Context-reference harnesses attach explicit `@` references to the current messag
 
 ## Kanban Collaboration Harness Contract
 
-Kanban collaboration harnesses coordinate named profiles through `huijoohwee.github.io/docs/kanban.md` rows. Context-reference patterns may inform row context refs, but local harnesses must reuse shared table/Kanban utilities and must not import copied board runtimes, schema examples, tests, fixtures, or prose.
+Kanban collaboration harnesses consume [TODO.md](TODO.md): immutable private Context records own planning, and `huijoohwee/.workspace/.todo/docs/kanban.md` is their generated view. Context-reference patterns may inform row context refs, but local harnesses must reuse shared table/Kanban utilities and must not import copied board runtimes, schema examples, tests, fixtures, or prose.
 
 | Stage | Harness input | Harness output | Guard |
 |---|---|---|---|
-| Board read | `{ boardRef }` | Parsed task table or missing-board result. | `huijoohwee.github.io/docs/kanban.md` is the SSOT; no second datastore. |
-| Task write | `{ taskRow, profile }` | Validated task row or rejection. | Stable id, owner profile, status, acceptance, evidence, and next action are required. |
-| Handoff write | `{ handoffRow }` | Validated handoff row or rejection. | From, to, task id, context refs, blockers, resume state, and acceptance are required. |
+| Board read | `{ boardRef }` | Parsed task table or missing-board result. | Read the generated private board; immutable Context records remain authoritative. |
+| Task write | `{ taskRow, profile }` | Owner-validated immutable Context record or rejection. | Consume the owner schema through TODO.md; never edit a prior record or the generated board directly. |
+| Handoff write | `{ handoffRow }` | Validated successor Context or rejection. | Preserve the prior Context and bind handoff evidence through the owner contract. |
 | Worker bind | `{ profile, process }` | Worker binding or blocked result. | Worker is a full OS process with identity, cwd, command, proof, bounds, and cleanup. |
-| Sync | `{ boardRows }` | Sync ledger or conflict packet. | Conflicts preserve evidence and require explicit resolution. |
+| Sync | `{ boardRows }` | Regenerated board or conflict packet. | Reconcile source records first; preserve evidence and reject direct board mutation. |
 
 ### Kanban Guardrails
 
 | Guardrail | Requirement |
 |---|---|
-| Durable rows | Every task and handoff is a Markdown row readable by all profiles. |
+| Durable rows | Each task and handoff resolves to an immutable owner record; the generated board is readable only by authorized profiles. |
 | Shared utilities | Use existing multi-dimensional table/Kanban utilities only. |
 | No hidden swarm | Named-profile coordination cannot use process-local subagent state; a dynamic application swarm requires its explicit durable ledger contract. |
-| No deploy mutation | Board writes do not imply Prod mirror or Cloudflare deploy. |
+| No deploy mutation | Planning records do not imply Prod mirror or Cloudflare deploy. |
 
 ## Mixture Of Agents Harness Contract
 

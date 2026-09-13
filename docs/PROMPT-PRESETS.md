@@ -20,6 +20,19 @@ dictionary_links:
   semantic: "DICTIONARY-SEMANTIC.md"
   binding: "DICTIONARY-BINDING.md"
 prompt_presets:
+  - id: "launch-copilot"
+    label: "Launch Copilot (81rv10)"
+    slash_command: "/launch-copilot-prompt-preset"
+    runtime_command: "/launch-copilot"
+    description: "Pain point -> business value -> grounded MVP and GTM proposal. Import a repository and select its nodes, cluster or edges first; edit this reference-only outline before Run."
+    activation: "chat-agent"
+    invocation_modes: ["native-chat-response", "mcp-invocation"]
+    chat_route: "active native shared runtime"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
+    mcp_token: "/launch-copilot"
+    prompt: |-
+      /launch-copilot outline reference
+      Help a solopreneur turn a costly, frequent customer pain point into a small MVP-to-GTM experiment using the selected repository as reference. State the target buyer, current workaround, willingness-to-pay hypothesis, measurable business value, smallest complete loop, acquisition test and success criteria. Ground PRD -> TAD -> ADR -> MVP -> GTM in the selected real nodes and explained edges; mark proposed work NEW. Keep one CID, RAO and SVO chain, five native document panels and a separate proposed-work overlay. Reuse existing owners and contracts; distinguish evidence from assumptions. Do not infer code ownership, payment readiness, model verification or production readiness from this reference. Keep publication behind exact-content review and approval.
   - id: "video-agent"
     label: "Video Agent"
     slash_command: "/video-prompt-preset"

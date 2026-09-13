@@ -11,8 +11,8 @@ owner: "agentic-os"
 source_reference_root: "agentic-canvas-os/docs"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "f4ec45fc7e0be4e056e65c11bc4a55670daf3e320dcaeda05aaaff4b7323a0f6"
-catalog_entry_count: 406
+catalog_digest: "360046acda93ee86d74af9788d91a347fead780a9724086c2065d1aadb0ada0b"
+catalog_entry_count: 407
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "src/invocation.mjs#validateDictionaryCatalogContract"
 source_docs:
@@ -59,6 +59,7 @@ entry_metadata_contract:
   keywords: "token parts plus Intent, Required bindings, Semantic filters, and Completion signal text"
   mcp: "MCP consumers expose command intent, required context, full-catalog counts, and one deterministic catalog digest; digest or count drift fails closed before spend, mutation, or deploy"
 dictionary_entries:
+  - "/launch-copilot"
   - "/soul.load"
   - "/personality.overlay"
   - "/moa"
@@ -223,6 +224,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 
 | Command | Intent | Required bindings | Semantic filters | Completion signal |
 |---|---|---|---|---|
+| `/launch-copilot` | Turn a solopreneur pain point into an 81rv10 Launch Copilot proposal grounded in an imported Graph source, with PRD, TAD, ADR, MVP and GTM panels. | Complete imported source snapshot and selected nodes, cluster or edges; explicit `owned` or `reference` role; retained CID for follow-up operations. | `#canvas`, `#approval-gate`, `#token-economics` | Graph owns `outline`, `draft`, `probe`, `refine`, `reopen`, `export`, `review`, `approve`, `status`, `connect` and `disconnect`; use its documented argument syntax. Outline makes no model call; drafting uses the authorized Graph connection. Exact-content approval gates the existing OS proposal lane; catalog discovery neither runs commands nor authorizes publication. |
 | `/soul.load` | Load durable agent identity from `SOUL.md` as prompt slot 1 without hardcoding a default identity in runtime code. | `@soul-profile`, `@identity-slot`, `@runtime-proof` | `#soul`, `#primary-identity`, `#no-hardcode`, `#vcc` | Soul source parses, scan and bound result is typed, slot 1 identity is sourced or a typed fallback is returned, and no project commands or deploy grants are introduced. |
 | `/personality.overlay` | Apply a temporary session-level style or mode overlay. | `@personality-overlay`, `@operator`, `@runtime-proof` | `#personality-overlay`, `#soul`, `#approval-gate` | Overlay is session-scoped, cannot mutate `SOUL.md`, and remains subordinate to facts, roles, memory, safety, and deploy gates. |
 | `/moa` | Run a one-shot Mixture of Agents pass for a hard query without switching the global model or creating a copied provider preset. | `@moa-preset`, `@reference-agents`, `@aggregator-agent`, `@cost-log`, `@operator` when paid calls are possible | `#mixture-of-agents`, `#reference-agents`, `#aggregator-agent`, `#token-economics` | Local preset resolves; no-tool capped references settle fail-soft into input-ordered typed outcomes and attempted/succeeded/failed totals; aggregator returns the only user-visible answer; tool calls use normal approval gates; cost log records reference and aggregator tokens; prior context is restored. |

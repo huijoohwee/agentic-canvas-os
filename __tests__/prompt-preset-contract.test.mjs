@@ -21,8 +21,8 @@ function withReplacement(name, before, after) {
   return documents;
 }
 
-test("repository prompt presets expose eleven source-backed Chat and MCP routes", () => {
-  assert.equal(REQUIRED_PROMPT_PRESET_IDS.length, 11);
+test("repository prompt presets expose twelve source-backed Chat and MCP routes", () => {
+  assert.equal(REQUIRED_PROMPT_PRESET_IDS.length, 12);
   assert.deepEqual(validatePromptPresetContractDocuments(repositoryDocuments), []);
 });
 
@@ -84,4 +84,11 @@ test("semantic extension prompts cannot replace active context with a fixed quer
   );
   const failures = validatePromptPresetContractDocuments(documents);
   assert.equal(failures.some((failure) => failure.includes("must remain generic")), true);
+});
+
+test("Launch Copilot selection cannot preselect drafting or publication", () => {
+  for (const action of ["draft", "approve"]) {
+    const documents = withReplacement("PROMPT-PRESETS.md", "/launch-copilot outline reference", `/launch-copilot ${action} reference`);
+    assert.ok(validatePromptPresetContractDocuments(documents).some(failure => failure.includes("native reference-only outline")));
+  }
 });

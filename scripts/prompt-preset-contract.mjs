@@ -2,6 +2,7 @@ const MCP_TOOL = "agentic-graph.agentic_canvas_os.docs.invoke";
 const ACTIVE_CHAT_ROUTE = "active Chat provider, endpoint, and model";
 
 export const REQUIRED_PROMPT_PRESET_IDS = Object.freeze([
+  "launch-copilot",
   "video-agent",
   "image-to-threejs",
   "image-to-glb",
@@ -26,7 +27,7 @@ const LLM_RESPONSE_PRESET_IDS = new Set([
   "investment-plan-assessment",
 ]);
 
-const NATIVE_RESPONSE_PRESET_IDS = new Set(["image-to-threejs", "image-to-glb", "crawler-agent"]);
+const NATIVE_RESPONSE_PRESET_IDS = new Set(["image-to-threejs", "image-to-glb", "crawler-agent", "launch-copilot"]);
 
 const SEMANTIC_EXTENSION_MARKERS = Object.freeze({
   "sme-risk-assessment": ["active request and workspace sources", "ask one focused clarification", "do not invent"],
@@ -81,6 +82,11 @@ export function validatePromptPresetContractDocuments(documents) {
     if (mcpTool !== MCP_TOOL) failures.push(`PROMPT-PRESETS.md: ${id} mcp_tool must be ${MCP_TOOL}`);
     if (mcpToken !== runtimeCommand) failures.push(`PROMPT-PRESETS.md: ${id} mcp_token must equal runtime_command`);
     requireRuntimeCommand(runtimeCommand, facts, command, failures, id);
+    if (id === "launch-copilot" && (runtimeCommand !== "/launch-copilot"
+      || alias !== "/launch-copilot-prompt-preset"
+      || !/^      \/launch-copilot outline reference\s+\S/m.test(preset))) {
+      failures.push("PROMPT-PRESETS.md: launch-copilot must seed the native reference-only outline");
+    }
 
     for (const marker of SEMANTIC_EXTENSION_MARKERS[id] ?? []) {
       if (!preset.includes(marker)) failures.push(`PROMPT-PRESETS.md: ${id} must remain generic and include ${marker}`);

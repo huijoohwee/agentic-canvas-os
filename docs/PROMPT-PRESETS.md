@@ -20,6 +20,18 @@ dictionary_links:
   semantic: "DICTIONARY-SEMANTIC.md"
   binding: "DICTIONARY-BINDING.md"
 prompt_presets:
+  - id: "xr-physics"
+    label: "Physics Playground"
+    slash_command: "/xr-physics-prompt-preset"
+    runtime_command: "/xr.physics"
+    description: "Explore the source-authored Physics Playground with the beach ball or rocket controller. Demo opens its matching document and example conversation without a provider call."
+    activation: "source-backed-canvas"
+    invocation_modes: ["native-chat-response", "mcp-invocation"]
+    chat_route: "active native shared runtime"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
+    mcp_token: "/xr.physics"
+    prompt: |-
+      /xr.physics @canvas #controller operation=develop-run mode=ball
   - id: "launch-copilot"
     label: "Launch Copilot (81rv10)"
     slash_command: "/launch-copilot-prompt-preset"
@@ -219,6 +231,7 @@ Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-pre
 
 | Preset | Preset invocation | Runtime route | Load behavior | Send behavior |
 | --- | --- | --- | --- | --- |
+| Physics Playground | `/xr-physics-prompt-preset` | `/xr.physics` | Load the native controller invocation; Home previews the existing source-authored XR world. Demo opens the corresponding demo document and example Chat thread. | Native physics execution remains owned by the existing XR controller runtime. |
 | Video Agent | `/video-prompt-preset` | `/video-agent` | Load the centralized prompt after validating the authored video Canvas and script source. | Activate the committed Canvas and hand it to the shared Run all owner. |
 | Image to Three.js | `/image.to-threejs` | `/image.to-threejs @image-to-threejs #image-to-threejs` | Load the native prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Resolve only an attached or selected supported image through the native zero-cost conversion owner. |
 | Image to GLB | `/image.to-glb` | `/image.to-glb @image-to-glb #image-to-glb` | Load the native procedural prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Require the compact connected-contour plan, separate geometry/material/reference/action gates, rigid pivots/sockets, bounded inspection loop, full GLB plus editable external-buffer glTF, and honest `validated`/optional `approved` evidence; source media stays unchanged and deploy remains Dev-only. |

@@ -2,6 +2,7 @@ const MCP_TOOL = "agentic-graph.agentic_canvas_os.docs.invoke";
 const ACTIVE_CHAT_ROUTE = "active Chat provider, endpoint, and model";
 
 export const REQUIRED_PROMPT_PRESET_IDS = Object.freeze([
+  "xr-physics",
   "launch-copilot",
   "video-agent",
   "image-to-threejs",
@@ -27,7 +28,7 @@ const LLM_RESPONSE_PRESET_IDS = new Set([
   "investment-plan-assessment",
 ]);
 
-const NATIVE_RESPONSE_PRESET_IDS = new Set(["image-to-threejs", "image-to-glb", "crawler-agent", "launch-copilot"]);
+const NATIVE_RESPONSE_PRESET_IDS = new Set(["image-to-threejs", "image-to-glb", "crawler-agent", "launch-copilot", "xr-physics"]);
 
 const SEMANTIC_EXTENSION_MARKERS = Object.freeze({
   "sme-risk-assessment": ["active request and workspace sources", "ask one focused clarification", "do not invent"],
@@ -82,6 +83,11 @@ export function validatePromptPresetContractDocuments(documents) {
     if (mcpTool !== MCP_TOOL) failures.push(`PROMPT-PRESETS.md: ${id} mcp_tool must be ${MCP_TOOL}`);
     if (mcpToken !== runtimeCommand) failures.push(`PROMPT-PRESETS.md: ${id} mcp_token must equal runtime_command`);
     requireRuntimeCommand(runtimeCommand, facts, command, failures, id);
+    if (id === "xr-physics" && (runtimeCommand !== "/xr.physics"
+      || alias !== "/xr-physics-prompt-preset"
+      || !preset.includes("/xr.physics @canvas #controller operation=develop-run mode=ball"))) {
+      failures.push("PROMPT-PRESETS.md: xr-physics must reuse the native Physics Playground controller");
+    }
     if (id === "launch-copilot" && (runtimeCommand !== "/launch-copilot"
       || alias !== "/launch-copilot-prompt-preset"
       || !/^      \/launch-copilot outline reference\s+\S/m.test(preset))) {

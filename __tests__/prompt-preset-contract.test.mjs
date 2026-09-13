@@ -21,8 +21,8 @@ function withReplacement(name, before, after) {
   return documents;
 }
 
-test("repository prompt presets expose twelve source-backed Chat and MCP routes", () => {
-  assert.equal(REQUIRED_PROMPT_PRESET_IDS.length, 12);
+test("repository prompt presets expose thirteen source-backed Chat and MCP routes", () => {
+  assert.equal(REQUIRED_PROMPT_PRESET_IDS.length, 13);
   assert.deepEqual(validatePromptPresetContractDocuments(repositoryDocuments), []);
 });
 
@@ -34,6 +34,11 @@ test("missing semantic extension preset fails closed", () => {
   );
   const failures = validatePromptPresetContractDocuments(documents);
   assert.equal(failures.some((failure) => failure.includes("missing required preset investment-plan-assessment")), true);
+});
+
+test("Physics Playground keeps the existing native controller route", () => {
+  const documents = withReplacement("PROMPT-PRESETS.md", "operation=develop-run mode=ball", "operation=generate mode=ball");
+  assert.ok(validatePromptPresetContractDocuments(documents).some(failure => failure.includes("native Physics Playground controller")));
 });
 
 test("removing LLM Chat response mode fails closed", () => {

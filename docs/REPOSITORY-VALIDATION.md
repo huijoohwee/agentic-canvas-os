@@ -46,8 +46,9 @@ and environment dependencies make these checks ineligible for local result reuse
 
 The four existing test shards remain parallel in CI. Each job selects its own
 declared partition; build, docs, collaboration and budgets jobs use the same owner.
-Together they cover every broad fallback ID. Full event history is checked out for
-the verified baseline. The existing authorization and aggregate checks remain.
+Together they cover every broad fallback ID. PR jobs fetch the synthetic merge
+and both parents (depth two), which contain the verified base and candidate trees.
+Push and merge-group events retain full history for their potentially older bases. The existing authorization and aggregate checks remain.
 
 ## ADR
 

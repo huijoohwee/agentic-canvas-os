@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
+import { consumerSnapshotReader } from "../node_modules/agentic-os/bin/agentic-os-validation-inputs.mjs";
 import path from "node:path";
 import test from "node:test";
 
@@ -34,4 +38,31 @@ test("CI partitions preserve every broad validation group", () => {
   assert.equal(packageDocument.scripts.check, "node node_modules/agentic-os/bin/agentic-os-validation.mjs run");
   assert.deepEqual(policy.always, ["budgets"]);
   for (const check of policy.checks) assert.equal(check.reuse, "never");
+});
+
+
+test("depth-two PR merge checkout contains the exact changed-tree boundary", (t) => {
+  assert.equal(workflow.match(/fetch-depth: \$\{\{ github.event_name == 'pull_request' && 2 \|\| 0 \}\}/gu)?.length, 5);
+  const directory = mkdtempSync(path.join(tmpdir(), "canvas-validation-history-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const source = path.join(directory, "source"), checkout = path.join(directory, "checkout");
+  const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  git(directory, "init", "-b", "main", source);
+  git(source, "config", "user.name", "Validation fixture");
+  git(source, "config", "user.email", "validation@example.invalid");
+  writeFileSync(path.join(source, "base.txt"), "base\n");
+  git(source, "add", "."); git(source, "commit", "-m", "base");
+  git(source, "switch", "-c", "feature");
+  writeFileSync(path.join(source, "feature.txt"), "feature\n");
+  git(source, "add", "."); git(source, "commit", "-m", "feature");
+  git(source, "switch", "main");
+  writeFileSync(path.join(source, "base.txt"), "new base\n");
+  git(source, "commit", "-am", "advance base");
+  const base = git(source, "rev-parse", "HEAD");
+  git(source, "merge", "--no-ff", "feature", "-m", "synthetic merge");
+  git(directory, "clone", "--depth=2", "--branch=main", pathToFileURL(source).href, checkout);
+  assert.equal(git(checkout, "rev-parse", "--is-shallow-repository"), "true");
+  const observed = consumerSnapshotReader({ root: checkout, base, committed: true })();
+  assert.equal(observed.identity.baseRevision, base);
+  assert.deepEqual(observed.changed, ["feature.txt"]);
 });

@@ -42,12 +42,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: node --test --test-shard=${{ matrix.shard }}/4 __tests__/*.test.mjs
+      - run: npm run check:ci -- --only=test-${{ matrix.shard }}
 
   test_aggregate:
     name: test
@@ -78,12 +79,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm run build
+      - run: npm run check:ci -- --only=build
 
   docs-contract:
     name: docs-contract
@@ -99,12 +101,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm run docs:check
+      - run: npm run check:ci -- --only=docs
 
   collaboration-integration:
     name: collaboration-integration
@@ -120,11 +123,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
-      - run: npm run collab:test
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check:ci -- --only=collaboration
 
   budgets:
     name: budgets
@@ -140,14 +145,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify bounded repository contracts
-        run: |
-          npm --prefix node_modules/agentic-os run evals
-          npm run authored-line-budget:check
-          node --test __tests__/adlc-compatibility.test.mjs __tests__/agentic-os-profile.test.mjs
-          npm run dictionary-catalog:check
+        run: npm run check:ci -- --only=budgets

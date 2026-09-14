@@ -1,0 +1,174 @@
+{
+  "schema": "agentic-os/repository-validation-policy/v1",
+  "repository": "github.com/huijoohwee/agentic-canvas-os",
+  "broadInputs": [
+    ".agentic-os/",
+    ".github/",
+    "wrangler.toml"
+  ],
+  "always": [
+    "budgets"
+  ],
+  "fallback": [
+    "test-1",
+    "test-2",
+    "test-3",
+    "test-4",
+    "build",
+    "docs",
+    "collaboration",
+    "budgets"
+  ],
+  "checks": [
+    {
+      "id": "test-1",
+      "command": [
+        "npm",
+        "run",
+        "test:shard:1"
+      ],
+      "inputs": [
+        "__tests__/",
+        "scripts/",
+        "src/",
+        "worker/",
+        "agent-api/",
+        "web/",
+        "docs/",
+        "evals/",
+        "memory/"
+      ],
+      "requires": [],
+      "reuse": "never",
+      "timeoutMs": 600000
+    },
+    {
+      "id": "test-2",
+      "command": [
+        "npm",
+        "run",
+        "test:shard:2"
+      ],
+      "inputs": [
+        "__tests__/",
+        "scripts/",
+        "src/",
+        "worker/",
+        "agent-api/",
+        "web/",
+        "docs/",
+        "evals/",
+        "memory/"
+      ],
+      "requires": [],
+      "reuse": "never",
+      "timeoutMs": 600000
+    },
+    {
+      "id": "test-3",
+      "command": [
+        "npm",
+        "run",
+        "test:shard:3"
+      ],
+      "inputs": [
+        "__tests__/",
+        "scripts/",
+        "src/",
+        "worker/",
+        "agent-api/",
+        "web/",
+        "docs/",
+        "evals/",
+        "memory/"
+      ],
+      "requires": [],
+      "reuse": "never",
+      "timeoutMs": 600000
+    },
+    {
+      "id": "test-4",
+      "command": [
+        "npm",
+        "run",
+        "test:shard:4"
+      ],
+      "inputs": [
+        "__tests__/",
+        "scripts/",
+        "src/",
+        "worker/",
+        "agent-api/",
+        "web/",
+        "docs/",
+        "evals/",
+        "memory/"
+      ],
+      "requires": [],
+      "reuse": "never",
+      "timeoutMs": 600000
+    },
+    {
+      "id": "build",
+      "command": [
+        "npm",
+        "run",
+        "web:build"
+      ],
+      "inputs": [
+        "web/"
+      ],
+      "requires": [],
+      "reuse": "never",
+      "timeoutMs": 300000
+    },
+    {
+      "id": "docs",
+      "command": [
+        "npm",
+        "run",
+        "docs:check"
+      ],
+      "inputs": [
+        "docs/",
+        "scripts/",
+        "src/",
+        "worker/",
+        "agent-api/",
+        "web/",
+        "memory/"
+      ],
+      "requires": [],
+      "reuse": "never",
+      "timeoutMs": 300000
+    },
+    {
+      "id": "collaboration",
+      "command": [
+        "npm",
+        "run",
+        "collab:test"
+      ],
+      "inputs": [
+        "src/",
+        "worker/",
+        "__tests__/collab-room.test.mjs"
+      ],
+      "requires": [],
+      "reuse": "never",
+      "timeoutMs": 300000
+    },
+    {
+      "id": "budgets",
+      "command": [
+        "npm",
+        "run",
+        "check:budgets:source"
+      ],
+      "inputs": [],
+      "requires": [],
+      "reuse": "never",
+      "timeoutMs": 600000
+    }
+  ]
+}

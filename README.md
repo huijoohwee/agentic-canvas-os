@@ -8,10 +8,15 @@ This repo holds no model provider keys in source or client bundles. Runtime
 secrets are Cloudflare secret bindings; the browser only sees public URLs.
 
 Agent execution, orchestration, swarm, Toolkit, and their generic state transports
-use the [pinned OS runtime](https://github.com/huijoohwee/agentic-os/blob/65d3184632efec32a39515b71b3b55d5bab0a0c6/runtime/agents/README.md).
-The existing `agent-api/src/` entry paths re-export that package for the HTTP and
-Worker callers. Remaining application assets and deployment stay subject to the
-[approved consolidation plan](https://github.com/huijoohwee/agentic-os/blob/65d3184632efec32a39515b71b3b55d5bab0a0c6/guides/DURABLE-WORKFLOWS.md).
+use the [pinned OS runtime](https://github.com/huijoohwee/agentic-os/blob/69c869816885c754fb1ee3d131d2b45e63b9896b/runtime/agents/README.md).
+Fifty-eight optional capability modules use explicit OS package subpaths.
+Owner tests are imported from the same protected packages. Existing HTTP and
+Worker callers retain named-export contracts.
+[Commerce owns admission](https://github.com/huijoohwee/agentic-commerce-os/tree/a632166eb8e4258f55301b5089aa78da663e0d21/src/admission)
+and extends the generic state owner through an injected Worker extension.
+The minified Worker retains the existing class names and same-Worker release probe.
+Remaining application assets and deployment stay subject to the
+[approved consolidation plan](https://github.com/huijoohwee/agentic-os/blob/69c869816885c754fb1ee3d131d2b45e63b9896b/guides/DURABLE-WORKFLOWS.md).
 This source cutover does not prove a production deployment.
 
 ## Start Here

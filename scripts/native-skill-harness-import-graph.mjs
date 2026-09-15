@@ -12,25 +12,25 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const MODULES_ROOT = path.join(REPOSITORY_ROOT, "agent-api/src");
+const MODULES_ROOT = path.dirname(fileURLToPath(import.meta.resolve("agentic-os/agents/skill-proposer")));
 const PROPOSER = "skill-proposer.js";
 const GATE = "skill-registry-gate.js";
 const REGISTRATION = "adapter-registration.js";
 const DEFINITIONS = "agent-definitions.js";
 const PROVIDER_ADAPTER_PATTERN = /(openai|model-provider|provider-adapter)/;
 
-async function localImports(moduleName, seen = new Set()) {
-  if (seen.has(moduleName)) return seen;
-  seen.add(moduleName);
-  const text = await readFile(path.join(MODULES_ROOT, moduleName), "utf8");
-  const specifiers = [...text.matchAll(/from\s+"(\.[^"]+)"/g)].map((match) => match[1]);
-  for (const specifier of specifiers) {
-    const resolved = path.basename(specifier);
-    if (specifier.startsWith("./") && !specifier.endsWith(".js")) continue;
-    await localImports(resolved, seen);
-  }
-  return seen;
+// Follow the installed source, including relative edges into the shared runtime.
+async function visitImports(filename, seen) {
+  if (seen.has(filename)) return;
+  seen.add(filename);
+  const text = await readFile(filename, "utf8");
+  const specifiers = [...text.matchAll(/from\s+["'](\.[^"']+)["']/g)].map(match => match[1]);
+  for (const specifier of specifiers) await visitImports(path.resolve(path.dirname(filename), specifier), seen);
+}
+async function localImports(moduleName) {
+  const seen = new Set();
+  await visitImports(path.join(MODULES_ROOT, moduleName), seen);
+  return new Set([...seen].map(filename => path.basename(filename)));
 }
 
 async function directImports(moduleName) {

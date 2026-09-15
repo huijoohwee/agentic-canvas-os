@@ -15,9 +15,10 @@ import {
 } from "./lib/native-skill-harness-fakes.mjs";
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ownerText = moduleName => readFile(fileURLToPath(import.meta.resolve(`agentic-os/agents/${moduleName}`)), "utf8");
 
 // Pinned identity-migration digests: later work must not broaden this narrow rename.
-const WRANGLER_SHA256 = "31c7cf34b50f71be0cb2ff721ef49415060f30e0f23f34d2c47250b136cc0126";
+const WRANGLER_SHA256 = "19c6e34f1d449f0530570123e148a4116de601bc944cdde7387f1b80f39f7729";
 const SKILL_EVOLUTION_SHA256 = "e2c17a57a15de7ad47699908739abfc4c8f4b42760cc280d937be6ad2d521a08";
 const PROPERTY_SEED = 20260817;
 const retiredNamespace = ["k", "now", "grph"].join("");
@@ -31,6 +32,7 @@ test("every durable-object state store scope prefix is unique per factory", asyn
   const text = (await Promise.all([
     path.join(REPOSITORY_ROOT, "agent-api/src/durable-object-state-store.js"),
     fileURLToPath(import.meta.resolve("agentic-os/agents/durable-object-store")),
+    fileURLToPath(import.meta.resolve("agentic-os/agents/durable-object-state-store")),
   ].map((file) => readFile(file, "utf8")))).join("\n");
   // Split the file into factory bodies so a prefix used twice inside one
   // factory (the same namespace) does not read as a cross-factory collision.
@@ -97,6 +99,7 @@ test("wrangler.jsonc pins the identity migration and private admission boundary"
   assert.equal(text.includes("/agentic-graph"), false, "agentic-graph runtime routes must not return");
   // Comment-tolerant parse of the JSONC body for the structural counts.
   const parsed = JSON.parse(text.replace(/^\s*\/\/.*$/gm, ""));
+  assert.equal(parsed.minify, true);
   assert.equal(parsed.durable_objects.bindings.length, 2);
   assert.equal(parsed.migrations.length, 2);
   assert.equal(parsed.ratelimits.length, 2);
@@ -135,18 +138,18 @@ test("docs/SKILL-EVOLUTION.md preserves flag semantics through the identity migr
   );
   assert.equal(text.toLowerCase().includes(retiredNamespace), false, "retired product identity must not return");
   // No new module sets, reads, or reinterprets the Skill Evolution flags.
-  for (const modulePath of ["agent-api/src/skill-proposer.js", "agent-api/src/skill-registry-gate.js", "agent-api/src/adapter-registration.js"]) {
-    const moduleText = await readFile(path.join(REPOSITORY_ROOT, modulePath), "utf8");
+  for (const modulePath of ["skill-proposer", "skill-registry-gate", "adapter-registration"]) {
+    const moduleText = await ownerText(modulePath);
     assert.equal(/modelWeightsMutated|deploymentAttempted/.test(moduleText), false, `${modulePath} references Skill Evolution flags`);
   }
 });
 
 // Feature: native-skill-creation-harness, Property 14: Evaluator independence as a structural invariant.
 test("Property 14: Evaluator independence as a structural invariant", async () => {
-  const proposerText = await readFile(path.join(REPOSITORY_ROOT, "agent-api/src/skill-proposer.js"), "utf8");
-  const gateText = await readFile(path.join(REPOSITORY_ROOT, "agent-api/src/skill-registry-gate.js"), "utf8");
-  const adapterRegistrationText = await readFile(path.join(REPOSITORY_ROOT, "agent-api/src/adapter-registration.js"), "utf8");
-  const definitionsText = await readFile(path.join(REPOSITORY_ROOT, "agent-api/src/agent-definitions.js"), "utf8");
+  const proposerText = await ownerText("skill-proposer");
+  const gateText = await ownerText("skill-registry-gate");
+  const adapterRegistrationText = await ownerText("adapter-registration");
+  const definitionsText = await ownerText("agent-definitions");
   const proposerImports = parseLocalImports(proposerText);
   const gateImports = parseLocalImports(gateText);
   const adapterRegistrationImports = parseLocalImports(adapterRegistrationText);
@@ -231,5 +234,35 @@ test("transferred runtime exports are references to the single upstream implemen
     const upstream = await import(new URL(path.basename(entry.destination), ownerRoot));
     assert.deepEqual(Object.keys(local), Object.keys(upstream), entry.source);
     for (const name of Object.keys(upstream)) assert.equal(local[name], upstream[name], entry.source + ":" + name);
+  }
+});
+
+
+test("optional adapter compatibility paths preserve the protected owner exports", async () => {
+  const ownerRoot = new URL("./", import.meta.resolve("agentic-os/agents/app"));
+  for (const manifestName of ["MIGRATION.json", "MIGRATION-HTTP.json", "MIGRATION-APPLICATION.json"]) {
+    const manifest = JSON.parse(await readFile(new URL(manifestName, ownerRoot), "utf8"));
+    for (const entry of manifest.modules) {
+      const local = await import(new URL("../" + entry.source, import.meta.url));
+      const upstream = await import(new URL(path.basename(entry.destination), ownerRoot));
+      if (entry.source === "worker/agent-state.js") {
+        assert.equal(Object.getPrototypeOf(local.AgentState), upstream.AgentState);
+      } else if (entry.source === "worker/index.js") {
+        const room = await import("agentic-os/agents/canvas-room");
+        const admission = await import("agentic-commerce-os/admission/agent-state");
+        assert.deepEqual(Object.keys(local).sort(), ["AgentState", "CanvasRoom", "CommerceAdmissionProbe",
+          "createWorkerFetch", "default", "handleCloudflareRequest"].sort());
+        assert.equal(local.createWorkerFetch, upstream.createWorkerFetch);
+        assert.equal(local.CanvasRoom, room.CanvasRoom);
+        assert.equal(local.AgentState, admission.AgentState);
+        assert.equal(local.default.fetch, local.handleCloudflareRequest);
+        assert.equal(local.CommerceAdmissionProbe.fetch, local.default.fetch);
+      } else {
+        for (const name of Object.keys(upstream)) assert.equal(local[name], upstream[name], entry.source + ":" + name);
+        const expected = [...Object.keys(upstream), ...(entry.source.endsWith("/durable-object-state-store.js")
+          ? ["createDurableObjectCommerceAdmissionStore"] : [])].sort();
+        assert.deepEqual(Object.keys(local).sort(), expected, entry.source);
+      }
+    }
   }
 });

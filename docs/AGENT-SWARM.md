@@ -2,11 +2,11 @@
 title: "Agentic Canvas OS Agent Swarm"
 graphId: "md:agentic-canvas-os-agent-swarm"
 doc_type: "Agent Swarm Runtime Contract"
-date: "2026-07-20"
+date: "2026-09-15"
 lang: "en-US"
 schema: "agent-swarm-runtime-contract/v1"
 frontmatter_contract: "required"
-status: "runtime-ready-dev"
+status: "consumer-contract-implemented"
 authority: "provider-neutral dynamic work decomposition, horizontal worker coordination, and base-agent synthesis"
 runtime_scope: "goal planning, durable task claims, isolated worker execution, bounded recovery, cancellation, synthesis, observability, and cost evidence"
 runtime_claim: "native Dev runtime with dynamic task briefs and atomic worker claims; live provider execution remains separately gated"
@@ -175,6 +175,22 @@ Run:
 npm run agent-swarm:check
 ```
 
-The focused proof covers goal-only dynamic planning, exact-agent resolution, rejection of caller roles and workflows, pre-planning run-id reservation and ABA-safe cleanup, real overlapping worker intervals, concurrency ceilings, deterministic dependency waves, isolated context, single-worker fallback, atomic competing claims, admission-anchored run expiry, full-lease deadline admission, expired-lease recovery across runtime instances, stable retry idempotency, stale-result fencing, task and synthesis cancellation, durable receipt verification, partial synthesis, cost honesty, session-bound Worker routing, sanitized readiness, and Durable Object persistence.
+The generic runtime and its regression suite are owned by
+[agentic-os](https://github.com/huijoohwee/agentic-os/tree/main/runtime/agents).
+This repository retains named compatibility exports, authenticated HTTP composition,
+Worker route tests and the existing state binding. `agent-swarm.test.mjs` verifies
+that those exports are exactly the upstream functions; it does not duplicate the
+runtime implementation or its recovery tests.
 
-VCC: Given one resolved exact base agent and a goal with at least two independent generated tasks, when distinct workers claim the session-owned durable run, then observed execution intervals overlap without exceeding `maxParallel`; task and synthesis leases remain recoverable and fenced; only dependency results cross worker contexts; the base agent returns the only public output; costs, verified receipts, retries, and peak claims are visible; and no predefined role, caller workflow, copied external artifact, external dependency, paid default, Prod mirror mutation, or Cloudflare deployment occurs.
+The shared typed dispatcher owns start, status, cancel and retry validation.
+`/api/agent-swarm/retry` performs one authenticated effect reconciliation. Planning,
+waiting and reconciliation return 202. Run identity, current principal and step
+leases are revalidated by the upstream runtime. A session must cover admission;
+long jobs require fresh authorization before each bounded attempt. Tool JSON cannot
+set principals, credentials, endpoint, executable code or AbortSignal.
+
+This consumer cutover implements the HTTP portion of approved
+`DURABLE-AGENT-WORKFLOWS-001@0.1.0`. Package pin, protected integration, worker
+configuration and deployment have separate evidence. The default Worker still
+reports unconfigured execution until its trusted adapters are supplied. Mobile
+fulfillment, local AI quality, actual payment and live deployment remain unproved.

@@ -20,8 +20,8 @@ const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 const OWNERS = Object.freeze([
   Object.freeze({
     artifactType: PROMOTION_ARTIFACT_TYPE,
-    proposalOwnerModule: "agent-api/src/skill-proposer.js",
-    promotionOwnerModule: "agent-api/src/skill-registry-gate.js",
+    proposalOwnerModule: "agentic-os/agents/skill-proposer",
+    promotionOwnerModule: "agentic-os/agents/skill-registry-gate",
     promotionOwnerIdentity: "acos-skill-registry-gate",
   }),
   Object.freeze({
@@ -61,8 +61,8 @@ async function run() {
 
   // No second Agent Definition registry: the new modules receive the shared
   // registry by injection and never construct a parallel one.
-  for (const modulePath of ["agent-api/src/skill-proposer.js", "agent-api/src/skill-registry-gate.js", "agent-api/src/adapter-registration.js"]) {
-    const text = await readFile(path.join(REPOSITORY_ROOT, modulePath), "utf8");
+  for (const modulePath of ["agentic-os/agents/skill-proposer", "agentic-os/agents/skill-registry-gate", "agentic-os/agents/adapter-registration"]) {
+    const text = await readFile(fileURLToPath(import.meta.resolve(modulePath)), "utf8");
     if (text.includes("createAgentDefinitionRegistry")) {
       failures.push(`${modulePath} constructs an Agent Definition registry instead of receiving the shared one by injection`);
     }

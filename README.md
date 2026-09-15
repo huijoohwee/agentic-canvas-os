@@ -7,6 +7,13 @@ to the agentic-graph MCP control plane, exposes runtime readiness, and embeds th
 This repo holds no model provider keys in source or client bundles. Runtime
 secrets are Cloudflare secret bindings; the browser only sees public URLs.
 
+Agent execution, orchestration, swarm, Toolkit, and their generic state transports
+use the [pinned OS runtime](https://github.com/huijoohwee/agentic-os/blob/65d3184632efec32a39515b71b3b55d5bab0a0c6/runtime/agents/README.md).
+The existing `agent-api/src/` entry paths re-export that package for the HTTP and
+Worker callers. Remaining application assets and deployment stay subject to the
+[approved consolidation plan](https://github.com/huijoohwee/agentic-os/blob/65d3184632efec32a39515b71b3b55d5bab0a0c6/guides/DURABLE-WORKFLOWS.md).
+This source cutover does not prove a production deployment.
+
 ## Start Here
 
 This repository consumes one pinned global ADLC harness. Read [AGENTS.md](./AGENTS.md)

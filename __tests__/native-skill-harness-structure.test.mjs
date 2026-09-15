@@ -28,7 +28,10 @@ function parseLocalImports(text) {
 }
 
 test("every durable-object state store scope prefix is unique per factory", async () => {
-  const text = await readFile(path.join(REPOSITORY_ROOT, "agent-api/src/durable-object-state-store.js"), "utf8");
+  const text = (await Promise.all([
+    path.join(REPOSITORY_ROOT, "agent-api/src/durable-object-state-store.js"),
+    fileURLToPath(import.meta.resolve("agentic-os/agents/durable-object-store")),
+  ].map((file) => readFile(file, "utf8")))).join("\n");
   // Split the file into factory bodies so a prefix used twice inside one
   // factory (the same namespace) does not read as a cross-factory collision.
   const factoryBodies = text.split(/export function createDurableObject/).slice(1);
@@ -217,4 +220,16 @@ test("Property 14: Evaluator independence as a structural invariant", async () =
     ),
     { numRuns: 75, seed: PROPERTY_SEED + 14 },
   );
+});
+
+
+test("transferred runtime exports are references to the single upstream implementation", async () => {
+  const ownerRoot = new URL("./", import.meta.resolve("agentic-os/agents/swarm"));
+  const manifest = JSON.parse(await readFile(new URL("MIGRATION.json", ownerRoot), "utf8"));
+  for (const entry of manifest.files) {
+    const local = await import(new URL("../" + entry.source, import.meta.url));
+    const upstream = await import(new URL(path.basename(entry.destination), ownerRoot));
+    assert.deepEqual(Object.keys(local), Object.keys(upstream), entry.source);
+    for (const name of Object.keys(upstream)) assert.equal(local[name], upstream[name], entry.source + ":" + name);
+  }
 });

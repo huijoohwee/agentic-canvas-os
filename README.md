@@ -35,6 +35,13 @@ contracts remain owned by their native packages and keep their tests.
 Use the source-owned OS runtime and Commerce/Graph release owners for current
 production work. This checkpoint does not claim full repository retirement.
 
+## Retired one-off recovery tooling
+
+The 12 PR #825 recovery controllers and their exclusive tests are retired.
+They have no remaining source callers; current lifecycle operations use the pinned
+OS commands below. Their exact source remains in [Git history](https://github.com/huijoohwee/agentic-canvas-os/tree/b35aef7a28fecf526a9cb6babcc8ff0d4c999418/scripts).
+This source cleanup changes no retained recovery records, refs or provider state.
+
 ## Start Here
 
 This repository consumes one pinned global ADLC harness. Read [AGENTS.md](./AGENTS.md)

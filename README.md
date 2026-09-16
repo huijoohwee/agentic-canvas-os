@@ -1,6 +1,6 @@
 # agentic-canvas-os
 
-Cloudflare Worker product tier demonstrating agentic-graph MCP Readiness & Command Grammar Integration.
+Retained development adapter for agentic-graph MCP Readiness & Command Grammar Integration.
 One Worker serves the static UI, authenticates callers, forwards `/api/invoke` and `/api/run` 
 to the agentic-graph MCP control plane, exposes runtime readiness, and embeds the live agentic-graph canvas.
 
@@ -18,6 +18,22 @@ The minified Worker retains the existing class names and same-Worker release pro
 Remaining application assets and deployment stay subject to the
 [approved consolidation plan](https://github.com/huijoohwee/agentic-os/blob/69c869816885c754fb1ee3d131d2b45e63b9896b/guides/DURABLE-WORKFLOWS.md).
 This source cutover does not prove a production deployment.
+
+## Production retirement
+
+The old `agentic-canvas-os` production Worker and its `CanvasRoom` namespace
+were removed on 2026-09-16 after explicit operator approval. The only stored
+room contained the `Production Smoke` test node and no links. Private graph
+snapshot and deployed-code evidence are retained; the snapshot is not a full
+Durable Object storage backup. The separate `agentic-canvas-os-dev` Worker
+and its namespaces remain preserved.
+
+The obsolete production workflow, uploader, activation controller and their
+exclusive contracts/tests are removed. No package command prepares or executes
+that retired production release. Shared deployment identity and receipt
+contracts remain owned by their native packages and keep their tests.
+Use the source-owned OS runtime and Commerce/Graph release owners for current
+production work. This checkpoint does not claim full repository retirement.
 
 ## Start Here
 

@@ -72,12 +72,22 @@ npm run check
 npm run dev
 ```
 
-Use `npm run lane -- <scope>`, `npm run land`, `npm run reap -- --ref=<lane>`,
-and `npm run sync:canonical` only under the pinned ADLC workflows. Required checks,
-protected integration, integration proof, retirement, exact worktree quarantine,
-canonical synchronization, deployment, and rollback remain separate authorized receipts.
-The ACOS profile permits quarantine of an exact eligible worktree projection and
-registration only; branches, refs, and unreachable objects remain retained.
+Prefer the canonical human-facing path:
+
+```bash
+npm run release:common -- start <scope> --write=<paths>
+npm run release:common -- publish --message="<message>"
+npm run release:common -- finish --ref=<lane>
+```
+
+Use `npm run doctor`, `npm run status`, `npm run lane`, `npm run land`,
+`npm run reap -- --ref=<lane>`, and `npm run sync:canonical` as underlying
+diagnostics or bounded recovery primitives under the pinned ADLC workflows.
+Required checks, protected integration, integration proof, retirement, exact
+worktree quarantine, canonical synchronization, deployment, and rollback remain
+separate authorized receipts. The ACOS profile permits quarantine of an exact
+eligible worktree projection and registration only; branches, refs, and
+unreachable objects remain retained.
 
 Run the complete product collaboration and runtime-identity proof with:
 

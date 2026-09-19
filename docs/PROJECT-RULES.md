@@ -51,11 +51,15 @@ document can express the same contract.
 
 ## Agentic Orchestration Layer
 
-- `agentic-os` ADLC is the single lifecycle owner. Start with `npm run lane --
-  <scope>`, publish with `npm run land`, and observe with `npm run status` and
-  `npm run reap`. ACOS opts into exact worktree projection and registration
-  quarantine while retaining branches, refs, and unreachable objects; each
-  effect still requires ADLC eligibility and exact authority.
+- `agentic-os` ADLC is the single lifecycle owner. Prefer
+  `npm run release:common -- start <scope> --write=<paths>`,
+  `npm run release:common -- publish --message="<message>"`, and
+  `npm run release:common -- finish --ref=<lane>` as the human-facing path.
+  Use `npm run doctor`, `npm run status`, `npm run lane`, `npm run land`, and
+  `npm run reap` as underlying primitives or diagnostics. ACOS opts into exact
+  worktree projection and registration quarantine while retaining branches,
+  refs, and unreachable objects; each effect still requires ADLC eligibility
+  and exact authority.
 - The remotely addressable branch and pull request are the shared claim. Local
   records and compatibility shims are observations; they never replace GitHub
   branch protection, exact required checks, or pull-request authority.

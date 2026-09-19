@@ -21,14 +21,16 @@ controller. GitHub authority remains selected by `.github/adlc-authority-policy.
 ## Author and publish a scoped change
 
 ```bash
-npm run lane -- canvas-presence
+npm run release:common -- start canvas-presence --write=<paths>
 # author and commit only in the worktree printed by agentic-os
-npm run land
+npm run release:common -- publish --message="<message>"
+npm run release:common -- finish --ref=<lane>
 ```
 
 Treat every command result as bounded evidence, not inferred authority. Do not
 replace the installed start workflow with raw worktree creation, branch adoption,
-lease repair, or direct protected-branch publication.
+lease repair, or direct protected-branch publication. Use `doctor`, `status`,
+`lane`, `land`, and `reap` directly only for diagnostics or bounded recovery.
 
 ## Observe or reconcile canonical state
 

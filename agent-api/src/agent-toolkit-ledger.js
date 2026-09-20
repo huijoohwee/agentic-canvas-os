@@ -16,5 +16,6 @@ export {
   projectToolkitRun,
   reserveToolkitEvaluation,
   runRecordId,
-  startToolkitSpan
+  startToolkitSpan,
+  toolkitSubjectDigest
 } from 'agentic-os/agents/toolkit-ledger';

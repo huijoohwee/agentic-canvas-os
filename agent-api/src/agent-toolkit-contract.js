@@ -4,10 +4,12 @@ export {
   AGENT_TOOLKIT_DEFAULTS,
   AGENT_TOOLKIT_RUN_SCHEMA,
   AgentToolkitBlock,
+  RESOURCE_UNITS,
   assertExactKeys,
   assertIdentifier,
   assertRecordSize,
   normalizeAccessContext,
+  normalizeAllocation,
   normalizeAuthorization,
   normalizeCandidate,
   normalizeCompareRequest,
@@ -19,8 +21,11 @@ export {
   normalizeInstrumentOutcome,
   normalizeProposalRequest,
   normalizeReasonCode,
+  normalizeResources,
+  normalizeRunContext,
   normalizeSpanFinishRequest,
   normalizeSpanStartRequest,
   normalizeStartRequest,
-  normalizeToolkitCostLog
+  normalizeToolkitCostLog,
+  normalizeTraceQuery
 } from 'agentic-os/agents/toolkit-contract';

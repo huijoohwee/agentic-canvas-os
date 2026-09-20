@@ -48,7 +48,7 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   const instructions = read("AGENTS.md");
   const guideline = readFileSync(path.join(UPSTREAM, "docs", "adlc-guidelines.md"), "utf8");
   const guide = readFileSync(path.join(UPSTREAM, "guides", "AUTONOMOUS-GOAL-PURSUIT.md"), "utf8");
-  const promptBytes = readFileSync(path.join(UPSTREAM, "templates", "SYSTEM-PROMPT-RUNTIME.md"));
+  const promptBytes = readFileSync(path.join(UPSTREAM, "guides", "SYSTEM-PROMPT-RUNTIME.md"));
   assert.equal(promptBytes.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])), false);
   assert.equal(promptBytes.includes(0x0d), false);
   assert.equal(promptBytes.at(-1), 0x0a);
@@ -65,11 +65,11 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.match(guideline, /^lifecycle_status: active$/mu);
   assert.equal(Buffer.byteLength(prompt, "utf8"), 999);
   assert.ok(Buffer.byteLength(prompt, "utf8") <= 1_000);
-  assert.equal([...prompt].length, 991);
+  assert.equal([...prompt].length, 993);
   assert.ok(prompt.split("\n").every((line) => [...line].length <= 120));
   assert.equal(createHash("sha256").update(promptBytes).digest("hex"),
-    "c4cb3b5cc96a2b35e80b10ae98883a54be2b7923d582afccc41fe2778523bb69");
-  assert.match(prompt, /Lean time-bound sprints: state ETA\+time\/byte\/module caps;/u);
+    "3531440da28391838eade31b5984d74c3ce76dbf0d8d7eec6ea04571665ecb11");
+  assert.match(prompt, /Sprint: ETA\+time\/byte\/module caps;/u);
   assert.match(prompt, /External wait: blocker\+recheck, not ETA\./u);
   assert.match(guide, /on-demand ADLC guide, not an always-load instruction/u);
   assert.match(guide, /smallest valuable vertical slice/u);
@@ -77,7 +77,7 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.match(guide, /After the same approach fails twice/u);
   assert.match(guide, /shared-state repair gets one attempt/u);
   for (const owner of [
-    "node_modules/agentic-os/templates/SYSTEM-PROMPT-RUNTIME.md",
+    "node_modules/agentic-os/guides/SYSTEM-PROMPT-RUNTIME.md",
     "node_modules/agentic-os/docs/adlc-guidelines.md",
     "node_modules/agentic-os/docs/START-WORKFLOW.md",
     "node_modules/agentic-os/docs/RELEASE-WORKFLOW.md",

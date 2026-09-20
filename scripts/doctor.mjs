@@ -28,7 +28,7 @@ const checks = [
     label: "Workflow docs present",
     run: async () => {
       const required = [
-        "node_modules/agentic-os/templates/SYSTEM-PROMPT-RUNTIME.md",
+        "node_modules/agentic-os/guides/SYSTEM-PROMPT-RUNTIME.md",
         "node_modules/agentic-os/docs/adlc-guidelines.md",
         "node_modules/agentic-os/docs/START-WORKFLOW.md",
         "node_modules/agentic-os/docs/RELEASE-WORKFLOW.md",

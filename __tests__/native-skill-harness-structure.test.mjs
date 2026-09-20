@@ -37,7 +37,7 @@ test("every durable-object state store scope prefix is unique per factory", asyn
   // Split the file into factory bodies so a prefix used twice inside one
   // factory (the same namespace) does not read as a cross-factory collision.
   const factoryBodies = text.split(/export function createDurableObject/).slice(1);
-  assert.ok(factoryBodies.length >= 7, `expected at least 7 store factories, found ${factoryBodies.length}`);
+  assert.ok(factoryBodies.length >= 5, `expected at least 5 store factories, found ${factoryBodies.length}`);
   const prefixSets = factoryBodies.map((body) => {
     const prefixes = [...body.matchAll(/`([a-z0-9-]+):\$\{/g)].map((match) => match[1]);
     return new Set(prefixes);

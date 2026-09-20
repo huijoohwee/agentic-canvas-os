@@ -5,6 +5,7 @@ export {
   RUNNING_AGENT_DEFAULTS,
   RunningAgentBlock,
   aggregateCosts,
+  assertExactKeys,
   assertIdentifier,
   assertPositiveInteger,
   continuationMatches,
@@ -14,5 +15,6 @@ export {
   normalizeBoundedJson,
   normalizeContinuation,
   normalizeCostLog,
+  normalizeSignal,
   withDeadline
 } from 'agentic-os/agents/running-contract';

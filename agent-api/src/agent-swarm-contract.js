@@ -1,9 +1,9 @@
 // Native runtime owner; this path remains only for existing callers.
 export {
-  AgentSwarmFailure,
   AGENT_SWARM_DEFAULTS,
   AGENT_SWARM_RUN_SCHEMA,
   AgentSwarmBlock,
+  AgentSwarmFailure,
   assertExactKeys,
   assertIdentifier,
   assertLedgerSize,

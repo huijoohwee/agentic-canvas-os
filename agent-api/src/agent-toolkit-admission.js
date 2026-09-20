@@ -1,4 +1,6 @@
 // Native runtime owner; this path remains only for existing callers.
 export {
-  createAgentToolkitAdmissionController
+  createAgentResourceAdmission,
+  createAgentToolkitAdmissionController,
+  mutateToolkitRecord
 } from 'agentic-os/agents/toolkit-admission';

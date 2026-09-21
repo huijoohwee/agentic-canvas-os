@@ -2,21 +2,21 @@
 title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
-date: "2026-09-12"
-version: "1.0.1"
+date: "2026-09-22"
+version: "1.0.2"
 continuity_id: "CANVAS-CONTROL-SURFACE-001"
-prd_revision: "1.0.1"
-tad_revision: "1.0.1"
-adr_revision: "1.0.1"
-mvp_revision: "1.0.1"
-gtm_revision: "1.0.1"
+prd_revision: "1.0.2"
+tad_revision: "1.0.2"
+adr_revision: "1.0.2"
+mvp_revision: "1.0.2"
+gtm_revision: "1.0.2"
 owner: "Canvas control-surface maintainers"
 local_rung: "spec-complete"
 delivered_rung: "undocumented"
 lane: "authoring"
 universal_scope: false
-worktree_id: "device-cba000d3779d--planning-owner-review"
-agent_id: "codex-01a0940a"
+worktree_id: "device-0232231d4a19--offline-learning-plan"
+agent_id: "codex-offline-learning-plan"
 guideline_revision: "2.7.0"
 guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/e8d2a10a8d3e5735c43edf350a22523df05fdf91/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
 reviewed_source_revision: "035636cd31f546195c6cba64f485425750e101d7"
@@ -121,7 +121,7 @@ flow:
 Planning writes consume the private workspace through [TODO](TODO.md) and [Kanban](kanban.md).
 The retired website routes own no task rows; this revision changes routing contracts only.
 
-PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.1`.
+PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.2`.
 This combined specification records requirements, architecture and decisions. Its target is
 runtime-ready; that target is not a whole-document runtime verdict. Prove each applicable criterion
 with exact owner revisions and independent evidence before advancing its status.
@@ -428,7 +428,7 @@ in `RUNTIME-PROOF.md`. A documentation pass cannot satisfy the runtime VCCs abov
 entry-to-readback walkthrough in five minutes, with zero paid calls for discovery; elapsed time remains
 unmeasured. Cancelled or rejected invocation must produce a visible result without unauthorized effects.
 
-For `CANVAS-CONTROL-SURFACE-001@1.0.1`, all four experience criteria are **unassessed** in the authoring
+For `CANVAS-CONTROL-SURFACE-001@1.0.2`, all four experience criteria are **unassessed** in the authoring
 environment: Core Requirements & Functionality; Innovation & Theme Alignment; Technical Execution &
 Integration; Usefulness & Agentic Experience. No timed user study is attached. The document owner must
 capture one pilot walkthrough and criterion-specific observations using the shared maturity rubric.
@@ -442,3 +442,54 @@ free self-serve workflow using observed rework, offered price and support minute
 winner until those inputs exist. Demand, priced acceptance, collected payment and repeat use remain
 unvalidated. Agent usage and hosting costs require separate measurements; zero-spend discovery does
 not imply zero total cost or collected revenue. A pilot result belongs in a successor Context record.
+
+## Offline learning proposal - reference implementation
+
+This proposed increment joins PRD, TAD, ADR, MVP and GTM at `CANVAS-CONTROL-SURFACE-001@1.0.2`.
+It consumes the Graph learning proposal at `PLAN-AGENTIC-GRAPH-GAME-FLIGHT-SIM-PRD-TAD-ADR-MVP-GTM@1.5.2`,
+in `$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-game-flight-sim-prd-tad-adr-mvp-gtm.md#offline-learning-proposal---reference-implementation`.
+Language/display scope awaits a decision; these criteria have no runtime or deployment evidence.
+
+**PRD / C-L01.** A learner needs useful assistance while practising a short offline program; an
+assistant must explain the actual local run instead of inventing a grade. Given a selected lesson,
+when an agent inspects its latest run, then its explanation cites the same lesson revision, program
+identity and deterministic result visible to the learner. Missing or stale evidence stays unavailable.
+Core lessons require no account, model or paid service.
+
+**TAD / C-L01.** Graph owns lesson content, bounded execution, grading, browser-local WebMCP and
+WorkspaceFs Decisions. Canvas documents discovery, tool policy and evidence presentation using existing
+`TOOL-SEARCH.md`, `HARNESS-CONTRACTS.md` and dictionary owners after Graph settles its
+contract. Inspect before proposing a change; explicit learner action starts a run or save. Assistance
+cannot overwrite a program, promote an attempted run to success, silently save, or trigger a provider.
+Discovery reuses Flight inspection; control additions use its existing invocation register.
+
+**ADR / C-L01, proposed.** Reuse browser-local evidence and deterministic authored hints. A second
+interpreter, grader, lesson registry, student database, remote proxy or orchestration controller in
+Canvas is rejected. The first slice teaches native bounded sequences and repetition; general Python
+execution and desktop GUI/database packaging are deferred pending an explicit scope decision.
+Recovery disables the new projection and preserves saved Decisions.
+
+**Grounding.** At Canvas `997ecfe8ed4e779eba3bd3d6a0b70b7254a2d4a0`, `FACTS.md` confirms Graph owns
+runtime and workspace seeds; the existing PRD's ADR-AOS-2/3/13/15 establishes routing, bounded disclosure
+and proposal-first learning. At Graph `b242ab5d82c49155808a86b45565c797f8e04f61`, Flight inspection
+already returns training state; a bounded programming lesson runner was absent in the inspected
+Flight/agent-ready/parser owners. Runtime parity, classroom efficacy and offline caching are unverified.
+Authoring reference: shared guidelines v3.1.0 at `993eb0e28a6d2e9427364df98c39c8a5e10910b4`,
+SHA-256 `cc49896776a70e372a34d54fb81582ae1a46d46e2f527e2dfd3108cc07a0b1ef`.
+
+**MVP / C-L01.** After scope acceptance, integrate the Graph contract first, then adjust only affected
+Canvas owner text and invocation references. Verify `npm run docs:check`; Graph's exact-candidate
+source/browser evidence must show identical UI/WebMCP grading, stale-result refusal, cancellation,
+offline completion and explicit-save readback. A docs pass satisfies only document structure.
+Planning cap: this existing file, 4 KiB added, no runtime modules or dependency changes; always-load
+delta zero. Follow-on Canvas estimate: one 30-minute sprint, at most three existing owner documents
+and 8 KiB added; refresh after Graph's actual contract is known. External CI waits have no ETA.
+
+**GTM / C-L01.** Hypothesis: a tutor or workshop facilitator spends time reproducing a learner's
+failure. Rank a guided session using the free native lesson loop before paid hosting or an LMS.
+Measure completion, retries, hint usefulness and facilitator minutes before selecting an offer.
+Demand, revenue and cash are unvalidated; outreach/payment is not authorized. Runtime spend target
+is zero; development cost and savings are unmeasured. Use the existing pilot evidence owner.
+
+**Delivery.** Use the pinned ADLC START/RELEASE path and Graph's product deploy/rollback owner.
+This proposal grants no integration/deploy/cleanup effect. Preserve work and reference restrictions.

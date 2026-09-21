@@ -20,6 +20,21 @@ dictionary_links:
   semantic: "DICTIONARY-SEMANTIC.md"
   binding: "DICTIONARY-BINDING.md"
 prompt_presets:
+  - id: "procedural-asset"
+    label: "Create editable asset"
+    slash_command: "/asset.create"
+    runtime_command: "/asset.create"
+    description: "Create a bounded native Three.js asset from text, edit persistent procedural controls, and export faithful GLB with recipe and source companions."
+    activation: "card-inline"
+    invocation_modes: ["native-chat-response", "mcp-invocation"]
+    chat_route: "active native shared runtime"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
+    mcp_token: "/asset.create"
+    semantic_contract: "PROCEDURAL-ASSET-SKILL.md"
+    prompt: |-
+      /asset.create @text #procedural-asset
+
+      Create an editable asset from the active text intent through the native Graph builder. Declare the supported vocabulary and bounds before construction. Preserve intent, typed recipe, seed, stable part IDs, pivots, sockets, control schema and values, and reviewable generated source. Apply numeric, color, enum, boolean and reset controls deterministically with zero provider calls. Never execute supplied JavaScript. Preserve the last-valid asset and unapplied draft on rejection, cancellation or stale completion. Use text-only validated evidence without invented image scores or provider approval. Export the admitted scene faithfully as GLB with recipe and source companions; GLB alone does not preserve procedural logic. Reuse the same asset identity, scene, selection and transport across Card, Widget, Rich Media and XR. Keep deployment separately authorized.
   - id: "xr-physics"
     label: "Physics Playground"
     slash_command: "/xr-physics-prompt-preset"
@@ -225,13 +240,14 @@ This document is the single prompt-text owner for the agentic-graph FloatingPane
 
 Selection and loading are zero-spend. **Send** remains the Chat execution boundary. An `llm-chat-response` preset must use the active Chat provider, endpoint, and model; it cannot inherit stale card-local routing. A `native-chat-response` preset resolves through its named shared runtime without inventing a model route. The image-to-threejs, image-to-glb, and Probe-Tree presets may also be inserted from the shared Skills & Commands catalog into the selected Widget Card, where each expands to its canonical `/`, `@`, and `#` tokens without replacing attached source media. The Widget Card **Run** action is the execution boundary for those card-inline presets. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; each changed multi-card stage is tracked by the shared active-source GitGraph owner as `Chat Run All i/n: <card>`, while an identical already-published graph remains an accepted no-op. SME Care and Investment Research presets use the shared slash-agent response contracts; Crawler Agent uses the native Import URL workflow.
 
-Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-preset`, except the two native image routes that intentionally reuse their executable slash commands. Every `runtime_command` remains the executable route owned by `SKILLS.md` and the command dictionary. Selecting a preset resolves its `runtime_command` and loads the source-backed prompt without submitting, persisting a chat turn, or rewriting the alias into another catalog entry. `mcp-invocation` calls `agentic-graph.agentic_canvas_os.docs.invoke` with `mcp_token` to resolve the same command metadata; that read-only resolution is not command execution, a model call, or approval to spend or mutate.
+Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-preset`, except the native image and procedural-asset routes that intentionally reuse their executable slash commands. Every `runtime_command` remains the executable route owned by `SKILLS.md` and the command dictionary. Selecting a preset resolves its `runtime_command` and loads the source-backed prompt without submitting, persisting a chat turn, or rewriting the alias into another catalog entry. `mcp-invocation` calls `agentic-graph.agentic_canvas_os.docs.invoke` with `mcp_token` to resolve the same command metadata; that read-only resolution is not command execution, a model call, or approval to spend or mutate.
 
 ## Catalog contract
 
 | Preset | Preset invocation | Runtime route | Load behavior | Send behavior |
 | --- | --- | --- | --- | --- |
 | Physics Playground | `/xr-physics-prompt-preset` | `/xr.physics` | Load the native controller invocation; Home previews the existing source-authored XR world. Demo opens the corresponding demo document and example Chat thread. | Native physics execution remains owned by the existing XR controller runtime. |
+| Create editable asset | `/asset.create` | `/asset.create @text #procedural-asset` | Load the native text prompt or insert its canonical tokens into the selected Card without executing. | Validate a bounded typed recipe, persist editable controls and last-valid state, and export GLB with recipe/source companions through the existing Graph asset owner. |
 | Video Agent | `/video-prompt-preset` | `/video-agent` | Load the centralized prompt after validating the authored video Canvas and script source. | Activate the committed Canvas and hand it to the shared Run all owner. |
 | Image to Three.js | `/image.to-threejs` | `/image.to-threejs @image-to-threejs #image-to-threejs` | Load the native prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Resolve only an attached or selected supported image through the native zero-cost conversion owner. |
 | Image to GLB | `/image.to-glb` | `/image.to-glb @image-to-glb #image-to-glb` | Load the native procedural prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Require the compact connected-contour plan, separate geometry/material/reference/action gates, rigid pivots/sockets, bounded inspection loop, full GLB plus editable external-buffer glTF, and honest `validated`/optional `approved` evidence; source media stays unchanged and deploy remains Dev-only. |

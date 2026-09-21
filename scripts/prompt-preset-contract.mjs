@@ -7,6 +7,7 @@ export const REQUIRED_PROMPT_PRESET_IDS = Object.freeze([
   "video-agent",
   "image-to-threejs",
   "image-to-glb",
+  "procedural-asset",
   "agentic-graph-probe-tree",
   "sme-care-agent",
   "investment-research-agent",
@@ -28,7 +29,7 @@ const LLM_RESPONSE_PRESET_IDS = new Set([
   "investment-plan-assessment",
 ]);
 
-const NATIVE_RESPONSE_PRESET_IDS = new Set(["image-to-threejs", "image-to-glb", "crawler-agent", "launch-copilot", "xr-physics"]);
+const NATIVE_RESPONSE_PRESET_IDS = new Set(["image-to-threejs", "image-to-glb", "procedural-asset", "crawler-agent", "launch-copilot", "xr-physics"]);
 
 const SEMANTIC_EXTENSION_MARKERS = Object.freeze({
   "sme-risk-assessment": ["active request and workspace sources", "ask one focused clarification", "do not invent"],
@@ -83,6 +84,21 @@ export function validatePromptPresetContractDocuments(documents) {
     if (mcpTool !== MCP_TOOL) failures.push(`PROMPT-PRESETS.md: ${id} mcp_tool must be ${MCP_TOOL}`);
     if (mcpToken !== runtimeCommand) failures.push(`PROMPT-PRESETS.md: ${id} mcp_token must equal runtime_command`);
     requireRuntimeCommand(runtimeCommand, facts, command, failures, id);
+    if (id === "procedural-asset") {
+      if (runtimeCommand !== "/asset.create" || alias !== "/asset.create"
+        || readStringField(preset, "semantic_contract", failures, id) !== "PROCEDURAL-ASSET-SKILL.md"
+        || !/^      \/asset\.create @text #procedural-asset$/m.test(preset)) {
+        failures.push("PROMPT-PRESETS.md: procedural-asset must reuse the native typed asset route");
+      }
+      requireMarkers(preset, "PROMPT-PRESETS.md procedural-asset safety and editability", [
+        "typed recipe", "control schema and values", "zero provider calls",
+        "Never execute supplied JavaScript", "last-valid asset and unapplied draft",
+        "text-only validated evidence", "GLB alone does not preserve procedural logic",
+      ], failures);
+      requireMarkers(skills, "SKILLS.md procedural asset owner", [
+        '  - "asset.create"', "`PROCEDURAL-ASSET-SKILL.md`",
+      ], failures);
+    }
     if (id === "xr-physics" && (runtimeCommand !== "/xr.physics"
       || alias !== "/xr-physics-prompt-preset"
       || !preset.includes("/xr.physics @canvas #controller operation=develop-run mode=ball"))) {

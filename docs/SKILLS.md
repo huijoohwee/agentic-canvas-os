@@ -53,6 +53,7 @@ skill_contracts:
   - "flow.computing"
   - "image.to-threejs"
   - "image.to-glb"
+  - "asset.create"
   - "experience.capture"
   - "memory.write"
   - "memory.compact"
@@ -150,7 +151,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Tools | `tool.catalog`, `tool.route`, `tool.provider.select`, `tool.gateway.audit`, `toolset.enable`, `toolset.disable`, `tool.search`, `tool.describe`, `tool.call` | `MCP-GATEWAY.md` and `HARNESS-CONTRACTS.md` |
 | Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.team`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `kanban.collaborate` | `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `HARNESS-CONTRACTS.md`, `huijoohwee/.workspace/.todo/docs/kanban.md`, and runtime-specific proof |
 | Agentic graph | `agentic.graph.parser.generate`, `agentic.graph.ingest`, `agentic.graph.query`, `agentic.graph.explain` | `AGENTIC-GRAPH.md`, `MCP-GATEWAY.md`, and the agentic-graph executable owner |
-| Canvas and domain capabilities | `launch.copilot`, `flow.computing`, `image.to-threejs`, `image.to-glb`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `url.ingest`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named agentic-graph runtime owners |
+| Canvas and domain capabilities | `launch.copilot`, `flow.computing`, `image.to-threejs`, `image.to-glb`, `asset.create`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `url.ingest`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named agentic-graph runtime owners |
 
 The `launch.copilot` skill resolves `/launch-copilot` to Graph's existing Chat dispatcher at `/81rv10/`. Its shared `launch-copilot` preset seeds a reference-only outline without executing or calling a model. Import a complete source with Graph Import URL/GitHub import and select its nodes, cluster or edges before Run. Use `outline reference <requirement>` for an editable outline; change to `owned` only for a source you own, or explicitly use `draft` with the authorized Graph model connection. Follow-up `probe`, `refine`, `reopen`, `export`, `review` and `status` take the returned CID; `approve` additionally requires the exact review token. `connect <code>` and `disconnect` reuse the paired host. Arguments and runtime bounds remain owned by [Graph's Launch Copilot guide](https://github.com/huijoohwee/agentic-graph/blob/d003fc2663a5d842c9865a1e6fdceb5063e2368c/docs/launch-copilot.md). MCP dictionary resolution supplies metadata only. Canvas owns the ingest/parse validators; Graph owns the native panels and source-bound Probe-Tree overlay; neither preset selection nor dictionary discovery opens a PR.
 
@@ -162,6 +163,7 @@ The `launch.copilot` skill resolves `/launch-copilot` to Graph's existing Chat d
 | Instruction task quality | `INSTRUCTION-QUALITY-EVALUATION.md` |
 | Image to Three.js | `IMAGE-TO-THREEJS-SKILL.md` |
 | Image to GLB | `IMAGE-TO-GLB-SKILL.md` |
+| Editable procedural assets | `PROCEDURAL-ASSET-SKILL.md` |
 | AI Voice Studio | `VOICE-STUDIO.md` |
 | Sandbox policy | `SANDBOX-RUNTIME.md` |
 | Agent Team | `AGENT-TEAM.md` |

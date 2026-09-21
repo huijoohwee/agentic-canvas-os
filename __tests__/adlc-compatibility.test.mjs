@@ -6,7 +6,7 @@ import test from "node:test";
 import { TextDecoder } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { AGENTIC_OS_INTEGRITY, AGENTIC_OS_PIN } from "./fixtures/agentic-os-pin.mjs";
+import { AGENTIC_OS_INTEGRITY, AGENTIC_OS_PIN, AGENTIC_OS_PROMPT_SHA256 } from "./fixtures/agentic-os-pin.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const UPSTREAM = path.join(ROOT, "node_modules", "agentic-os");
@@ -68,9 +68,9 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.equal([...prompt].length, 993);
   assert.ok(prompt.split("\n").every((line) => [...line].length <= 120));
   assert.equal(createHash("sha256").update(promptBytes).digest("hex"),
-    "3531440da28391838eade31b5984d74c3ce76dbf0d8d7eec6ea04571665ecb11");
+    AGENTIC_OS_PROMPT_SHA256);
   assert.match(prompt, /Sprint: ETA\+time\/byte\/module caps;/u);
-  assert.match(prompt, /External wait: blocker\+recheck, not ETA\./u);
+  assert.match(prompt, /FORBID idle\/poll loops; do disjoint work; else blocker\+recheck, not ETA\./u);
   assert.match(guide, /on-demand ADLC guide, not an always-load instruction/u);
   assert.match(guide, /smallest valuable vertical slice/u);
   assert.match(guide, /minimal scoped hunks/u);

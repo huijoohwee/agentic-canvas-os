@@ -11,8 +11,8 @@ owner: "agentic-os"
 source_reference_root: "agentic-canvas-os/docs"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "360046acda93ee86d74af9788d91a347fead780a9724086c2065d1aadb0ada0b"
-catalog_entry_count: 407
+catalog_digest: "39cfec91e0beab025d2c10e9d55cac4393176c4d0b3ac7b3ecfd83f19ab3eb71"
+catalog_entry_count: 409
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "src/invocation.mjs#validateDictionaryCatalogContract"
 source_docs:
@@ -70,6 +70,7 @@ dictionary_entries:
   - "/crawler-agent"
   - "/image.to-threejs"
   - "/image.to-glb"
+  - "/asset.create"
   - "/agentic-graph.probe-tree"
   - "/query"
   - "/memory.seed"
@@ -235,6 +236,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `/crawler-agent` | Run the native headless website crawl through the existing Import URL and Canvas output owners. | `@url:`, `@reference-policy`, `@runtime-proof` | `#canvas`, `#dev-only`, `#approval-gate` | The native shared runtime returns a persisted crawl report and pipe-table output or a typed URL, policy, download, storage, or capability error; paid-provider, authenticated, and external mutation actions stay blocked without approval. |
 | `/image.to-threejs` | Resolve the native `image.to-threejs` skill for the selected Card or Widget source. | `@image-to-threejs`, `@local-harness`, `@runtime-proof` | `#image-to-threejs`, `#skill-system`, `#dev-only` | A PNG, JPG, JPEG, or SVG source resolves to the shared zero-cost Three.js manifest and Card, Widget, or Rich Media projection; unsupported sources return the typed fallback without provider execution. |
 | `/image.to-glb` | Resolve the native procedural `image.to-glb` asset contract for the selected Card or Widget source. | `@image-to-glb`, `@local-harness`, `@runtime-proof` | `#image-to-glb`, `#skill-system`, `#dev-only` | Connected contour volumes reconstruct the observed front while hidden surfaces remain explicitly inferred; compact construction budgets, separate geometry, material, reference, and action gates, rigid named pivots and sockets, and one four-second +/-12-degree loop clip must validate before GLB plus editable external-buffer glTF export. Baked geometry, unproved skinning, or external runtime, model, dependency, and provider execution fail closed. |
+| `/asset.create` | Resolve the native text-to-procedural Three.js editable asset contract. | exactly `@text` | exactly `#procedural-asset` | Graph owns bounded typed construction, persistent intent, recipe, seed, stable parts, reviewable source and deterministic controls. Separate geometry, material, hierarchy, control and export evidence admits faithful GLB with editable workspace companions; text-only input has no image-fidelity claim. Parameter edits require no model call. Invalid, stale or unsupported input preserves the last valid asset and unapplied draft; arbitrary source evaluation, hidden provider fallback and new dependencies are forbidden. This metadata grants no execution, provider or deployment authority. |
 | `/agentic-graph.probe-tree` | Generate bounded editable next-question branches from the selected Widget Card through the shared Probe-Tree runtime. | `@agentic-graph.probe-tree`, `@source.frontmatter`, `@runtime-proof` | `#agentic-graph.probe-tree`, `#runtime-ready`, `#token-economics` | RECOMMEND, COMPARE, ASSESS, and PLAN action topics are semantic, case-insensitive clarification requests that use the active Chat provider, endpoint, and model to return 2-4 forward-only Type 2 cards. Only a runtime-recognized selected-child terminal continuation bypasses generation; an action verb, imperative, or root alias does not. Distinct questions, selected-child decision variables, numbered semantic choices, Other, and verbatim anchors are required; bare focus fragments, query-specific hardcoding, repeated or overlapping choice sets, stale card-local routing, and zero-model fallback cards fail closed. |
 | `/query` | Answer from `FACTS.md`, dictionaries, memory, and cited source docs without mutation. | `@agent`, `@source.body` | `#truth`, `#frontmatter`, `#vcc` | Response cites the owning source or returns a typed gap; no file mutation, token spend, Prod mirror change, or Cloudflare deploy occurs. |
 | `/memory.seed` | Create or update a neutral memory block from source docs. | `@source.frontmatter`, `@source.body`, `@operator` | `#frontmatter`, `#no-hardcode`, `#vcc` | Parsed frontmatter and authored body memory block are present locally. |

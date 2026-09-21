@@ -122,6 +122,7 @@ harness:
 |---|---|---|---|---|
 | OS Status | Read process, capability, cost, gate, and breaker views | `{ view, filters }` | Typed read view with zero cost | None; read-only |
 | Capability Discovery | Deduplicate local, browser, Pages, and control-plane catalogs | `{ includeRemote, trustBoundary }` | `Capability_Entry[]`, `sourceCatalogs[]`, `unreachableCatalogs[]` | None; discovery must be zero-token |
+| Python Learning | Reuse Graph's bounded local Python workspace, authored hints and shared rubric | Fresh document/run binding and one operation; schemas remain Graph-owned | Typed inspection, acknowledgement, result or visible failure; see `PYTHON-LEARNING.md` | Explicit applicable action; no implicit source edit, execution or save. Central tool and dictionary registration remain pending; ordinary UI is available. |
 | Repository Packing | Convert one exact local Git worktree into a deterministic content-addressed Markdown artifact | `{ repositoryPath, outputDirectory, includePaths, excludePaths, maxFiles, maxFileBytes, maxTotalBytes }` | `agentic-graph-repository-pack-result/v1` metadata, typed omissions, verified digests, or source-byte-free block | Explicit local artifact request only; secrets, escape, drift, overflow, external dependency, network, model, Prod, and Cloudflare fail before publication |
 | Soul Identity | Load durable agent identity into prompt slot 1 | `{ soulRef, promptSlot, overlayRef }` | Identity packet, typed fallback, scan result, or blocked reason | Mutation only when editing `SOUL.md`; prompt use requires scan |
 | Mixture Of Agents | Run bounded advisory reference fan-out and one aggregator-owned response | `{ prompt, presetRef, contextRef, approvals[] }` | Aggregator response, reference ledger, cost log, or blocked reason | Paid reference calls, paid aggregator calls, tool calls, mutation, deploy |
@@ -371,10 +372,9 @@ authorized references and rely on the injected application adapter to use the
 existing Function Calling owner. Specialist workflows remain exact registered
 topologies with branch-owned conversation and final-answer identity.
 
-The facade exposes no external SDK objects, callbacks, provider payloads,
-credentials, tool schemas, or inferred routers. Offline proof establishes the
-incremental owner wiring and one local gateway invocation; it does not establish
-provider reachability, SDK compatibility, model quality, live usage, or spend.
+The facade exposes no external SDK objects, callbacks, provider payloads, credentials,
+tool schemas or inferred routers. Offline proof covers incremental owner wiring and
+one local gateway invocation; provider reachability, SDK compatibility, model quality, live usage and spend remain unproven.
 
 ## Function Calling Harness Contract
 

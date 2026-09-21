@@ -95,9 +95,19 @@ document can express the same contract.
 
 ## Pipeline
 
-- Optimize through batching, caching, chunking, virtualization, sharding, and
-  lazy loading when the benefit is real.
-- Ensure thread safety and prevent race conditions.
+- Apply the shared [incremental work contract](https://github.com/huijoohwee/huijoohwee.github.io/blob/main/guidelines/token-performance-economics-guidelines.md#incremental-work-contract)
+  through existing runtime owners. Forbid costly recomputation or rendering for
+  unchanged inputs; preserve required state transitions and validation.
+- Canvas composition, catalog hydration and panel projections must identify their
+  dependencies. Refresh affected revisions or entries rather than rebuilding all
+  catalogs, scenes or mounted panels for an unrelated selection or transport tick.
+  MCP/WebMCP and `/`, `@`, `#` projections reuse the same source owner and identity.
+- Keep render subscriptions and effect dependencies stable. Use the existing clock,
+  batching and bounded caches; cancel stale work and reject late results after a
+  source switch. Dispose resources when their owning surface is replaced.
+- Verify unchanged-input reuse, relevant-input invalidation, ordering and disposal
+  using affected owner checks. Measure active/idle time and retained memory before
+  claiming savings; documentation-only changes do not establish runtime proof.
 
 ## Conflicts And Stale Code
 

@@ -38,6 +38,17 @@ test("procedural asset creation cannot route through image admission or provider
   }
 });
 
+test("procedural asset discovery never grants unavailable execution capabilities", () => {
+  for (const [before, after] of [
+    ['execution_surface: "card-run"', 'execution_surface: "chat-send"'],
+    ['pending_surfaces: ["chat-send", "mcp-execution", "webmcp-execution", "xr"]', 'pending_surfaces: []'],
+    ['chat_route: "native Card Run; Chat execution pending"', 'chat_route: "active native shared runtime"'],
+  ]) {
+    const failures = validatePromptPresetContractDocuments(withReplacement("PROMPT-PRESETS.md", before, after));
+    assert.ok(failures.some(failure => failure.includes("procedural-asset")), before);
+  }
+});
+
 test("procedural asset preset preserves executable-code, failure recovery and export boundaries", () => {
   for (const marker of [
     "Never execute supplied JavaScript", "last-valid asset and unapplied draft",

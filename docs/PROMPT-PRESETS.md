@@ -27,14 +27,16 @@ prompt_presets:
     description: "Create a bounded native Three.js asset from text, edit persistent procedural controls, and export faithful GLB with recipe and source companions."
     activation: "card-inline"
     invocation_modes: ["native-chat-response", "mcp-invocation"]
-    chat_route: "active native shared runtime"
+    chat_route: "native Card Run; Chat execution pending"
+    execution_surface: "card-run"
+    pending_surfaces: ["chat-send", "mcp-execution", "webmcp-execution", "xr"]
     mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
     mcp_token: "/asset.create"
     semantic_contract: "PROCEDURAL-ASSET-SKILL.md"
     prompt: |-
       /asset.create @text #procedural-asset
 
-      Create an editable asset from the active text intent through the native Graph builder. Declare the supported vocabulary and bounds before construction. Preserve intent, typed recipe, seed, stable part IDs, pivots, sockets, control schema and values, and reviewable generated source. Apply numeric, color, enum, boolean and reset controls deterministically with zero provider calls. Never execute supplied JavaScript. Preserve the last-valid asset and unapplied draft on rejection, cancellation or stale completion. Use text-only validated evidence without invented image scores or provider approval. Export the admitted scene faithfully as GLB with recipe and source companions; GLB alone does not preserve procedural logic. Reuse the same asset identity, scene, selection and transport across Card, Widget, Rich Media and XR. Keep deployment separately authorized.
+      Create an editable asset from the active text intent through the native Graph builder. Declare the supported vocabulary and bounds before construction. Preserve intent, typed recipe, seed, stable part IDs, pivots, sockets, control schema and values, and reviewable generated source. Apply numeric, color, enum, boolean and reset controls deterministically with zero provider calls. Never execute supplied JavaScript. Preserve the last-valid asset and unapplied draft on rejection, cancellation or stale completion. Use text-only validated evidence without invented image scores or provider approval. Export the admitted scene faithfully as GLB with recipe and source companions; GLB alone does not preserve procedural logic. Use Card Run only; Chat Send, MCP execution, WebMCP execution and XR integration remain pending. Do not substitute another execution route. Preserve the existing Card and Rich Media identity; later XR integration must share the scene, selection and transport. Keep deployment separately authorized.
   - id: "xr-physics"
     label: "Physics Playground"
     slash_command: "/xr-physics-prompt-preset"

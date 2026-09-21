@@ -79,12 +79,17 @@ export function validatePromptPresetContractDocuments(documents) {
     if (NATIVE_RESPONSE_PRESET_IDS.has(id) && responseMode !== "native-chat-response") {
       failures.push(`PROMPT-PRESETS.md: ${id} must use native-chat-response`);
     }
-    const expectedChatRoute = responseMode === "llm-chat-response" ? ACTIVE_CHAT_ROUTE : "active native shared runtime";
+    const expectedChatRoute = id === "procedural-asset" ? "native Card Run; Chat execution pending"
+      : responseMode === "llm-chat-response" ? ACTIVE_CHAT_ROUTE : "active native shared runtime";
     if (chatRoute !== expectedChatRoute) failures.push(`PROMPT-PRESETS.md: ${id} chat_route must be ${expectedChatRoute}`);
     if (mcpTool !== MCP_TOOL) failures.push(`PROMPT-PRESETS.md: ${id} mcp_tool must be ${MCP_TOOL}`);
     if (mcpToken !== runtimeCommand) failures.push(`PROMPT-PRESETS.md: ${id} mcp_token must equal runtime_command`);
     requireRuntimeCommand(runtimeCommand, facts, command, failures, id);
     if (id === "procedural-asset") {
+      if (readStringField(preset, "execution_surface", failures, id) !== "card-run"
+        || JSON.stringify(readJsonField(preset, "pending_surfaces", failures, id)) !== JSON.stringify(["chat-send", "mcp-execution", "webmcp-execution", "xr"])) {
+        failures.push("PROMPT-PRESETS.md: procedural-asset execution capability must remain Card Run only");
+      }
       if (runtimeCommand !== "/asset.create" || alias !== "/asset.create"
         || readStringField(preset, "semantic_contract", failures, id) !== "PROCEDURAL-ASSET-SKILL.md"
         || !/^      \/asset\.create @text #procedural-asset$/m.test(preset)) {

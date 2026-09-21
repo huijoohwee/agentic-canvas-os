@@ -32,11 +32,16 @@ are exact projections of its pinned source. Discovery does not execute creation.
 
 | Route | Contract |
 |---|---|
-| `/asset.create @text #procedural-asset` | Use the active text intent and approved document target through the same Graph owner on Chat, Card, MCP and WebMCP surfaces. |
+| `/asset.create @text #procedural-asset` | Resolve the intended native construction contract. The current implementation candidate executes through Card Run; Chat Send, MCP execution, WebMCP execution and XR projection are pending. |
 | Preset selection | Load the source-backed prompt without submitting, mutating the document or calling a provider. |
-| Run or Send | Execute only after normal target, capability and mutation checks. Preserve the input Card and its attachments. |
+| Card Run | Execute only when the integrated Graph candidate advertises this capability and normal target/mutation checks pass. Preserve the input Card and its attachments. |
+| Chat, MCP and WebMCP | Discovery or metadata resolution grants no execution capability. Return unavailable until the shared runtime entry is integrated and proven; never fall back to a provider or unrelated runtime. |
 | Connected agent | Supply a typed recipe through the same validator and mutation owner; never execute agent-generated JavaScript. |
 | Missing capability | Return a typed unsupported or unavailable result with the supported vocabulary. Keep the last valid asset and unapplied intent. |
+
+The preset explicitly declares `execution_surface: card-run` and pending surfaces.
+Legacy invocation-mode fields describe discovery vocabulary, not delivered Chat or
+agent execution. Source promotion, preset loading and runtime proof are separate.
 
 The first local vocabulary is explicit: robot, character, tree, palm, chair,
 table, box, sphere and cylinder. These are original native part assemblies,

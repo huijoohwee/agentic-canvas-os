@@ -77,7 +77,7 @@ Prefer the canonical human-facing path:
 ```bash
 npm run release:common -- start <scope> --write=<paths>
 npm run release:common -- publish --message="<message>"
-npm run release:common -- finish --ref=<lane>
+npm run release:common -- complete --ref=<lane>
 ```
 
 Use `npm run doctor`, `npm run status`, `npm run lane`, `npm run land`,

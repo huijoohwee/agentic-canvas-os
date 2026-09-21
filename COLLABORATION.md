@@ -24,7 +24,7 @@ controller. GitHub authority remains selected by `.github/adlc-authority-policy.
 npm run release:common -- start canvas-presence --write=<paths>
 # author and commit only in the worktree printed by agentic-os
 npm run release:common -- publish --message="<message>"
-npm run release:common -- finish --ref=<lane>
+npm run release:common -- complete --ref=<lane>
 ```
 
 Treat every command result as bounded evidence, not inferred authority. Do not

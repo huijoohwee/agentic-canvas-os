@@ -113,7 +113,7 @@
     "check:budgets:source": "npm --prefix node_modules/agentic-os run evals && npm run authored-line-budget:check && node --test __tests__/adlc-compatibility.test.mjs __tests__/agentic-os-profile.test.mjs && npm run dictionary-catalog:check"
   },
   "devDependencies": {
-    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/139c46d8fe239c5a051a26729cb572fff6bd191a",
+    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/2a86d4321edbcc34ea38f3f4718fd4e49b80d153",
     "ajv": "8.20.0",
     "fast-check": "3.23.2",
     "wrangler": "4.120.0",

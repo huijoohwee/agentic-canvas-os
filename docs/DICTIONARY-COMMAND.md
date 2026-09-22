@@ -11,8 +11,8 @@ owner: "agentic-os"
 source_reference_root: "agentic-canvas-os/docs"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "39cfec91e0beab025d2c10e9d55cac4393176c4d0b3ac7b3ecfd83f19ab3eb71"
-catalog_entry_count: 409
+catalog_digest: "307e42b2815049dc9e79b791c41fde0862d26760cbfdd002780beec0ed070534"
+catalog_entry_count: 411
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "src/invocation.mjs#validateDictionaryCatalogContract"
 source_docs:
@@ -174,6 +174,7 @@ dictionary_entries:
   - "/motion.control"
   - "/game.mode"
   - "/game.portability"
+  - "/python.learning"
   - "/flight.sim"
   - "/canvas.interaction.tune"
   - "/canvas.physics.tune"
@@ -340,6 +341,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `/motion.control` | Inspect or control the bounded Motion Control session on the existing Canvas. | exactly `@canvas` | exactly `#pose` | Dev-only browser-local WebMCP tools `agentic-graph.inspect_local_motion_control` and `agentic-graph.control_local_motion_control` validate open, start, stop, record, finish, clear, export, and share operations and return typed state or an applied or blocked result; agentic-graph retains camera permission, pose inference, XR projection, persistence, and deployment authority. |
 | `/game.mode` | Open, inspect, or control deterministic Agentic ECS gameplay on the existing Canvas. | exactly `@canvas` | exactly `#gameplay` | Dev-only browser-local WebMCP tools `agentic-graph.inspect_local_game_mode` and `agentic-graph.control_local_game_mode` return typed state or an applied or blocked result; agentic-graph remains the single game, ECS, renderer, camera/input, and Decision-persistence owner, while this dictionary adds no runtime or deployment authority. |
 | `/game.portability` | Resolve the source-backed, capability-detected Agentic Game OS portability contract across browser and native projections without executing either runtime. | exactly `@portability-layer` | exactly `#game-portability` | The exact dictionary tuple resolves as metadata only; agentic-graph remains the shared capability and backend owner, GameXR remains the visual projection, interaction, scene-configuration, and local-adapter owner, and no renderer, persistence, provider, model, credential, Prod, Cloudflare, or deploy authority is granted. |
+| `/python.learning` | Inspect or control the active offline Python learning document through its shared bounded runtime. | exactly `@canvas` | exactly `#learning` | Browser-local `agentic-graph.inspect_local_python_learning` and `agentic-graph.control_local_python_learning` use the current document/run binding, the existing Editor Workspace, native procedural scenes, shared rubric and durable debriefs. No source edit, implicit execution, model, network, renderer, database or deployment authority is added; missing registration returns unsupported. |
 | `/flight.sim` | Open, inspect, or control deterministic Flight Sim training on the existing Canvas. | exactly `@canvas` | exactly `#flight` | Dev-only browser-local WebMCP tools `agentic-graph.inspect_local_flight_sim` and `agentic-graph.control_local_flight_sim` return typed lifecycle, input, telemetry, and Decision-persistence state or an applied or blocked result; agentic-graph remains the single flight, ECS, XR terrain, renderer, camera/input, and persistence owner, while this dictionary adds no network, model, renderer, Prod, or Cloudflare authority. |
 | `/canvas.interaction.tune` | Tune pointer mode, run mode, drag alpha target, and flow interaction behavior through existing canvas owners. | `@flow-run-mode`, `@drag-alpha-target`, `@interaction-speed`, `@canvas` | `#canvas-interaction`, `#canvas-flow`, `#canvas-wheel`, `#vcc` | Browser-local WebMCP tool `agentic-graph.control_local_canvas_interaction` accepts one canonical toolbar option id or `/canvas.interaction.tune #canvas-interaction @canvas option=<id>`, delegates to the existing Interaction toolbar/store owner, and returns the exact applied tuple; unsupported values fail visibly without a FloatingPanel alias, duplicate state owner, or command registry. |
 | `/canvas.physics.tune` | Tune or reset schema-owned 2D physics forces without keeping panel-local slider state. | `@physics-2d`, `@layout-forces`, `@canvas`, `@runtime-proof` | `#canvas-physics`, `#canvas-layout`, `#vcc` | Charge, collision, speed, overlap, label, and drag-force values clamp through the schema owner and report applied, reset, or blocked state. |

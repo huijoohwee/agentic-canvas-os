@@ -41,8 +41,10 @@ test("CI partitions preserve every broad validation group", () => {
 });
 
 
-test("depth-two PR merge checkout contains the exact changed-tree boundary", (t) => {
-  assert.equal(workflow.match(/fetch-depth: \$\{\{ github.event_name == 'pull_request' && 2 \|\| 0 \}\}/gu)?.length, 5);
+test("depth-two PR and single-commit push checkouts contain their exact changed-tree boundaries", (t) => {
+  assert.equal(workflow.match(/fetch-depth: \$\{\{ github.event_name == 'pull_request' && 2 \|\| 0 \}\}/gu)?.length, 4);
+  const collaboration = workflow.split("  collaboration-integration:\n", 2)[1]?.split("  budgets:\n", 1)[0];
+  assert.match(collaboration, /^\s+fetch-depth: 2$/mu);
   const directory = mkdtempSync(path.join(tmpdir(), "canvas-validation-history-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const source = path.join(directory, "source"), checkout = path.join(directory, "checkout");
@@ -65,4 +67,13 @@ test("depth-two PR merge checkout contains the exact changed-tree boundary", (t)
   const observed = consumerSnapshotReader({ root: checkout, base, committed: true })();
   assert.equal(observed.identity.baseRevision, base);
   assert.deepEqual(observed.changed, ["feature.txt"]);
+
+  const beforePush = git(source, "rev-parse", "HEAD");
+  writeFileSync(path.join(source, "base.txt"), "squash push\n");
+  git(source, "commit", "-am", "squash push");
+  const pushCheckout = path.join(directory, "push-checkout");
+  git(directory, "clone", "--depth=2", "--branch=main", pathToFileURL(source).href, pushCheckout);
+  const pushed = consumerSnapshotReader({ root: pushCheckout, base: beforePush, committed: true })();
+  assert.equal(pushed.identity.baseRevision, beforePush);
+  assert.deepEqual(pushed.changed, ["base.txt"]);
 });

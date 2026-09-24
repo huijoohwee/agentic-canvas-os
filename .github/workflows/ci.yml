@@ -108,6 +108,27 @@ jobs:
           node-version: 22
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run check:ci -- --only=docs
+      - name: Checkout reviewed Markdown sync verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: huijoohwee/agentic-os
+          ref: abab0d39ddfcc69e2d683756e8e666ef260fdb22
+          path: .doc-sync-os
+          persist-credentials: false
+      - name: Checkout reviewed documentation template
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: huijoohwee/huijoohwee.github.io
+          ref: a9ab28adedf0d96b74670f459315560fa854b3b5
+          path: .doc-sync-source
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check enrolled Canvas document
+        run: >-
+          node .doc-sync-os/scripts/doc-sync.mjs
+          --mode=check --repo=. --source-repo=.doc-sync-source
+          --document=docs/document-maintenance.md
+          --to=a9ab28adedf0d96b74670f459315560fa854b3b5
 
   collaboration-integration:
     name: collaboration-integration

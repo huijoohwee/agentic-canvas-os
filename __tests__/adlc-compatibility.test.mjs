@@ -70,7 +70,7 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.equal(createHash("sha256").update(promptBytes).digest("hex"),
     AGENTIC_OS_PROMPT_SHA256);
   assert.match(prompt, /Sprint: ETA\+time\/byte\/module caps;/u);
-  assert.match(prompt, /FORBID idle\/poll loops; do disjoint work; else blocker\+recheck, not ETA\./u);
+  assert.match(prompt, /No idle\/poll loops; disjoint work or blocker\+recheck, not ETA\./u);
   assert.match(guide, /on-demand ADLC guide, not an always-load instruction/u);
   assert.match(guide, /smallest valuable vertical slice/u);
   assert.match(guide, /minimal scoped hunks/u);

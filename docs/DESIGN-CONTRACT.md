@@ -6,17 +6,17 @@ date: "2026-09-24"
 lang: "en-US"
 schema: "agentic-canvas-os-native-design-enforcement/v1"
 frontmatter_contract: "required"
-status: "spec-complete"
-version: "0.1.0"
+status: "source-verified"
+version: "0.1.1"
 continuity_id: "CANVAS-NATIVE-DESIGN-ENFORCEMENT"
-prd_revision: "0.1.0"
-tad_revision: "0.1.0"
-adr_revision: "0.1.0"
-mvp_revision: "0.1.0"
-gtm_revision: "0.1.0"
+prd_revision: "0.1.1"
+tad_revision: "0.1.1"
+adr_revision: "0.1.1"
+mvp_revision: "0.1.1"
+gtm_revision: "0.1.1"
 owner: "Canvas control-surface maintainers"
-local_rung: "undocumented"
-delivered_rung: "undocumented"
+local_rung: "source-verified"
+delivered_rung: "pending-protected-integration"
 lane: "authoring"
 universal_scope: false
 load_policy: "on-demand"
@@ -59,24 +59,24 @@ Playground remains native scene artwork. These concerns live in the policy, neve
 ## ADR
 
 Consume one verifier, with an injected browser host seam and a pinned local CLI seam. Duplicating its
-rules or silently upgrading an upstream candidate would break source authority. The current lockfile
-does not yet export `agentic-os/design`; therefore the CLI reports `design-check-upstream-unadmitted`.
-This source adapter is locally testable, but automatic browser mounting and dependency adoption wait
-for an exact protected upstream revision and the existing dependency-admission checks. No production
-or runtime-ready claim follows from this document or its transport tests.
+rules or silently upgrading an upstream candidate would break source authority. Agentic OS protected
+main integrated the checker at `a04c643f78c2ddafcfde766d063f28765996f482`. This repository now
+pins that exact archive and lockfile integrity. The CLI and an admitted host can run the shared
+checker; automatic browser mounting still requires an application composition owner. No production
+or browser-runtime claim follows from this document or its transport tests.
 
 ## MVP
 
 Deliver the two adapters, lifecycle/pin/grammar tests and this joined record. Keep them on demand;
-zero always-load bytes, no new package, no paid infrastructure. At most six files / 30 kB source,
+zero always-load bytes, no new package beyond the already-declared Agentic OS dependency, no paid infrastructure. At most six files / 30 kB source,
 under 600 lines per file and 500 kB per chunk. Shared active-work cap is 75 minutes including upstream
 and guideline changes. Local verification: focused adapter tests, docs contract and authored budgets.
 The product build remains unchanged until admitted browser composition exists.
 
-External dependency: Runtime maintainers publish and integrate the exact OS checker candidate.
-Recheck when that protected receipt exists; then update the lockfile through existing admission,
-run the same bundle through native CLI/MCP and a real supported browser host, and register the lazy
-adapter in that host. The local application at port 5175 is not this candidate's runtime proof.
+The upstream checker and its exact protected merge are integrated. This slice admits its archive
+through the existing lockfile and verifies the same bundle through native CLI and injected WebMCP
+adapter. A separate browser-composition change must mount the lazy adapter in a supported host and
+verify it there. The local application at port 5175 is not this candidate's runtime proof.
 Rollback removes the adapter registration and restores the prior source revision; no data migration.
 
 ## GTM
@@ -87,8 +87,11 @@ measure that through the owning product's pilot. All new execution is local and 
 
 ## Observed verification and handoff
 
-Four adapter tests pass: missing upstream/pin, host-pin mismatch, scoped registration/disposal and
-exact CLI tuple rejection. `npm run docs:check` passes (75 artifacts); authored budget checks pass.
+The prior adapter checks covered missing upstream/pin, host-pin mismatch, scoped
+registration/disposal and exact CLI tuple rejection. This admission also checks the installed
+checker export, its locked archive and actual CLI/adapter parity on one source-bound bundle.
+`npm run check:source` passed: 973 tests, the web build, docs contract (75 artifacts), and the
+authored line budget.
 An isolated integration supplied the OS candidate engine to the WebMCP host adapter and a temporary
 CLI harness. Both returned the same passing structural result as actual OS MCP stdio for six concerns
 and four Graph source files at `414ca9afcea332c7e5f357a850caa9463bb837c5` (56,784 input bytes).
@@ -97,6 +100,6 @@ This proves adapter composition with the candidate, not the browser's actual Web
 The adapter follows Graph's existing `registerTool(tool, {signal})` lifecycle at
 `canvas/src/features/agent-ready/webMcpLifecycle.mjs` and aborts only its own registration.
 
-The actual pinned CLI correctly exits 1 with `design-check-upstream-unadmitted`. Package files and
-existing dictionaries remain unchanged. Missing protected upstream admission blocks activation,
-not the independent guideline and adapter review. Recheck on that receipt; no guessed integration ETA.
+The previous pin correctly failed with `design-check-upstream-unadmitted`. The current pin names the
+protected upstream merge; package and lockfile changes are limited to that archive and integrity.
+Local source checks establish transport parity, not native browser mounting or visual acceptance.

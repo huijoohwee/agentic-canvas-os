@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import * as admittedEngine from 'agentic-os/design';
 import { createDesignContractTool, registerDesignContractTool, DESIGN_TOOL_NAME } from '../web/design-contract.mjs';
 import { designCommandArguments } from '../scripts/design-contract.mjs';
 
@@ -36,4 +41,32 @@ test('CLI preserves exact upstream invocation and rejects mutations or extra arg
   assert.deepEqual(designCommandArguments(['--input=record.json']), ['design-check', '--input=record.json']);
   for (const input of [[], [...tokens, '--apply'], ['/design.check', '#mutating', '@input:x']])
     assert.throws(() => designCommandArguments(input), /usage:/);
+});
+
+test('admitted upstream checker agrees across local CLI and WebMCP adapter', async () => {
+  const policy = { schema: 'native-design-policy/v1', id: 'design', revision: '1.0.0',
+    requiredConcerns: ['theme'] };
+  const sourceRevision = 'a'.repeat(40);
+  const text = 'export const theme = "black";';
+  const input = { schema: 'native-design-check/v1', policy,
+    expectedPolicyDigest: await admittedEngine.designDigest(admittedEngine.designPolicyBytes(policy)),
+    record: { continuityId: 'design-pilot', revision: '1.0.0', sourceRevision,
+      roles: Object.fromEntries(['prd', 'tad', 'adr', 'mvp', 'gtm'].map(role => [role, '1.0.0'])),
+      concerns: [{ id: 'theme', owner: 'native-ui', source: 'ui.js', symbol: 'theme', check: 'test theme' }] },
+    sources: [{ id: 'ui.js', revision: sourceRevision, text, sha256: await admittedEngine.designDigest(text) }] };
+  const expected = await createDesignContractTool({ engine: admittedEngine,
+    expectedPolicyDigest: input.expectedPolicyDigest }).execute(input);
+  assert.equal(expected.ok, true);
+  assert.equal(expected.runtimeVerified, false);
+  const dir = mkdtempSync(join(tmpdir(), 'canvas-design-'));
+  try {
+    const path = join(dir, 'record.json');
+    writeFileSync(path, JSON.stringify(input));
+    for (const args of [[`--input=${path}`], ['/design.check', '#read-only', `@input:${path}`]]) {
+      const call = spawnSync(process.execPath, ['scripts/design-contract.mjs', ...args],
+        { encoding: 'utf8', timeout: 10000 });
+      assert.equal(call.status, 0, call.stderr);
+      assert.deepEqual(JSON.parse(call.stdout), expected);
+    }
+  } finally { rmSync(dir, { recursive: true }); }
 });

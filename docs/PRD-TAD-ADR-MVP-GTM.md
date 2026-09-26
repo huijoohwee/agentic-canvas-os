@@ -2,24 +2,25 @@
 title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
-date: "2026-09-22"
-version: "1.0.3"
+date: "2026-09-26"
+version: "1.0.7"
 continuity_id: "CANVAS-CONTROL-SURFACE-001"
-prd_revision: "1.0.3"
-tad_revision: "1.0.3"
-adr_revision: "1.0.3"
-mvp_revision: "1.0.3"
-gtm_revision: "1.0.3"
+prd_revision: "1.0.7"
+tad_revision: "1.0.7"
+adr_revision: "1.0.7"
+mvp_revision: "1.0.7"
+gtm_revision: "1.0.7"
 owner: "Canvas control-surface maintainers"
 local_rung: "spec-complete"
 delivered_rung: "undocumented"
 lane: "authoring"
 universal_scope: false
-worktree_id: "device-0232231d4a19--offline-learning-plan"
-agent_id: "codex-offline-learning-plan"
+worktree_id: "device-0232231d4a19--drone-prompt-preset"
+agent_id: "codex-drone-catalog-closeout"
 guideline_revision: "2.7.0"
-guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/e8d2a10a8d3e5735c43edf350a22523df05fdf91/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
-reviewed_source_revision: "035636cd31f546195c6cba64f485425750e101d7"
+guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/87a4178264b272c567496568c57dc323a7a35550/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
+reviewed_source_revision: "e31de88e5353d8c0b0174bcecaa05ed1b8b4400f"
+reviewed_scope: "drone catalog supersession; inherited evidence retains its original scope"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
 frontmatter_contract: "required"
@@ -119,9 +120,10 @@ flow:
 ## Scope
 
 Planning writes consume the private workspace through [TODO](TODO.md) and [Kanban](kanban.md).
-The retired website routes own no task rows; this revision changes routing contracts only.
+The retired website routes own no task rows. This revision adds the proposed spatial consumer seam;
+existing requirements and historical evidence retain their stated scope.
 
-PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.2`.
+PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.6`.
 This combined specification records requirements, architecture and decisions. Its target is
 runtime-ready; that target is not a whole-document runtime verdict. Prove each applicable criterion
 with exact owner revisions and independent evidence before advancing its status.
@@ -428,7 +430,7 @@ in `RUNTIME-PROOF.md`. A documentation pass cannot satisfy the runtime VCCs abov
 entry-to-readback walkthrough in five minutes, with zero paid calls for discovery; elapsed time remains
 unmeasured. Cancelled or rejected invocation must produce a visible result without unauthorized effects.
 
-For `CANVAS-CONTROL-SURFACE-001@1.0.2`, all four experience criteria are **unassessed** in the authoring
+For `CANVAS-CONTROL-SURFACE-001@1.0.6`, all four experience criteria are **unassessed** in the authoring
 environment: Core Requirements & Functionality; Innovation & Theme Alignment; Technical Execution &
 Integration; Usefulness & Agentic Experience. No timed user study is attached. The document owner must
 capture one pilot walkthrough and criterion-specific observations using the shared maturity rubric.
@@ -445,7 +447,7 @@ not imply zero total cost or collected revenue. A pilot result belongs in a succ
 
 ## Offline learning proposal - reference implementation
 
-This proposed increment joins PRD, TAD, ADR, MVP and GTM at `CANVAS-CONTROL-SURFACE-001@1.0.2`.
+This proposed increment joins PRD, TAD, ADR, MVP and GTM at `CANVAS-CONTROL-SURFACE-001@1.0.6`.
 It consumes the Graph learning proposal at `PLAN-AGENTIC-GRAPH-GAME-FLIGHT-SIM-PRD-TAD-ADR-MVP-GTM@1.5.2`,
 in `$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-game-flight-sim-prd-tad-adr-mvp-gtm.md#offline-learning-proposal---reference-implementation`.
 Language/display scope awaits a decision; these criteria have no runtime or deployment evidence.
@@ -495,24 +497,101 @@ is zero; development cost and savings are unmeasured. Use the existing pilot evi
 This proposal grants no integration/deploy/cleanup effect. Preserve work and reference restrictions.
 
 
-## Programmatic Drone Flight catalog increment
+## Spatial workspace review - reference implementation
 
-CANVAS-CONTROL-SURFACE-001@1.0.3 adds one shared prompt preset for the existing
-Graph Python drone workspace. Buyer pain: the working example is hidden behind
-editor setup. MVP: select Programmatic Drone Flight in Home Catalog or Chat
-Prompt Presets; explicit Demo opens a fresh editable example with the drone
-lesson selected. Chat Send inspects that active lesson through the existing runtime. Run, receiver connection, flight execution and sharing remain
-separate user actions. The simulated bench has physicalAircraft=false.
+All five roles join `CANVAS-CONTROL-SURFACE-001@1.0.6`. The Graph source
+`docs/documents/agentic-graph-spatial-workspace-prd-tad-adr-mvp-gtm.md`,
+`SPATIAL-WORKSPACE-001@0.9.0`, owns spatial requirements, snapshot/proposal/receipt contracts,
+geometry, persistence and five flows. Its protected implementation is Graph PR #1307, merge
+`d91de86b772825aaec70e773f902756b6fd16e25`; this successor specification requires its own publication.
+`SPATIAL-GAMEXR-001@0.1.0` owns the cross-runtime extension plan, while GameXR owns its manifest,
+frontend and local storage. Existing XR, physics and drone owners retain their separate scopes.
 
-TAD/ADR: PROMPT-PRESETS.md owns the label and native inspection invocation. The existing
-/python.learning command owns the binding; Graph owns parsing, local workspace
-activation, bounded execution and reusable Canvas replay. MCP metadata resolution
-continues to return documentation only. No model call, new dependency or service.
+**PRD / C-S01.** Canvas presents the same active Graph document identity, source revision,
+candidate digest, bounded findings and provenance that the operator reviews. Missing, foreign or
+stale evidence is unavailable. Rejection, cancellation or missing approval issues no agent write.
+Customer pain/WTP remain unvalidated; provisional Must status applies to the existing pilot.
+For GameXR, show a distinct capability boundary: its game inspection is not Graph spatial review.
 
-GTM: one catalog entry leads to program, simulate, inspect, share replay and optional
-GameXR simulated bench review. No physical flight or public deployment is implied.
-Validation: preset/command contract, malformed invocation rejection, local launcher
-and reusable replay checks. Rollback removes this catalog row and restores its
-prior Graph launcher. Protected source integration and production require their
-own exact receipts. Increment cap: five ACOS source files, 12 KiB, 20 minutes;
-external integration wait has no ETA.
+**TAD / C-S01.** Reuse `agent-api/src/tool-search.js`, `TOOL-SEARCH.md`, `HARNESS-CONTRACTS.md`
+and Graph's `xrSceneMcpContract.mjs`/agent-ready catalog for admitted identities and schemas.
+The on-demand `web/spatial-workspace-client.mjs` requires the active same-realm Graph registry.
+The host supplies `getAgenticGraphWebMcpToolRegistry()` and catalog-derived tool names to
+`createSpatialWorkspaceClient({ registry, toolNames: { inspect, preview }, signal })`.
+Only `inspect()`, `preview({ inspection, edits })` and `dispose()` are exposed. Missing/replaced
+bindings refuse; an agent approval flag is rejected. Graph owns schema checks and all writes.
+A remote MCP client or a foreign iframe is not that same-realm binding. No new route is declared.
+
+**Grounding / current source.** At Canvas `e36ff95c210aa3fd11002958fde9bcbd26b336da`, the
+client and its nine tests are protected in PR #952. At Graph `d91de86b772825aaec70e773f902756b6fd16e25`,
+revision-bound inspection, detached preview, operator apply/undo, durable receipts, observation
+provenance, native import and mobile/offline review are protected. Full-app and exact main CI
+`36230039512` pass; native app/storage/proxy probes return HTTP 200 at that merge. Historical
+missing-transport/startup/integration statements no longer describe this bounded Dev slice.
+
+GameXR source `01b18b515b05e027d966eb157746332d2d830bd0` confirms a closed `gamexr-scene/v1`
+manifest, `LocalDatabase` scenes/assets/meta stores, `gamexr.inspect_runtime` and
+`gamexr.control_runtime`. Its `apply-manifest-patch` is an immediate runtime operation without
+Graph's proposal token, explicit review receipt or guarded undo. `WebMcpBridge`'s fallback-readable
+context is not proof of browser-native host availability. These are confirmed differences, not
+interchangeable contracts. GameXR's drone path/Graph iframe consumer is separate; its provider
+remains open Graph PR #1299 at `e4e7317aa5bceee0432eb4f119e8168c9f27448c`, absent from protected main.
+The exact inventory and claim dispositions live in `SPATIAL-GAMEXR-001@0.1.0`, not a second registry.
+
+**ADR / C-S01.** Retain the protected Graph-only client. Reject a second Canvas scene database,
+geometry implementation, remote proxy, approval issuer or schema alias. GameXR federation waits
+for the planned source-qualified contract and protected shared-policy/manifest adapters; never
+rename its current control tool to impersonate Graph review. Physical commands and native scene
+parity remain outside this route. Disable an unavailable capability and preserve manual workflows.
+New dependency and always-load instruction deltas are zero; no paid provider is selected.
+
+**MVP / C-S01.** Existing `npm run spatial-workspace:check` covers absent/unsupported contracts,
+foreign/stale inspections, approval refusal, session/registry replacement, abort, concurrency,
+Graph refusals, mismatched replies and importable build output (9 tests). Graph's existing browser
+smoke with `AG_SPATIAL_CANVAS_CLIENT=<Canvas-root>/web/dist/spatial-workspace-client.mjs` verifies
+identity, stale rejection, preview isolation, UI apply/undo, four receipts and fresh-page durable
+readback at 390/1024 px, offline after module load. Abort discards replies; a submitted preview
+can remain in Graph until the operator dismisses it, and cannot apply itself.
+
+Graph's separate full-app rehearsal records five actions at both widths, offline cancel/apply/undo
+and installed cold reload, with no agent host. Its desktop/mobile first-value times are 18.38/4.61 s;
+these are automated observations, not human or GameXR acceptance. Existing semantic-space package
+roundtrips preserve observation pixels/digests and unknown physical correspondence. Remaining work:
+real human outcomes, larger-scene responsiveness, full guideline alignment and planned GX1-GX6.
+The spatial increment's overall local/delivered rungs remain `undocumented`/`undocumented`.
+
+Implementation order: Graph's reusable pure-policy export and capability contract -> GameXR's
+manifest adapter and durable review -> optional Canvas admission. Reuse existing scoped discovery
+and tests; no automatic package-pin update or direct canvas-source import. This documentation pass
+changes this owner only; next Canvas implementation is capped at four existing files/two hours,
+after protected upstream evidence, with session/foreign-identity/no-host checks. No runtime modules,
+model calls or services are added here. The Graph plan owns the complete R0-R4 task sequence.
+
+**GTM / C-S01.** Consume `SPATIAL-WORKSPACE-PILOT-001@0.6.0` and its existing private measurement
+record. Consent alone is not completion; no human outcome or GameXR user result is claimed.
+Canvas creates no independent offer or payment loop. Infrastructure/model spend ceiling is $0;
+operator/support time and TCO are unmeasured. All four experience rubric criteria remain unassessed.
+Record task completion, explicit offer response and settled payment separately. Protected source
+integration is Dev evidence; authoring-to-mirror and mirror-to-delivery remain under the existing
+exact-candidate deploy owner, with no production promotion inferred from these checks.
+
+## Programmatic Drone Flight catalog supersession
+
+**PRD / CANVAS-CONTROL-SURFACE-001@1.0.7.** Preserve the discoverable drone
+learning entry while retiring the obsolete ACOS authoring lane and PR 951.
+Its immutable head is 6311e842962b58fabd19225201513b7783f010c1.
+**TAD/ADR.** The packaged catalog owner migrated to agentic-os/runtime/agents/docs.
+OS PR 314 owns the reviewed row; Graph owns the consumer and exact package pin.
+Keep the ACOS catalog, facts, contract and tests at the accepted main baseline.
+This reviewed successor replaces the predecessor changes in docs/PROMPT-PRESETS.md,
+docs/FACTS.md, docs/PRD-TAD-ADR-MVP-GTM.md, scripts/prompt-preset-contract.mjs and
+__tests__/prompt-preset-contract.test.mjs. It adds no competing runtime row.
+**MVP.** The only new source delta is this owner disposition. Validate docs contracts
+and exact protected successor checks; native recovery retirement retains predecessor
+branches, objects and checkout bytes. This disposition requires no ACOS deployment:
+it changes governance prose and metadata, not a packaged runtime catalog or client.
+Graph's catalog delivery remains subject to its separate exact release receipts.
+**GTM.** Follow OS PR 314 and Graph's consumer/pin successor for public delivery.
+Selection, Demo, Run, sharing and simulated bench review remain separately explicit;
+no physical aircraft or public deployment claim is added here. Rollback reverts this
+disposition text without deleting the preserved predecessor or recreating its row.

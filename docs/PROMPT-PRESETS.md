@@ -37,18 +37,6 @@ prompt_presets:
       /asset.create @text #procedural-asset
 
       Create an editable asset from the active text intent through the native Graph builder. Declare the supported vocabulary and bounds before construction. Preserve intent, typed recipe, seed, stable part IDs, pivots, sockets, control schema and values, and reviewable generated source. Apply numeric, color, enum, boolean and reset controls deterministically with zero provider calls. Never execute supplied JavaScript. Preserve the last-valid asset and unapplied draft on rejection, cancellation or stale completion. Use text-only validated evidence without invented image scores or provider approval. Export the admitted scene faithfully as GLB with recipe and source companions; GLB alone does not preserve procedural logic. Use Card Run only; Chat Send, MCP execution, WebMCP execution and XR integration remain pending. Do not substitute another execution route. Preserve the existing Card and Rich Media identity; later XR integration must share the scene, selection and transport. Keep deployment separately authorized.
-  - id: "programmatic-drone-flight"
-    label: "Programmatic Drone Flight"
-    slash_command: "/programmatic-drone-flight-prompt-preset"
-    runtime_command: "/python.learning"
-    description: "Program takeoff, hover, a flight path and landing in the local Python workspace. Demo opens an editable example; Run, Canvas replay sharing and GameXR simulated bench review stay explicit."
-    activation: "source-backed-canvas"
-    invocation_modes: ["native-chat-response", "mcp-invocation"]
-    chat_route: "active native shared runtime"
-    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
-    mcp_token: "/python.learning"
-    prompt: |-
-      /python.learning @canvas #learning operation=inspect lesson=drone
   - id: "xr-physics"
     label: "Physics Playground"
     slash_command: "/xr-physics-prompt-preset"
@@ -260,7 +248,6 @@ Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-pre
 
 | Preset | Preset invocation | Runtime route | Load behavior | Send behavior |
 | --- | --- | --- | --- | --- |
-| Programmatic Drone Flight | `/programmatic-drone-flight-prompt-preset` | `/python.learning` | Demo opens a fresh local Python drone example without executing it; selection loads the native inspection prompt. | Inspect the active drone lesson through its existing runtime. Run and simulated GameXR execution remain explicit; shared Canvas replays observations only. |
 | Physics Playground | `/xr-physics-prompt-preset` | `/xr.physics` | Load the native controller invocation; Home previews the existing source-authored XR world. Demo opens the corresponding demo document and example Chat thread. | Native physics execution remains owned by the existing XR controller runtime. |
 | Create editable asset | `/asset.create` | `/asset.create @text #procedural-asset` | Load the native text prompt or insert its canonical tokens into the selected Card without executing. | Validate a bounded typed recipe, persist editable controls and last-valid state, and export GLB with recipe/source companions through the existing Graph asset owner. |
 | Video Agent | `/video-prompt-preset` | `/video-agent` | Load the centralized prompt after validating the authored video Canvas and script source. | Activate the committed Canvas and hand it to the shared Run all owner. |

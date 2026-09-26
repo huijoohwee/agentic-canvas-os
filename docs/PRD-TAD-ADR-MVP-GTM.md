@@ -3,24 +3,24 @@ title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
 date: "2026-09-26"
-version: "1.0.6"
+version: "1.0.7"
 continuity_id: "CANVAS-CONTROL-SURFACE-001"
-prd_revision: "1.0.6"
-tad_revision: "1.0.6"
-adr_revision: "1.0.6"
-mvp_revision: "1.0.6"
-gtm_revision: "1.0.6"
+prd_revision: "1.0.7"
+tad_revision: "1.0.7"
+adr_revision: "1.0.7"
+mvp_revision: "1.0.7"
+gtm_revision: "1.0.7"
 owner: "Canvas control-surface maintainers"
 local_rung: "spec-complete"
 delivered_rung: "undocumented"
 lane: "authoring"
 universal_scope: false
-worktree_id: "device-cba000d3779d--spatial-gamexr-consumer"
-agent_id: "codex-01a0dba4"
+worktree_id: "device-0232231d4a19--drone-prompt-preset"
+agent_id: "codex-drone-catalog-closeout"
 guideline_revision: "2.7.0"
 guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/87a4178264b272c567496568c57dc323a7a35550/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
-reviewed_source_revision: "e36ff95c210aa3fd11002958fde9bcbd26b336da"
-reviewed_scope: "spatial consumer amendment; inherited evidence retains its original scope"
+reviewed_source_revision: "e31de88e5353d8c0b0174bcecaa05ed1b8b4400f"
+reviewed_scope: "drone catalog supersession; inherited evidence retains its original scope"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
 frontmatter_contract: "required"
@@ -574,3 +574,24 @@ operator/support time and TCO are unmeasured. All four experience rubric criteri
 Record task completion, explicit offer response and settled payment separately. Protected source
 integration is Dev evidence; authoring-to-mirror and mirror-to-delivery remain under the existing
 exact-candidate deploy owner, with no production promotion inferred from these checks.
+
+## Programmatic Drone Flight catalog supersession
+
+**PRD / CANVAS-CONTROL-SURFACE-001@1.0.7.** Preserve the discoverable drone
+learning entry while retiring the obsolete ACOS authoring lane and PR 951.
+Its immutable head is 6311e842962b58fabd19225201513b7783f010c1.
+**TAD/ADR.** The packaged catalog owner migrated to agentic-os/runtime/agents/docs.
+OS PR 314 owns the reviewed row; Graph owns the consumer and exact package pin.
+Keep the ACOS catalog, facts, contract and tests at the accepted main baseline.
+This reviewed successor replaces the predecessor changes in docs/PROMPT-PRESETS.md,
+docs/FACTS.md, docs/PRD-TAD-ADR-MVP-GTM.md, scripts/prompt-preset-contract.mjs and
+__tests__/prompt-preset-contract.test.mjs. It adds no competing runtime row.
+**MVP.** The only new source delta is this owner disposition. Validate docs contracts
+and exact protected successor checks; native recovery retirement retains predecessor
+branches, objects and checkout bytes. This disposition requires no ACOS deployment:
+it changes governance prose and metadata, not a packaged runtime catalog or client.
+Graph's catalog delivery remains subject to its separate exact release receipts.
+**GTM.** Follow OS PR 314 and Graph's consumer/pin successor for public delivery.
+Selection, Demo, Run, sharing and simulated bench review remain separately explicit;
+no physical aircraft or public deployment claim is added here. Rollback reverts this
+disposition text without deleting the preserved predecessor or recreating its row.

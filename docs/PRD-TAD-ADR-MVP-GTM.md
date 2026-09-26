@@ -3,13 +3,13 @@ title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
 date: "2026-09-22"
-version: "1.0.2"
+version: "1.0.3"
 continuity_id: "CANVAS-CONTROL-SURFACE-001"
-prd_revision: "1.0.2"
-tad_revision: "1.0.2"
-adr_revision: "1.0.2"
-mvp_revision: "1.0.2"
-gtm_revision: "1.0.2"
+prd_revision: "1.0.3"
+tad_revision: "1.0.3"
+adr_revision: "1.0.3"
+mvp_revision: "1.0.3"
+gtm_revision: "1.0.3"
 owner: "Canvas control-surface maintainers"
 local_rung: "spec-complete"
 delivered_rung: "undocumented"
@@ -493,3 +493,26 @@ is zero; development cost and savings are unmeasured. Use the existing pilot evi
 
 **Delivery.** Use the pinned ADLC START/RELEASE path and Graph's product deploy/rollback owner.
 This proposal grants no integration/deploy/cleanup effect. Preserve work and reference restrictions.
+
+
+## Programmatic Drone Flight catalog increment
+
+CANVAS-CONTROL-SURFACE-001@1.0.3 adds one shared prompt preset for the existing
+Graph Python drone workspace. Buyer pain: the working example is hidden behind
+editor setup. MVP: select Programmatic Drone Flight in Home Catalog or Chat
+Prompt Presets; explicit Demo opens a fresh editable example with the drone
+lesson selected. Chat Send inspects that active lesson through the existing runtime. Run, receiver connection, flight execution and sharing remain
+separate user actions. The simulated bench has physicalAircraft=false.
+
+TAD/ADR: PROMPT-PRESETS.md owns the label and native inspection invocation. The existing
+/python.learning command owns the binding; Graph owns parsing, local workspace
+activation, bounded execution and reusable Canvas replay. MCP metadata resolution
+continues to return documentation only. No model call, new dependency or service.
+
+GTM: one catalog entry leads to program, simulate, inspect, share replay and optional
+GameXR simulated bench review. No physical flight or public deployment is implied.
+Validation: preset/command contract, malformed invocation rejection, local launcher
+and reusable replay checks. Rollback removes this catalog row and restores its
+prior Graph launcher. Protected source integration and production require their
+own exact receipts. Increment cap: five ACOS source files, 12 KiB, 20 minutes;
+external integration wait has no ETA.

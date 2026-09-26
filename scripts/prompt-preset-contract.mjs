@@ -3,6 +3,7 @@ const ACTIVE_CHAT_ROUTE = "active Chat provider, endpoint, and model";
 
 export const REQUIRED_PROMPT_PRESET_IDS = Object.freeze([
   "xr-physics",
+  "programmatic-drone-flight",
   "launch-copilot",
   "video-agent",
   "image-to-threejs",
@@ -29,7 +30,7 @@ const LLM_RESPONSE_PRESET_IDS = new Set([
   "investment-plan-assessment",
 ]);
 
-const NATIVE_RESPONSE_PRESET_IDS = new Set(["image-to-threejs", "image-to-glb", "procedural-asset", "crawler-agent", "launch-copilot", "xr-physics"]);
+const NATIVE_RESPONSE_PRESET_IDS = new Set(["programmatic-drone-flight", "image-to-threejs", "image-to-glb", "procedural-asset", "crawler-agent", "launch-copilot", "xr-physics"]);
 
 const SEMANTIC_EXTENSION_MARKERS = Object.freeze({
   "sme-risk-assessment": ["active request and workspace sources", "ask one focused clarification", "do not invent"],
@@ -103,6 +104,11 @@ export function validatePromptPresetContractDocuments(documents) {
       requireMarkers(skills, "SKILLS.md procedural asset owner", [
         '  - "asset.create"', "`PROCEDURAL-ASSET-SKILL.md`",
       ], failures);
+    }
+    if (id === "programmatic-drone-flight" && (runtimeCommand !== "/python.learning"
+      || alias !== "/programmatic-drone-flight-prompt-preset"
+      || !/^      \/python\.learning @canvas #learning operation=inspect lesson=drone$/m.test(preset))) {
+      failures.push("PROMPT-PRESETS.md: programmatic-drone-flight must inspect the native drone lesson without execution");
     }
     if (id === "xr-physics" && (runtimeCommand !== "/xr.physics"
       || alias !== "/xr-physics-prompt-preset"

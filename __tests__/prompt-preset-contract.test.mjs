@@ -21,8 +21,8 @@ function withReplacement(name, before, after) {
   return documents;
 }
 
-test("repository prompt presets expose fourteen source-backed Chat and MCP routes", () => {
-  assert.equal(REQUIRED_PROMPT_PRESET_IDS.length, 14);
+test("repository prompt presets expose fifteen source-backed Chat and MCP routes", () => {
+  assert.equal(REQUIRED_PROMPT_PRESET_IDS.length, 15);
   assert.deepEqual(validatePromptPresetContractDocuments(repositoryDocuments), []);
 });
 
@@ -129,4 +129,9 @@ test("Launch Copilot selection cannot preselect drafting or publication", () => 
     const documents = withReplacement("PROMPT-PRESETS.md", "/launch-copilot outline reference", `/launch-copilot ${action} reference`);
     assert.ok(validatePromptPresetContractDocuments(documents).some(failure => failure.includes("native reference-only outline")));
   }
+});
+
+test("drone preset inspects its native example without implicit flight", () => {
+  const documents = withReplacement("PROMPT-PRESETS.md", "operation=inspect lesson=drone", "operation=run lesson=drone");
+  assert.ok(validatePromptPresetContractDocuments(documents).some(failure => failure.includes("programmatic-drone-flight")));
 });

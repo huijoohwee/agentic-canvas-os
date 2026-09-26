@@ -13,6 +13,8 @@ test('HTML builds reuse verified output and retain the previous artifact on over
   const source = path.join(root, 'web/index.html'), output = path.join(root, 'web/dist/index.html');
   fs.writeFileSync(source, '<html><head></head><body>first</body></html>');
   assert.equal((await buildWeb(root)).reused, false);
+  const client = await import(path.join(root, 'web/dist/spatial-workspace-client.mjs'));
+  assert.equal((await client.createSpatialWorkspaceClient().inspect()).code, 'transport-unavailable');
   const before = fs.statSync(output).mtimeMs;
   assert.equal((await buildWeb(root)).reused, true);
   assert.equal(fs.statSync(output).mtimeMs, before);
@@ -26,7 +28,7 @@ test('HTML builds reuse verified output and retain the previous artifact on over
   await assert.rejects(buildWeb(root), /output-byte-budget/);
   assert.deepEqual(fs.readFileSync(output), valid);
   assert.deepEqual(fs.readdirSync(path.join(root, 'node_modules/.cache/agentic-os')).sort(),
-    ['web-canvas.css.json', 'web-canvas.js.json', 'web-index.html.json']);
+    ['web-canvas.css.json', 'web-canvas.js.json', 'web-index.html.json', 'web-spatial-workspace-client.mjs.json']);
 });
 
 test('the authored inline extraction contract rejects malformed or extra active tags', async t => {

@@ -336,7 +336,7 @@ export async function buildWeb(root = REPO) {
   const inputs = () => ({
       source: generationManifest(root, { paths: ['web/index.html', 'package-lock.json'],
         maxEntries: 4, maxBytes: 2 * 1024 * 1024, maxFileBytes: 2 * 1024 * 1024 }).digest,
-      generator: generationManifest(HERE, { paths: ['build.mjs'], maxEntries: 1 }).digest,
+      generator: generationManifest(HERE, { paths: ['build.mjs', 'spatial-workspace-client.mjs'], maxEntries: 2 }).digest,
       esbuild: esbuild.version,
   });
   let compiledKey, compiled;
@@ -361,6 +361,7 @@ export async function buildWeb(root = REPO) {
         .replace('</body>', '<script src="./canvas.js"></script></body>');
       const overlay = buildGrammarOverlay();
       compiled = { 'index.html': html,
+        'spatial-workspace-client.mjs': (await esbuild.transform(fs.readFileSync(path.join(HERE, 'spatial-workspace-client.mjs'), 'utf8'), { loader: 'js', format: 'esm', minify: true })).code,
         'canvas.css': (await esbuild.transform(css + overlay.css, { loader: 'css', minify: true })).code,
         'canvas.js': (await esbuild.transform(js + overlay.js, { loader: 'js', minify: true, legalComments: 'none' })).code,
       };
@@ -371,7 +372,7 @@ export async function buildWeb(root = REPO) {
     return compiled[name];
   };
   const results = [];
-  for (const name of ['canvas.css', 'canvas.js', 'index.html']) results.push(await generateFile({
+  for (const name of ['canvas.css', 'canvas.js', 'spatial-workspace-client.mjs', 'index.html']) results.push(await generateFile({
     destination: path.join(root, 'web/dist', name),
     receipt: path.join(root, 'node_modules/.cache/agentic-os', `web-${name}.json`),
     maxOutputBytes: 499999, inputs, produce: () => content(name),
@@ -384,6 +385,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   process.stdout.write(
     `agentic-canvas-os web build → ${path.relative(REPO, DIST)} (${result.reused ? 'reused' : 'generated'})\n` +
       `  agentic-graph canvas + MCP command grammar overlay ready!\n` +
-      `  Artifacts: index.html, canvas.css, canvas.js (offline assets + remote grammar resolution)\n`,
+      `  Artifacts: index.html, canvas.css, canvas.js, spatial-workspace-client.mjs (offline assets + remote grammar resolution)\n`,
   );
 }

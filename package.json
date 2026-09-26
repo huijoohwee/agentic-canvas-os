@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "spatial-workspace:check": "node --test __tests__/spatial-workspace-client.test.mjs __tests__/web-build-cache.test.mjs",
     "agent-definitions:check": "node --test __tests__/agent-definitions.test.mjs",
     "agent-orchestration:check": "node --test __tests__/agent-orchestration.test.mjs",
     "agent-team:check": "node --test __tests__/agent-team-contract.test.mjs && node ./scripts/agent-team-contract.mjs",

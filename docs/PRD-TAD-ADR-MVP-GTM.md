@@ -2,24 +2,25 @@
 title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
-date: "2026-09-22"
-version: "1.0.2"
+date: "2026-09-26"
+version: "1.0.5"
 continuity_id: "CANVAS-CONTROL-SURFACE-001"
-prd_revision: "1.0.2"
-tad_revision: "1.0.2"
-adr_revision: "1.0.2"
-mvp_revision: "1.0.2"
-gtm_revision: "1.0.2"
+prd_revision: "1.0.5"
+tad_revision: "1.0.5"
+adr_revision: "1.0.5"
+mvp_revision: "1.0.5"
+gtm_revision: "1.0.5"
 owner: "Canvas control-surface maintainers"
 local_rung: "spec-complete"
 delivered_rung: "undocumented"
 lane: "authoring"
 universal_scope: false
-worktree_id: "device-0232231d4a19--offline-learning-plan"
-agent_id: "codex-offline-learning-plan"
+worktree_id: "device-cba000d3779d--spatial-workspace-spec"
+agent_id: "codex-01a0dba4"
 guideline_revision: "2.7.0"
-guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/e8d2a10a8d3e5735c43edf350a22523df05fdf91/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
-reviewed_source_revision: "035636cd31f546195c6cba64f485425750e101d7"
+guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/87a4178264b272c567496568c57dc323a7a35550/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
+reviewed_source_revision: "5ea33c4f521d39e985a60c054db8ebd13d4db54c"
+reviewed_scope: "spatial consumer amendment; inherited evidence retains its original scope"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
 frontmatter_contract: "required"
@@ -119,9 +120,10 @@ flow:
 ## Scope
 
 Planning writes consume the private workspace through [TODO](TODO.md) and [Kanban](kanban.md).
-The retired website routes own no task rows; this revision changes routing contracts only.
+The retired website routes own no task rows. This revision adds the proposed spatial consumer seam;
+existing requirements and historical evidence retain their stated scope.
 
-PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.2`.
+PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.5`.
 This combined specification records requirements, architecture and decisions. Its target is
 runtime-ready; that target is not a whole-document runtime verdict. Prove each applicable criterion
 with exact owner revisions and independent evidence before advancing its status.
@@ -428,7 +430,7 @@ in `RUNTIME-PROOF.md`. A documentation pass cannot satisfy the runtime VCCs abov
 entry-to-readback walkthrough in five minutes, with zero paid calls for discovery; elapsed time remains
 unmeasured. Cancelled or rejected invocation must produce a visible result without unauthorized effects.
 
-For `CANVAS-CONTROL-SURFACE-001@1.0.2`, all four experience criteria are **unassessed** in the authoring
+For `CANVAS-CONTROL-SURFACE-001@1.0.5`, all four experience criteria are **unassessed** in the authoring
 environment: Core Requirements & Functionality; Innovation & Theme Alignment; Technical Execution &
 Integration; Usefulness & Agentic Experience. No timed user study is attached. The document owner must
 capture one pilot walkthrough and criterion-specific observations using the shared maturity rubric.
@@ -445,7 +447,7 @@ not imply zero total cost or collected revenue. A pilot result belongs in a succ
 
 ## Offline learning proposal - reference implementation
 
-This proposed increment joins PRD, TAD, ADR, MVP and GTM at `CANVAS-CONTROL-SURFACE-001@1.0.2`.
+This proposed increment joins PRD, TAD, ADR, MVP and GTM at `CANVAS-CONTROL-SURFACE-001@1.0.5`.
 It consumes the Graph learning proposal at `PLAN-AGENTIC-GRAPH-GAME-FLIGHT-SIM-PRD-TAD-ADR-MVP-GTM@1.5.2`,
 in `$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-game-flight-sim-prd-tad-adr-mvp-gtm.md#offline-learning-proposal---reference-implementation`.
 Language/display scope awaits a decision; these criteria have no runtime or deployment evidence.
@@ -493,3 +495,72 @@ is zero; development cost and savings are unmeasured. Use the existing pilot evi
 
 **Delivery.** Use the pinned ADLC START/RELEASE path and Graph's product deploy/rollback owner.
 This proposal grants no integration/deploy/cleanup effect. Preserve work and reference restrictions.
+
+
+## Spatial workspace review - reference implementation
+
+This consumer implementation checkpoint joins all five roles at `CANVAS-CONTROL-SURFACE-001@1.0.5`.
+The Graph source `docs/documents/agentic-graph-spatial-workspace-prd-tad-adr-mvp-gtm.md`,
+`SPATIAL-WORKSPACE-001@0.3.0`, owns the spatial requirements, snapshot/proposal/receipt contract,
+geometry, persistence, five flows and implementation sequence. Resolve it from the admitted Graph
+worktree at branch `agent/device-cba000d3779d/spatial-workspace-spec` until publication succeeds.
+The exact continuity/revision is required; a matching filename or navigation link is insufficient.
+The existing Graph XR and native physics plans retain their own ownership. This amendment adds no
+second scene, proposal, physics, invocation or release owner.
+
+**PRD / C-S01.** A scene author needs the assistant's suggestion to describe the same active document
+that the author is reviewing. Given a Graph snapshot or proposal, when Canvas presents it, then the
+presentation retains document identity, source revision, candidate digest, bounded findings and
+provenance. Missing or stale evidence is shown as unavailable, never as a current scene or a completed
+edit. Given a rejection, cancellation or missing approval, no agent write is issued. Pain and WTP
+remain unvalidated; provisional Must status is limited to the planned pilot.
+
+**TAD / C-S01.** Reuse `agent-api/src/tool-search.js`, `TOOL-SEARCH.md` and `HARNESS-CONTRACTS.md` for
+bounded discovery, existing policy and evidence presentation. Graph's `xrSceneMcpContract.mjs` and
+agent-ready catalog own scene tool identities and typed inputs. The existing inspector/control tools
+are browser-local; a remote Graph MCP client does not establish browser-session access or parity.
+The on-demand `web/spatial-workspace-client.mjs` now binds an explicitly supplied active Graph registry and its admitted web tool names; absent or replaced bindings return unavailable. Forward no agent-supplied
+approval flag; the Graph mutation owner enforces the exact operator-approved proposal and source
+revision at apply time. Cached discovery, a status result, or an orchestration permit cannot replace
+that check. No new slash/semantic/binding token is declared by this amendment.
+
+**ADR / C-S01, implemented locally.** Consume Graph-owned spatial evidence through existing scoped tools.
+A second Canvas scene database, geometry library, remote proxy or autonomous approval issuer is
+rejected: each duplicates an existing owner and fails the one-document/offline constraints.
+The supported transport is a same-realm host binding, not a remote MCP connection. Canvas build emits the ESM client; the host supplies `getAgenticGraphWebMcpToolRegistry()` and the catalog-derived inspector/control `webName` values. The factory accepts `{ registry, toolNames: { inspect, preview }, signal }`, then `inspect()` and `preview({ inspection, edits })`; Graph retains schema validation and all writes. Recovery disables
+only the new presentation/capability and preserves authored documents and existing manual controls.
+New dependency and always-load instruction deltas are zero; no paid provider is selected.
+
+**Grounding.** Canvas `5ea33c4f521d39e985a60c054db8ebd13d4db54c` confirms the adapter re-export in
+`src/agentic-graph-mcp-contract.js`, existing tool search and XR invocation tests. At Graph
+`8bff012eac5f58a456c8caf85ccc2ac11ccf07c9`, scene controls mutate through existing persistence;
+the base lacked revision-bound proposal/apply/undo. Graph's local runtime successor now supplies
+inspection, detached preview, operator apply/undo and durable receipts, and repairs the editor-key
+and source-serialization omissions. Its specification checkpoint binds the exact 16-file source
+manifest and passing tests; these are candidate observations, not protected integration evidence.
+A browser scene's source state, detached simulated result and real-world observation remain distinct.
+The browser integration now verifies this Canvas client against Graph's real registry, review component and durable storage. A standalone Canvas shell without the supplied Graph capability remains unavailable.
+
+**MVP / C-S01.** `npm run spatial-workspace:check` covers transport absence, unsupported contracts,
+foreign/stale inspections, approval-flag refusal, session/registry replacement, abort, concurrent calls,
+Graph refusals, mismatched replies and importable cached build output (9 tests). Graph's browser smoke
+loads the built ESM client using `AG_SPATIAL_CANVAS_CLIENT=<Canvas-root>/web/dist/spatial-workspace-client.mjs`.
+At 390/1024 px it verifies identity, stale-source refusal, preview without writes, UI apply/undo, four
+persisted receipts and fresh-page readback, offline after module load. Source/schema owners are reused;
+no contract is copied. Aborting the consumer discards replies; any submitted preview stays in Graph
+for explicit operator dismissal and cannot apply itself. New library/always-load instruction deltas: zero.
+Graph's full app now starts and renders after native canonical revision synchronization. Full-app cold
+reload, consented customer TTV, measured-observation import/export and protected integration remain
+separate acceptance work. Target TTV is five actions/five minutes, unmeasured. Increment local/delivered
+readiness remains `undocumented`/`undocumented`; bounded passing tests do not promote the whole scope.
+Implementation budget: four runtime/build/test files plus the npm command and existing planning owner;
+all new modules are below 600 lines. No model or infrastructure cost was incurred by this transport.
+
+
+**GTM / C-S01.** Consume Graph's named solo-scene-author pilot and commercial evidence ledger;
+Canvas creates no independent offer or payment loop. Infrastructure/model spend ceiling is $0;
+operator/support time and total cost remain unmeasured. All four experience rubric criteria are
+unassessed for this amendment. Capture the timed review, explicit offer response and actual payment
+separately in the existing immutable Context owner before changing those claims. Authoring-to-mirror
+and mirror-to-delivery boundaries remain closed under the existing deploy owner; no publication or
+runtime promotion is inferred from local implementation or documentation checks.

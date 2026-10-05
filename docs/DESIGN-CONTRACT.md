@@ -71,12 +71,25 @@ Deliver the two adapters, lifecycle/pin/grammar tests and this joined record. Ke
 zero always-load bytes, no new package beyond the already-declared Agentic OS dependency, no paid infrastructure. At most six files / 30 kB source,
 under 600 lines per file and 500 kB per chunk. Shared active-work cap is 75 minutes including upstream
 and guideline changes. Local verification: focused adapter tests, docs contract and authored budgets.
-The product build remains unchanged until admitted browser composition exists.
+The design-check transport remains independent of application composition. The native observability
+entry is specified by `CANVAS-CONTROL-SURFACE-001@1.0.8` in `PRD-TAD-ADR-MVP-GTM.md` and consumes
+Graph-owned components, CSS and theme tokens through its dedicated build entry. Show only native
+`AgentMissionOverview` / `AgentMissionDashboard`, including Dashboard's built-in Explore D3.
+The entry must not import or show a separate source tree, editor, canvas or module browser.
+Dashboard Source Evidence reads exact retained bytes and references from the virtual
+`/.workspace/<encoded-workflow-id>/agent-mission.manifest.json`; configuration is only the host repository allowlist.
+This contract creates no renderer, selected-state palette, icon scale, toolbar variant or verifier.
+Local browser verification at port 5175 confirms native Dashboard archive evidence and Explore D3,
+with no separate source tree/canvas or horizontal overflow at 1,106 px. Mobile smoke and the final
+typecheck remain unverified. Static consumption is blocked by the 988,324-byte native MapLibre
+chunk and overlapping owner reservation; no chunk waiver, release or deployment claim follows.
+The refreshed composition bound is 40 active minutes / 20 authored runtime modules, with the
+existing <600-line/file and <500 kB/chunk limits. Structural checks do not prove visual acceptance.
 
 The upstream checker and its exact protected merge are integrated. This slice admits its archive
 through the existing lockfile and verifies the same bundle through native CLI and injected WebMCP
 adapter. A separate browser-composition change must mount the lazy adapter in a supported host and
-verify it there. The local application at port 5175 is not this candidate's runtime proof.
+verify it there. The observability UI at port 5175 does not prove design-check WebMCP mounting.
 Rollback removes the adapter registration and restores the prior source revision; no data migration.
 
 ## GTM

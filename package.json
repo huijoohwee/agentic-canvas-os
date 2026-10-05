@@ -86,7 +86,7 @@
     "turn:end": "node ./scripts/local-runtime.mjs turn-end",
     "production-release-authorization:check": "node --test ./__tests__/production-release-authorization-contract.test.mjs",
     "production-release:check": "node --test __tests__/production-retirement.test.mjs __tests__/commerce-deployment-identity.test.mjs __tests__/commerce-release-proof.test.mjs __tests__/commerce-release-proof-runtime.test.mjs",
-    "dev": "npm run cloudflare:dev",
+    "dev": "node scripts/dev.mjs",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",
     "instruction-quality:check": "node --test __tests__/instruction-task-quality.test.mjs && node ./scripts/instruction-task-quality.mjs --validate-suite",

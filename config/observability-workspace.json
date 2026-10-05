@@ -1,0 +1,11 @@
+{
+  "schema": "agentic-canvas-os/observability-workspace/v1",
+  "title": "Agentic workspace",
+  "readOnly": true,
+  "repositories": [
+    { "id": "agentic-os", "label": "Agentic OS", "path": "agentic-os" },
+    { "id": "agentic-canvas-os", "label": "Canvas OS", "path": "agentic-canvas-os" },
+    { "id": "agentic-graph", "label": "Graph", "path": "agentic-graph" },
+    { "id": "agentic-commerce-os", "label": "Commerce", "path": "agentic-commerce-os" }
+  ]
+}

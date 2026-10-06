@@ -86,7 +86,7 @@
     "turn:end": "node ./scripts/local-runtime.mjs turn-end",
     "production-release-authorization:check": "node --test ./__tests__/production-release-authorization-contract.test.mjs",
     "production-release:check": "node --test __tests__/production-retirement.test.mjs __tests__/commerce-deployment-identity.test.mjs __tests__/commerce-release-proof.test.mjs __tests__/commerce-release-proof-runtime.test.mjs",
-    "dev": "npm run cloudflare:dev",
+    "dev": "node scripts/dev.mjs",
     "docs:check": "node ./scripts/docs-contract.mjs",
     "instruction-audit:check": "node --test __tests__/instruction-audit.test.mjs && node ./scripts/instruction-audit.mjs",
     "instruction-quality:check": "node --test __tests__/instruction-task-quality.test.mjs && node ./scripts/instruction-task-quality.mjs --validate-suite",
@@ -117,11 +117,11 @@
     "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/a04c643f78c2ddafcfde766d063f28765996f482",
     "ajv": "8.20.0",
     "fast-check": "3.23.2",
-    "wrangler": "4.120.0",
+    "wrangler": "4.147.0",
     "agentic-commerce-os": "https://codeload.github.com/huijoohwee/agentic-commerce-os/tar.gz/a632166eb8e4258f55301b5089aa78da663e0d21"
   },
   "overrides": {
-    "fast-uri": "3.1.6",
+    "fast-uri": "3.1.8",
     "sharp": "0.35.4"
   }
 }

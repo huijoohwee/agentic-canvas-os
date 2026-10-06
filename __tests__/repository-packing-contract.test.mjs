@@ -72,7 +72,8 @@ test("repository packing keeps one canonical invocation and bounded contract", (
   assert.equal(repositorySources.some(([name]) => name.startsWith(".githooks/")), false);
   assert.equal(repositorySources.some(([name]) => name === "__tests__/agent-api-app.test.mjs"), true);
   assert.equal(repositorySources.some(([name]) => name === "__tests__/repository-packing-contract.test.mjs"), false);
-  assert.equal(repositorySources.some(([name]) => name === "web/index.html"), true);
+  assert.equal(repositorySources.some(([name]) => name === "web/observability-workspace.mjs"), true);
+  assert.equal(repositorySources.some(([name]) => name === "web/index.html"), false);
   assert.equal(repositorySources.some(([name]) => name === "wrangler.jsonc"), true);
 });
 

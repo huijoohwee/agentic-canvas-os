@@ -2,25 +2,25 @@
 title: "Agentic Canvas OS PRD-TAD-ADR-MVP-GTM"
 graphId: "md:agentic-graph-agentic-canvas-os-prd-tad-local"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
-date: "2026-09-26"
-version: "1.0.7"
+date: "2026-10-05"
+version: "1.0.8"
 continuity_id: "CANVAS-CONTROL-SURFACE-001"
-prd_revision: "1.0.7"
-tad_revision: "1.0.7"
-adr_revision: "1.0.7"
-mvp_revision: "1.0.7"
-gtm_revision: "1.0.7"
+prd_revision: "1.0.8"
+tad_revision: "1.0.8"
+adr_revision: "1.0.8"
+mvp_revision: "1.0.8"
+gtm_revision: "1.0.8"
 owner: "Canvas control-surface maintainers"
 local_rung: "spec-complete"
 delivered_rung: "undocumented"
 lane: "authoring"
 universal_scope: false
-worktree_id: "device-0232231d4a19--drone-prompt-preset"
-agent_id: "codex-drone-catalog-closeout"
+worktree_id: "device-0232231d4a19--canvas-observability-workspace"
+agent_id: "codex-canvas-observability"
 guideline_revision: "2.7.0"
 guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/87a4178264b272c567496568c57dc323a7a35550/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
-reviewed_source_revision: "e31de88e5353d8c0b0174bcecaa05ed1b8b4400f"
-reviewed_scope: "drone catalog supersession; inherited evidence retains its original scope"
+reviewed_source_revision: "9feb73844b93810ed0370c96ecb5743c3754e72f"
+reviewed_scope: "native observability workspace composition; inherited evidence retains its original scope"
 lang: "en-US"
 schema: "agentic-canvas-os-prd-tad/v1"
 frontmatter_contract: "required"
@@ -119,14 +119,29 @@ flow:
 
 ## Scope
 
-Planning writes consume the private workspace through [TODO](TODO.md) and [Kanban](kanban.md).
-The retired website routes own no task rows. This revision adds the proposed spatial consumer seam;
-existing requirements and historical evidence retain their stated scope.
+Planning writes consume the private workspace through [TODO](TODO.md) and [Kanban](kanban.md). The retired website routes own no task rows. This revision adds a native observability workspace; existing requirements and historical evidence retain their stated scope.
 
-PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.6`.
-This combined specification records requirements, architecture and decisions. Its target is
-runtime-ready; that target is not a whole-document runtime verdict. Prove each applicable criterion
-with exact owner revisions and independent evidence before advancing its status.
+PRD, TAD, ADR, MVP and GTM join `CANVAS-CONTROL-SURFACE-001@1.0.8`. This combined specification records requirements, architecture and decisions. Its target is runtime-ready; that target is not a whole-document runtime verdict. Prove each applicable criterion with exact owner revisions and independent evidence before advancing its status.
+
+## Native observability workspace - reference implementation
+
+All five roles join `CANVAS-CONTROL-SURFACE-001@1.0.8` for this increment.
+
+**PRD / C-O01.** Operator-reported pain: the development UI opens a saved unrelated export and cannot connect observed agent work to the four codebases. The latest scope shows only native Mission Overview / Dashboard, including its built-in Explore D3. Select a repository, inspect recorded work, and preserve missing, stale and partial evidence. Acceptance: exact repository/revision/snapshot identity; no separate source tree, editor, canvas or module browser; no source execution or lifecycle promotion from inspection.
+
+**TAD / C-O01.** `config/observability-workspace.json` is only a host repository allowlist with workspace-relative paths. `scripts/dev.mjs` validates Graph and starts its native entry; `web/observability-workspace.mjs` owns bounded composition. Reuse Graph's `AgentMissionOverview` / `AgentMissionDashboard`; Dashboard owns Explore D3, Source Evidence and references. The entry must not import other application surfaces. Native `agentMissionSourceDocument` resolves exact archive text, including whitespace, at `/.workspace/<encoded-workflow-id>/agent-mission.manifest.json`; foreign paths and traversal refuse. The archive owner validates schema, source identity, text digest and member bindings; codebase references alone do not prove revision provenance. Headless indexing remains bounded and semantically partial. OS retains execution/evidence authority; other repositories use the same host configuration.
+
+**Flows.** Select an allowlisted repository -> observe exact source identity -> read the native workflow archive/index -> inspect Overview / Dashboard, Explore D3 and Source Evidence. Deferred reads use the native Node binding through Vite; the virtual mission path retains exact bytes and references. Explicit indexing is bounded; Graph's pure session mode avoids workspace-filesystem seed initialization without adding a store or archive binding. Reading a fresh archive without a linked index clears the old graph. Joins require matching source identities; cancellation and source changes invalidate replies. Static dependencies and visual clusters do not establish recorded execution.
+
+**ADR / C-O01.** Remove the saved export and remote grammar overlay from default development. The Dashboard-only entry supersedes the prior separate source-tree/editor/canvas composition; do not import those surfaces or create a parallel store, mission schema or palette. Keep native Dashboard renderers/styles and explicit Worker API development. MCP/WebMCP and `/`, `@`, `#` retain their owners and capability limits. Static build uses Graph's native compiler and ignored `canvas/dist/observability`, then verifies source/config identity, paths, sizes and hashes before atomic staging. Missing or oversized artifacts fail visibly. A dirty local preview is never protected release evidence.
+
+**MVP / C-O01.** The allowlist defaults to OS, Canvas OS, Commerce and Graph; other repositories need configuration only. Load one neighborhood on demand and retain loaded evidence offline. Zero model calls or hosted graph dependency; <600 authored lines/file and <500 kB/generated chunk. The shared bound refreshes from 25 active minutes / 12 authored runtime modules to 40 minutes / 20 modules for native mission reuse. Thirteen ACOS manifest/build/spatial-client checks pass. Graph checks pass: 15 host/provenance/session, 2 lifecycle/context, 1 retained-index, 10 archive/stage, 4 mission/WebMCP, 1 authored-state and final TypeScript. Mobile smoke and exact committed-source release proof remain separate.
+
+**Local browser evidence / C-O01.** Port 5175 shows only native Overview / Dashboard with archive/mission-manifest Source Evidence and built-in Explore D3. Explicit indexing read 443 sources, 38,032 nodes and 38,073 edges; its bounded projection contained 200 nodes and 103 edges. At 1,106 px there was no horizontal overflow or separate source tree/canvas. A fresh archive lacking a linked index cleared the previous graph. These observations establish this local desktop slice, not mobile, full-graph or protected release parity.
+
+**GTM / C-O01.** Hypothesis: maintainers will pay for reducing time from a failed agent run to the exact affected code and evidence. First measure that local workflow with existing repositories; no new paid service, outreach, price promise or revenue claim. Model spend target is zero; operator time saved and willingness to pay remain unmeasured.
+
+**Delivery / C-O01.** Bases: Canvas `9feb73844b93810ed0370c96ecb5743c3754e72f`, Graph `b27429d9676c1ec57fd4f361c2b96b1d2fd16824`; admitted lanes are `canvas-observability-workspace` / `canvas-observability-host`. The Dashboard-only local implementation, final typecheck and bounded desktop evidence are complete; native RELEASE committed Graph candidate `464103c18`, with provider handoff pending. Static build fails on the inherited 988,324-byte MapLibre chunk; native admission denied its owner change for overlap with `aviation-build-ci-identity`. Preserve both cap and reservation; recheck after an admitted owner fix. No static-build, deployment or canonical-runtime readiness is claimed. The native ADLC evaluator remains unavailable under its existing observation contract. Use native RELEASE only with exact receipts. Rollback restores preceding admitted source/build bytes without migrating code or evidence stores.
 
 ## Codebase Grounding
 
@@ -145,10 +160,7 @@ bounded RAO task. The SVO object is the scoped target; outcome is the result che
 | Commerce paid loop | `agentic-commerce-os/scripts/checks/browser.ts`; source/unit checks do not replace sandbox runtime proof |
 | Spatial runtime | `GameXR` source and reviewed shared archives; its release checks remain separate from Commerce |
 
-Select only the affected owner's code, schemas and checks. Do not load all tools or start a sandbox
-for documentation or checks that do not use it. Missing required resources block only the affected
-coverage and remain visible. Review source-grounding contradictions before execution; document status,
-check success, provider proof, protected integration and deployment are distinct evidence.
+Select only the affected owner's code, schemas and checks. Do not load all tools or start a sandbox for documentation or checks that do not use it. Missing required resources block only the affected coverage and remain visible. Review source-grounding contradictions before execution; document status, check success, provider proof, protected integration and deployment are distinct evidence.
 
 ## Product Target
 
@@ -419,38 +431,19 @@ Projected counts are the Evidence Reference for each canvas-renderable claim. A 
 
 ## MVP - reference implementation
 
-The smallest slice consumes the PRD's discovery, invocation and proof requirements: open the native
-workspace, discover one source-owned command, invoke it within its existing bounds, and inspect the
-returned artifact and evidence. Reuse the TAD's dictionaries, validating client and native Graph runtime;
-no new renderer, provider proxy or planning store is required. ADR-AOS-1 through ADR-AOS-4 govern this slice.
+The smallest slice consumes the PRD's discovery, invocation and proof requirements: open the native workspace, discover one source-owned command, invoke it within its existing bounds, and inspect the returned artifact and evidence. Reuse the TAD's dictionaries, validating client and native Graph runtime; no new renderer, provider proxy or planning store is required. ADR-AOS-1 through ADR-AOS-4 govern this slice.
 
-Verify the document contract with `npm run docs:check`; verify actual invocation and its failure path
-with the focused owner checks in `VALIDATION-RUNBOOK.md`. Record check, exact source, result and surface
-in `RUNTIME-PROOF.md`. A documentation pass cannot satisfy the runtime VCCs above. Demo target: one
-entry-to-readback walkthrough in five minutes, with zero paid calls for discovery; elapsed time remains
-unmeasured. Cancelled or rejected invocation must produce a visible result without unauthorized effects.
+Verify the document contract with `npm run docs:check`; verify actual invocation and its failure path with the focused owner checks in `VALIDATION-RUNBOOK.md`. Record check, exact source, result and surface in `RUNTIME-PROOF.md`. A documentation pass cannot satisfy the runtime VCCs above. Demo target: one entry-to-readback walkthrough in five minutes, with zero paid calls for discovery; elapsed time remains unmeasured. Cancelled or rejected invocation must produce a visible result without unauthorized effects.
 
-For `CANVAS-CONTROL-SURFACE-001@1.0.6`, all four experience criteria are **unassessed** in the authoring
-environment: Core Requirements & Functionality; Innovation & Theme Alignment; Technical Execution &
-Integration; Usefulness & Agentic Experience. No timed user study is attached. The document owner must
-capture one pilot walkthrough and criterion-specific observations using the shared maturity rubric.
+For `CANVAS-CONTROL-SURFACE-001@1.0.6`, all four experience criteria are **unassessed** in the authoring environment: Core Requirements & Functionality; Innovation & Theme Alignment; Technical Execution & Integration; Usefulness & Agentic Experience. No timed user study is attached. The document owner must capture one pilot walkthrough and criterion-specific observations using the shared maturity rubric.
 
 ## GTM - reference implementation
 
-The reachable payer hypothesis is a solo builder who repeatedly loses time finding the right source,
-command and proof. First test a guided setup and one accepted outcome in that builder's existing
-workspace. Reuse the MVP before offering hosted or team infrastructure. Rank that service against the
-free self-serve workflow using observed rework, offered price and support minutes; there is no commercial
-winner until those inputs exist. Demand, priced acceptance, collected payment and repeat use remain
-unvalidated. Agent usage and hosting costs require separate measurements; zero-spend discovery does
-not imply zero total cost or collected revenue. A pilot result belongs in a successor Context record.
+The reachable payer hypothesis is a solo builder who repeatedly loses time finding the right source, command and proof. First test a guided setup and one accepted outcome in that builder's existing workspace. Reuse the MVP before offering hosted or team infrastructure. Rank that service against the free self-serve workflow using observed rework, offered price and support minutes; there is no commercial winner until those inputs exist. Demand, priced acceptance, collected payment and repeat use remain unvalidated. Agent usage and hosting costs require separate measurements; zero-spend discovery does not imply zero total cost or collected revenue. A pilot result belongs in a successor Context record.
 
 ## Offline learning proposal - reference implementation
 
-This proposed increment joins PRD, TAD, ADR, MVP and GTM at `CANVAS-CONTROL-SURFACE-001@1.0.6`.
-It consumes the Graph learning proposal at `PLAN-AGENTIC-GRAPH-GAME-FLIGHT-SIM-PRD-TAD-ADR-MVP-GTM@1.5.2`,
-in `$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-game-flight-sim-prd-tad-adr-mvp-gtm.md#offline-learning-proposal---reference-implementation`.
-Language/display scope awaits a decision; these criteria have no runtime or deployment evidence.
+This proposed increment joins PRD, TAD, ADR, MVP and GTM at `CANVAS-CONTROL-SURFACE-001@1.0.6`. It consumes the Graph learning proposal at `PLAN-AGENTIC-GRAPH-GAME-FLIGHT-SIM-PRD-TAD-ADR-MVP-GTM@1.5.2`, in `$AGENTIC_GRAPH_ROOT/docs/documents/agentic-graph-game-flight-sim-prd-tad-adr-mvp-gtm.md#offline-learning-proposal---reference-implementation`. Language/display scope awaits a decision; these criteria have no runtime or deployment evidence.
 
 **PRD / C-L01.** A learner needs useful assistance while practising a short offline program; an
 assistant must explain the actual local run instead of inventing a grade. Given a selected lesson,
@@ -553,19 +546,9 @@ identity, stale rejection, preview isolation, UI apply/undo, four receipts and f
 readback at 390/1024 px, offline after module load. Abort discards replies; a submitted preview
 can remain in Graph until the operator dismisses it, and cannot apply itself.
 
-Graph's separate full-app rehearsal records five actions at both widths, offline cancel/apply/undo
-and installed cold reload, with no agent host. Its desktop/mobile first-value times are 18.38/4.61 s;
-these are automated observations, not human or GameXR acceptance. Existing semantic-space package
-roundtrips preserve observation pixels/digests and unknown physical correspondence. Remaining work:
-real human outcomes, larger-scene responsiveness, full guideline alignment and planned GX1-GX6.
-The spatial increment's overall local/delivered rungs remain `undocumented`/`undocumented`.
+Graph's separate full-app rehearsal records five actions at both widths, offline cancel/apply/undo and installed cold reload, with no agent host. Its desktop/mobile first-value times are 18.38/4.61 s; these are automated observations, not human or GameXR acceptance. Existing semantic-space package roundtrips preserve observation pixels/digests and unknown physical correspondence. Remaining work: real human outcomes, larger-scene responsiveness, full guideline alignment and planned GX1-GX6. The spatial increment's overall local/delivered rungs remain `undocumented`/`undocumented`.
 
-Implementation order: Graph's reusable pure-policy export and capability contract -> GameXR's
-manifest adapter and durable review -> optional Canvas admission. Reuse existing scoped discovery
-and tests; no automatic package-pin update or direct canvas-source import. This documentation pass
-changes this owner only; next Canvas implementation is capped at four existing files/two hours,
-after protected upstream evidence, with session/foreign-identity/no-host checks. No runtime modules,
-model calls or services are added here. The Graph plan owns the complete R0-R4 task sequence.
+Implementation order: Graph's reusable pure-policy export and capability contract -> GameXR's manifest adapter and durable review -> optional Canvas admission. Reuse existing scoped discovery and tests; no automatic package-pin update or direct canvas-source import. This documentation pass changes this owner only; next Canvas implementation is capped at four existing files/two hours, after protected upstream evidence, with session/foreign-identity/no-host checks. No runtime modules, model calls or services are added here. The Graph plan owns the complete R0-R4 task sequence.
 
 **GTM / C-S01.** Consume `SPATIAL-WORKSPACE-PILOT-001@0.6.0` and its existing private measurement
 record. Consent alone is not completion; no human outcome or GameXR user result is claimed.

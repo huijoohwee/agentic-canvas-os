@@ -70,7 +70,7 @@ jobs:
     needs: authorization
     if: ${{ always() }}
     runs-on: ubuntu-slim
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
       - name: Require exact CI authorization
         env:
@@ -84,8 +84,47 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
+      - name: Read exact Graph source revision
+        id: graph-source
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const manifest = JSON.parse(fs.readFileSync('config/observability-workspace.json', 'utf8'));
+          const graph = manifest.repositories?.find(repository => repository.id === 'agentic-graph');
+          if (!/^[a-f0-9]{40}$/.test(graph?.buildRevision ?? '')) throw new Error('Graph buildRevision must pin an exact commit');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `revision=${graph.buildRevision}\n`);
+          NODE
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: huijoohwee/agentic-graph
+          ref: ${{ steps.graph-source.outputs.revision }}
+          path: agentic-graph
+          fetch-depth: 1
+          persist-credentials: false
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm run check:ci -- --only=build
+      - name: Install only Graph dashboard workspace dependencies
+        working-directory: agentic-graph
+        run: npm ci --workspace=@agentic-graph/canvas --workspace=grph-shared --workspace=gympgrph --workspace=@agentic-graph/mcp --include-workspace-root=false --ignore-scripts --no-audit --no-fund
+      - name: Prepare Graph linked packages
+        working-directory: agentic-graph
+        run: npm run prepare:linked-packages --workspace=@agentic-graph/canvas
+      - name: Prepare dashboard source templates and settings
+        working-directory: agentic-graph
+        run: |
+          npm run prepare:html-viewer-runtime --workspace=@agentic-graph/canvas
+          npm run build:settings --workspace=@agentic-graph/canvas
+      - name: Build the Canvas web application
+        env:
+          AGENTIC_WORKSPACE_ROOT: ${{ github.workspace }}
+          AGENTIC_GRAPH_ROOT: ${{ github.workspace }}/agentic-graph
+        run: npm run web:build
+      - name: Build the exact native Graph dashboard
+        working-directory: agentic-graph
+        env:
+          AGENTIC_WORKSPACE_ROOT: ${{ github.workspace }}
+          AG_SKIP_DOCS_UPDATE: '1'
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build
 
   docs-contract:
     name: docs-contract

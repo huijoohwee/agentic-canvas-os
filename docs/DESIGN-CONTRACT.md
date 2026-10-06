@@ -2,18 +2,18 @@
 title: "Native design enforcement PRD-TAD-ADR-MVP-GTM"
 graphId: "md:native-design-enforcement"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
-date: "2026-09-24"
+date: "2026-10-06"
 lang: "en-US"
 schema: "agentic-canvas-os-native-design-enforcement/v1"
 frontmatter_contract: "required"
 status: "source-verified"
-version: "0.1.1"
+version: "0.1.3"
 continuity_id: "CANVAS-NATIVE-DESIGN-ENFORCEMENT"
-prd_revision: "0.1.1"
-tad_revision: "0.1.1"
-adr_revision: "0.1.1"
-mvp_revision: "0.1.1"
-gtm_revision: "0.1.1"
+prd_revision: "0.1.3"
+tad_revision: "0.1.3"
+adr_revision: "0.1.3"
+mvp_revision: "0.1.3"
+gtm_revision: "0.1.3"
 owner: "Canvas control-surface maintainers"
 local_rung: "source-verified"
 delivered_rung: "pending-protected-integration"
@@ -71,12 +71,33 @@ Deliver the two adapters, lifecycle/pin/grammar tests and this joined record. Ke
 zero always-load bytes, no new package beyond the already-declared Agentic OS dependency, no paid infrastructure. At most six files / 30 kB source,
 under 600 lines per file and 500 kB per chunk. Shared active-work cap is 75 minutes including upstream
 and guideline changes. Local verification: focused adapter tests, docs contract and authored budgets.
-The product build remains unchanged until admitted browser composition exists.
+The design-check transport remains independent of application composition. The native observability
+entry is specified by `CANVAS-CONTROL-SURFACE-001@1.0.8` in `PRD-TAD-ADR-MVP-GTM.md` and consumes
+Graph-owned components, CSS and theme tokens through its dedicated build entry. Show only native
+`AgentMissionOverview` / `AgentMissionDashboard`, including Dashboard's built-in Explore D3.
+The entry must not import or show a separate source tree, editor, canvas or module browser.
+Dashboard Source Evidence reads exact retained bytes and references from the virtual
+`/.workspace/<encoded-workflow-id>/agent-mission.manifest.json`; configuration is only the host repository allowlist.
+This contract creates no renderer, selected-state palette, icon scale, toolbar variant or verifier.
+The local native build uses Graph's protected merge `80962bfef5c4789fc68274b1da041defc5204fa1`;
+the largest emitted JavaScript chunk was 444.23 kB. All eight selected Canvas checks passed
+locally. The live desktop at port 5175 loaded Graph's Mission Dashboard and its built-in D3
+projection, with no separate source tree, editor or canvas. Indexing Agentic OS returned a complete
+admitted-source index of 667 reused sources, 97,778 nodes and 98,984 relationships; the D3 view
+showed its bounded 200-node/103-link projection. The retained Graph workflow itself has no linked
+codebase index, and a cold full-repository Graph ingest returned the native 60-second timeout.
+That limitation is visible; no incomplete index is presented as complete. Canvas CI now reads the
+exact Graph `buildRevision`, checks out only Graph, and permits absent sibling repositories during
+the build. Serving remains strict and rejects an unavailable selected repository. Protected CI
+for the successor, mobile smoke and final typecheck remain unverified. No chunk waiver, release or
+deployment claim follows.
+The refreshed composition bound is 40 active minutes / 20 authored runtime modules, with the
+existing <600-line/file and <500 kB/chunk limits. Structural checks do not prove visual acceptance.
 
 The upstream checker and its exact protected merge are integrated. This slice admits its archive
 through the existing lockfile and verifies the same bundle through native CLI and injected WebMCP
 adapter. A separate browser-composition change must mount the lazy adapter in a supported host and
-verify it there. The local application at port 5175 is not this candidate's runtime proof.
+verify it there. The observability UI at port 5175 does not prove design-check WebMCP mounting.
 Rollback removes the adapter registration and restores the prior source revision; no data migration.
 
 ## GTM

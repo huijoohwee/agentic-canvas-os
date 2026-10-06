@@ -1,390 +1,93 @@
-// Offline static build using the pinned OS generation primitives.
-// Assembles `web/dist` with the existing Wrangler esbuild toolchain. Builds work
-// OFFLINE with zero network or Cloudflare calls.
-//
-// It (1) copies the agentic-graph static canvas shell, and (2) injects the MCP
-// command grammar overlay UI at the bottom of index.html.
-// The UI now queries the agentic-canvas-os worker (`/api/invoke`) instead
-// of statically compiling the dictionary.
-//
-// SECRET SAFETY: never a model key or auth signing secret.
+// Consume verified native Graph output; no secondary compiler or renderer.
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { GRAPH_CONFIG, GRAPH_ENTRY, resolveObservabilityWorkspace, safeRelativePath, sha256 } from './observability-workspace.mjs';
 
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { createRequire } from 'node:module';
-import { generateFile, generationKey, generationManifest } from "agentic-os/generation";
+const ROOT = fileURLToPath(new URL('../', import.meta.url));
+const MANIFEST = 'observability-build.json';
+const fail = message => { throw new Error('observability-build: ' + message); };
+const inside = (root, file) => file.startsWith(root + path.sep);
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const REPO = path.resolve(HERE, "..");
-const WEB = path.join(REPO, "web");
-const DIST = path.join(WEB, "dist");
-
-function buildGrammarOverlay() {
-  const css = `
-/* MCP Command Grammar Overlay Styles (agentic-graph-Themed) */
-.kg-cmd-overlay[hidden] { display: none; }
-.kg-cmd-overlay {
-  position: fixed;
-  inset: 0;
-  background: transparent;
-  z-index: 10000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 32px;
-}
-.kg-cmd-dialog {
-  width: 100%;
-  max-width: 640px;
-  background: rgba(17, 24, 39, 0.98);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--kg-border);
-  border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column-reverse;
-}
-.kg-cmd-input {
-  width: 100%;
-  padding: 16px 20px;
-  font-size: 16px;
-  background: transparent;
-  border: 0;
-  border-top: 1px solid var(--kg-border);
-  color: var(--kg-text-primary);
-  outline: none;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-}
-.kg-cmd-input::placeholder {
-  color: var(--kg-text-tertiary);
-}
-.kg-cmd-results {
-  max-height: 320px;
-  overflow-y: auto;
-  padding: 10px;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 4px;
-}
-.kg-cmd-item {
-  padding: 14px 16px;
-  border-radius: 10px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  transition: background 120ms ease;
-}
-.kg-cmd-item:hover,
-.kg-cmd-item[aria-selected="true"] {
-  background: var(--kg-panel-action-bg-hover);
-}
-.kg-cmd-item-title {
-  font-weight: 700;
-  color: var(--kg-canvas-accent);
-  font-size: 15px;
-}
-.kg-cmd-item-desc {
-  font-size: 12px;
-  color: var(--kg-text-secondary);
-}
-.kg-hud-chip {
-  border: 1px solid var(--kg-border);
-  background: var(--kg-panel-bg);
-  color: var(--kg-text);
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 12px;
-  cursor: default;
-  min-width: 32px;
-  min-height: 32px;
-  line-height: 1.2;
-  display: flex;
-  align-items: center;
-}
-.kg-hud-chip strong {
-  font-weight: 700;
-  color: var(--kg-canvas-accent);
-}
-`;
-
-  const js = `
-// MCP Command Grammar Integration (agentic-graph Canvas)
-let debounceTimer = null;
-let sessionToken = null;
-let abortController = null;
-
-function buildOverlayHtml() {
-  return \`
-    <div class="kg-cmd-overlay" id="kgCmdOverlay" hidden>
-      <div class="kg-cmd-dialog">
-        <input type="text" id="kgCmdInput" class="kg-cmd-input" placeholder="Type /, @, or # to invoke MCP commands..." autocomplete="off" spellcheck="false" />
-        <div id="kgCmdResults" class="kg-cmd-results"></div>
-      </div>
-    </div>
-  \`;
-}
-
-async function getSessionToken() {
-  if (sessionToken) return sessionToken;
-  try {
-    const res = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({})
-    });
-    if (res.ok) {
-      const data = await res.json();
-      sessionToken = data.token;
-      return sessionToken;
-    }
-  } catch (e) {
-    console.error("Failed to fetch session token", e);
+export function consumeGraphObservabilityBuild(root, workspace, buildRoot) {
+  buildRoot = fs.realpathSync(buildRoot);
+  const sourceManifest = path.join(buildRoot, MANIFEST);
+  if (!inside(buildRoot, fs.realpathSync(sourceManifest))) fail('manifest symlink escapes output');
+  const manifestBytes = fs.readFileSync(sourceManifest);
+  if (manifestBytes.length > 65536) fail('manifest exceeds 64 KiB');
+  const manifest = JSON.parse(manifestBytes.toString('utf8'));
+  if (manifest.schema !== 'agentic-graph/observability-build/v1'
+    || manifest.sourceRevision !== workspace.sourceRevision || manifest.sourceDirty !== workspace.sourceDirty
+    || manifest.workspaceManifestDigest !== workspace.workspaceManifestDigest || manifest.entry !== GRAPH_ENTRY
+    || !Array.isArray(manifest.outputs) || !manifest.outputs.length || manifest.outputs.length > 128)
+    fail('source identity or artifact manifest mismatch');
+  if (sha256(fs.readFileSync(workspace.manifestPath)) !== workspace.workspaceManifestDigest) fail('workspace changed during build');
+  const files = new Map(), names = new Set();
+  let total = 0;
+  for (const row of manifest.outputs) {
+    if (!row || !safeRelativePath(row.path) || names.has(row.path)
+      || [MANIFEST, 'index.html', 'spatial-workspace-client.mjs', 'canvas-observability-build.json'].includes(row.path)
+      || !Number.isSafeInteger(row.bytes) || row.bytes < 1 || row.bytes >= 500000
+      || !/^[a-f0-9]{64}$/.test(row.sha256 ?? '')) fail('invalid or oversized native asset');
+    const file = path.resolve(buildRoot, row.path);
+    if (!inside(buildRoot, fs.realpathSync(file)) || !fs.statSync(file).isFile()) fail('asset escapes native output');
+    const bytes = fs.readFileSync(file);
+    if (bytes.length !== row.bytes || sha256(bytes) !== row.sha256) fail('native asset digest mismatch');
+    total += bytes.length; if (total > 16000000) fail('native output exceeds 16 MB');
+    names.add(row.path); files.set(row.path, bytes);
   }
-  return null;
-}
-
-async function fetchResults(query) {
-  const q = (query || "").trim();
-  if (!q || (!q.startsWith("/") && !q.startsWith("@") && !q.startsWith("#"))) {
-    return null;
-  }
-  
-  const token = await getSessionToken();
-  if (!token) return { error: "Failed to authenticate session" };
-
-  if (abortController) abortController.abort();
-  abortController = new AbortController();
-
-  try {
-    const res = await fetch("/api/invoke", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "authorization": "Bearer " + token
-      },
-      body: JSON.stringify({ query: q }),
-      signal: abortController.signal
-    });
-    
-    if (!res.ok) {
-      return { error: "API error: " + res.status };
-    }
-    
-    return await res.json();
-  } catch (e) {
-    if (e.name === 'AbortError') return { aborted: true };
-    return { error: e.message };
-  }
-}
-
-function showOverlay() {
-  const overlay = document.getElementById("kgCmdOverlay");
-  const input = document.getElementById("kgCmdInput");
-  if (!overlay || !input) return;
-  overlay.hidden = false;
-  input.value = "";
-  input.focus();
-  renderEmpty();
-  
-  // Pre-warm the session token
-  getSessionToken();
-}
-
-function hideOverlay() {
-  const overlay = document.getElementById("kgCmdOverlay");
-  const input = document.getElementById("kgCmdInput");
-  if (!overlay || !input) return;
-  overlay.hidden = true;
-  input.blur();
-}
-
-function renderEmpty() {
-  const container = document.getElementById("kgCmdResults");
-  if (!container) return;
-  container.innerHTML = '<div class="kg-cmd-item-desc" style="padding:14px;color:var(--kg-text-tertiary);">Type /, @, or # to search MCP command grammar...</div>';
-}
-
-function renderLoading() {
-  const container = document.getElementById("kgCmdResults");
-  if (!container) return;
-  container.innerHTML = '<div class="kg-cmd-item-desc" style="padding:14px;color:var(--kg-text-tertiary);">Searching MCP...</div>';
-}
-
-function renderError(msg) {
-  const container = document.getElementById("kgCmdResults");
-  if (!container) return;
-  container.innerHTML = \`<div class="kg-cmd-item-desc" style="padding:14px;color:var(--kg-text-secondary);"><span style="color:#ff4444">Error:</span> \${msg}</div>\`;
-}
-
-function renderResults(data) {
-  const container = document.getElementById("kgCmdResults");
-  if (!container) return;
-  
-  if (data && data.aborted) return;
-  if (data && data.error) {
-    renderError(data.error);
-    return;
-  }
-  
-  const items = (data && data.catalog) || [];
-  if (!items.length) {
-    renderError("No matches found.");
-    return;
-  }
-  
-  container.innerHTML = items.map(item => \`
-    <div class="kg-cmd-item">
-      <div class="kg-cmd-item-title">\${item.token}</div>
-      <div class="kg-cmd-item-desc">\${item.summary || item.intent || ""}</div>
-    </div>
-  \`).join("");
-}
-
-function initGrammar() {
-  // Inject overlay
-  const overlayDiv = document.createElement('div');
-  overlayDiv.innerHTML = buildOverlayHtml();
-  document.body.appendChild(overlayDiv.firstElementChild);
-
-  // Add HUD hint to agentic-graph's existing HUD
-  const hud = document.getElementById('kg-hud');
-  if (hud) {
-    const chip = document.createElement('div');
-    chip.className = 'kg-hud-chip';
-    chip.innerHTML = '<strong>Cmd+K</strong> or type /@#';
-    hud.insertBefore(chip, hud.firstChild);
-  }
-
-  // Event listeners
-  const overlay = document.getElementById('kgCmdOverlay');
-  const input = document.getElementById('kgCmdInput');
-  if (overlay) {
-    overlay.addEventListener('pointerdown', (e) => {
-      if (e.target === overlay) hideOverlay();
-    });
-  }
-  if (input) {
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        hideOverlay();
-        e.stopPropagation();
-      }
-    });
-    input.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      const q = input.value.trim();
-      if (!q || (!q.startsWith("/") && !q.startsWith("@") && !q.startsWith("#"))) {
-        renderEmpty();
-        return;
-      }
-      renderLoading();
-      debounceTimer = setTimeout(async () => {
-        const data = await fetchResults(q);
-        renderResults(data);
-      }, 250);
-    });
-  }
-
-  // Keyboard shortcuts
-  window.addEventListener('keydown', (e) => {
-    if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      if (document.getElementById('kgCmdOverlay')?.hidden) {
-        showOverlay();
-      } else {
-        hideOverlay();
-      }
-      return;
-    }
-    // Auto-open when typing /, @, # (and not in any input already)
-    if ((e.key === '/' || e.key === '@' || e.key === '#')) {
-      const active = document.activeElement;
-      const isTyping = active && (
-        active.tagName === 'INPUT' || 
-        active.tagName === 'TEXTAREA' ||
-        active.isContentEditable
-      );
-      if (!isTyping) {
-        showOverlay();
-        if (input) {
-          input.value = e.key;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        e.preventDefault();
-      }
-    }
+  if (!files.has(GRAPH_ENTRY)) fail('native entry is missing');
+  if (!fs.readFileSync(sourceManifest).equals(manifestBytes)) fail('native manifest changed during read');
+  files.set(MANIFEST, manifestBytes);
+  // Root routing is a byte-identical alias, not another document or renderer.
+  files.set('index.html', files.get(GRAPH_ENTRY));
+  const client = fs.readFileSync(path.join(root, 'web/spatial-workspace-client.mjs'));
+  if (client.length >= 500000) fail('spatial client exceeds byte bound');
+  files.set('spatial-workspace-client.mjs', client);
+  const receipt = { schema: 'agentic-canvas-os/observability-consumption/v1', sourceRevision: manifest.sourceRevision,
+    sourceDirty: manifest.sourceDirty, protectedReleaseProof: false, workspaceManifestDigest: manifest.workspaceManifestDigest,
+    nativeManifestDigest: sha256(manifestBytes), rootAlias: GRAPH_ENTRY, spatialClientDigest: sha256(client) };
+  files.set('canvas-observability-build.json', Buffer.from(JSON.stringify(receipt, null, 2) + '\n'));
+  const destination = path.join(root, 'web/dist');
+  if (fs.existsSync(destination) && fs.lstatSync(destination).isSymbolicLink()) fail('destination must not be a symlink');
+  const inventory = directory => fs.readdirSync(directory, { withFileTypes: true }).flatMap(item => {
+    const file = path.join(directory, item.name);
+    if (item.isSymbolicLink()) fail('existing output contains a symlink');
+    return item.isDirectory() ? inventory(file) : [path.relative(destination, file).split(path.sep).join('/')];
   });
+  const reused = fs.existsSync(destination) && inventory(destination).sort().join('\n') === [...files.keys()].sort().join('\n')
+    && [...files].every(([file, bytes]) => fs.readFileSync(path.join(destination, file)).equals(bytes));
+  if (reused) return { reused, ...receipt };
+  const stage = destination + '.stage-' + randomUUID(), backup = destination + '.previous-' + randomUUID();
+  fs.mkdirSync(stage, { recursive: true });
+  let displaced = false;
+  try {
+    for (const [file, bytes] of files) { const target = path.join(stage, file); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.writeFileSync(target, bytes, { flag: 'wx' }); }
+    if (fs.existsSync(destination)) { fs.renameSync(destination, backup); displaced = true; }
+    try { fs.renameSync(stage, destination); }
+    catch (error) { if (displaced) fs.renameSync(backup, destination); throw error; }
+    if (displaced) fs.rmSync(backup, { recursive: true });
+  } finally { fs.rmSync(stage, { recursive: true, force: true }); }
+  return { reused: false, ...receipt };
 }
 
-// Initialize after agentic-graph's canvas loads
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initGrammar);
-} else {
-  initGrammar();
-}
-`;
-  return { css, js };
-}
-
-export async function buildWeb(root = REPO) {
-  const require = createRequire(import.meta.url);
-  const esbuild = createRequire(require.resolve('wrangler/package.json'))('esbuild');
-  const inputs = () => ({
-      source: generationManifest(root, { paths: ['web/index.html', 'package-lock.json'],
-        maxEntries: 4, maxBytes: 2 * 1024 * 1024, maxFileBytes: 2 * 1024 * 1024 }).digest,
-      generator: generationManifest(HERE, { paths: ['build.mjs', 'spatial-workspace-client.mjs'], maxEntries: 2 }).digest,
-      esbuild: esbuild.version,
-  });
-  let compiledKey, compiled;
-  const content = async name => {
-    const key = generationKey(inputs());
-    if (compiledKey !== key) {
-      let html = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
-      // Compile this authored shell's two exact regions; this is not an HTML sanitizer.
-      const extract = tag => {
-        const opening = `<${tag}>`, closing = `</${tag}>`, start = html.indexOf(opening);
-        if (start < 0) return '';
-        const end = html.indexOf(closing, start + opening.length);
-        if (end < 0) throw new Error('web_build_inline_contract');
-        const body = html.slice(start + opening.length, end);
-        html = html.slice(0, start) + html.slice(end + closing.length);
-        return body;
-      };
-      const css = extract('style'), js = extract('script');
-      if (/<\/?(?:script|style)\b/i.test(html) || !html.includes('</head>') || !html.includes('</body>'))
-        throw new Error('web_build_inline_contract');
-      html = html.replace('</head>', '<link rel="stylesheet" href="./canvas.css"></head>')
-        .replace('</body>', '<script src="./canvas.js"></script></body>');
-      const overlay = buildGrammarOverlay();
-      compiled = { 'index.html': html,
-        'spatial-workspace-client.mjs': (await esbuild.transform(fs.readFileSync(path.join(HERE, 'spatial-workspace-client.mjs'), 'utf8'), { loader: 'js', format: 'esm', minify: true })).code,
-        'canvas.css': (await esbuild.transform(css + overlay.css, { loader: 'css', minify: true })).code,
-        'canvas.js': (await esbuild.transform(js + overlay.js, { loader: 'js', minify: true, legalComments: 'none' })).code,
-      };
-      for (const value of Object.values(compiled)) if (Buffer.byteLength(value) >= 500000)
-        throw new Error('blocked-generation-output-byte-budget');
-      compiledKey = key;
-    }
-    return compiled[name];
-  };
-  const results = [];
-  for (const name of ['canvas.css', 'canvas.js', 'spatial-workspace-client.mjs', 'index.html']) results.push(await generateFile({
-    destination: path.join(root, 'web/dist', name),
-    receipt: path.join(root, 'node_modules/.cache/agentic-os', `web-${name}.json`),
-    maxOutputBytes: 499999, inputs, produce: () => content(name),
-  }));
-  return { ...results.at(-1), reused: results.every(result => result.reused) };
+export async function buildWeb(root = ROOT, { env = process.env, resolveWorkspace = resolveObservabilityWorkspace,
+  run = execFileSync } = {}) {
+  const workspace = resolveWorkspace(root, { env });
+  if (workspace.buildRevision && workspace.sourceRevision !== workspace.buildRevision)
+    fail('selected Graph source does not match its pinned build revision');
+  run('npm', ['exec', '--workspace', 'canvas', '--', 'vite', 'build', '--configLoader', 'runner', '--config', GRAPH_CONFIG],
+    { cwd: workspace.graphRoot, env: workspace.env, stdio: 'inherit', timeout: 180000 });
+  const after = resolveWorkspace(root, { env });
+  if (after.sourceRevision !== workspace.sourceRevision || after.sourceDirty !== workspace.sourceDirty
+    || after.buildRevision !== workspace.buildRevision
+    || after.workspaceManifestDigest !== workspace.workspaceManifestDigest) fail('source changed during native build');
+  return consumeGraphObservabilityBuild(root, workspace, path.join(workspace.graphRoot, 'canvas/dist/observability'));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const result = await buildWeb();
-  process.stdout.write(
-    `agentic-canvas-os web build → ${path.relative(REPO, DIST)} (${result.reused ? 'reused' : 'generated'})\n` +
-      `  agentic-graph canvas + MCP command grammar overlay ready!\n` +
-      `  Artifacts: index.html, canvas.css, canvas.js, spatial-workspace-client.mjs (offline assets + remote grammar resolution)\n`,
-  );
+  console.log(`Native Graph output ${result.reused ? 'reused' : 'verified'} at web/dist; source ${result.sourceRevision}, dirty=${result.sourceDirty}. Local artifact only; no protected release claim.`);
 }

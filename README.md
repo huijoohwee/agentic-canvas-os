@@ -1,8 +1,11 @@
 # agentic-canvas-os
 
-Retained development adapter for agentic-graph MCP Readiness & Command Grammar Integration.
-One Worker serves the static UI, authenticates callers, forwards `/api/invoke` and `/api/run` 
-to the agentic-graph MCP control plane, exposes runtime readiness, and embeds the live agentic-graph canvas.
+Local observability workspace showing agentic-graph's native Mission Overview and Dashboard only.
+`npm run dev` serves the Graph-owned entry with the repository allowlist in
+`config/observability-workspace.json`. Mission documents retain their native archive schema;
+existing agent and lifecycle owners retain execution authority.
+The separate Worker API authenticates callers, forwards `/api/invoke` and `/api/run`
+to its configured MCP control plane, and exposes runtime readiness.
 
 This repo holds no model provider keys in source or client bundles. Runtime
 secrets are Cloudflare secret bindings; the browser only sees public URLs.
@@ -61,7 +64,7 @@ and authorization policy in [docs/PROJECT-RULES.md](./docs/PROJECT-RULES.md),
 [docs/RUNTIME-READINESS.md](./docs/RUNTIME-READINESS.md), the committed ADLC
 profile, and the authenticated authority/transition policies.
 
-Quick local path:
+Quick local path (installed Graph checkout required):
 
 ```bash
 npm ci --ignore-scripts
@@ -71,6 +74,32 @@ npm run status
 npm run check
 npm run dev
 ```
+
+The default workspace root is the canonical checkout's parent, including when Canvas runs in an
+admitted worktree. Set `AGENTIC_WORKSPACE_ROOT` for another explicit repository collection and
+`AGENTIC_GRAPH_ROOT` for an admitted Graph candidate containing the observability entry. The launcher
+uses Graph's native preflight and Vite configuration, binds loopback with a strict port, and reports
+the selected source identity. It never installs, fetches, replaces another server, or deploys.
+Use `npm run dev -- --port 5175` to choose an available port. Source selection reads existing evidence;
+explicit indexing is bounded and model-free. Missing run, index or provenance remains unavailable.
+
+The shared UI contract reuses Graph's `AgentMissionOverview` / `AgentMissionDashboard` and the
+Dashboard's built-in Explore D3 view. The entry must not import or show a separate source tree,
+editor, canvas or module browser. Dashboard Source Evidence reads the exact archived mission bytes
+and references at `/.workspace/<encoded-workflow-id>/agent-mission.manifest.json`.
+The repository allowlist does not define another mission format or execution state.
+Local verification at port 5175 confirms Dashboard-only archive/manifest evidence and built-in D3.
+One explicit index read covered 443 sources, 38,032 nodes and 38,073 edges; the bounded view showed
+200 nodes and 103 edges. At 1,106 px there was no horizontal overflow. Reading a fresh archive
+without a linked index clears the prior graph. Native TypeScript checks pass; mobile verification remains pending.
+
+`npm run web:build` invokes Graph's native build into `canvas/dist/observability`, then verifies
+source identity, configuration digest, asset paths, sizes and hashes before atomic staging.
+The current static build is blocked: the inherited MapLibre chunk is 988,324 bytes, above the
+500,000-byte limit, and native admission rejected changes to its already-reserved owner.
+The saved export is not a fallback. `npm run cloudflare:dev` remains the separate Worker API
+development command and also requires a passing static build; its authentication and upstream
+bindings are separate from local inspection. No deployment or release readiness is claimed.
 
 Prefer the canonical human-facing path:
 

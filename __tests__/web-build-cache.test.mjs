@@ -3,41 +3,64 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { buildWeb } from '../web/build.mjs';
+import { buildWeb, consumeGraphObservabilityBuild } from '../web/build.mjs';
+import { sha256 } from '../web/observability-workspace.mjs';
 
-test('HTML builds reuse verified output and retain the previous artifact on overflow', async t => {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'canvas-build-')));
+function fixture(t) {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'canvas-native-build-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(root, 'web'));
-  fs.writeFileSync(path.join(root, 'package-lock.json'), '{}');
-  const source = path.join(root, 'web/index.html'), output = path.join(root, 'web/dist/index.html');
-  fs.writeFileSync(source, '<html><head></head><body>first</body></html>');
-  assert.equal((await buildWeb(root)).reused, false);
-  const client = await import(path.join(root, 'web/dist/spatial-workspace-client.mjs'));
-  assert.equal((await client.createSpatialWorkspaceClient().inspect()).code, 'transport-unavailable');
-  const before = fs.statSync(output).mtimeMs;
-  assert.equal((await buildWeb(root)).reused, true);
-  assert.equal(fs.statSync(output).mtimeMs, before);
-  fs.writeFileSync(source, '<html><head></head><body>second</body></html>');
-  assert.equal((await buildWeb(root)).reused, false);
-  assert.match(fs.readFileSync(output, 'utf8'), /second/);
-  fs.writeFileSync(output, 'corrupt');
-  assert.equal((await buildWeb(root)).reused, false);
-  const valid = fs.readFileSync(output);
-  fs.writeFileSync(source, `<html><head></head><body>${'x'.repeat(500000)}</body></html>`);
-  await assert.rejects(buildWeb(root), /output-byte-budget/);
-  assert.deepEqual(fs.readFileSync(output), valid);
-  assert.deepEqual(fs.readdirSync(path.join(root, 'node_modules/.cache/agentic-os')).sort(),
-    ['web-canvas.css.json', 'web-canvas.js.json', 'web-index.html.json', 'web-spatial-workspace-client.mjs.json']);
+  const build = path.join(root, 'graph/canvas/dist/observability'), manifestPath = path.join(root, 'workspace.json');
+  fs.mkdirSync(build, { recursive: true }); fs.mkdirSync(path.join(root, 'web'));
+  fs.writeFileSync(path.join(root, 'web/spatial-workspace-client.mjs'), 'export const existingClient = true;');
+  fs.writeFileSync(manifestPath, '{}');
+  const workspace = { graphRoot: path.join(root, 'graph'), sourceRevision: 'a'.repeat(40), buildRevision: 'a'.repeat(40), sourceDirty: true,
+    manifestPath, workspaceManifestDigest: sha256('{}'), env: {} };
+  const assets = { 'observability.html': '<html><script src="./entry.js"></script></html>', 'entry.js': 'export const native = true;' };
+  for (const [name, bytes] of Object.entries(assets)) fs.writeFileSync(path.join(build, name), bytes);
+  const manifest = { schema: 'agentic-graph/observability-build/v1', sourceRevision: workspace.sourceRevision,
+    sourceDirty: true, workspaceManifestDigest: workspace.workspaceManifestDigest, entry: 'observability.html',
+    outputs: Object.entries(assets).map(([name, bytes]) => ({ path: name, bytes: Buffer.byteLength(bytes), sha256: sha256(bytes) })) };
+  const save = () => fs.writeFileSync(path.join(build, 'observability-build.json'), JSON.stringify(manifest));
+  save(); return { root, workspace, build, manifest, save };
+}
+
+test('verified native bytes reuse output and preserve the existing spatial client', t => {
+  const f = fixture(t);
+  assert.equal(consumeGraphObservabilityBuild(f.root, f.workspace, f.build).reused, false);
+  const output = path.join(f.root, 'web/dist/index.html'), time = fs.statSync(output).mtimeMs;
+  assert.deepEqual(fs.readFileSync(output), fs.readFileSync(path.join(f.build, 'observability.html')));
+  assert.equal(consumeGraphObservabilityBuild(f.root, f.workspace, f.build).reused, true);
+  assert.equal(fs.statSync(output).mtimeMs, time);
+  assert.match(fs.readFileSync(path.join(f.root, 'web/dist/spatial-workspace-client.mjs'), 'utf8'), /existingClient/);
+  const receipt = JSON.parse(fs.readFileSync(path.join(f.root, 'web/dist/canvas-observability-build.json')));
+  assert.equal(receipt.sourceDirty, true); assert.equal(receipt.protectedReleaseProof, false);
 });
 
-test('the authored inline extraction contract rejects malformed or extra active tags', async t => {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'canvas-build-markup-')));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.mkdirSync(path.join(root, 'web')); fs.writeFileSync(path.join(root, 'package-lock.json'), '{}');
-  for (const body of ['<script>run()</script >', '<scr<script>run()</script>ipt>',
-    '<script src="external.js"></script>', '<script>first()</script><script>second()</script>']) {
-    fs.writeFileSync(path.join(root, 'web/index.html'), `<html><head></head><body>${body}</body></html>`);
-    await assert.rejects(buildWeb(root), /web_build_inline_contract/);
+test('digest, traversal, duplicate, overflow and source mismatches preserve prior output', t => {
+  const f = fixture(t); consumeGraphObservabilityBuild(f.root, f.workspace, f.build);
+  const output = path.join(f.root, 'web/dist/index.html'), previous = fs.readFileSync(output), good = structuredClone(f.manifest);
+  for (const change of [m => { m.outputs[0].sha256 = '0'.repeat(64); }, m => { m.outputs[0].path = '../escape'; },
+    m => { m.outputs.push(m.outputs[0]); }, m => { m.outputs[0].bytes = 500000; },
+    m => { m.sourceRevision = 'b'.repeat(40); }, m => { m.workspaceManifestDigest = '0'.repeat(64); }]) {
+    Object.assign(f.manifest, structuredClone(good)); change(f.manifest); f.save();
+    assert.throws(() => consumeGraphObservabilityBuild(f.root, f.workspace, f.build), /observability-build/);
+    assert.deepEqual(fs.readFileSync(output), previous);
   }
+});
+
+test('native build selects Graph Vite and rejects workspace drift', async t => {
+  const f = fixture(t), calls = [];
+  const options = { resolveWorkspace: () => f.workspace, run: (...args) => calls.push(args) };
+  await buildWeb(f.root, options);
+  assert.deepEqual(calls[0][1], ['exec', '--workspace', 'canvas', '--', 'vite', 'build', '--configLoader', 'runner', '--config', 'vite.observability.config.ts']);
+  assert.equal(calls[0][2].cwd, f.workspace.graphRoot);
+  fs.writeFileSync(f.workspace.manifestPath, '{"changed":true}');
+  await assert.rejects(buildWeb(f.root, options), /workspace changed/);
+});
+
+test('native build rejects a Graph source revision outside the exact workspace pin', async t => {
+  const f = fixture(t), calls = [];
+  f.workspace.buildRevision = 'b'.repeat(40);
+  await assert.rejects(buildWeb(f.root, { resolveWorkspace: () => f.workspace, run: (...args) => calls.push(args) }), /pinned build revision/);
+  assert.equal(calls.length, 0);
 });

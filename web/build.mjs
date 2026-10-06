@@ -76,10 +76,13 @@ export function consumeGraphObservabilityBuild(root, workspace, buildRoot) {
 export async function buildWeb(root = ROOT, { env = process.env, resolveWorkspace = resolveObservabilityWorkspace,
   run = execFileSync } = {}) {
   const workspace = resolveWorkspace(root, { env });
+  if (workspace.buildRevision && workspace.sourceRevision !== workspace.buildRevision)
+    fail('selected Graph source does not match its pinned build revision');
   run('npm', ['exec', '--workspace', 'canvas', '--', 'vite', 'build', '--configLoader', 'runner', '--config', GRAPH_CONFIG],
     { cwd: workspace.graphRoot, env: workspace.env, stdio: 'inherit', timeout: 180000 });
   const after = resolveWorkspace(root, { env });
   if (after.sourceRevision !== workspace.sourceRevision || after.sourceDirty !== workspace.sourceDirty
+    || after.buildRevision !== workspace.buildRevision
     || after.workspaceManifestDigest !== workspace.workspaceManifestDigest) fail('source changed during native build');
   return consumeGraphObservabilityBuild(root, workspace, path.join(workspace.graphRoot, 'canvas/dist/observability'));
 }

@@ -23,9 +23,11 @@ export function validateWorkspaceManifest(value) {
   const ids = new Set(), paths = new Set();
   for (const row of value.repositories) {
     if (!row || typeof row !== 'object' || Array.isArray(row)
-      || Object.keys(row).sort().join(',') !== 'id,label,path'
+      || Object.keys(row).some(key => !['id', 'label', 'path', 'buildRevision'].includes(key))
       || !/^[a-z][a-z0-9-]{0,63}$/.test(row.id ?? '') || !text(row.label, 128)
       || !safeRelativePath(row.path) || ids.has(row.id) || paths.has(row.path)) fail('invalid or duplicate repository');
+    if (row.buildRevision !== undefined
+      && (row.id !== 'agentic-graph' || !/^[a-f0-9]{40}$/.test(row.buildRevision))) fail('invalid Graph build revision');
     ids.add(row.id); paths.add(row.path);
   }
   return JSON.parse(JSON.stringify(value));
@@ -57,7 +59,7 @@ export function resolveObservabilityWorkspace(root, { env = process.env, gitText
   if (!/^[a-f0-9]{40}$/.test(sourceRevision)) fail('invalid Graph source revision');
   const sourceDirty = Boolean(gitText(graphRoot, ['status', '--porcelain', '--untracked-files=normal']));
   return { root, manifest, manifestPath, workspaceManifestDigest: sha256(bytes), workspaceRoot, graphRoot,
-    sourceRevision, sourceDirty, env: { ...env, AGENTIC_WORKSPACE_ROOT: workspaceRoot,
+    sourceRevision, sourceDirty, buildRevision: provider?.buildRevision ?? null, env: { ...env, AGENTIC_WORKSPACE_ROOT: workspaceRoot,
       VITE_OBSERVABILITY_WORKSPACE_MANIFEST: manifestPath } };
 }
 

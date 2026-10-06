@@ -13,7 +13,7 @@ function fixture(t) {
   fs.mkdirSync(build, { recursive: true }); fs.mkdirSync(path.join(root, 'web'));
   fs.writeFileSync(path.join(root, 'web/spatial-workspace-client.mjs'), 'export const existingClient = true;');
   fs.writeFileSync(manifestPath, '{}');
-  const workspace = { graphRoot: path.join(root, 'graph'), sourceRevision: 'a'.repeat(40), sourceDirty: true,
+  const workspace = { graphRoot: path.join(root, 'graph'), sourceRevision: 'a'.repeat(40), buildRevision: 'a'.repeat(40), sourceDirty: true,
     manifestPath, workspaceManifestDigest: sha256('{}'), env: {} };
   const assets = { 'observability.html': '<html><script src="./entry.js"></script></html>', 'entry.js': 'export const native = true;' };
   for (const [name, bytes] of Object.entries(assets)) fs.writeFileSync(path.join(build, name), bytes);
@@ -56,4 +56,11 @@ test('native build selects Graph Vite and rejects workspace drift', async t => {
   assert.equal(calls[0][2].cwd, f.workspace.graphRoot);
   fs.writeFileSync(f.workspace.manifestPath, '{"changed":true}');
   await assert.rejects(buildWeb(f.root, options), /workspace changed/);
+});
+
+test('native build rejects a Graph source revision outside the exact workspace pin', async t => {
+  const f = fixture(t), calls = [];
+  f.workspace.buildRevision = 'b'.repeat(40);
+  await assert.rejects(buildWeb(f.root, { resolveWorkspace: () => f.workspace, run: (...args) => calls.push(args) }), /pinned build revision/);
+  assert.equal(calls.length, 0);
 });

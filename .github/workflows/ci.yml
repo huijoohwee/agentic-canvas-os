@@ -116,7 +116,7 @@ jobs:
       - name: Build the exact native Graph dashboard
         env:
           AGENTIC_WORKSPACE_ROOT: ${{ github.workspace }}
-        run: npm run check:ci -- --only=build
+        run: npm run build
 
   docs-contract:
     name: docs-contract

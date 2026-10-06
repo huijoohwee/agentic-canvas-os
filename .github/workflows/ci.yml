@@ -123,6 +123,7 @@ jobs:
         env:
           AGENTIC_WORKSPACE_ROOT: ${{ github.workspace }}
           AG_SKIP_DOCS_UPDATE: '1'
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npm run build
 
   docs-contract:

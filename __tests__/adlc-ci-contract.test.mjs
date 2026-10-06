@@ -35,8 +35,8 @@ test("CI partitions preserve every broad validation group", () => {
   const build = workflow.split("  build:\n", 2)[1]?.split("\n  docs-contract:", 1)[0] ?? "";
   const canvasBuild = policy.checks.find((check) => check.id === "build")?.command.join(" ");
   assert.equal(canvasBuild, "npm run web:build");
-  assert.ok(build.includes(`run: ${canvasBuild}`));
-  assert.match(build, /Build the exact native Graph dashboard[\s\S]*?run: npm run build/u);
+  assert.match(build, /Build the Canvas web application[\s\S]*?AGENTIC_WORKSPACE_ROOT: \$\{\{ github\.workspace \}\}[\s\S]*?AGENTIC_GRAPH_ROOT: \$\{\{ github\.workspace \}\}\/agentic-graph[\s\S]*?run: npm run web:build/u);
+  assert.match(build, /Build the exact native Graph dashboard[\s\S]*?working-directory: agentic-graph[\s\S]*?run: npm run build/u);
   const selected = [...workflow.matchAll(/--only=([a-z-]+)(?:\$\{\{ matrix.shard \}\})?/gu)].flatMap((match) =>
     match[1] === "test-" ? ["test-1", "test-2", "test-3", "test-4"] : [match[1]]);
   selected.push("build");

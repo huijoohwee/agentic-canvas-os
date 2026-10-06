@@ -32,8 +32,14 @@ test("CI runs installed ADLC evals and local consumer checks without a legacy br
 
 test("CI partitions preserve every broad validation group", () => {
   const policy = JSON.parse(readFileSync(new URL("../.agentic-os-validation.json", import.meta.url)));
+  const build = workflow.split("  build:\n", 2)[1]?.split("\n  docs-contract:", 1)[0] ?? "";
+  const canvasBuild = policy.checks.find((check) => check.id === "build")?.command.join(" ");
+  assert.equal(canvasBuild, "npm run web:build");
+  assert.ok(build.includes(`run: ${canvasBuild}`));
+  assert.match(build, /Build the exact native Graph dashboard[\s\S]*?run: npm run build/u);
   const selected = [...workflow.matchAll(/--only=([a-z-]+)(?:\$\{\{ matrix.shard \}\})?/gu)].flatMap((match) =>
     match[1] === "test-" ? ["test-1", "test-2", "test-3", "test-4"] : [match[1]]);
+  selected.push("build");
   assert.deepEqual(selected.sort(), [...policy.fallback].sort());
   assert.equal(packageDocument.scripts.check, "node node_modules/agentic-os/bin/agentic-os-validation.mjs run");
   assert.deepEqual(policy.always, ["budgets"]);

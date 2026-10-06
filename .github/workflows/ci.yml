@@ -113,6 +113,8 @@ jobs:
         run: |
           npm run prepare:html-viewer-runtime --workspace=@agentic-graph/canvas
           npm run build:settings --workspace=@agentic-graph/canvas
+      - name: Build the Canvas web application
+        run: npm run web:build
       - name: Build the exact native Graph dashboard
         env:
           AGENTIC_WORKSPACE_ROOT: ${{ github.workspace }}

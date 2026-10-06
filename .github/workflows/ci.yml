@@ -122,6 +122,7 @@ jobs:
         working-directory: agentic-graph
         env:
           AGENTIC_WORKSPACE_ROOT: ${{ github.workspace }}
+          AG_SKIP_DOCS_UPDATE: '1'
         run: npm run build
 
   docs-contract:

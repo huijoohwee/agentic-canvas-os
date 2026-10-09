@@ -2,7 +2,7 @@
 title: "Deterministic Agentic Graph Invocation Contract"
 graphId: "md:agentic-canvas-os-deterministic-agentic-graph"
 doc_type: "Invocation And Client Contract"
-date: "2026-07-30"
+date: "2026-10-09"
 lang: "en-US"
 schema: "deterministic-agentic-graph-invocation-contract/v1"
 frontmatter_contract: "required"
@@ -31,8 +31,8 @@ external_dependency: "forbidden"
 
 Agentic Canvas OS supplies the canonical `/`, `#`, and `@` vocabulary, policy
 boundaries, and typed MCP client methods for turning an explicitly selected
-codebase plus its docs, SQL schemas, configs, and text-bearing PDFs into a
-queryable agentic graph. agentic-graph owns the executable parser, graph builder,
+codebase plus its docs, SQL schemas, configs, text-bearing PDFs, and recognized native-binary
+metadata into a queryable agentic graph. agentic-graph owns the executable parser, graph builder,
 artifact store, queries, edge explanations, Launch import flows, and Canvas
 projection.
 
@@ -67,6 +67,13 @@ exact tools above.
 | Generate parser | Exactly one of the `default-source` built-in profile or one bounded, non-empty custom `descriptors` array selecting inert source matchers and native adapter identities | Source matchers, declared kinds, adapter fidelity, deterministic priority, and an optional source-resolved invocation proof. |
 | Query | Non-empty opaque `graphId`, lowercase 64-character `expectedSnapshotDigest`, and one supported `mode` | Lexical query, endpoints, direction, edge labels, depth, result limit, and an optional source-resolved invocation proof. |
 | Explain edge | Non-empty opaque `graphId`, lowercase 64-character `expectedSnapshotDigest`, and non-empty `edgeId` | Optional source-resolved invocation proof. |
+
+The built-in local source registry can inspect recognized ELF, thin Mach-O, PE, WebAssembly, and
+`ar` archive files as bounded metadata. Its projection may include format and architecture headers,
+selected section names, library dependencies, short archive member names, and WebAssembly imports or
+exports. Long-name archive references are diagnostic. The parser does not execute binaries,
+disassemble instructions, extract arbitrary strings, or claim runtime behavior. Unknown signatures and unsupported or malformed tables stay inventory-only or
+produce explicit diagnostics. Extensionless binary files remain inventory-only.
 
 When present, the invocation proof is versioned and bound to the exact agentic-graph
 tool. It carries the resolved action, semantic and binding tokens, the source

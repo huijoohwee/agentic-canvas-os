@@ -4,23 +4,27 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { buildWeb, consumeGraphObservabilityBuild } from '../web/build.mjs';
-import { sha256 } from '../web/observability-workspace.mjs';
+import { GRAPH_ENTRY, sha256 } from '../web/observability-workspace.mjs';
 
 function fixture(t) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'canvas-native-build-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const build = path.join(root, 'graph/canvas/dist/observability'), manifestPath = path.join(root, 'workspace.json');
+  const build = path.join(root, 'graph/canvas/dist'), manifestPath = path.join(root, 'workspace.json');
   fs.mkdirSync(build, { recursive: true }); fs.mkdirSync(path.join(root, 'web'));
   fs.writeFileSync(path.join(root, 'web/spatial-workspace-client.mjs'), 'export const existingClient = true;');
   fs.writeFileSync(manifestPath, '{}');
   const workspace = { graphRoot: path.join(root, 'graph'), sourceRevision: 'a'.repeat(40), buildRevision: 'a'.repeat(40), sourceDirty: true,
     manifestPath, workspaceManifestDigest: sha256('{}'), env: {} };
-  const assets = { 'observability.html': '<html><script src="./entry.js"></script></html>', 'entry.js': 'export const native = true;' };
-  for (const [name, bytes] of Object.entries(assets)) fs.writeFileSync(path.join(build, name), bytes);
+  const assets = { [GRAPH_ENTRY]: '<html><script src="./entry.js"></script></html>', 'entry.js': 'export const native = true;' };
+  for (const [name, bytes] of Object.entries(assets)) {
+    const target = path.join(build, name);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, bytes);
+  }
   const manifest = { schema: 'agentic-graph/observability-build/v1', sourceRevision: workspace.sourceRevision,
-    sourceDirty: true, workspaceManifestDigest: workspace.workspaceManifestDigest, entry: 'observability.html',
+    sourceDirty: true, workspaceManifestDigest: workspace.workspaceManifestDigest, entry: GRAPH_ENTRY,
     outputs: Object.entries(assets).map(([name, bytes]) => ({ path: name, bytes: Buffer.byteLength(bytes), sha256: sha256(bytes) })) };
-  const save = () => fs.writeFileSync(path.join(build, 'observability-build.json'), JSON.stringify(manifest));
+  const save = () => fs.writeFileSync(path.join(build, 'observability', 'observability-build.json'), JSON.stringify(manifest));
   save(); return { root, workspace, build, manifest, save };
 }
 
@@ -28,7 +32,7 @@ test('verified native bytes reuse output and preserve the existing spatial clien
   const f = fixture(t);
   assert.equal(consumeGraphObservabilityBuild(f.root, f.workspace, f.build).reused, false);
   const output = path.join(f.root, 'web/dist/index.html'), time = fs.statSync(output).mtimeMs;
-  assert.deepEqual(fs.readFileSync(output), fs.readFileSync(path.join(f.build, 'observability.html')));
+  assert.deepEqual(fs.readFileSync(output), fs.readFileSync(path.join(f.build, GRAPH_ENTRY)));
   assert.equal(consumeGraphObservabilityBuild(f.root, f.workspace, f.build).reused, true);
   assert.equal(fs.statSync(output).mtimeMs, time);
   assert.match(fs.readFileSync(path.join(f.root, 'web/dist/spatial-workspace-client.mjs'), 'utf8'), /existingClient/);

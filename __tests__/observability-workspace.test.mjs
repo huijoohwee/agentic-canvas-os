@@ -37,9 +37,10 @@ test('explicit Graph source uses only the native config and loopback strict port
   const workspace = resolveObservabilityWorkspace(root, { env: { AGENTIC_GRAPH_ROOT: graph, AGENTIC_WORKSPACE_ROOT: root },
     gitText: (_, args) => args[0] === 'rev-parse' ? 'a'.repeat(40) : ' M native.ts' });
   assert.equal(workspace.graphRoot, graph); assert.equal(workspace.sourceDirty, true); assert.equal(workspace.buildRevision, 'a'.repeat(40));
+  assert.equal(workspace.env.AGENTIC_CANVAS_OS_ROOT, root);
   assert.equal(workspace.env.VITE_OBSERVABILITY_WORKSPACE_MANIFEST, path.join(root, 'config/observability-workspace.json'));
   const plan = observabilityDevPlan(workspace, ['--port', '5199']);
-  assert.equal(plan.url, 'http://127.0.0.1:5199/observability.html');
+  assert.equal(plan.url, 'http://127.0.0.1:5199/observability/index.html');
   assert.deepEqual(plan.args, ['run', 'dev', '--', '--config', 'vite.observability.config.ts', '--host', '127.0.0.1', '--port', '5199', '--strictPort']);
   for (const args of [['--host=0.0.0.0'], ['--port=1'], ['--config=foreign.ts']]) assert.throws(() => observabilityDevPlan(workspace, args));
 });

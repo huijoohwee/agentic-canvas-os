@@ -18,7 +18,7 @@ const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 const ownerText = moduleName => readFile(fileURLToPath(import.meta.resolve(`agentic-os/agents/${moduleName}`)), "utf8");
 
 // Pinned identity-migration digests: later work must not broaden this narrow rename.
-const WRANGLER_SHA256 = "19c6e34f1d449f0530570123e148a4116de601bc944cdde7387f1b80f39f7729";
+const WRANGLER_SHA256 = "a17e00cdcef2a4b0c5249bd388751cf571c4378bb7a2a66326f0dae29f2d3862";
 const SKILL_EVOLUTION_SHA256 = "e2c17a57a15de7ad47699908739abfc4c8f4b42760cc280d937be6ad2d521a08";
 const PROPERTY_SEED = 20260817;
 const retiredNamespace = ["k", "now", "grph"].join("");
@@ -102,7 +102,7 @@ test("wrangler.jsonc pins the identity migration and private admission boundary"
   assert.equal(parsed.minify, true);
   assert.equal(parsed.durable_objects.bindings.length, 2);
   assert.equal(parsed.migrations.length, 2);
-  assert.equal(parsed.ratelimits.length, 2);
+  assert.equal(parsed.ratelimits.length, 3);
   assert.equal(parsed.assets ? 1 : 0, 1);
   assert.equal(parsed.env.dev.services.length, 1);
   assert.deepEqual(parsed.env.dev.services[0], {
@@ -114,6 +114,11 @@ test("wrangler.jsonc pins the identity migration and private admission boundary"
     "https://agentic-mcp-dev.huijoohwee.workers.dev/agentic-os/control-plane/mcp",
   );
   for (const config of [parsed, parsed.env.dev]) {
+    assert.deepEqual(config.ratelimits.find(({ name }) => name === "SOURCE_EVIDENCE_RATE_LIMITER")?.simple, {
+      limit: 60,
+      period: 60,
+    });
+    assert.equal(config.r2_buckets[0]?.binding, "AGENTIC_OS_SOURCE_EVIDENCE");
     assert.match(config.vars.AGENTIC_OS_ADMISSION_AUTHORITY_REF, /^__AGENTIC_OS_/u);
     assert.match(config.vars.AGENTIC_OS_ADMISSION_OPERATOR_INSTRUCTION_REF, /^__AGENTIC_OS_/u);
     assert.match(config.vars.AGENTIC_OS_ADMISSION_AUTHORITY_EVIDENCE, /^__AGENTIC_OS_/u);

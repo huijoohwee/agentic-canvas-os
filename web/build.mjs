@@ -8,12 +8,13 @@ import { GRAPH_CONFIG, GRAPH_ENTRY, resolveObservabilityWorkspace, safeRelativeP
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const MANIFEST = 'observability-build.json';
+const GRAPH_MANIFEST = path.join('observability', MANIFEST);
 const fail = message => { throw new Error('observability-build: ' + message); };
 const inside = (root, file) => file.startsWith(root + path.sep);
 
 export function consumeGraphObservabilityBuild(root, workspace, buildRoot) {
   buildRoot = fs.realpathSync(buildRoot);
-  const sourceManifest = path.join(buildRoot, MANIFEST);
+  const sourceManifest = path.join(buildRoot, GRAPH_MANIFEST);
   if (!inside(buildRoot, fs.realpathSync(sourceManifest))) fail('manifest symlink escapes output');
   const manifestBytes = fs.readFileSync(sourceManifest);
   if (manifestBytes.length > 65536) fail('manifest exceeds 64 KiB');
@@ -84,7 +85,7 @@ export async function buildWeb(root = ROOT, { env = process.env, resolveWorkspac
   if (after.sourceRevision !== workspace.sourceRevision || after.sourceDirty !== workspace.sourceDirty
     || after.buildRevision !== workspace.buildRevision
     || after.workspaceManifestDigest !== workspace.workspaceManifestDigest) fail('source changed during native build');
-  return consumeGraphObservabilityBuild(root, workspace, path.join(workspace.graphRoot, 'canvas/dist/observability'));
+  return consumeGraphObservabilityBuild(root, workspace, path.join(workspace.graphRoot, 'canvas/dist'));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

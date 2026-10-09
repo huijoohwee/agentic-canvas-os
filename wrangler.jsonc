@@ -5,7 +5,7 @@
   "minify": true,
   "workers_dev": false,
   "preview_urls": false,
-  "compatibility_date": "2026-07-05",
+  "compatibility_date": "2026-10-09",
   "compatibility_flags": ["nodejs_compat"],
   // The Free plan enforces its 10 ms CPU ceiling and rejects explicit CPU overrides.
   "ratelimits": [
@@ -18,18 +18,24 @@
       "name": "CANVAS_ROOM_RATE_LIMITER",
       "namespace_id": "41002",
       "simple": { "limit": 120, "period": 60 }
+    },
+    {
+      "name": "SOURCE_EVIDENCE_RATE_LIMITER",
+      "namespace_id": "41003",
+      "simple": { "limit": 60, "period": 60 }
     }
   ],
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 0.01,
+    "head_sampling_rate": 0.1,
     "logs": {
       "enabled": true,
-      "head_sampling_rate": 0.01,
-      "invocation_logs": false
+      "head_sampling_rate": 0.1,
+      "invocation_logs": true
     },
     "traces": {
-      "enabled": false
+      "enabled": true,
+      "head_sampling_rate": 0.1
     }
   },
   "assets": {
@@ -38,6 +44,7 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": [
       "/api/*",
+      "/agentic-os/api/*",
       "/ready",
       "/auth/session",
       "/run",
@@ -52,6 +59,9 @@
       "/agentic-os/internal/*"
     ]
   },
+  "r2_buckets": [
+    { "binding": "AGENTIC_OS_SOURCE_EVIDENCE", "bucket_name": "agentic-os-source-evidence" }
+  ],
   // One SQLite-backed room owner per room id and one atomic agent-state owner
   // per review or paused conversation identity.
   "durable_objects": {
@@ -94,18 +104,24 @@
           "name": "CANVAS_ROOM_RATE_LIMITER",
           "namespace_id": "41102",
           "simple": { "limit": 120, "period": 60 }
+        },
+        {
+          "name": "SOURCE_EVIDENCE_RATE_LIMITER",
+          "namespace_id": "41103",
+          "simple": { "limit": 60, "period": 60 }
         }
       ],
       "observability": {
         "enabled": true,
-        "head_sampling_rate": 0.01,
+        "head_sampling_rate": 0.1,
         "logs": {
           "enabled": true,
-          "head_sampling_rate": 0.01,
-          "invocation_logs": false
+          "head_sampling_rate": 0.1,
+          "invocation_logs": true
         },
         "traces": {
-          "enabled": false
+          "enabled": true,
+          "head_sampling_rate": 0.1
         }
       },
       "assets": {
@@ -114,6 +130,7 @@
         "not_found_handling": "single-page-application",
         "run_worker_first": [
           "/api/*",
+          "/agentic-os/api/*",
           "/ready",
           "/auth/session",
           "/run",
@@ -128,6 +145,9 @@
           "/agentic-os/internal/*"
         ]
       },
+      "r2_buckets": [
+        { "binding": "AGENTIC_OS_SOURCE_EVIDENCE", "bucket_name": "agentic-os-source-evidence-dev" }
+      ],
       "durable_objects": {
         "bindings": [
           { "name": "CANVAS_ROOM", "class_name": "CanvasRoom" },

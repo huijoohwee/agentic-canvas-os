@@ -2,7 +2,7 @@
 title: "Agentic Canvas OS Prompt Presets"
 graphId: "md:agentic-canvas-os-prompt-presets"
 doc_type: "Prompt Preset Catalog"
-date: "2026-07-18"
+date: "2026-10-09"
 lang: "en-US"
 schema: "agentic-os-prompt-preset-catalog/v1"
 frontmatter_contract: "required"
@@ -62,6 +62,20 @@ prompt_presets:
     prompt: |-
       /launch-copilot outline reference
       Help a solopreneur turn a costly, frequent customer pain point into a small MVP-to-GTM experiment using the selected repository as reference. State the target buyer, current workaround, willingness-to-pay hypothesis, measurable business value, smallest complete loop, acquisition test and success criteria. Ground PRD -> TAD -> ADR -> MVP -> GTM in the selected real nodes and explained edges; mark proposed work NEW. Keep one CID, RAO and SVO chain, five native document panels and a separate proposed-work overlay. Reuse existing owners and contracts; distinguish evidence from assumptions. Do not infer code ownership, payment readiness, model verification or production readiness from this reference. Keep publication behind exact-content review and approval.
+  - id: "software-forensics"
+    label: "Agentic Reverse Engineering"
+    slash_command: "/software-forensics-prompt-preset"
+    runtime_command: "/software.forensics"
+    description: "Trace one selected application from observed behavior through source indexing and registered native-binary metadata. Demo opens a static example with a link to agentic-reverse-engineering-demo.md; no provider call is made."
+    activation: "chat-agent"
+    invocation_modes: ["native-chat-response", "mcp-invocation"]
+    chat_route: "active native shared runtime"
+    mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
+    mcp_token: "/software.forensics"
+    prompt: |-
+      /software.forensics @application @working-directory @agent #reverse-engineering #vcc
+
+      Build a bounded evidence dossier for the explicitly selected application and one explicitly selected repository root. Keep read-only UI observations, exact-hash source facts, source-graph relationships, registered binary-parser metadata, and inference separate. Record route, visible state, observation time, repository revision and dirty state, source hashes, graph identity and digest, parser identities, completeness, and diagnostics. Use only available host observation, bounded local source indexing, local graph, and agent capabilities; do not fetch a sibling repository, execute target code, load or emulate binaries, or infer runtime behavior from static metadata. Mark unsupported files and missing evidence as unknown, protect secrets and personal data, make no model/provider call while selecting or opening Demo, and link findings to [agentic-reverse-engineering-demo.md](workspace:/docs/workspace-seeds/agentic-reverse-engineering-demo.md). Do not claim comprehensive coverage when any selected layer is unavailable.
   - id: "video-agent"
     label: "Video Agent"
     slash_command: "/video-prompt-preset"
@@ -249,6 +263,7 @@ Every `slash_command` is a catalog-owned selection alias matching `/*-prompt-pre
 | Preset | Preset invocation | Runtime route | Load behavior | Send behavior |
 | --- | --- | --- | --- | --- |
 | Physics Playground | `/xr-physics-prompt-preset` | `/xr.physics` | Load the native controller invocation; Home previews the existing source-authored XR world. Demo opens the corresponding demo document and example Chat thread. | Native physics execution remains owned by the existing XR controller runtime. |
+| Agentic Reverse Engineering | `/software-forensics-prompt-preset` | `/software.forensics` | Load the host-neutral evidence workflow; Demo opens a local example with a lowercase `agentic-reverse-engineering-demo.md` link, without a provider call. | Use available observation, exact-hash source indexing, local source-graph, and registered binary-metadata owners. Unsupported layers remain explicit gaps; target code is never executed by this preset. |
 | Create editable asset | `/asset.create` | `/asset.create @text #procedural-asset` | Load the native text prompt or insert its canonical tokens into the selected Card without executing. | Validate a bounded typed recipe, persist editable controls and last-valid state, and export GLB with recipe/source companions through the existing Graph asset owner. |
 | Video Agent | `/video-prompt-preset` | `/video-agent` | Load the centralized prompt after validating the authored video Canvas and script source. | Activate the committed Canvas and hand it to the shared Run all owner. |
 | Image to Three.js | `/image.to-threejs` | `/image.to-threejs @image-to-threejs #image-to-threejs` | Load the native prompt in Chat or insert its three invocation tokens into the selected Widget Card. | Resolve only an attached or selected supported image through the native zero-cost conversion owner. |

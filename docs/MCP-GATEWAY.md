@@ -2,7 +2,7 @@
 title: "agentic-graph Agentic Canvas OS MCP Gateway"
 graphId: "md:agentic-graph-agentic-canvas-os-mcp-gateway"
 doc_type: "MCP Gateway Contract"
-date: "2026-09-05"
+date: "2026-10-09"
 lang: "en-US"
 schema: "agentic-canvas-os-mcp-gateway/v1"
 frontmatter_contract: "required"
@@ -254,7 +254,7 @@ client boundary.
 
 | Exact tool | Behavior | Mutation boundary |
 |---|---|---|
-| `agentic-graph.agent_graph.ingest` | Compile registered code, documents, SQL, configs, PDFs, and optional inert grammar artifacts into one deterministic explained graph. | Read the explicit workspace; return opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection. |
+| `agentic-graph.agent_graph.ingest` | Compile registered code, documents, SQL, configs, PDFs, optional inert grammar artifacts, and recognized native-binary metadata into one deterministic explained graph. | Read the explicit workspace; return opaque `graphId`, exact `snapshotDigest`, completeness, counts, and a bounded read-only projection. Native files are parsed as data; unsupported signatures or structures remain diagnostic evidence, and files are never executed. |
 | `agentic-graph.agent_graph.parser_generate` | Compile one inert bounded parser-registry specification, including optional finite declarative grammar data, into one deterministic canonical v2 registry. | Validate adapter fidelity and grammar bounds, reject executable or ambiguous input, and return the inert registry plus its exact digest without code, artifact paths, ingest, model use, or network use. |
 | `agentic-graph.agent_graph.query` | Run bounded lexical, neighborhood, impact, path, or summary operations against `graphId` plus `expectedSnapshotDigest`. | Read-only; reject a stale digest and perform no vector or remote lookup. |
 | `agentic-graph.agent_graph.explain_edge` | Return one stored relationship and its exact parser/source evidence from `graphId` plus `expectedSnapshotDigest`. | Read-only; no workspace scan, inference, model, network, or mutation. |

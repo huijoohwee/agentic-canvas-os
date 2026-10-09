@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 
 export const WORKSPACE_SCHEMA = 'agentic-canvas-os/observability-workspace/v1';
-export const GRAPH_ENTRY = 'observability.html';
+export const GRAPH_ENTRY = 'observability/index.html';
 export const GRAPH_CONFIG = 'vite.observability.config.ts';
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const fail = message => { throw new Error('observability-workspace: ' + message); };
@@ -59,7 +59,7 @@ export function resolveObservabilityWorkspace(root, { env = process.env, gitText
   if (!/^[a-f0-9]{40}$/.test(sourceRevision)) fail('invalid Graph source revision');
   const sourceDirty = Boolean(gitText(graphRoot, ['status', '--porcelain', '--untracked-files=normal']));
   return { root, manifest, manifestPath, workspaceManifestDigest: sha256(bytes), workspaceRoot, graphRoot,
-    sourceRevision, sourceDirty, buildRevision: provider?.buildRevision ?? null, env: { ...env, AGENTIC_WORKSPACE_ROOT: workspaceRoot,
+    sourceRevision, sourceDirty, buildRevision: provider?.buildRevision ?? null, env: { ...env, AGENTIC_WORKSPACE_ROOT: workspaceRoot, AGENTIC_CANVAS_OS_ROOT: root,
       VITE_OBSERVABILITY_WORKSPACE_MANIFEST: manifestPath } };
 }
 

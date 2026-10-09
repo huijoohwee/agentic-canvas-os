@@ -2,5 +2,6 @@
 export {
   createAgentResourceAdmission,
   createAgentToolkitAdmissionController,
-  mutateToolkitRecord
+  mutateToolkitRecord,
+  retireSettledToolkitRecords
 } from 'agentic-os/agents/toolkit-admission';

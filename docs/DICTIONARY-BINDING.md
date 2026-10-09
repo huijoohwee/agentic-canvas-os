@@ -2,7 +2,7 @@
 title: "Agentic OS Binding Dictionary"
 graphId: "md:agentic-os-dictionary-binding"
 doc_type: "Invocation Dictionary"
-date: "2026-09-05"
+date: "2026-10-09"
 lang: "en-US"
 schema: "agentic-os-dictionary-binding/v1"
 frontmatter_contract: "required"
@@ -146,6 +146,7 @@ dictionary_entries:
   - "@task-row"
   - "@implementation-run"
   - "@application-manifest"
+  - "@application"
   - "@component-catalog"
   - "@integration-profile"
   - "@agentic-graph"
@@ -311,6 +312,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `@task-row` | One validated task row in `kanban.md`. | Shared table row parser and operator-approved task schema. | Requires stable id, title, owner profile, status, priority, acceptance, evidence, and next action. |
 | `@implementation-run` | Immutable identity and revision for one externally owned implementation-run receipt. | The caller-selected receipt source; ACOS consumes it only through the read-only `/adlc.observe` projection. | Carries no worktree, branch, lease, claim, review, integration, release, cleanup, or deployment authority. |
 | `@application-manifest` | Bounded source-backed application slots, dependency edges, entrypoints, outputs, bounds, and exact revisions and digests. | Authored application source selected by the operator or project owner. | No latest tags, ranges, fallbacks, callbacks, packages, commands, endpoints, headers, environment maps, credentials, or embedded code. |
+| `@application` | One user-selected application surface, route, binary, or runtime target to inspect. | Explicit user selection or a previously authorized local application handle. | Read-only observation by default; no implicit navigation into authenticated state, remote acquisition, target execution, or mutation. |
 | `@component-catalog` | Immutable exact component, source, interface, schema, capability, runtime-owner, risk, and readiness records. | agentic-graph local component catalog owner. | Same-revision drift, missing evidence, disabled records, and implicit fallback or upgrade block planning. |
 | `@integration-profile` | Opaque host-approved integration id, exact profile revision, and exact declared capability revision. | Existing integration registry, gateway, or transport owner. | Executable, arguments, transport, endpoint, headers, secrets, credentials, sessions, and provider payloads remain owner-private. |
 | `@agentic-graph` | One exact digest-fenced local graph snapshot view plus its source, parser, diagnostic, and artifact manifest. | agentic-graph artifact owner under an explicitly configured local boundary. | The binding is not a database credential, global index, vector store, approval, or executable graph; replacement makes prior expected digests stale, source files stay authored SSOT, and query or explanation cannot select or mutate another snapshot. |
@@ -409,6 +411,7 @@ binding:
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Persist the session's pending decisions atomically and dispose it only after a terminal success. |
 | `/release.complete #runtime-ready #multi-agent-collaboration @operator @source.frontmatter @runtime-proof` | Bind fresh human authorization to the exact product artifact, deployment target, verification result, and rollback evidence without granting repository authority. |
 | `/application.compose #application-composition @application-manifest @component-catalog @integration-profile @runtime-proof` | Compile exact host-owned interfaces into one immutable plan and delegate bounded ready steps to their existing owners. |
+| `/software.forensics #reverse-engineering @application @working-directory @agent @runtime-proof` | Bind one explicitly selected application and local repository to a source-grounded evidence dossier; host agent roles remain capability-aware and read-only by default. |
 | `/agentic.graph.ingest #agentic-graph #mcp #runtime-ready @working-directory @agentic-graph @operator @runtime-proof` | Bind one explicit workspace selection and artifact view to agentic-graph deterministic ingestion. |
 | `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof` | Bind one exact inert specification to agentic-graph parser generation and its digest-fenced result identity. |
 | `/agentic.graph.query #agentic-graph #mcp #vcc @agentic-graph @runtime-proof` | Bind a query to one opaque agentic-graph graph id and expected current snapshot digest. |
@@ -480,6 +483,7 @@ binding:
 | Token | Facts source |
 |---|---|
 | `@application-manifest` | `FACTS.md` direct-resolution entry for bounded version-locked application source. |
+| `@application` | `../../skills/software-forensics/SKILL.md` source contract for explicit application scope and read-only observation. |
 | `@agent-team` | `FACTS.md` direct-resolution entry for one exact source-backed Agent Team binding. |
 | `@component-catalog` | `FACTS.md` direct-resolution entry for immutable local component and interface records. |
 | `@integration-profile` | `FACTS.md` direct-resolution entry for opaque host-owned integration capability bindings. |

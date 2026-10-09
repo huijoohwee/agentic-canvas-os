@@ -2,7 +2,7 @@
 title: "Agentic OS Command Dictionary"
 graphId: "md:agentic-os-dictionary-command"
 doc_type: "Invocation Dictionary"
-date: "2026-09-05"
+date: "2026-10-09"
 lang: "en-US"
 schema: "agentic-os-dictionary-command/v1"
 frontmatter_contract: "required"
@@ -11,8 +11,8 @@ owner: "agentic-os"
 source_reference_root: "agentic-canvas-os/docs"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "307e42b2815049dc9e79b791c41fde0862d26760cbfdd002780beec0ed070534"
-catalog_entry_count: 411
+catalog_digest: "e38acf245e2be304048e459b0f64b9eb510262d458b32d350e4ce18d6cbd792e"
+catalog_entry_count: 416
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "src/invocation.mjs#validateDictionaryCatalogContract"
 source_docs:
@@ -110,6 +110,7 @@ dictionary_entries:
   - "/agentic.graph.parser.generate"
   - "/agentic.graph.query"
   - "/agentic.graph.explain"
+  - "/software.forensics"
   - "/orchestration.graph"
   - "/agent.team"
   - "/agent.swarm"
@@ -277,6 +278,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `/agentic.graph.parser.generate` | Compile one source-backed inert parser-registry specification into a deterministic canonical v2 registry of fixed adapters or bounded declarative grammar data. | exactly `@parser-specification` and `@runtime-proof` | exactly `#agentic-graph`, `#parser-generation`, and `#mcp` | `agentic-graph.agent_graph.parser_generate` validates bounded descriptors and finite grammar data, then returns one canonical registry with its exact digest; Agentic Canvas OS adds no parser runtime, generated code, adapter, artifact store, model, network path, or implicit ingest. |
 | `/agentic.graph.query` | Query one exact local knowledge-graph snapshot with bounded deterministic lexical search, path, neighborhood, impact, or summary operations. | `@agentic-graph`, `@runtime-proof` | `#agentic-graph`, `#mcp`, `#vcc` | `agentic-graph.agent_graph.query` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `mode`, then returns ordered evidence from that exact snapshot; stale identity and vector lookup fail closed. |
 | `/agentic.graph.explain` | Explain one exact relationship from one digest-bound local knowledge-graph snapshot. | `@agentic-graph`, `@runtime-proof` | `#agentic-graph`, `#mcp`, `#vcc` | `agentic-graph.agent_graph.explain_edge` requires opaque `graphId`, exact `expectedSnapshotDigest`, and `edgeId`, then returns stored endpoints, relationship kind, deterministic explanation, source evidence, parser identity, and extraction rule without reparsing or inference. |
+| `/software.forensics` | Build a bounded evidence dossier across read-only application observation, exact-hash source context, local source-graph relationships, and registered native-binary metadata. | `@application`, `@working-directory`, `@agent`, `@runtime-proof` | `#reverse-engineering`, `#vcc` | Use only host-local observation, bounded source indexing, and registered graph or binary adapters. Separate observations, source facts, parser output, inference, and unknowns; preserve exact identities and diagnostics. Target code is never executed; unavailable layers remain explicit gaps. |
 | `/orchestration.graph` | Declare or validate a stateful agent orchestration graph without importing an external graph runtime. | `@orchestration-graph`, `@state-store`, `@runtime-proof` | `#orchestration-graph`, `#stateful-agent`, `#vcc` | Graph contract names state schema, node ids, edge rules, compile checks, stop conditions, and proof. |
 | `/agent.team` | Plan, start, list, or control one exact source-backed role-playing agent team through the agentic-graph local stdio MCP owner. | exactly `@agent-team` | exactly `#role-based-agent-team` | `/agent.team #role-based-agent-team @agent-team` resolves exact Agent Definition and Agent Orchestration revisions, preserves delegate or handoff ownership, enforces bounded durable state and human review, and returns typed proof without broadening Agent Swarm. |
 | `/agent.swarm` | Horizontally scale one goal through runtime-generated independent tasks without caller-authored roles or workflow topology. | `@agent`, `@swarm-run`, `@runtime-proof` | `#agent-swarm`, `#runtime-ready`, `#token-economics` | Resolved exact agent, session-owned durable claims, bounded observed overlap, recovery, verified receipts, and base-agent-only synthesis pass focused proof. |
@@ -427,6 +429,7 @@ command:
 | `/agentic.graph.parser.generate` | `FACTS.md` direct-resolution entry for deterministic source-backed parser generation. |
 | `/agentic.graph.query` | `FACTS.md` direct-resolution entry for deterministic local graph queries. |
 | `/agentic.graph.explain` | `FACTS.md` direct-resolution entry for exact stored edge evidence and explanation. |
+| `/software.forensics` | `../../skills/software-forensics/SKILL.md` source contract for the bounded evidence workflow. |
 | `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
 | `/adlc.observe` | `FACTS.md` direct-resolution entry for deterministic read-only ADLC ledger projection through the existing Canvas. |
 | `/agent.team` | `FACTS.md` direct-resolution entry for exact role-based Agent Team planning and durable agentic-graph MCP control. |

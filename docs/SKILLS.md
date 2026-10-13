@@ -2,7 +2,7 @@
 title: "agentic-graph Agentic Canvas OS Skills"
 graphId: "md:agentic-graph-agentic-canvas-os-skills"
 doc_type: "Skill Contract Catalog"
-date: "2026-07-31"
+date: "2026-10-13"
 lang: "en-US"
 schema: "agentic-canvas-os-skills/v1"
 frontmatter_contract: "required"
@@ -54,6 +54,7 @@ skill_contracts:
   - "image.to-threejs"
   - "image.to-glb"
   - "asset.create"
+  - "cinematic.production"
   - "experience.capture"
   - "memory.write"
   - "memory.compact"
@@ -152,6 +153,7 @@ The three dictionaries own invocation tokens: `DICTIONARY-COMMAND.md`, `DICTIONA
 | Orchestration | `moa.run`, `experience.capture`, `orchestration.graph`, `agent.team`, `agent.swarm`, `agent.toolkit`, `state.checkpoint`, `human.review`, `stream.trace`, `superagent.run`, `kanban.collaborate` | `AGENT-TEAM.md`, `AGENT-SWARM.md`, `AGENT-TOOLKIT.md`, `HARNESS-CONTRACTS.md`, `huijoohwee/.workspace/.todo/docs/kanban.md`, and runtime-specific proof |
 | Agentic graph | `agentic.graph.parser.generate`, `agentic.graph.ingest`, `agentic.graph.query`, `agentic.graph.explain` | `AGENTIC-GRAPH.md`, `MCP-GATEWAY.md`, and the agentic-graph executable owner |
 | Canvas and domain capabilities | `launch.copilot`, `flow.computing`, `image.to-threejs`, `image.to-glb`, `asset.create`, `voice.studio`, `sme.risk.profile`, `crawler.run`, `url.ingest`, `sandbox.policy.author`, `sandbox.gateway.troubleshoot` | Specialized documents and the named agentic-graph runtime owners |
+| Cinematic production | `cinematic.production` | `CINEMATIC-PRODUCTION-SKILL.md`, the invocation dictionaries, and the existing agentic-graph video, Media, Timeline, Camera, and XR owners |
 
 The `launch.copilot` skill resolves `/launch-copilot` to Graph's existing Chat dispatcher at `/81rv10/`. Its shared `launch-copilot` preset seeds a reference-only outline without executing or calling a model. Import a complete source with Graph Import URL/GitHub import and select its nodes, cluster or edges before Run. Use `outline reference <requirement>` for an editable outline; change to `owned` only for a source you own, or explicitly use `draft` with the authorized Graph model connection. Follow-up `probe`, `refine`, `reopen`, `export`, `review` and `status` take the returned CID; `approve` additionally requires the exact review token. `connect <code>` and `disconnect` reuse the paired host. Arguments and runtime bounds remain owned by [Graph's Launch Copilot guide](https://github.com/huijoohwee/agentic-graph/blob/d003fc2663a5d842c9865a1e6fdceb5063e2368c/docs/launch-copilot.md). MCP dictionary resolution supplies metadata only. Canvas owns the ingest/parse validators; Graph owns the native panels and source-bound Probe-Tree overlay; neither preset selection nor dictionary discovery opens a PR.
 
@@ -164,6 +166,7 @@ The `launch.copilot` skill resolves `/launch-copilot` to Graph's existing Chat d
 | Image to Three.js | `IMAGE-TO-THREEJS-SKILL.md` |
 | Image to GLB | `IMAGE-TO-GLB-SKILL.md` |
 | Editable procedural assets | `PROCEDURAL-ASSET-SKILL.md` |
+| Cinematic production | `CINEMATIC-PRODUCTION-SKILL.md` |
 | AI Voice Studio | `VOICE-STUDIO.md` |
 | Sandbox policy | `SANDBOX-RUNTIME.md` |
 | Agent Team | `AGENT-TEAM.md` |
@@ -184,7 +187,7 @@ agentic-graph Agent Definition registry and its `/collaboration-manager-agent`,
 `/evidence-scout-agent`, and `/risk-reviewer-agent` routes. The other domain
 variants resolve through `/investment-research-agent`, `/sme-care-agent`,
 `/video-agent`, and `/crawler-agent`; `agent.orchestrator` resolves role-based team requests through `/agent.team`.
-A variant does not create a wildcard command or a second execution registry.
+A variant does not create a wildcard command or a second execution registry. `cinematic.production` is a selected-skill contract for the existing `agent.video` variant; it preserves `/video-agent` as the only cinematic command and delegates its `@` bindings and `#` semantics to the dictionaries.
 The `url.ingest` skill resolves only through the exact four-token invocation `/ingest-url @url:https://example.com @reference-policy #canvas`; `agentic-graph.agentic_canvas_os.docs.invoke` supplies read-only discovery metadata and guarded browser WebMCP tool `agentic-graph.control_local_import_url` remains the sole Import URL executor.
 The `agentic.graph.parser.generate` skill resolves only through `/agentic.graph.parser.generate #agentic-graph #parser-generation #mcp @parser-specification @runtime-proof`; dictionary resolution remains read-only, while the exact local agentic-graph MCP tool owns deterministic compilation and returns digest-fenced identity without generated code or implicit ingest.
 The `workspace.artifact.lifecycle` skill resolves only through `/workspace.artifact.manage #workspace-artifact-lifecycle @artifact-operation @workspace-entry @artifact-policy @runtime-proof`; add `@operator` only for apply. The skill delegates local execution to the exact plan/apply MCP tools and preserves `/workspace.launch`, `/source.ingest`, and `/file.sync` as the UI, URL-ingest, and provider-sync owners.

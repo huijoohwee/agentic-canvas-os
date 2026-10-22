@@ -49,7 +49,8 @@ test("the WebMCP surface is a first-class register entry in both dictionaries", 
   assert.equal(binding.kind, "binding");
   // The recorded W3C API revision must be named so a spec rename fails a check
   // instead of leaving the declared browser tools describing an absent API.
-  assert.match(binding.summary, /navigator\.modelContext\.registerTool/);
+  assert.match(binding.summary,
+    /feature-detect `document\.modelContext`.*else legacy `navigator\.modelContext\.registerTool`/);
   assert.match(binding.summary, /getTools\(\{ fromOrigins \}\)/);
   assert.match(binding.summary, /origin-trial/);
 });

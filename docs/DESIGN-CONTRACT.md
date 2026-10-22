@@ -47,7 +47,7 @@ node scripts/design-contract.mjs /design.check '#read-only' '@input:record.json'
 An admitted host supplies the `agentic-os/design` module and a reviewed `expectedPolicyDigest`.
 The tool `agentic-canvas-os.design_check` receives the same bounded bundle and calls the shared
 checker. The host pin cannot be overridden by tool input. Register once on the host's existing
-`navigator.modelContext`; dispose the returned registration by aborting its registration signal when its host unmounts. Never clear
+`document.modelContext` (legacy `navigator.modelContext` fallback); dispose the returned registration by aborting its registration signal when its host unmounts. Never clear
 another owner's tools. Unsupported WebMCP surfaces fail explicitly; CLI remains the local option.
 
 Flows: author creates source-bound record -> exact native invocation -> shared verifier -> findings ->

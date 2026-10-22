@@ -114,6 +114,27 @@ function response(body, sessionId = "") {
   };
 }
 
+// Mirrors the upstream agentic-os test verifier: trusted zero-cost evidence scoped to each call.
+export async function verifyTestZeroCost(scope) {
+  return {
+    schema: "agentic-os/verified-effect-cost-evidence/v1",
+    status: "verified-zero-cost",
+    mode: "free-fail-closed",
+    provider: scope.provider,
+    scopeDigest: scope.scopeDigest,
+    billingPlan: "free",
+    providerHardCapUsd: null,
+    quotaExhaustion: "deny",
+    paidPlanActive: false,
+    addOnsActive: false,
+    overagesEnabled: false,
+    autoUpgradeEnabled: false,
+    evidenceDigest: "c".repeat(64),
+    verifiedAt: scope.observedAt,
+    expiresAt: new Date(Date.parse(scope.observedAt) + 60_000).toISOString(),
+  };
+}
+
 function createRecordingClient() {
   const requests = [];
   const parserDescriptors = [{
@@ -129,6 +150,7 @@ function createRecordingClient() {
   const registryDigest = parserDigest(parserDescriptors);
   const client = createAgenticGraphMcpClient({
     endpoint: ENDPOINT,
+    verifyProviderCostEvidence: verifyTestZeroCost,
     fetchImpl: async (request) => {
       requests.push(request);
       if (request.body.method === "initialize") {

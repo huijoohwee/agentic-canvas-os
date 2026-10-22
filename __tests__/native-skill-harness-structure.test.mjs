@@ -13,6 +13,7 @@ import {
   createOperatorInstructionResolver,
   createScriptedCandidateAdapter,
 } from "./lib/native-skill-harness-fakes.mjs";
+import { verifyTestZeroCost } from "./fixtures/agentic-graph-client.mjs";
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ownerText = moduleName => readFile(fileURLToPath(import.meta.resolve(`agentic-os/agents/${moduleName}`)), "utf8");
@@ -60,6 +61,8 @@ test("the proposer runtime surface is exactly propose and stats", () => {
   const runtime = createSkillProposerRuntime({
     draftStore: createInMemoryDraftStore(),
     proposeCandidate: createScriptedCandidateAdapter(["valid"]).proposeCandidate,
+    providerId: "test-provider",
+    verifyProviderCostEvidence: verifyTestZeroCost,
   });
   assert.deepEqual(Object.keys(runtime).sort(), ["propose", "stats"]);
   assert.equal(Object.isFrozen(runtime), true);
@@ -183,6 +186,8 @@ test("Property 14: Evaluator independence as a structural invariant", async () =
         const proposerRuntime = createSkillProposerRuntime({
           draftStore: createInMemoryDraftStore(),
           proposeCandidate: createScriptedCandidateAdapter(["valid"]).proposeCandidate,
+          providerId: "test-provider",
+          verifyProviderCostEvidence: verifyTestZeroCost,
         });
         assert.deepEqual(Object.keys(proposerRuntime).sort(), ["propose", "stats"]);
 

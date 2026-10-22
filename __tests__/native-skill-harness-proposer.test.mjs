@@ -27,6 +27,23 @@ import {
 import { createAgentDefinitionRegistry } from "../agent-api/src/agent-definitions.js";
 
 const PROPERTY_SEED = 20260817;
+const testCostVerifier = async (scope) => ({
+  schema: "agentic-os/verified-effect-cost-evidence/v1",
+  status: "verified-zero-cost",
+  provider: scope.provider,
+  mode: "provider-hard-cap",
+  billingPlan: "free",
+  providerHardCapUsd: 0,
+  quotaExhaustion: "not-applicable",
+  paidPlanActive: false,
+  addOnsActive: false,
+  overagesEnabled: false,
+  autoUpgradeEnabled: false,
+  evidenceDigest: "b".repeat(64),
+  scopeDigest: scope.scopeDigest,
+  verifiedAt: scope.observedAt,
+  expiresAt: new Date(Date.parse(scope.observedAt) + 60_000).toISOString(),
+});
 
 function createRegistry() {
   return createAgentDefinitionRegistry({
@@ -51,6 +68,8 @@ function createHarness({ markers = ["valid"], costThrows = false, gapSignal = cr
   const runtime = createSkillProposerRuntime({
     draftStore,
     proposeCandidate: adapter.proposeCandidate,
+    providerId: "test-provider",
+    verifyProviderCostEvidence: testCostVerifier,
     emitCostLog: costObserver.emit,
     emitTrace: traceObserver.emit,
     now: () => clock,
@@ -135,6 +154,18 @@ test("a configuration above the declared token ceiling is rejected at constructi
     () => createSkillProposerRuntime({ maxCompletionTokens: 401 }),
     (error) => error instanceof SkillProposalBlock,
   );
+});
+
+test("requires verified zero-cost evidence before calling the injected model adapter", async () => {
+  let calls = 0;
+  const store = createInMemoryDraftStore();
+  assert.throws(() => createSkillProposerRuntime({
+    draftStore: store,
+    proposeCandidate: async () => { calls += 1; return {}; },
+  }), (error) => error instanceof SkillProposalBlock
+    && error.reasonCode === "provider_cost_evidence_verifier_missing");
+  assert.equal(calls, 0);
+  assert.equal(store.calls.length, 0);
 });
 
 test("a valid candidate writes exactly one proposed draft and returns exactly three fields", async () => {
@@ -260,6 +291,8 @@ test("a malformed candidate is retried within the bound and the bound stop is ob
   const boundedRuntime = createSkillProposerRuntime({
     draftStore,
     proposeCandidate: adapter.proposeCandidate,
+    providerId: "test-provider",
+    verifyProviderCostEvidence: testCostVerifier,
     emitTrace: traceObserver.emit,
     circuitBreakerConsecutiveNoCandidate: 6,
   });
@@ -287,9 +320,10 @@ test("the p95 cost decision computes the percentile and breach boolean", () => {
   assert.equal(decision.p95, 0.019);
   assert.equal(decision.breach, true);
 
-  const cheap = Array.from({ length: 20 }, () => normalizeCostEntry({ estimated_cost_usd: 0.0001 }));
+  const cheap = Array.from({ length: 20 }, () => normalizeCostEntry({ estimated_cost_usd: 0 }));
   assert.equal(p95CostDecision(cheap).breach, false);
   assert.deepEqual(p95CostDecision([]), { sampleCount: 0, p95: null, breach: false });
+  assert.throws(() => p95CostDecision(cheap, 0.01), /USD 0/u);
 });
 
 test("gapSignalFromToolSearchDenial maps a tool-search denial into a Gap_Signal", () => {
@@ -398,6 +432,8 @@ test("Property 7: Result and cost log field exactness", async () => {
         const runtime = createSkillProposerRuntime({
           draftStore,
           emitCostLog: costObserver.emit,
+          providerId: "test-provider",
+          verifyProviderCostEvidence: testCostVerifier,
           proposeCandidate: async () => ({
             agent_definition: createValidAgentDefinition({ id: `variant-${usageVariant}`, revision: `variant-${usageVariant}-v1` }),
             rationale: `usage-${usageVariant}`,

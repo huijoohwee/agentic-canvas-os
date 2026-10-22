@@ -27,6 +27,23 @@ import {
 
 const OPERATOR_REF = "operator-instruction/promote-gap-draft/2026-08-17";
 const PROPERTY_SEED = 20260817;
+const testCostVerifier = async (scope) => ({
+  schema: "agentic-os/verified-effect-cost-evidence/v1",
+  status: "verified-zero-cost",
+  provider: scope.provider,
+  mode: "provider-hard-cap",
+  billingPlan: "free",
+  providerHardCapUsd: 0,
+  quotaExhaustion: "not-applicable",
+  paidPlanActive: false,
+  addOnsActive: false,
+  overagesEnabled: false,
+  autoUpgradeEnabled: false,
+  evidenceDigest: "b".repeat(64),
+  scopeDigest: scope.scopeDigest,
+  verifiedAt: scope.observedAt,
+  expiresAt: new Date(Date.parse(scope.observedAt) + 60_000).toISOString(),
+});
 
 function createRegistry() {
   return createAgentDefinitionRegistry({
@@ -63,6 +80,8 @@ async function seedDraftFromProposer(draftStore) {
   const proposer = createSkillProposerRuntime({
     draftStore,
     proposeCandidate: adapter.proposeCandidate,
+    providerId: "test-provider",
+    verifyProviderCostEvidence: testCostVerifier,
     now: () => clock,
   });
   const result = await proposer.propose(createValidGapSignal());
@@ -403,6 +422,8 @@ test("Property 12: Promotion is the sole proposed-to-active transition", async (
             const proposer = createSkillProposerRuntime({
               draftStore,
               proposeCandidate: adapter.proposeCandidate,
+              providerId: "test-provider",
+              verifyProviderCostEvidence: testCostVerifier,
             });
             await proposer.propose(createValidGapSignal({
               signal_id: `gap-${index}`,

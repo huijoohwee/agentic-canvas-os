@@ -72,6 +72,9 @@ dictionary_entries:
   - "@cost-log"
   - "@video-generation-demo-script"
   - "@provider.byteplus"
+  - "@model"
+  - "@artifact"
+  - "@asset"
   - "@provider.openai"
   - "@text"
   - "@image"
@@ -238,6 +241,9 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `@cost-log` | Token, cache, and estimated cost ledger. | Harness observer or runtime result. | Must report exact zero for model-free views. |
 | `@video-generation-demo-script` | Authored source-script binding for the default video-agent preset. | The preset frontmatter plus its canonical workspace Markdown reference. | Source context only; it cannot contain generated artifact identities, credentials, provider job ids, or fabricated media URLs. |
 | `@provider.byteplus` | Select the existing BytePlus ModelArk generation route. | Shared provider settings and generation-runtime owner. | Selection carries no credential and fails before spend when endpoint, model, entitlement, or credential is unavailable. |
+| `@model` | Vendor-neutral language-model selection by capability, context and cost class. | Shared provider settings; concrete routes stay `@provider.*`. | Names no vendor and carries no credential; resolves to one configured `@provider.*` route or fails before spend. |
+| `@artifact` | One ADLC artifact addressed by continuity id and family tag. | Owning guideline plus `adlc-artifact-continuity.md`. | Exactly one owner per artifact; updates are in place, never a parallel copy. |
+| `@asset` | One brand, design or media asset addressed by content digest. | Owning design or asset runtime. | Digest-pinned and license-scoped; no inline secret, renderer or storage authority. |
 | `@provider.openai` | Select the existing OpenAI generation route. | Shared provider settings and generation-runtime owner. | Selection carries no credential and fails before spend when endpoint, model, entitlement, or credential is unavailable. |
 | `@text` | Request a structured text artifact. | Shared text-generation and workspace-artifact owners. | The video preset requires Character, Scene, Dialogue, Visual asset, Audio, Timing, Metadata, and Prompt sheets; empty or malformed output fails terminally. |
 | `@image` | Request source-consistent image artifacts. | Shared image-generation, persistence, Media, and Canvas projection owners. | Only provider-returned and read-back-verified image identities may project; no fabricated or localhost-only URL is accepted as durable output. |

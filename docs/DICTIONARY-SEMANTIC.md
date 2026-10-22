@@ -129,6 +129,22 @@ dictionary_entries:
   - "#computing-flow"
   - "#learning-loop"
   - "#validated-learning"
+  - "#startup"
+  - "#pitch-deck"
+  - "#business-plan"
+  - "#financial-model"
+  - "#prd"
+  - "#tad"
+  - "#adr"
+  - "#mvp"
+  - "#gtm"
+  - "#brand"
+  - "#design"
+  - "#ui"
+  - "#ux"
+  - "#marketplace"
+  - "#llm"
+  - "#adlc-artifact"
   - "#lean-sprint"
   - "#persistent-memory"
   - "#user-profile"
@@ -307,6 +323,22 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `#computing-flow` | Agentic OS/frontmatter DAG execution contract. | A document or chat request generates, validates, or runs a computing-flow. | `agentic-os-computing-flow/v1` frontmatter owns topology, typed inputs, explicit handles, bounded execution, and validation proof. |
 | `#learning-loop` | Closed learning cycle from experience capture to reviewed persistence. | A workflow turns run evidence, failures, or operator corrections into reusable memory or skill proposals. | Source evidence, applicability, expiry risk, bounds, approval state, and no-copy statement are present. |
 | `#validated-learning` | Customer and market learning loop: falsifiable hypothesis, pre-registered experiment, measured result and pivot-or-persevere decision. | Work tests a pain, payer, price, channel or growth hypothesis, or records a pivot, persevere or stop decision. | Hypothesis and experiment IDs, threshold set before observation, raw evidence location and decision record resolve in the owning plan; agent memory (`#learning-loop`) and Python lessons (`#learning`) are distinct. |
+| `#startup` | Venture-stage scope: problem, payer, model and validated-learning state of one startup. | Work frames or reprioritizes a venture before artifact authoring. | Owner: `huijoohwee.github.io/guidelines/lean-startup-guidelines.md`; claims compose with `#validated-learning` evidence. |
+| `#pitch-deck` | Investor or partner narrative artifact. | Work authors, reviews or derives slides from venture artifacts. | Owner: `huijoohwee.github.io/guidelines/pitch-deck-guidelines.md`; every figure cites its `#financial-model` or `#business-plan` source. |
+| `#business-plan` | Operating and go-to-market plan artifact. | Work authors or reconciles market, operations, team or milestone plans. | Owner: `huijoohwee.github.io/guidelines/business-plan-guidelines.md`; no figure restates the model without a source link. |
+| `#financial-model` | Revenue, cost, unit-economics and runway model artifact. | Work changes assumptions, scenarios or derived metrics. | Owner: `huijoohwee.github.io/guidelines/financial-model-guidelines.md`; assumptions are named inputs and outputs are reproducible. |
+| `#prd` | Product requirements artifact. | Work defines personas, problems, scope or acceptance. | Owner: `huijoohwee.github.io/guidelines/prd-tad-adr-mvp-gtm-guidelines.md` PRD module; combined PRD/TAD routes to `/prd-tad.create`. |
+| `#tad` | Technical architecture artifact. | Work defines topology, interfaces, data or harness design. | Owner: `huijoohwee.github.io/guidelines/prd-tad-adr-mvp-gtm-guidelines.md` TAD module; combined PRD/TAD routes to `/prd-tad.create`. |
+| `#adr` | Architecture decision record. | Work records one decision, its options, consequences or supersession. | Owner: `huijoohwee.github.io/guidelines/prd-tad-adr-mvp-gtm-guidelines.md` ADR module; one decision per record with status. |
+| `#mvp` | Minimum viable product scope and build slice. | Work cuts, builds or evaluates the smallest testable product. | Owner: `huijoohwee.github.io/guidelines/prd-tad-adr-mvp-gtm-guidelines.md` MVP module; scope ties to a `#validated-learning` hypothesis. |
+| `#gtm` | Go-to-market artifact: segment, channel, pricing and launch. | Work plans or measures acquisition, pricing or launch. | Owner: `huijoohwee.github.io/guidelines/prd-tad-adr-mvp-gtm-guidelines.md` GTM module; channel claims cite measured evidence. |
+| `#brand` | Brand identity: voice, naming, logo, palette and usage rules. | Work authors or checks brand-bearing copy, marks or tokens. | Owner: `huijoohwee.github.io/guidelines/design-guidelines.md` and `design-theme-contract.md`; tokens resolve from the theme contract, not inline values. |
+| `#design` | Visual and interaction design system scope. | Work changes layout, tokens, components or design review. | Owner: `huijoohwee.github.io/guidelines/design-guidelines.md`; `/design.check` evidence where a check exists. |
+| `#ui` | User-interface surface: screens, components and states. | Work adds or changes a rendered surface. | Owner: `huijoohwee.github.io/guidelines/design-guidelines.md`; states and tokens trace to the design system. |
+| `#ux` | User-experience flow: tasks, journeys and usability. | Work changes a user journey, onboarding or task flow. | Owner: `huijoohwee.github.io/guidelines/product-guidelines.md` and `design-guidelines.md`; flow claims cite observed usage or tests. |
+| `#marketplace` | Listing or distribution of skills, tools, agents or assets to third parties. | Work packages, lists, prices or reviews an offering for external consumers. | Owner: `huijoohwee.github.io/guidelines/product-guidelines.md` and `skill-guidelines.md`; listings carry license, version, provenance and capability scope. |
+| `#llm` | Vendor-neutral language-model use: prompt, context, generation or evaluation. | Work selects, prompts, evaluates or budgets a model without naming a vendor. | Owner: `huijoohwee.github.io/guidelines/llm-ops-guidelines.md` and `prompt-guidelines.md`; binds `@model`, and spend passes `#token-economics` gates. |
+| `#adlc-artifact` | Any agent-development-lifecycle artifact tracked by continuity id. | Work creates, updates or retires a venture, product, design or harness artifact. | Owner: `huijoohwee.github.io/guidelines/adlc-artifact-continuity.md`; the artifact resolves through `@artifact` with one owner. |
 | `#lean-sprint` | Time-bound, budget-driven delivery of one smallest valuable vertical diff under the ADLC execution policy. | A task states a sprint ETA, time/byte/module caps or a compressed release lifecycle. | Declared bounds, exact candidate and receipts are present; a sprint proves delivery only, never customer learning, demand or revenue. |
 | `#persistent-memory` | Bounded curated memory that persists across sessions. | An entry records environment facts, conventions, lessons, profile preferences, or reusable project context. | Target is explicit, entry is scanned, capacity is checked, duplicate/stale handling is defined, and write result is typed. |
 | `#user-profile` | Explicit operator preferences, communication style, and expectations. | A claim belongs to the operator profile rather than agent notes or project rules. | Operator evidence or approval is present; unsupported personal inference, secrets, and sensitive profiling are rejected. |
@@ -401,6 +433,7 @@ semantic:
 | Pattern | Meaning |
 |---|---|
 | `/runtime-ready.check #runtime-ready #harness #vcc #foss #ttv @repository-root @local-harness @runtime-proof` | Prove an AI-capable contract or one exact local repository layer with bounded model-free checks. |
+| `/artifact.create #<family> @artifact @source.body` | Author one artifact family (`#startup` … `#adlc-artifact`) through its owning guideline; family tags select, never duplicate, the guideline. |
 | `/ecs.session-start #agentic-ecs @source.frontmatter @ecs-session` | Hydrate one private bounded ECS session from validated Agentic OS source. |
 | `/ecs.world-tick #agentic-ecs @ecs-session @runtime-proof` | Run ordered transactional systems and surface real or deferred reasoning cost evidence. |
 | `/ecs.decision-persist #agentic-ecs @ecs-session @source.frontmatter` | Atomically persist only pending validated decision nodes, then close the successful session. |

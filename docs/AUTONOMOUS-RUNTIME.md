@@ -17,7 +17,7 @@ publish_policy: "Dev-only until explicit operator approval and separate bounded 
 
 # Opt-In Autonomous Runtime
 
-The Worker exposes one authenticated composed-agent path at `POST /api/agent/run`. The path is absent in effect until an operator explicitly enables it, acknowledges provider spend, supplies one source-bound definition, and aligns the generic model registry with the OpenAI Responses agent adapter. Missing or conflicting configuration returns `runtime_unconfigured` without a provider request.
+The Worker exposes one authenticated composed-agent path at `POST /api/agent/run`. The path is absent in effect until an operator explicitly enables it, acknowledges provider spend, injects a trusted provider cost evidence verifier, supplies one source-bound definition, and aligns the generic model registry with the OpenAI Responses agent adapter. Missing or conflicting configuration returns `runtime_unconfigured` without a provider request.
 
 This route closes the default composition wiring gap. It does not enable Agent Swarm, register a multi-agent workflow, grant MCP tools, approve mutations, deploy a Worker, or turn a session token into spend or mutation authorization.
 
@@ -40,6 +40,7 @@ Enablement requires all of the following server-side values:
 | Group | Required values |
 |---|---|
 | Operator gate | `AGENT_RUNTIME_ENABLED=true`, `AGENT_RUNTIME_SPEND_APPROVED=true`, and `AGENT_RUNTIME_MAX_PROVIDER_CALLS` from 1 through 64. |
+| Cost evidence | A trusted `verifyProviderCostEvidence` passed to the upstream `createCloudflareWorker` factory. Before every provider call it must return `agentic-os/verified-effect-cost-evidence/v1` with `status: "verified-zero-cost"` bound to that call's scope digest. Any non-zero or unverifiable cost fails closed. ACOS ships no default verifier, because the only shipped adapter targets a paid provider. Without a verifier, readiness reports `provider_cost_evidence_verifier_missing` and the route returns `501`. |
 | Agent identity | `AGENT_RUNTIME_AGENT_ID` and `AGENT_RUNTIME_AGENT_REVISION`. |
 | Source evidence | `AGENT_RUNTIME_AGENT_SOURCE_URI`, lowercase SHA-256 in `AGENT_RUNTIME_AGENT_SOURCE_SHA256`, and exact JSON source text in `AGENT_RUNTIME_AGENT_SOURCE`. |
 | Provider registry | Complete `AGENT_MODEL_*` configuration with provider `openai`, adapter `openai-responses-agent`, delivery `complete`, connection `per-run`, and a present server key binding. |
@@ -96,4 +97,4 @@ Run the network-free proof:
 npm run autonomous-runtime:check
 ```
 
-The focused suite proves all-gate admission, source digest mismatch, spend refusal, model mismatch, provider-call bounds, secret redaction, authenticated Worker routing, caller-control rejection, per-principal continuation isolation, exact previous-response continuation, returned usage cost, and zero provider requests while unconfigured.
+The focused suite proves all-gate admission, source digest mismatch, spend refusal, missing cost-verifier refusal, model mismatch, provider-call bounds, secret redaction, authenticated Worker routing, caller-control rejection, per-principal continuation isolation, exact previous-response continuation, returned usage cost, and zero provider requests while unconfigured.

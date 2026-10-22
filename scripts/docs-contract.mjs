@@ -3,6 +3,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { DICTIONARY_DESCRIPTORS } from "agentic-os/invocation";
 
 import { validateDocsSourceReferences } from "./docs-source-references.mjs";
 
@@ -85,7 +86,7 @@ export function validateMarkdownArtifact({ relativePath, text }) {
   }
 
   for (const [index, line] of text.split("\n").entries()) {
-    if (!sourceOwnedProjection && /[^\x00-\x7F]/.test(line)) {
+    if (!sourceOwnedProjection && !isUpstreamDictionaryProjection(relativePath) && /[^\x00-\x7F]/.test(line)) {
       failures.push(`${relativePath}:${index + 1}: non-ASCII content`);
     }
     for (const pattern of ARTIFACT_PATTERNS) {
@@ -334,6 +335,12 @@ function scalarMatch(frontmatter, pattern) {
 
 function isWorkspaceSeedProjection(relativePath) {
   return relativePath.startsWith("workspace-seeds/");
+}
+
+// Byte-exact agentic-os projections; dictionary-projections.mjs owns their equality check.
+const UPSTREAM_DICTIONARY_PATHS = new Set(DICTIONARY_DESCRIPTORS.map(({ docsPath }) => docsPath));
+function isUpstreamDictionaryProjection(relativePath) {
+  return UPSTREAM_DICTIONARY_PATHS.has(relativePath);
 }
 
 function countLines(text) {

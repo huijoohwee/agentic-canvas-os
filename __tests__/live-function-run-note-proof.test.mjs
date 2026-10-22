@@ -7,6 +7,7 @@ import {
   reviewStateFromPause,
   runLiveFunctionRunNoteProof,
 } from "../scripts/live-function-run-note-proof.mjs";
+import { verifyTestZeroCost } from "./fixtures/agentic-graph-client.mjs";
 
 const DEPLOY_ENV = Object.freeze({
   OPENAI_FUNCTION_CALLING_MODEL: "gpt-test",
@@ -153,6 +154,7 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
   };
   const proof = await runLiveFunctionRunNoteProof({
     fetchImpl,
+    verifyProviderCostEvidence: verifyTestZeroCost,
     env: {
       AGENTIC_LIVE_PROVIDER_APPROVAL: LIVE_FUNCTION_RUN_NOTE_APPROVAL,
       AGENTIC_DEV_URL: "https://agentic-canvas-os-dev.example.workers.dev",
@@ -181,6 +183,7 @@ test("live proof composes seed, pause, signed resume, receipt, and read-back wit
   calls.length = 0;
   const recoveredProof = await runLiveFunctionRunNoteProof({
     fetchImpl,
+    verifyProviderCostEvidence: verifyTestZeroCost,
     env: {
       AGENTIC_LIVE_PROVIDER_APPROVAL: LIVE_FUNCTION_RUN_NOTE_APPROVAL,
       AGENTIC_DEV_URL: "https://agentic-canvas-os-dev.example.workers.dev",

@@ -9,6 +9,24 @@ import {
   createValidGapSignal,
 } from "./lib/native-skill-harness-fakes.mjs";
 
+const testCostVerifier = async (scope) => ({
+  schema: "agentic-os/verified-effect-cost-evidence/v1",
+  status: "verified-zero-cost",
+  provider: scope.provider,
+  mode: "provider-hard-cap",
+  billingPlan: "free",
+  providerHardCapUsd: 0,
+  quotaExhaustion: "not-applicable",
+  paidPlanActive: false,
+  addOnsActive: false,
+  overagesEnabled: false,
+  autoUpgradeEnabled: false,
+  evidenceDigest: "b".repeat(64),
+  scopeDigest: scope.scopeDigest,
+  verifiedAt: scope.observedAt,
+  expiresAt: new Date(Date.parse(scope.observedAt) + 60_000).toISOString(),
+});
+
 // Timed p95 gap-to-draft check. Deterministic and network-free: the scripted
 // stub adapter stands in for the provider, so this proves the loop's latency
 // shape against the declared threshold and makes no end-to-end provider claim.
@@ -30,6 +48,8 @@ test("observed p95 gap-to-draft latency stays under the declared threshold", asy
     const proposer = createSkillProposerRuntime({
       draftStore,
       proposeCandidate: wrappedCandidate,
+      providerId: "test-provider",
+      verifyProviderCostEvidence: testCostVerifier,
       emitTrace: traceObserver.emit,
       now: () => clock,
     });

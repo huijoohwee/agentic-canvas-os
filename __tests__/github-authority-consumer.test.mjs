@@ -13,7 +13,7 @@ import { verifyGitHubAuthorityIssuanceLive } from 'agentic-os/adapters/github-au
 import * as githubTransitionAuthority from 'agentic-os/adapters/github-transition-authority'
 import * as githubTransitionClient from 'agentic-os/adapters/github-transition-client'
 import * as githubTransitionPolicy from 'agentic-os/adapters/github-transition-policy'
-import { createEffectPlan, encodeEffectPlan } from 'agentic-os/records/completion'
+import { createEffectPlan, effectCostScopeDigest, encodeEffectPlan } from 'agentic-os/records/completion'
 
 import { AGENTIC_OS_INTEGRITY, AGENTIC_OS_PIN } from './fixtures/agentic-os-pin.mjs'
 
@@ -40,7 +40,7 @@ const transitionFixture = () => {
     expiresAt: '2026-09-02T01:00:00.000Z',
   }
   const continuation = continueRequest(source)
-  const plan = createEffectPlan({
+  const planInput = {
     target: {
       repository: source.repository,
       resource: source.scope[0],
@@ -75,7 +75,25 @@ const transitionFixture = () => {
       'remove-directory-bytes',
     ],
     parametersDigest: hex('6'),
-  })
+  }
+  // Mirrors upstream createTestEffectPlan: scoped free-fail-closed zero-cost evidence.
+  const plan = createEffectPlan({ ...planInput, costEvidence: {
+    schema: 'agentic-os/effect-cost-evidence/v1',
+    mode: 'free-fail-closed',
+    provider: 'fixture-provider',
+    billingPlan: 'free',
+    providerHardCapUsd: null,
+    quotaExhaustion: 'deny',
+    paidPlanActive: false,
+    addOnsActive: false,
+    overagesEnabled: false,
+    autoUpgradeEnabled: false,
+    evidenceRef: 'provider://fixture/account-cost-evidence',
+    evidenceDigest: hex('f'),
+    scopeDigest: effectCostScopeDigest(planInput),
+    verifiedAt: '2026-09-01T00:00:00.000Z',
+    expiresAt: '2027-01-01T00:00:00.000Z',
+  } })
   const planBytes = encodeEffectPlan(plan)
   const planByteDigest = sha256(planBytes)
   const request = retire({

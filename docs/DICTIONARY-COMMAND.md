@@ -11,8 +11,8 @@ owner: "agentic-os"
 source_reference_root: "agentic-canvas-os/docs"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "e38acf245e2be304048e459b0f64b9eb510262d458b32d350e4ce18d6cbd792e"
-catalog_entry_count: 416
+catalog_digest: "26d5817c730c47144ddf63eb3a10bae8b2979c16e1c0ef25ab81d71954727abd"
+catalog_entry_count: 436
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "src/invocation.mjs#validateDictionaryCatalogContract"
 source_docs:
@@ -122,6 +122,7 @@ dictionary_entries:
   - "/sandbox.policy.validate"
   - "/sandbox.policy.authorize"
   - "/prd-tad.create"
+  - "/artifact.create"
   - "/runtime-ready.check"
   - "/instruction.audit"
   - "/instruction.quality-evaluate"
@@ -290,6 +291,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `/sandbox.policy.validate` | Compile and audit one source-backed native sandbox policy without executing an operation. | `@sandbox-policy`, `@runtime-proof` | `#agent-sandbox-policy`, `#sandboxed-workspace`, `#no-hardcode` | Schema, policy digest, fail-closed defaults, domain mutability, and host-enforcement gap are returned. |
 | `/sandbox.policy.authorize` | Return one fail-closed preflight decision for a filesystem, process, network, or credential operation. | `@sandbox-policy`, `@sandbox-workspace`, `@runtime-proof` | `#agent-sandbox-policy`, `#sandboxed-workspace`, `#vcc` | Decision, reason code, matched rule where applicable, redacted audit metadata, and enforcement status are returned without execution. |
 | `/prd-tad.create` | Produce or refresh a combined PRD/TAD from validated problem and architecture context. | `@operator`, `@source.body` | `#tco`, `#ttv`, `#vcc`, `#foss` | PRD/TAD includes personas, MoSCoW, topology, harness, ADR, and VCC sections. |
+| `/artifact.create` | Create or refresh one ADLC artifact; the `#` family tag selects the owning guideline. | `@artifact`, `@source.body`; `@model` when generation is used | exactly one family tag (`#startup`, `#pitch-deck`, `#business-plan`, `#financial-model`, `#prd`, `#tad`, `#adr`, `#mvp`, `#gtm`, `#brand`, `#design`, `#ui`, `#ux`, `#marketplace`, `#adlc-artifact`) | Artifact passes its owning guideline checks and keeps one continuity id; no per-family command or copy is created. |
 | `/runtime-ready.check` | Verify whether a spec-complete artifact or exact local Git worktree is runnable. | `@local-harness`, `@runtime-proof`, and `@repository-root` for repository audits | `#harness`, `#vcc`, `#runtime-ready` | Focused checks or the bounded source-admission evaluator emit layer-specific proof, stable findings, zero-cost evidence, and unchanged deploy boundaries; exit 0 applies only to the requested proven layer. |
 | `/instruction.audit` | Audit always-on guidance and skill catalog context without model calls or source mutation. | `@instruction-source`, `@local-harness`, `@runtime-proof` | `#instruction-audit`, `#progressive-disclosure`, `#runtime-ready` | Required intent remains present; context budgets, duplicate instructions, embedded procedures, and owner leakage pass with exact zero model cost. |
 | `/instruction.quality-evaluate` | Score recorded or live final answers against the bounded instruction task-quality suite. | `@instruction-eval-suite`, `@runtime-proof`, `@operator` | `#instruction-quality`, `#vcc`, `#runtime-ready` | Every registered case passes required concepts, forbidden-claim screening, and word budgets with explicit candidate provenance and human review. |
@@ -418,6 +420,8 @@ command:
 | `/repository.pack` receives a non-Git root, unsafe path, symlink escape, changed source, sensitive content, unknown field, or exceeded bound | Block before artifact publication, remove staging residue, and return a source-byte-free typed error; do not fall back to a remote service, external binary, model, or alternate alias. |
 | An ECS command receives a missing, expired, or disposed `@ecs-session` | Return a typed session error without reconstructing hidden state or persisting caller-supplied decisions. |
 | Command requires paid, mutating, payment, Prod, or Cloudflare action | Require `@operator` approval and fail closed without approval. |
+| `/artifact.create` receives `#prd` with `#tad` | Route to `/prd-tad.create`; do not keep a second combined-artifact path. |
+| `/artifact.create` receives zero or several family tags | Reject with a typed ambiguous-family result before model spend. |
 | Command conflicts with source frontmatter | Fix the source or shared owner; do not add a downstream alias. |
 | Command is unknown | Reject with a typed unsupported-command result and suggest nearest dictionary entries. |
 

@@ -13,6 +13,23 @@ const SOURCE = JSON.stringify({
   instructions: [{ name: "purpose", content: "Return one bounded answer for the authenticated caller." }],
 });
 const SOURCE_DIGEST = createHash("sha256").update(SOURCE).digest("hex");
+const verifyProviderCostEvidence = async (scope) => ({
+  schema: "agentic-os/verified-effect-cost-evidence/v1",
+  status: "verified-zero-cost",
+  provider: scope.provider,
+  mode: "provider-hard-cap",
+  billingPlan: "free",
+  providerHardCapUsd: 0,
+  quotaExhaustion: "not-applicable",
+  paidPlanActive: false,
+  addOnsActive: false,
+  overagesEnabled: false,
+  autoUpgradeEnabled: false,
+  evidenceDigest: "b".repeat(64),
+  scopeDigest: scope.scopeDigest,
+  verifiedAt: scope.observedAt,
+  expiresAt: new Date(Date.parse(scope.observedAt) + 60_000).toISOString(),
+});
 
 function runtimeEnv(overrides = {}) {
   return {
@@ -86,6 +103,7 @@ test("keeps the autonomous runtime disabled until every operator gate aligns", (
     const config = resolveAutonomousRuntimeEnvironment(env, {
       modelProviderEnvironment: resolveModelProviderEnvironment(env),
       openAiAgentConfig: resolveOpenAiResponsesAgentConfig(env),
+      verifyProviderCostEvidence,
     });
     assert.equal(config.ready, false);
     assert.ok(config.issues.includes(issue));
@@ -95,7 +113,7 @@ test("keeps the autonomous runtime disabled until every operator gate aligns", (
 
 test("wires one source-verified definition through the authenticated composed agent route", async () => {
   const calls = [];
-  const app = createAgentApiApp({ env: runtimeEnv(), fetchImpl: providerTransport(calls) });
+  const app = createAgentApiApp({ env: runtimeEnv(), fetchImpl: providerTransport(calls), verifyProviderCostEvidence });
   const readiness = app.readiness();
   assert.equal(readiness.autonomousRuntime.configured, true);
   assert.equal(readiness.autonomousRuntime.enabled, true);
@@ -147,6 +165,7 @@ test("returns 501 without spending when the autonomous route is not explicitly a
   const app = createAgentApiApp({
     env: runtimeEnv({ AGENT_RUNTIME_SPEND_APPROVED: "false" }),
     fetchImpl: providerTransport(calls),
+    verifyProviderCostEvidence,
   });
   const headers = await session(app);
   const result = await app.agentRuntimeRun({
@@ -155,6 +174,20 @@ test("returns 501 without spending when the autonomous route is not explicitly a
   });
   assert.equal(result.statusCode, 501);
   assert.equal(result.body.code, "runtime_unconfigured");
+  assert.equal(calls.length, 0);
+});
+
+test("requires trusted provider cost evidence before enabling external routes", async () => {
+  const calls = [];
+  const app = createAgentApiApp({ env: runtimeEnv(), fetchImpl: providerTransport(calls) });
+  const readiness = app.readiness();
+  assert.equal(readiness.autonomousRuntime.configured, false);
+  assert.ok(readiness.autonomousRuntime.issues.includes("provider_cost_evidence_verifier_missing"));
+  const result = await app.agentRuntimeRun({
+    headers: await session(app),
+    body: { runId: "unverified-run", conversationId: "unverified-conversation", input: "must not call provider" },
+  });
+  assert.equal(result.statusCode, 501);
   assert.equal(calls.length, 0);
 });
 
@@ -190,15 +223,15 @@ test("exposes POST /api/agent/run through the Worker and rejects extra caller-ow
         agent: { agentId: "caller-controlled" },
       }),
     }), env);
-    assert.equal(invalid.status, 400);
-    const completed = await handleCloudflareRequest(new Request("https://runtime.example/api/agent/run", {
+    assert.equal(invalid.status, 501);
+    const blocked = await handleCloudflareRequest(new Request("https://runtime.example/api/agent/run", {
       method: "POST",
       headers: { authorization: `Bearer ${token}` },
       body: JSON.stringify({ runId: "worker-run", conversationId: "worker-conversation", input: "hello" }),
     }), env);
-    assert.equal(completed.status, 200);
-    assert.equal((await completed.json()).output, "bounded answer 1");
-    assert.equal(providerCalls.length, 1);
+    assert.equal(blocked.status, 501);
+    assert.equal((await blocked.json()).code, "runtime_unconfigured");
+    assert.equal(providerCalls.length, 0);
   } finally {
     globalThis.fetch = originalFetch;
   }

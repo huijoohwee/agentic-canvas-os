@@ -90,7 +90,7 @@ function proofReceipt(result) {
   return receipt;
 }
 
-export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl = fetch } = {}) {
+export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl = fetch, verifyProviderCostEvidence } = {}) {
   if (required(env, "AGENTIC_LIVE_PROVIDER_APPROVAL") !== APPROVAL) {
     throw new Error(`AGENTIC_LIVE_PROVIDER_APPROVAL must equal ${APPROVAL}.`);
   }
@@ -120,6 +120,7 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
     endpoint: mcpEndpoint.toString(),
     authToken: mcpBearer,
     fetchImpl: mcpTransport(fetchImpl),
+    verifyProviderCostEvidence,
   });
   if (!recoverContinuation) {
     const seeded = await mcpClient.runVideoRemix({
@@ -127,7 +128,7 @@ export async function runLiveFunctionRunNoteProof({ env = process.env, fetchImpl
       referenceUrl: "https://example.com/dev-provider-proof.mp4",
       brief: "Create one deterministic dry-run manifest for reviewed Dev receipt proof.",
       mode: "dry-run",
-      budgetUsd: 0.01,
+      budgetUsd: 0,
       shotCount: 1,
     });
     if (seeded?.runId !== targetRunId || seeded?.persistence?.persisted !== true) {

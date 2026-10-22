@@ -11,7 +11,7 @@ owner: "agentic-os"
 source_reference_root: "agentic-canvas-os/docs"
 prefix: "/"
 prefix_role: "command route"
-catalog_digest: "26d5817c730c47144ddf63eb3a10bae8b2979c16e1c0ef25ab81d71954727abd"
+catalog_digest: "f9b3716d2dac24ba319ab1b86062672726c6f37aea5085f1f2b80d336ff41b4b"
 catalog_entry_count: 436
 catalog_digest_input: "sha256:canonical-json:sorted(kind,token):token,kind,label,summary,sourcePath"
 catalog_digest_owner: "src/invocation.mjs#validateDictionaryCatalogContract"

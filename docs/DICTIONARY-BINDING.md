@@ -23,7 +23,7 @@ source_docs:
   - "AGENT-TEAM.md"
   - "REPOSITORY-PACKING.md"
   - "VOICE-STUDIO.md"
-  - "../node_modules/agentic-os/docs/adlc-guidelines.md"
+  - "$GITHUB_ROOT/agentic-canvas-os/node_modules/agentic-os/docs/adlc-guidelines.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "shared invocation metadata; execution remains consumer-owned"
 runtime_claim: "dictionary content for shared binding invocation utilities; no separate binding store"
@@ -242,7 +242,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `@video-generation-demo-script` | Authored source-script binding for the default video-agent preset. | The preset frontmatter plus its canonical workspace Markdown reference. | Source context only; it cannot contain generated artifact identities, credentials, provider job ids, or fabricated media URLs. |
 | `@provider.byteplus` | Select the existing BytePlus ModelArk generation route. | Shared provider settings and generation-runtime owner. | Selection carries no credential and fails before spend when endpoint, model, entitlement, or credential is unavailable. |
 | `@model` | Vendor-neutral language-model selection by capability, context and cost class. | Shared provider settings; concrete routes stay `@provider.*`. | Names no vendor and carries no credential; resolves to one configured `@provider.*` route or fails before spend. |
-| `@artifact` | One ADLC artifact addressed by continuity id and family tag. | Owning guideline plus `adlc-artifact-continuity.md`. | Exactly one owner per artifact; updates are in place, never a parallel copy. |
+| `@artifact` | One ADLC artifact addressed by continuity id and family tag. | Owning guideline plus `huijoohwee.github.io/guidelines/adlc-artifact-continuity.md`. | Exactly one owner per artifact; updates are in place, never a parallel copy. |
 | `@asset` | One brand, design or media asset addressed by content digest. | Owning design or asset runtime. | Digest-pinned and license-scoped; no inline secret, renderer or storage authority. |
 | `@provider.openai` | Select the existing OpenAI generation route. | Shared provider settings and generation-runtime owner. | Selection carries no credential and fails before spend when endpoint, model, entitlement, or credential is unavailable. |
 | `@text` | Request a structured text artifact. | Shared text-generation and workspace-artifact owners. | The video preset requires Character, Scene, Dialogue, Visual asset, Audio, Timing, Metadata, and Prompt sheets; empty or malformed output fails terminally. |
@@ -308,7 +308,7 @@ Dictionary references resolve within this directory. Runtime and approval claims
 | `@git:` | Context reference to recent commit metadata or patch range. | Current VCS repository. | Count is clamped to a small maximum, missing revisions warn, and sensitive content remains blocked. |
 | `@local-git-repository` | Browser-owned persisted Git object, ref, worktree, and outbox state. | agentic-graph storage-engine IndexedDB owner. | Carries no credential; controls require active IndexedDB, bounded paths and objects, atomic authority checks, and typed offline state. |
 | `@git-remote` | Opaque configured remote alias used for browser Git fetch or push. | Authenticated Dev Worker storage relay and its static allowlist. | Browser payloads contain neither credentials nor upstream URLs; the relay revalidates loopback origin, membership, role, size, path, and compare-before-update state. |
-| `@git-guidelines` | Git guidelines source. | `../node_modules/agentic-os/docs/adlc-guidelines.md`. | Source-only binding; it grants no mutation, integration, release, publication, or deployment authority. |
+| `@git-guidelines` | Git guidelines source. | `docs/documents/git-guidelines.md` and `$GITHUB_ROOT/agentic-canvas-os/node_modules/agentic-os/docs/adlc-guidelines.md`. | Source-only binding; it grants no mutation, integration, release, publication, or deployment authority. |
 | `@persisted-cache` | Browser-owned binary and metadata cache used by file synchronization. | agentic-graph storage-engine IndexedDB owner. | Chunked values stay within browser limits, credentials are rejected, and degraded persistence blocks mutating controls. |
 | `@file-sync-provider` | Opaque configured provider alias for file or directory pull and push. | Authenticated Dev Worker provider registry. | Alias exposes no provider resource id or credential; unsupported native documents, shortcuts, symlinks, and unverifiable hashes fail explicitly. |
 | `@url:` | Operator-provided reference to bounded external content for context expansion or source import. | Approved URL fetch, extract, or Import URL owner. | Requires `@reference-policy`, egress policy, cache/citation metadata, size bounds, and no credentials in the URL or headers. |
@@ -489,7 +489,7 @@ binding:
 | Token | Facts source |
 |---|---|
 | `@application-manifest` | `FACTS.md` direct-resolution entry for bounded version-locked application source. |
-| `@application` | `../../skills/software-forensics/SKILL.md` source contract for explicit application scope and read-only observation. |
+| `@application` | `$GITHUB_ROOT/agentic-canvas-os/node_modules/agentic-os/skills/software-forensics/SKILL.md` source contract for explicit application scope and read-only observation. |
 | `@agent-team` | `FACTS.md` direct-resolution entry for one exact source-backed Agent Team binding. |
 | `@component-catalog` | `FACTS.md` direct-resolution entry for immutable local component and interface records. |
 | `@integration-profile` | `FACTS.md` direct-resolution entry for opaque host-owned integration capability bindings. |

@@ -28,8 +28,9 @@ source_docs:
   - "IMPLEMENTATION-RUN-OBSERVATION.md"
   - "MCP-GATEWAY.md"
   - "VALIDATION-RUNBOOK.md"
-  - "../AGENTS.md"
-  - "../node_modules/agentic-os/docs/adlc-guidelines.md"
+  - "$GITHUB_ROOT/agentic-canvas-os/AGENTS.md"
+  - "$GITHUB_ROOT/agentic-canvas-os/node_modules/agentic-os/docs/adlc-guidelines.md"
+  - "$GITHUB_ROOT/huijoohwee.github.io/docs/documents/git-guidelines.md"
 publish_policy: "Dev-only until explicit operator approval"
 runtime_scope: "shared invocation metadata; execution remains consumer-owned"
 runtime_claim: "dictionary content for shared slash invocation utilities; no separate command runtime"
@@ -433,7 +434,7 @@ command:
 | `/agentic.graph.parser.generate` | `FACTS.md` direct-resolution entry for deterministic source-backed parser generation. |
 | `/agentic.graph.query` | `FACTS.md` direct-resolution entry for deterministic local graph queries. |
 | `/agentic.graph.explain` | `FACTS.md` direct-resolution entry for exact stored edge evidence and explanation. |
-| `/software.forensics` | `../../skills/software-forensics/SKILL.md` source contract for the bounded evidence workflow. |
+| `/software.forensics` | `$GITHUB_ROOT/agentic-canvas-os/node_modules/agentic-os/skills/software-forensics/SKILL.md` source contract for the bounded evidence workflow. |
 | `/application.compose` | `FACTS.md` direct-resolution entry for exact versioned application planning and bounded owner-delegated execution. |
 | `/adlc.observe` | `FACTS.md` direct-resolution entry for deterministic read-only ADLC ledger projection through the existing Canvas. |
 | `/agent.team` | `FACTS.md` direct-resolution entry for exact role-based Agent Team planning and durable agentic-graph MCP control. |

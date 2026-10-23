@@ -69,7 +69,7 @@ jobs:
     name: build
     needs: authorization
     if: ${{ always() }}
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Require exact CI authorization

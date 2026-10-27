@@ -115,7 +115,7 @@
   },
   "devDependencies": {
     "agentic-commerce-os": "https://codeload.github.com/huijoohwee/agentic-commerce-os/tar.gz/a632166eb8e4258f55301b5089aa78da663e0d21",
-    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/a25a748d201fa9ff0cf7e7fa64fb3512dca3143d",
+    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/29004b5ec299eb8ddda1485508099c0e186c130f",
     "ajv": "8.20.0",
     "fast-check": "3.23.2",
     "wrangler": "4.149.0"

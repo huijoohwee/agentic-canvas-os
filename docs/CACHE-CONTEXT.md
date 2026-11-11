@@ -2,7 +2,7 @@
 title: "Agentic Canvas OS Cache Context Contract"
 graphId: "md:agentic-canvas-os-cache-context"
 doc_type: "Runtime Cache Context Contract"
-date: "2026-09-11"
+date: "2026-11-11"
 lang: "en-US"
 schema: "agentic-cache-context/v1"
 frontmatter_contract: "required"
@@ -42,3 +42,13 @@ Run Canvas `npm run check` for all local suites, web build and document/line bud
 Worker bundle validation establishes platform compatibility only. Provider cache
 hits, effective reasoning context and production readiness still require owner
 evidence. Dev integration grants no production mirror, Cloudflare or payment effect.
+
+## Storage and timing
+
+The context registry is bounded, per-isolate memory. It adds no disk cache or durable user state.
+For a local E2E sample, record the exact OS pin and policy input, then time cold initialization and
+warm local reuse separately. Registry counters describe only this local owner; provider cache hits
+remain unverified until response usage proves them. Do not clear browser data, Worker state or other
+product storage as part of context-cache maintenance. Reuse shared Agentic OS validation receipts for
+command elapsed time and supported CPU/RSS measurements; keep those host-process metrics separate
+from isolate memory and provider-side cache evidence.

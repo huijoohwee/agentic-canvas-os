@@ -147,4 +147,4 @@ exception. Preserve user bytes and stop on any typed ADLC attention result.
 - A Dev `main` merge does not authorize Prod mirror or Cloudflare mutation.
 - Suggest next steps in `/GitHub/.workspace/.todo/{docs/TODO.md, docs/kanban.md, todo/}`,
   `/GitHub/agentic-graph/docs/`, and
-  `/GitHub/huijoohwee.github.io/schema/AgenticRAG` when relevant.
+  `/GitHub/huijoohwee.github.io/schema/agentic-rag` when relevant.

@@ -28,7 +28,7 @@ status: "spec-complete"
 target_status: "runtime-ready"
 load_policy: "on-demand"
 semantic_owner: "$GITHUB_ROOT/huijoohwee.github.io/guidelines/cid-guidelines.md#shared-field-contract"
-grounding_record: "$GITHUB_ROOT/huijoohwee.github.io/schema/AgenticRAG/prd-tad-adr-mvp-gtm-grounding.json"
+grounding_record: "$GITHUB_ROOT/huijoohwee.github.io/schema/agentic-rag/prd-tad-adr-mvp-gtm-grounding.json"
 source_docs:
   - "FACTS.md"
   - "MEMORY.md"
@@ -146,7 +146,7 @@ All five roles join `CANVAS-CONTROL-SURFACE-001@1.0.8` for this increment.
 ## Codebase Grounding
 
 The shared `huijoohwee.github.io/guidelines/prd-tad-adr-mvp-gtm-codebase-grounding.md` and its single
-`schema/AgenticRAG/prd-tad-adr-mvp-gtm-grounding.json` snapshot own the seven-repository evidence map.
+`schema/agentic-rag/prd-tad-adr-mvp-gtm-grounding.json` snapshot own the seven-repository evidence map.
 Consume their reviewed revisions before baseline; no local copy of the inventory or CID/RAO/SVO
 grammar belongs here. One continuity ID joins each PRD criterion, TAD element, applicable ADR and
 bounded RAO task. The SVO object is the scoped target; outcome is the result checked by its criterion.

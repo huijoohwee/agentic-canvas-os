@@ -101,17 +101,11 @@ The saved export is not a fallback. `npm run cloudflare:dev` remains the separat
 development command and also requires a passing static build; its authentication and upstream
 bindings are separate from local inspection. No deployment or release readiness is claimed.
 
-Prefer the canonical human-facing path:
-
-```bash
-npm run release:common -- start <scope> --write=<paths>
-npm run release:common -- publish --message="<message>"
-npm run release:common -- complete --ref=<lane>
-```
-
-Use `npm run doctor`, `npm run status`, `npm run lane`, `npm run land`,
-`npm run reap -- --ref=<lane>`, and `npm run sync:canonical` as underlying
-diagnostics or bounded recovery primitives under the pinned ADLC workflows.
+Follow the pinned `node_modules/agentic-os/docs/START-WORKFLOW.md` and
+`node_modules/agentic-os/docs/RELEASE-WORKFLOW.md`. Finish authorized unfinished
+work and affected checks, LAND/publish, then END; inspect unpublished commits
+even when the worktree is clean. Parking requires an explicit owner decision.
+`npm run release:common` delegates directly to the pinned shared owner.
 Required checks, protected integration, integration proof, retirement, exact
 worktree quarantine, canonical synchronization, deployment, and rollback remain
 separate authorized receipts. The ACOS profile permits quarantine of an exact

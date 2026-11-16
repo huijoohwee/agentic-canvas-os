@@ -72,7 +72,7 @@
     "status": "agentic-os status",
     "reap": "agentic-os reap",
     "finish": "agentic-os finish",
-    "release:common": "node ./scripts/release-common.mjs",
+    "release:common": "agentic-os release-common",
     "queue:show": "agentic-os queue show",
     "autonomy-class": "agentic-os autonomy-class",
     "git:configure": "agentic-os git-configure",
@@ -115,7 +115,7 @@
   },
   "devDependencies": {
     "agentic-commerce-os": "https://codeload.github.com/huijoohwee/agentic-commerce-os/tar.gz/a632166eb8e4258f55301b5089aa78da663e0d21",
-    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/29004b5ec299eb8ddda1485508099c0e186c130f",
+    "agentic-os": "https://codeload.github.com/huijoohwee/agentic-os/tar.gz/73bf77869d75c60eff687a7e7dbec72ae39be2b2",
     "ajv": "8.20.0",
     "fast-check": "3.23.2",
     "wrangler": "4.149.0"

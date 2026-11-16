@@ -14,6 +14,7 @@ import * as githubTransitionAuthority from 'agentic-os/adapters/github-transitio
 import * as githubTransitionClient from 'agentic-os/adapters/github-transition-client'
 import * as githubTransitionPolicy from 'agentic-os/adapters/github-transition-policy'
 import { createEffectPlan, effectCostScopeDigest, encodeEffectPlan } from 'agentic-os/records/completion'
+import { CLEANUP_EFFECTS, RETAINED_EFFECTS } from 'agentic-os/adapters/worktree-cleanup'
 
 import { AGENTIC_OS_INTEGRITY, AGENTIC_OS_PIN } from './fixtures/agentic-os-pin.mjs'
 
@@ -60,20 +61,8 @@ const transitionFixture = () => {
     candidateDigest: hex('4'),
     snapshotDigest: hex('5'),
     effectClass: 'claim-retirement-with-cleanup',
-    allowedEffects: [
-      'quarantine-worktree-projection',
-      'quarantine-worktree-registration',
-      'retire-claim',
-    ],
-    forbiddenEffects: [
-      'delete-branch',
-      'delete-object',
-      'delete-ref',
-      'delete-reflog',
-      'force-push',
-      'prune-peer-registration',
-      'remove-directory-bytes',
-    ],
+    allowedEffects: [...CLEANUP_EFFECTS, 'retire-claim'].sort(),
+    forbiddenEffects: RETAINED_EFFECTS,
     parametersDigest: hex('6'),
   }
   // Mirrors upstream createTestEffectPlan: scoped free-fail-closed zero-cost evidence.

@@ -21,9 +21,19 @@ function withReplacement(name, before, after) {
   return documents;
 }
 
-test("repository prompt presets expose fourteen source-backed Chat and MCP routes", () => {
-  assert.equal(REQUIRED_PROMPT_PRESET_IDS.length, 14);
+test("repository prompt presets expose fifteen source-backed Chat and MCP routes", () => {
+  assert.equal(REQUIRED_PROMPT_PRESET_IDS.length, 15);
   assert.deepEqual(validatePromptPresetContractDocuments(repositoryDocuments), []);
+});
+
+test("every preset keeps centralized scope and selection metadata", () => {
+  for (const [before, after] of [
+    ['scope: "global-core"', 'scope: "repo-overlay"'],
+    ['selection_context: "selected-repository-graph"', 'selection_context: "active-workspace-sources"'],
+  ]) {
+    const failures = validatePromptPresetContractDocuments(withReplacement("PROMPT-PRESETS.md", before, after));
+    assert.equal(failures.some((failure) => failure.includes("scope") || failure.includes("selection_context")), true);
+  }
 });
 
 test("procedural asset creation cannot route through image admission or provider execution", () => {
@@ -122,6 +132,17 @@ test("semantic extension prompts cannot replace active context with a fixed quer
   );
   const failures = validatePromptPresetContractDocuments(documents);
   assert.equal(failures.some((failure) => failure.includes("must remain generic")), true);
+});
+
+test("extension presets must keep the shared base family link and runtime command", () => {
+  for (const [before, after, marker] of [
+    ['extends: "sme-care-agent"', 'extends: "investment-research-agent"', "extends"],
+    ['runtime_command: "/sme-care-agent"', 'runtime_command: "/crawler-agent"', "runtime_command"],
+  ]) {
+    const documents = withReplacement("PROMPT-PRESETS.md", before, after);
+    const failures = validatePromptPresetContractDocuments(documents);
+    assert.equal(failures.some((failure) => failure.includes(marker)), true);
+  }
 });
 
 test("Launch Copilot selection cannot preselect drafting or publication", () => {

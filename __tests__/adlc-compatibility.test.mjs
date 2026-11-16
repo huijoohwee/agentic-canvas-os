@@ -28,13 +28,14 @@ test("ACOS pins one reviewed ADLC package and delegates lifecycle commands direc
   assert.equal(lock.packages["node_modules/agentic-os"].resolved, AGENTIC_OS_PIN);
   assert.equal(lock.packages["node_modules/agentic-os"].integrity, AGENTIC_OS_INTEGRITY);
   assert.deepEqual(Object.fromEntries([
-    "setup", "doctor", "lane", "land", "status", "reap", "queue:show",
+    "setup", "doctor", "lane", "land", "release:common", "status", "reap", "queue:show",
     "autonomy-class", "git:configure", "sync:canonical",
   ].map(name => [name, pkg.scripts[name]])), {
     setup: "agentic-os setup",
     doctor: "agentic-os doctor",
     lane: "agentic-os start",
     land: "agentic-os land",
+    "release:common": "agentic-os release-common",
     status: "agentic-os status",
     reap: "agentic-os reap",
     "queue:show": "agentic-os queue show",
@@ -54,7 +55,7 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.equal(promptBytes.at(-1), 0x0a);
   const prompt = new TextDecoder("utf-8", { fatal: true }).decode(promptBytes);
   assert.match(guideline, /^schema: agentic-os\/adlc-guidelines\/v1$/mu);
-  assert.match(guideline, /^version: 1\.4\.4$/mu);
+  assert.match(guideline, /^version: 1\.4\.5$/mu);
   assert.match(guideline, /^supersedes: agentic-sdlc$/mu);
   assert.match(guideline, /^runtime_contract: enforced$/mu);
   assert.match(guideline, /^runtime_evaluator: npm run evals$/mu);
@@ -65,12 +66,12 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
   assert.match(guideline, /^lifecycle_status: active$/mu);
   assert.equal(Buffer.byteLength(prompt, "utf8"), 999);
   assert.ok(Buffer.byteLength(prompt, "utf8") <= 1_000);
-  assert.equal([...prompt].length, 991);
+  assert.equal([...prompt].length, 987);
   assert.ok(prompt.split("\n").every((line) => [...line].length <= 120));
   assert.equal(createHash("sha256").update(promptBytes).digest("hex"),
     AGENTIC_OS_PROMPT_SHA256);
   assert.match(prompt, /Sprint: ETA\+time\/byte\/module caps;/u);
-  assert.match(prompt, /1 owner\/candidate\/effect; event wait; bounded recheck\./u);
+  assert.match(prompt, /^1 owner\/candidate\/effect; event wait; bounded recheck$/mu);
   assert.match(guide, /on-demand ADLC guide, not an always-load instruction/u);
   assert.match(guide, /smallest valuable vertical slice/u);
   assert.match(guide, /minimal scoped hunks/u);
@@ -93,6 +94,7 @@ test("global ADLC guidance and runtime prompt remain the installed SSOT", () => 
 
 test("ACOS has no competing lane, worktree, session, guard, or synchronization controller", () => {
   for (const relativePath of [
+    "scripts/release-common.mjs",
     "scripts/worktree-lifecycle.mjs",
     "scripts/scoped-lane-admission-state.mjs",
     "scripts/session-start-policy.mjs",

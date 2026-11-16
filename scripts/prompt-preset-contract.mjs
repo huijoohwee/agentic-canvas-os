@@ -1,9 +1,11 @@
 const MCP_TOOL = "agentic-graph.agentic_canvas_os.docs.invoke";
 const ACTIVE_CHAT_ROUTE = "active Chat provider, endpoint, and model";
+const ALLOWED_SCOPES = new Set(["global-core", "global-domain", "repo-overlay", "workspace-overlay"]);
 
 export const REQUIRED_PROMPT_PRESET_IDS = Object.freeze([
   "xr-physics",
   "launch-copilot",
+  "software-forensics",
   "video-agent",
   "image-to-threejs",
   "image-to-glb",
@@ -38,6 +40,24 @@ const SEMANTIC_EXTENSION_MARKERS = Object.freeze({
   "investment-plan-assessment": ["user-named objective", "Ask one focused clarification", "Do not invent"],
 });
 
+const EXPECTED_PRESET_METADATA = Object.freeze({
+  "procedural-asset": { scope: "global-core", selectionContext: "active-text-intent" },
+  "xr-physics": { scope: "global-core", selectionContext: "active-canvas-document" },
+  "launch-copilot": { scope: "global-core", selectionContext: "selected-repository-graph" },
+  "software-forensics": { scope: "global-core", selectionContext: "selected-application-and-repository" },
+  "video-agent": { scope: "global-core", selectionContext: "active-canvas-document" },
+  "image-to-threejs": { scope: "global-core", selectionContext: "selected-widget-card-media" },
+  "image-to-glb": { scope: "global-core", selectionContext: "selected-widget-card-media" },
+  "agentic-graph-probe-tree": { scope: "global-core", selectionContext: "selected-widget-card" },
+  "sme-care-agent": { scope: "global-domain", selectionContext: "active-workspace-sources" },
+  "investment-research-agent": { scope: "global-domain", selectionContext: "active-workspace-sources" },
+  "crawler-agent": { scope: "global-core", selectionContext: "active-url-reference" },
+  "sme-risk-assessment": { scope: "global-domain", selectionContext: "active-workspace-sources", extends: "sme-care-agent" },
+  "sme-protection-comparison": { scope: "global-domain", selectionContext: "active-workspace-sources", extends: "sme-care-agent" },
+  "investment-options-comparison": { scope: "global-domain", selectionContext: "active-workspace-sources", extends: "investment-research-agent" },
+  "investment-plan-assessment": { scope: "global-domain", selectionContext: "active-workspace-sources", extends: "investment-research-agent" },
+});
+
 export function validatePromptPresetContractDocuments(documents) {
   const failures = [];
   const catalog = requireDocument(documents, "PROMPT-PRESETS.md", failures);
@@ -53,8 +73,12 @@ export function validatePromptPresetContractDocuments(documents) {
 
   const ids = new Set();
   const aliases = new Set();
+  const metadataById = new Map();
   for (const preset of presets) {
     const id = readStringField(preset, "id", failures);
+    const scope = readStringField(preset, "scope", failures, id);
+    const selectionContext = readStringField(preset, "selection_context", failures, id);
+    const extendsId = readOptionalStringField(preset, "extends", failures, id);
     const alias = readStringField(preset, "slash_command", failures, id);
     const runtimeCommand = readStringField(preset, "runtime_command", failures, id);
     const chatRoute = readStringField(preset, "chat_route", failures, id);
@@ -66,6 +90,19 @@ export function validatePromptPresetContractDocuments(documents) {
     if (aliases.has(alias)) failures.push(`PROMPT-PRESETS.md: duplicate preset alias ${alias}`);
     ids.add(id);
     aliases.add(alias);
+    metadataById.set(id, { scope, selectionContext, extendsId, runtimeCommand });
+
+    if (!ALLOWED_SCOPES.has(scope)) failures.push(`PROMPT-PRESETS.md: ${id} scope must be one of ${[...ALLOWED_SCOPES].join(", ")}`);
+    const expectedMetadata = EXPECTED_PRESET_METADATA[id];
+    if (expectedMetadata) {
+      if (scope !== expectedMetadata.scope) failures.push(`PROMPT-PRESETS.md: ${id} scope must remain ${expectedMetadata.scope}`);
+      if (selectionContext !== expectedMetadata.selectionContext) {
+        failures.push(`PROMPT-PRESETS.md: ${id} selection_context must remain ${expectedMetadata.selectionContext}`);
+      }
+      if ((expectedMetadata.extends ?? "") !== extendsId) {
+        failures.push(`PROMPT-PRESETS.md: ${id} extends must remain ${expectedMetadata.extends ?? "(absent)"}`);
+      }
+    }
 
     const responseMode = Array.isArray(invocationModes) ? invocationModes[0] : "";
     if (!["llm-chat-response", "native-chat-response"].includes(responseMode)
@@ -124,8 +161,26 @@ export function validatePromptPresetContractDocuments(documents) {
     if (!ids.has(id)) failures.push(`PROMPT-PRESETS.md: missing required preset ${id}`);
   }
 
+  for (const [id, metadata] of metadataById.entries()) {
+    if (!metadata.extendsId) continue;
+    if (!metadataById.has(metadata.extendsId)) {
+      failures.push(`PROMPT-PRESETS.md: ${id} extends missing preset ${metadata.extendsId}`);
+      continue;
+    }
+    if (metadata.extendsId === id) {
+      failures.push(`PROMPT-PRESETS.md: ${id} cannot extend itself`);
+      continue;
+    }
+    if (metadata.runtimeCommand !== metadataById.get(metadata.extendsId)?.runtimeCommand) {
+      failures.push(`PROMPT-PRESETS.md: ${id} must share runtime_command with extended preset ${metadata.extendsId}`);
+    }
+  }
+
   requireMarkers(facts, "FACTS.md prompt preset invocation contract", [
     `invocation_routes: "llm-chat-response uses the ${ACTIVE_CHAT_ROUTE}`,
+    'layer_values: "global-core, global-domain, repo-overlay, workspace-overlay"',
+    'selection_context_rule: "every preset declares a source-backed selection_context"',
+    'extension_rule: "extends refines a prompt family without creating a second runtime-command owner"',
     MCP_TOOL,
   ], failures);
   requireMarkers(skills, "SKILLS.md prompt preset runtime owners", [
@@ -157,6 +212,17 @@ function readStringField(block, field, failures, id = "preset") {
   return "";
 }
 
+function readOptionalStringField(block, field, failures, id = "preset") {
+  const raw = readField(block, field, failures, id, { optional: true });
+  if (raw === undefined) return "";
+  try {
+    const value = JSON.parse(raw);
+    if (typeof value === "string" && value.trim()) return value.trim();
+  } catch {}
+  failures.push(`PROMPT-PRESETS.md: ${id} ${field} must be a non-empty quoted string when present`);
+  return "";
+}
+
 function readJsonField(block, field, failures, id) {
   const raw = readField(block, field, failures, id);
   if (raw === undefined) return undefined;
@@ -168,11 +234,11 @@ function readJsonField(block, field, failures, id) {
   }
 }
 
-function readField(block, field, failures, id) {
+function readField(block, field, failures, id, { optional = false } = {}) {
   const prefix = field === "id" ? " {2}- " : " {4}";
   const match = block.match(new RegExp(`^${prefix}${escapeRegExp(field)}:\\s*(.+)$`, "m"));
   if (match) return match[1].trim();
-  failures.push(`PROMPT-PRESETS.md: ${id} missing ${field}`);
+  if (!optional) failures.push(`PROMPT-PRESETS.md: ${id} missing ${field}`);
   return undefined;
 }
 

@@ -51,12 +51,9 @@ document can express the same contract.
 
 ## Agentic Orchestration Layer
 
-- `agentic-os` ADLC is the single lifecycle owner. Prefer
-  `npm run release:common -- start <scope> --write=<paths>`,
-  `npm run release:common -- publish --message="<message>"`, and
-  `npm run release:common -- complete --ref=<lane>` as the human-facing path.
-  Use `npm run doctor`, `npm run status`, `npm run lane`, `npm run land`, and
-  `npm run reap` as underlying primitives or diagnostics. ACOS opts into exact
+- `agentic-os` ADLC is the single lifecycle owner; follow the pinned
+  `node_modules/agentic-os/docs/RELEASE-WORKFLOW.md`, through the native
+  `npm run release:common` entry point. ACOS opts into exact
   worktree projection and registration quarantine while retaining branches,
   refs, and unreachable objects; each effect still requires ADLC eligibility
   and exact authority.

@@ -15,6 +15,10 @@ preset_invocation_authority: "PROMPT-PRESETS.md"
 probe_tree_contract: "PROBE-TREE.md"
 runtime_command_authority: "SKILLS.md and DICTIONARY-COMMAND.md"
 invocation_suffix: "-prompt-preset"
+preset_scope_values: ["global-core", "global-domain", "repo-overlay", "workspace-overlay"]
+overlay_resolution_order: ["global-core", "global-domain", "repo-overlay", "workspace-overlay"]
+selection_context_authority: "PROMPT-PRESETS.md"
+extension_rule: "extends may refine prompt text and selection context without creating a second runtime-command owner"
 dictionary_links:
   command: "DICTIONARY-COMMAND.md"
   semantic: "DICTIONARY-SEMANTIC.md"
@@ -22,6 +26,8 @@ dictionary_links:
 prompt_presets:
   - id: "procedural-asset"
     label: "Create editable asset"
+    scope: "global-core"
+    selection_context: "active-text-intent"
     slash_command: "/asset.create"
     runtime_command: "/asset.create"
     description: "Create a bounded native Three.js asset from text, edit persistent procedural controls, and export faithful GLB with recipe and source companions."
@@ -39,6 +45,8 @@ prompt_presets:
       Create an editable asset from the active text intent through the native Graph builder. Declare the supported vocabulary and bounds before construction. Preserve intent, typed recipe, seed, stable part IDs, pivots, sockets, control schema and values, and reviewable generated source. Apply numeric, color, enum, boolean and reset controls deterministically with zero provider calls. Never execute supplied JavaScript. Preserve the last-valid asset and unapplied draft on rejection, cancellation or stale completion. Use text-only validated evidence without invented image scores or provider approval. Export the admitted scene faithfully as GLB with recipe and source companions; GLB alone does not preserve procedural logic. Use Card Run only; Chat Send, MCP execution, WebMCP execution and XR integration remain pending. Do not substitute another execution route. Preserve the existing Card and Rich Media identity; later XR integration must share the scene, selection and transport. Keep deployment separately authorized.
   - id: "xr-physics"
     label: "Physics Playground"
+    scope: "global-core"
+    selection_context: "active-canvas-document"
     slash_command: "/xr-physics-prompt-preset"
     runtime_command: "/xr.physics"
     description: "Explore the source-authored Physics Playground with the beach ball or rocket controller. Demo opens its matching document and example conversation without a provider call."
@@ -51,6 +59,8 @@ prompt_presets:
       /xr.physics @canvas #controller operation=develop-run mode=ball
   - id: "launch-copilot"
     label: "Launch Copilot (81rv10)"
+    scope: "global-core"
+    selection_context: "selected-repository-graph"
     slash_command: "/launch-copilot-prompt-preset"
     runtime_command: "/launch-copilot"
     description: "Pain point -> business value -> grounded MVP and GTM proposal. Import a repository and select its nodes, cluster or edges first; edit this reference-only outline before Run."
@@ -64,10 +74,12 @@ prompt_presets:
       Help a solopreneur turn a costly, frequent customer pain point into a small MVP-to-GTM experiment using the selected repository as reference. State the target buyer, current workaround, willingness-to-pay hypothesis, measurable business value, smallest complete loop, acquisition test and success criteria. Ground PRD -> TAD -> ADR -> MVP -> GTM in the selected real nodes and explained edges; mark proposed work NEW. Keep one CID, RAO and SVO chain, five native document panels and a separate proposed-work overlay. Reuse existing owners and contracts; distinguish evidence from assumptions. Do not infer code ownership, payment readiness, model verification or production readiness from this reference. Keep publication behind exact-content review and approval.
   - id: "software-forensics"
     label: "Agentic Reverse Engineering"
+    scope: "global-core"
+    selection_context: "selected-application-and-repository"
     slash_command: "/software-forensics-prompt-preset"
     runtime_command: "/software.forensics"
     description: "Trace one selected application from observed behavior through source indexing and registered native-binary metadata. Demo opens a static example with a link to agentic-reverse-engineering-demo.md; no provider call is made."
-    activation: "chat-agent"
+    activation: "source-backed-canvas"
     invocation_modes: ["native-chat-response", "mcp-invocation"]
     chat_route: "active native shared runtime"
     mcp_tool: "agentic-graph.agentic_canvas_os.docs.invoke"
@@ -78,6 +90,8 @@ prompt_presets:
       Build a bounded evidence dossier for the explicitly selected application and one explicitly selected repository root. Keep read-only UI observations, exact-hash source facts, source-graph relationships, registered binary-parser metadata, and inference separate. Record route, visible state, observation time, repository revision and dirty state, source hashes, graph identity and digest, parser identities, completeness, and diagnostics. Use only available host observation, bounded local source indexing, local graph, and agent capabilities; do not fetch a sibling repository, execute target code, load or emulate binaries, or infer runtime behavior from static metadata. Mark unsupported files and missing evidence as unknown, protect secrets and personal data, make no model/provider call while selecting or opening Demo, and link findings to [agentic-reverse-engineering-demo.md](workspace:/docs/workspace-seeds/agentic-reverse-engineering-demo.md). Do not claim comprehensive coverage when any selected layer is unavailable.
   - id: "video-agent"
     label: "Video Agent"
+    scope: "global-core"
+    selection_context: "active-canvas-document"
     slash_command: "/video-prompt-preset"
     runtime_command: "/video-agent"
     description: "Source-backed multilingual video package, media generation, persistence, read-back, and shared Canvas projection."
@@ -92,6 +106,8 @@ prompt_presets:
       Build a 45-second, 16:9 Hong Kong live-action drama sequence from the referenced eight-shot script. Generate a structured text package containing a Character sheet, Scene sheet, Dialogue sheet, Visual asset sheet, Audio sheet, Timing sheet, Metadata sheet, and Prompt sheet, plus source-consistent image keyframes, Chinese/Cantonese/English narration, synchronized Chinese/English subtitles, and a playable master video. Persist returned artifacts, read them back, and project the same typed identities into Canvas Cards, Widgets, Rich Media Panels, and BottomPanel Timeline video/FBF/audio lanes. Stop when approval, credentials, entitlement, budget, persistence, read-back, or a required capability is unavailable.
   - id: "image-to-threejs"
     label: "Image to Three.js"
+    scope: "global-core"
+    selection_context: "selected-widget-card-media"
     slash_command: "/image.to-threejs"
     runtime_command: "/image.to-threejs"
     description: "Native Widget Card prompt preset for a selected PNG, JPG, JPEG, or SVG source."
@@ -106,6 +122,8 @@ prompt_presets:
       Convert the selected or attached PNG, JPG, JPEG, or SVG source into a native Three.js render. Keep the source Widget Card and input media unchanged; publish the generated result as a separate Three.js Rich Media Panel. Return a typed source error for an unsupported source. Do not use a provider, external plugin, or copied implementation.
   - id: "image-to-glb"
     label: "Image to GLB"
+    scope: "global-core"
+    selection_context: "selected-widget-card-media"
     slash_command: "/image.to-glb"
     runtime_command: "/image.to-glb"
     description: "Native Widget Card preset for a compact, quality-gated contour-volume GLB and editable external-buffer glTF from one selected image reference."
@@ -120,6 +138,8 @@ prompt_presets:
       Rebuild the selected or attached PNG, JPG, JPEG, or SVG reference as code-only procedural Three.js without mutating the source Widget Card or input media. Use the universal connected-silhouette contour-volume lane: preserve disconnected negative spaces, quantize a compact plan, and reject object-specific templates, horizontal box bands, baked geometry, serialized geometry, data URIs, loaders, network calls, and external modules. Enforce bounded component, outline, material, triangle, source, and three-pass review/correction budgets. Keep geometry, PBR material, reference, and action gates separate; record the visible front as observed and every rear, interior, or occluded surface as inferred with bounded confidence. Create stable rigid-part pivots and attachment sockets plus one four-second loop-continuous inspection clip bounded to +/-12 degrees yaw; do not claim skinning, morph targets, or deformable readiness. Export the same admitted scene as a full GLB and editable glTF JSON with an external .bin buffer. Use `validated` for deterministic evidence; use `approved` only for a proven optional independent provider review. Treat https://github.com/hoainho/img2threejs and https://github.com/microsoft/TRELLIS.2 as conceptual inspiration only; copy or depend on none of their code, prompts, schemas, examples, tests, fixtures, prose, assets, weights, models, packages, configuration, services, layout, or runtime. Keep the result Dev-only until explicit operator release authority.
   - id: "agentic-graph-probe-tree"
     label: "agentic-graph Probe-Tree"
+    scope: "global-core"
+    selection_context: "selected-widget-card"
     slash_command: "/agentic-graph-probe-tree-prompt-preset"
     runtime_command: "/agentic-graph.probe-tree"
     description: "Native Widget Card preset for bounded, editable next-question branches and a separate Rich Media branch ledger."
@@ -143,6 +163,8 @@ prompt_presets:
       Generate 2-4 bounded, editable next-question cards from this Widget Card under the semantic clarification contract in PROBE-TREE.md. Derive every question and every 2-4 answer choice from the selected user input, give every card a different user-named focus, and attach 2-6 short context anchors copied verbatim from that input. Every answer choice must express a decision-relevant preference, tradeoff, or consequence rather than a mechanical number, range, unit, named entity, or topic fragment. Never reuse a choice label, one card's complete choice set, or a subset/superset of it in another card. For a continuation, the selected child and its committed Output own the next topic; the root is lineage only. Classify the action-topic families RECOMMEND, COMPARE, ASSESS, and PLAN semantically and case-insensitively as clarification requests; an imperative or action verb never establishes terminal intent. Only a runtime-recognized selected-child terminal continuation bypasses card generation. Never substitute stock evidence, policy, reviewer, approval, system-of-record, recalled-exemplar, or fixture content unless the user actually named it. Keep the source card unchanged, connect each candidate branch, and atomically connect the source to its single owned Probe-Tree Branches Rich Media ledger. Preserve user-authored output targets; for a runtime-recognized selected-child terminal continuation, atomically create or reuse one owned Generated Result Rich Media Panel and one typed output edge from that child without merging targets or attaching an unrelated panel. Stop visibly at depth 8. Widget Run authorizes the bounded MCP context call followed by the active Chat provider, endpoint, and model. Never use stale card-local routing or materialize query-specific hardcoding or zero-model fallback cards; fail closed when fewer than two semantic cards survive.
   - id: "sme-care-agent"
     label: "SME Care Agent"
+    scope: "global-domain"
+    selection_context: "active-workspace-sources"
     slash_command: "/sme-care-prompt-preset"
     runtime_command: "/sme-care-agent"
     description: "Review-ready SME exposure, coverage-gap, unknown-risk, and provider-neutral protection guidance."
@@ -157,6 +179,8 @@ prompt_presets:
       Assess the active SME workspace sources across cyber, supply-chain, physical-asset, and growth-stage exposure. Keep exposure, current coverage, apparent gaps, unknown risks, evidence confidence, and urgency distinct. Produce provider-neutral protection guidance, evidence-needed fields, rationale, and a review-ready licensed-adviser handoff. Stop before quote, bind, purchase, contact, paid-provider, persistence, Prod, or Cloudflare actions unless each required approval and capability is available. Never treat unknown coverage as safe.
   - id: "investment-research-agent"
     label: "Investment Research Agent"
+    scope: "global-domain"
+    selection_context: "active-workspace-sources"
     slash_command: "/investment-research-prompt-preset"
     runtime_command: "/investment-research-agent"
     description: "Source-grounded investment research with evidence, contradictions, assumptions, and review-first graph candidates."
@@ -171,6 +195,8 @@ prompt_presets:
       Analyze the investment question using the active workspace sources. Separate claims, evidence, assumptions, contradictions, open questions, freshness, and verification steps; mark unsupported material claims as unknown. Produce a concise research brief, evidence ledger, contradiction ledger, risk/catalyst view, and review-first graph candidates. This is research support, not financial advice. Stop before paid-provider, graph mutation, persistence, transaction, Prod, or Cloudflare actions unless each required approval and capability is available.
   - id: "crawler-agent"
     label: "Crawler Agent"
+    scope: "global-core"
+    selection_context: "active-url-reference"
     slash_command: "/crawler-prompt-preset"
     runtime_command: "/crawler-agent"
     description: "Native headless website crawl with reference-policy gating, file downloads, proxy rotation, and persistent Canvas outputs."
@@ -185,6 +211,9 @@ prompt_presets:
       Crawl the referenced website with the native headless browser automation runtime. Reuse the Import URL pipeline, download supported website files, persist the crawl report and Markdown pipe-table artifacts, and project the result into Canvas. Keep the input prompt unchanged; create separate connected Rich Media Panel outputs for the report and multi-dimensional table. Report processed pages, successful pages, errors, and stored files. Stop before paid-provider, authenticated, or external mutation actions unless each required approval and capability is available.
   - id: "sme-risk-assessment"
     label: "SME Risk Assessment"
+    scope: "global-domain"
+    selection_context: "active-workspace-sources"
+    extends: "sme-care-agent"
     slash_command: "/sme-risk-assessment-prompt-preset"
     runtime_command: "/sme-care-agent"
     description: "Decision-focused SME exposure assessment with missing-input clarification, evidence confidence, and review boundaries."
@@ -199,6 +228,9 @@ prompt_presets:
       Assess the SME's material exposures using only the active request and workspace sources. If sector, operating footprint, assets, current coverage, or decision horizon is missing and would change the assessment, ask one focused clarification before concluding. Separate observed exposure, inferred exposure, existing protection, gaps, unknowns, evidence confidence, and urgency. Return prioritized review questions and provider-neutral risk actions; do not invent quotes, policies, providers, limits, or user facts.
   - id: "sme-protection-comparison"
     label: "SME Protection Comparison"
+    scope: "global-domain"
+    selection_context: "active-workspace-sources"
+    extends: "sme-care-agent"
     slash_command: "/sme-protection-comparison-prompt-preset"
     runtime_command: "/sme-care-agent"
     description: "Semantic comparison of SME protection choices against user-named priorities and unresolved evidence."
@@ -213,6 +245,9 @@ prompt_presets:
       Compare the user-named SME protection choices against the decision variables present in the active request and workspace sources. Ask a focused clarification when a missing priority, exposure, limit, or tradeoff would change the comparison. Distinguish coverage relevance, exclusions or unknowns, operational fit, evidence confidence, and adviser-review needs. Do not fabricate product terms, rankings, premiums, providers, or a recommendation unsupported by the supplied context.
   - id: "investment-options-comparison"
     label: "Investment Options Comparison"
+    scope: "global-domain"
+    selection_context: "active-workspace-sources"
+    extends: "investment-research-agent"
     slash_command: "/investment-options-comparison-prompt-preset"
     runtime_command: "/investment-research-agent"
     description: "Source-grounded comparison of user-named investment options, tradeoffs, evidence quality, and decision gaps."
@@ -227,6 +262,9 @@ prompt_presets:
       Compare only the investment options named by the user or supported by active workspace sources. If objective, horizon, liquidity need, downside tolerance, jurisdiction, or comparison basis is missing and material, ask one focused clarification. Separate evidence, assumptions, contradictions, risk drivers, potential catalysts, liquidity, and verification gaps. Return a decision-useful comparison without inventing prices, returns, products, entities, or personalized financial advice.
   - id: "investment-plan-assessment"
     label: "Investment Plan Assessment"
+    scope: "global-domain"
+    selection_context: "active-workspace-sources"
+    extends: "investment-research-agent"
     slash_command: "/investment-plan-assessment-prompt-preset"
     runtime_command: "/investment-research-agent"
     description: "Review-first assessment of an investment plan against user goals, constraints, evidence, and unresolved risks."
@@ -253,6 +291,10 @@ publication authority remain separate. No standalone Launch Copilot runtime is
 admitted. Native consumer and live-provider proof are required before readiness.
 
 This document is the single prompt-text owner for the agentic-graph FloatingPanel **Prompt Presets** catalog. The runtime reads `prompt_presets` from frontmatter and projects the selected prompt into the existing shared composer.
+
+The current catalog is layered for reuse: `global-core` presets are portable building blocks, `global-domain` presets are still centrally owned but narrower in audience, and future `repo-overlay` and `workspace-overlay` presets may extend this catalog without replacing it as the source of truth. Overlay scopes are reserved in this contract even when no overlay manifests are active.
+
+Every preset declares a `selection_context` so FloatingPanel or other shared selectors can filter suggestions without inferring applicability from prose. Extension presets may declare `extends` to refine a shared base prompt family while keeping the original runtime command owner and execution boundary.
 
 Selection and loading are zero-spend. **Send** remains the Chat execution boundary. An `llm-chat-response` preset must use the active Chat provider, endpoint, and model; it cannot inherit stale card-local routing. A `native-chat-response` preset resolves through its named shared runtime without inventing a model route. The image-to-threejs, image-to-glb, and Probe-Tree presets may also be inserted from the shared Skills & Commands catalog into the selected Widget Card, where each expands to its canonical `/`, `@`, and `#` tokens without replacing attached source media. The Widget Card **Run** action is the execution boundary for those card-inline presets. The video preset additionally activates its authored Canvas document and source script through the existing source-backed video path; each changed multi-card stage is tracked by the shared active-source GitGraph owner as `Chat Run All i/n: <card>`, while an identical already-published graph remains an accepted no-op. SME Care and Investment Research presets use the shared slash-agent response contracts; Crawler Agent uses the native Import URL workflow.
 

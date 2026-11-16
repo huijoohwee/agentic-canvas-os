@@ -38,6 +38,9 @@ export const FACTS_COMPACTED_CONTRACTS = Object.freeze({
     execution_boundary: "selection resolves and loads the source-backed runtime prompt without submit; Send remains the execution boundary",
     semantic_contract_authority: "PROBE-TREE.md",
     invocation_routes: "llm-chat-response uses the active Chat provider, endpoint, and model; native-chat-response uses the named shared runtime; mcp-invocation resolves the matching runtime command through agentic-graph.agentic_canvas_os.docs.invoke without executing it",
+    layer_values: "global-core, global-domain, repo-overlay, workspace-overlay",
+    selection_context_rule: "every preset declares a source-backed selection_context",
+    extension_rule: "extends refines a prompt family without creating a second runtime-command owner",
   }),
 });
 

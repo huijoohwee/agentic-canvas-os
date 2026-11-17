@@ -95,11 +95,10 @@ without a linked index clears the prior graph. Native TypeScript checks pass; mo
 
 `npm run web:build` invokes Graph's native build into `canvas/dist/observability`, then verifies
 source identity, configuration digest, asset paths, sizes and hashes before atomic staging.
-The current static build is blocked: the inherited MapLibre chunk is 988,324 bytes, above the
-500,000-byte limit, and native admission rejected changes to its already-reserved owner.
-The saved export is not a fallback. `npm run cloudflare:dev` remains the separate Worker API
-development command and also requires a passing static build; its authentication and upstream
-bindings are separate from local inspection. No deployment or release readiness is claimed.
+The inherited bundle and asset budgets are checked by the native build and required CI.
+`npm run cloudflare:dev` remains the separate Worker API development command and also
+requires a passing static build; its authentication and upstream bindings are separate
+from local inspection. No deployment or release readiness is claimed.
 
 Follow the pinned `node_modules/agentic-os/docs/START-WORKFLOW.md` and
 `node_modules/agentic-os/docs/RELEASE-WORKFLOW.md`. Finish authorized unfinished
@@ -533,3 +532,8 @@ The native observation form also consumes Design System Markdown commands, text
 transforms and color controls through Graph. Its rich editor is loaded on demand;
 Graph retains field labels, validation and observation callbacks. Canvas adds no
 Markdown parser, formatting toolbar or palette implementation.
+
+The native mission-document Viewer uses Design System `ViewerSurface` through the
+pinned Graph entry, with the original read-only `pre` content and product source
+callbacks retained. Graph's Editor Workspace also activates editing on the existing
+rendered content element. Canvas adds no replacement Viewer, parser or edit lifecycle.

@@ -212,3 +212,9 @@ flowchart LR
 | `blocked` | Cannot advance without missing source, owner, or approval. |
 
 Never promote external capabilities to `runtime-ready` from prose alone.
+
+## Shared typed-row adoption - reference implementation
+
+The UI dependency order is Design System (`fd9884ce292e0e08997063b27762173a64d0122c`) -> direct Base and Graph consumers -> Commerce projections. Design System owns `agentic-design-system/ktv` and `agentic-design-system/react/ktv`, one semantic Key-Type-Value cell descriptor, shared responsive tracks and typography. Products own typed metadata, labels, values, validation and callbacks. Base must not implement or re-export the KTV renderer. Graph panel, form and geospatial bindings consume the central row; Commerce's existing SME editor consumes its exact native projection and removes the replaced field grid. Agentic Canvas OS uses Graph's runtime UI and adds no renderer.
+
+Each integration unit retains exact source/lock/projection proof and focused checks. Native and React rows must preserve control identity, accessible labels, events and product state; invalid native cells fail before mutation. Browser acceptance covers desktop, narrow containers, text zoom and local offline behavior. Source adoption does not establish canonical Graph runtime readiness, cross-device parity, Production activation or any provider effect. Rollback restores producer/consumer revisions and generated projections together, without migrating user facts.

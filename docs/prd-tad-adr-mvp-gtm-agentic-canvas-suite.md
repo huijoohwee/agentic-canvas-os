@@ -2,24 +2,24 @@
 title: "Agentic Canvas Suite - Local Codebase Evidence Review"
 graphId: "md:agentic-canvas-suite-local-codebase-evidence-review"
 doc_type: "PRD-TAD-ADR-MVP-GTM"
-version: "0.3.0"
-date: "2026-10-11"
+version: "0.3.1"
+date: "2026-11-17"
 lang: "en-US"
 schema: "agentic-canvas-suite-prd-tad/v1"
 status: "spec-complete"
 frontmatter_contract: "required"
 owner: "Product and documentation maintainers"
 continuity_id: "PRD-TAD-ADR-AGENTIC-CANVAS-SUITE-001"
-prd_revision: "0.3.0"
-tad_revision: "0.3.0"
-adr_revision: "0.3.0"
-mvp_revision: "0.3.0"
-gtm_revision: "0.3.0"
+prd_revision: "0.3.1"
+tad_revision: "0.3.1"
+adr_revision: "0.3.1"
+mvp_revision: "0.3.1"
+gtm_revision: "0.3.1"
 local_rung: "spec-complete"
 delivered_rung: "undocumented"
 lane: "authoring"
 universal_scope: false
-worktree_id: "device-0232231d4a19--canvas-suite-prd"
+worktree_id: "device-0232231d4a19--shared-hover"
 agent_id: "codex-canvas-suite-review"
 guideline_revision: "3.4.0"
 guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/82835ac37d524643faa6b9703cb077ea9474ab15/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
@@ -29,7 +29,7 @@ planning_record: "./prd-tad-adr-mvp-gtm-agentic-canvas-suite-planning-record.md"
 ---
 # Agentic Canvas Suite - Local Codebase Evidence Review
 
-Five roles join at `PRD-TAD-ADR-AGENTIC-CANVAS-SUITE-001@0.3.0`; the [grounding record](./prd-tad-adr-mvp-gtm-agentic-canvas-suite-grounding.md) pins inspected sources. This is a local authoring record and does not replace the existing mission manifest or change its Dashboard view selection.
+Five roles join at `PRD-TAD-ADR-AGENTIC-CANVAS-SUITE-001@0.3.1`; the [grounding record](./prd-tad-adr-mvp-gtm-agentic-canvas-suite-grounding.md) pins inspected sources. This is a local authoring record and does not replace the existing mission manifest or change its Dashboard view selection.
 
 ## PRD
 
@@ -150,7 +150,7 @@ Defer TAM/SAM/SOM until buyer evidence; then size bottom-up and from an independ
 
 ## 360 degrees coverage and learning
 
-| Domain | Source @ 0.3.0 | Disposition | Evidence or explicit gap | Owner and next check |
+| Domain | Source @ 0.3.1 | Disposition | Evidence or explicit gap | Owner and next check |
 |---|---|---|---|---|
 | C01 Purpose, customer, pain | [PRD](#prd), [GTM](#gtm) | deferred | Buyer, workaround frequency, and current cost are unknown. | Product maintainer: interview one reachable reviewer and measure today's task. |
 | C02 Market and timing | [GTM](#gtm) | deferred | Segment size and geography are unresearched. | GTM owner: use bottom-up and independent top-down sizing after a buyer is named. |
@@ -172,3 +172,7 @@ Defer TAM/SAM/SOM until buyer evidence; then size bottom-up and from an independ
 Coverage: 16/16 domains dispositioned; 3/15 applicable domains covered; 12 deferred; 1 not applicable. Coverage disposition records specification completeness only; it does not advance runtime readiness.
 
 Experience dimensions: unassessed. Delivered readiness, demand, mobile parity, deployment, and revenue: undocumented.
+
+## Shared hover adoption - 2026-11-17
+
+PRD: operators need one hover panel, palette, label/text and key/value help grammar across the suite. TAD: Design System `b8b8c0624b9f5d378fa1a54ea32c52f867f3ad6d` owns native and React hover APIs; Base `b36420f1e06c9d70569ac928e2b8b6ae882e7992` consumes the React bridge for charts. Canvas embeds Graph's existing UI and introduces no competing component, palette, dependency or forwarding entrypoint. ADR: reuse that embedded owner instead of implementing an independent Canvas hover system. MVP: pin the native observability build to that exact Graph revision, validate the source boundary, shared owner pins, documentation contracts and budgets. The native launcher displays one black/white Index manifest label, Escape dismisses it, and the console has no errors. Graph candidate `42e03e240fd93594f80f0616ab3a8282487cf258` has a local 30-case focused regression suite and desktop/320px Settings focus/Escape evidence for the shared runtime. Graph PR 1980 passed its exact Integration Gate and merged to this revision. GTM: this increment establishes source ownership, not full feature parity, cross-device, buyer or Production proof. Rollback restores the prior exact Graph/shared source pins and projections together and retains user data; no provider deployment is selected.

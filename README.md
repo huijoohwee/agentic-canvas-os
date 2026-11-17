@@ -523,3 +523,8 @@ generated 128-bit room id is a bearer capability; anyone with that URL can join
 the room, while generic session tokens and guessable room labels cannot.
 
 Do not deploy this repo as part of local validation unless explicitly instructed.
+
+The native observability entry consumes Design System section headers and scroll
+regions through its exact Graph build revision in `config/observability-workspace.json`.
+Dashboard disclosures use the same shared React section owner. Canvas adds no
+second header renderer, collapse handler or scrolling stylesheet.

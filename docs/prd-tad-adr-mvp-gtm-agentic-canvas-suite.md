@@ -22,7 +22,7 @@ universal_scope: false
 worktree_id: "device-0232231d4a19--atomic-ktv-rows"
 agent_id: "codex-canvas-suite-review"
 guideline_revision: "3.5.0"
-guideline_source: "https://github.com/huijoohwee/huijoohwee.github.io/blob/99ea1f49211361528256045719b54f1634eee41a/guidelines/prd-tad-adr-mvp-gtm-guidelines.md"
+guideline_source: "https://github.com/huijoohwee/agentic-gateway/blob/cdb000925729a729732206a32de36e6bc7db011c/references/README.md#guidelineprd-tad-adr-mvp-gtm"
 reviewed_source_revision: "f44e8d2d42b857bc5bc1658a50fcc5a7ce81b877"
 grounding_record: "./prd-tad-adr-mvp-gtm-agentic-canvas-suite-grounding.md"
 planning_record: "./prd-tad-adr-mvp-gtm-agentic-canvas-suite-planning-record.md"

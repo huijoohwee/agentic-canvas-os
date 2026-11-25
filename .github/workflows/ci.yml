@@ -47,6 +47,11 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
+      - name: Enforce shared owner reuse
+        if: matrix.shard == 1
+        uses: huijoohwee/agentic-os/.github/actions/owner-reuse@2a394c589064105387f1c58e6db54da135059c28
+        with:
+          baseline: 68fe2474e4f73bf22a5a64e483e87bd5decfe1fb
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run check:ci -- --only=test-${{ matrix.shard }}
 

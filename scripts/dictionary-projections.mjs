@@ -3,6 +3,7 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { openReferenceIndex } from "agentic-gateway/references";
 import { DICTIONARY_DESCRIPTORS, DICTIONARY_LIMITS } from "agentic-os/invocation";
 import { readBoundedFile } from "agentic-os/frontmatter";
 import { validateDictionaryCatalogContract } from "./dictionary-catalog-contract.mjs";
@@ -11,10 +12,19 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 const read = target => utf8.decode(readBoundedFile(target, DICTIONARY_LIMITS.bytesPerFile, "dictionary"));
 
+const gatewayAsset = name => fileURLToPath(import.meta.resolve('agentic-gateway/references/' + name));
+const index = await openReferenceIndex(read(gatewayAsset('index.json')), JSON.parse(read(gatewayAsset('pin.json'))));
+const verified = await Promise.all(DICTIONARY_DESCRIPTORS.map(async ({ docsPath }) => {
+  const kind = /^DICTIONARY-(COMMAND|SEMANTIC|BINDING)\.md$/.exec(docsPath)?.[1].toLowerCase();
+  const selected = await index.select('route-dictionary/' + kind, entry => {
+    if (entry.owner !== 'agentic-os' || entry.path !== 'catalog/dictionaries/' + docsPath) throw Error('Unexpected dictionary owner');
+    return read(fileURLToPath(import.meta.resolve('agentic-os/dictionaries/' + docsPath)));
+  });
+  return [docsPath, utf8.decode(selected.bytes)];
+}));
+
 export function readUpstreamDictionaries() {
-  const documents = new Map(DICTIONARY_DESCRIPTORS.map(({ docsPath }) => [
-    docsPath, read(fileURLToPath(import.meta.resolve(`agentic-os/dictionaries/${docsPath}`))),
-  ]));
+  const documents = new Map(verified);
   const failures = validateDictionaryCatalogContract(documents);
   if (failures.length) throw new Error(failures.join("\n"));
   return documents;

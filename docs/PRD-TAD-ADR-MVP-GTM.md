@@ -579,3 +579,8 @@ Graph's catalog delivery remains subject to its separate exact release receipts.
 Selection, Demo, Run, sharing and simulated bench review remain separately explicit;
 no physical aircraft or public deployment claim is added here. Rollback reverts this
 disposition text without deleting the preserved predecessor or recreating its row.
+
+## Git-economical ADLC cleanup default
+
+**PRD/TAD/ADR.** At authorized END, remove an exactly integrated linked-worktree projection and registration only when the complete current inventory proves it clean. Keep its local branch, remote branch, tracking refs, reflogs, and Git objects. Preserve dirty or ignored bytes in recoverable quarantine; stop when inventory or integration is uncertain. Independent scratch clones stay outside this default. A green review remains evidence, not cleanup authority.
+**MVP/GTM/rollback.** The committed profile selects `remove-clean`; the existing native ADLC planner rechecks eligibility and requires the exact plan authorization and stopped-writer confirmation. Existing focused profile and cleanup checks plus repository gates verify the change. No dependency, service, paid resource, deployment, or new always-load instruction is added. Measure elapsed operator time and actual storage effects after use; this policy change alone claims no savings. A protected revert restores quarantine policy and docs while retaining branches, objects, worktrees, and receipts.

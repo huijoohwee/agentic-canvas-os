@@ -349,13 +349,13 @@ test('the transition workflow is read-only exact-input validation', () => {
   assert.doesNotMatch(executionWorkflow, /\$\{\{\s*(?:inputs\.|github\.event\.inputs)/u)
 })
 
-test('the retained profile and initial authority surfaces stay byte-identical', () => {
+test('the selected profile and initial authority surfaces stay byte-identical', () => {
   assert.deepEqual({
     '.agentic-os.json': digest('.agentic-os.json'),
     '.github/adlc-authority-policy.json': digest('.github/adlc-authority-policy.json'),
     '.github/workflows/adlc-authority.yml': digest('.github/workflows/adlc-authority.yml'),
   }, {
-    '.agentic-os.json': '3fe2918ca7629edd5aa5f50186dcca5a9169f5f2d384301a6b55d785e88518ba',
+    '.agentic-os.json': '2cb520eca07b883fe69b04dfa5b98832699ef3b759d17b92156a22b54aea0a82',
     '.github/adlc-authority-policy.json':
       'df118c2eb4bed96b07445602c6f7111b717069ec1e36030402c5f8cef4c818aa',
     '.github/workflows/adlc-authority.yml':

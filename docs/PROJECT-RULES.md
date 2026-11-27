@@ -53,10 +53,11 @@ document can express the same contract.
 
 - `agentic-os` ADLC is the single lifecycle owner; follow the pinned
   `node_modules/agentic-os/docs/RELEASE-WORKFLOW.md`, through the native
-  `npm run release:common` entry point. ACOS opts into exact
-  worktree projection and registration quarantine while retaining branches,
-  refs, and unreachable objects; each effect still requires ADLC eligibility
-  and exact authority.
+  `npm run release:common` entry point. On authorized END, ACOS removes only
+  an exactly integrated, clean linked-worktree projection and registration;
+  dirty, ignored, or uncertain bytes are preserved or block cleanup. Local and
+  remote branches, remote-tracking refs, reflogs, and Git objects remain. Each
+  effect still requires ADLC eligibility and exact authority.
 - The remotely addressable branch and pull request are the shared claim. Local
   records and compatibility shims are observations; they never replace GitHub
   branch protection, exact required checks, or pull-request authority.
